@@ -2,6 +2,8 @@ import { ConvexError, v } from "convex/values"
 
 import type { Doc } from "./_generated/dataModel"
 import { mutation, query, type MutationCtx } from "./_generated/server"
+import { transitionSessionSafely } from "@/lib/interview/session-machine"
+import type { InterviewSessionState } from "@/lib/interview/types"
 import { ensureDefaultTemplate } from "./helpers/templates"
 
 const DEVELOPMENT_INVITE_TOKEN = "demo-invite"
@@ -25,6 +27,20 @@ function buildInterviewPolicy(expiresAt?: string) {
     maxAttempts: 1,
     expiresAt,
   }
+}
+
+function resolveTranscriptLookupKey(args: {
+  segmentId: string
+  speaker: "agent" | "candidate" | "system"
+  startedAt: string
+}) {
+  const normalizedSegmentId = args.segmentId.trim()
+
+  if (normalizedSegmentId) {
+    return normalizedSegmentId
+  }
+
+  return `${args.speaker}:${args.startedAt}`
 }
 
 function deriveAccessState(
@@ -182,16 +198,31 @@ export const getPublicSessionDetail = query({
       .query("interviewSessions")
       .withIndex("by_invite", (q) => q.eq("inviteId", invite._id))
       .first()
+    const access = deriveAccessState(invite, session)
 
     if (!session) {
-      const access = deriveAccessState(invite, null)
-
       return {
         inviteId: invite._id,
         sessionId: undefined,
         candidateName: invite.candidateName ?? "Candidate",
         templateName: template?.name ?? "AI Tutor Screener",
         state: "ready" as const,
+        ...access,
+        policy: buildInterviewPolicy(invite.expiresAt),
+        roomName: undefined,
+        events: [],
+        transcript: [],
+        recordings: [],
+      }
+    }
+
+    if (access.accessState !== "available") {
+      return {
+        inviteId: invite._id,
+        sessionId: session._id,
+        candidateName: invite.candidateName ?? "Candidate",
+        templateName: template?.name ?? "AI Tutor Screener",
+        state: session.state,
         ...access,
         policy: buildInterviewPolicy(invite.expiresAt),
         roomName: undefined,
@@ -222,7 +253,7 @@ export const getPublicSessionDetail = query({
       candidateName: invite.candidateName ?? "Candidate",
       templateName: template?.name ?? "AI Tutor Screener",
       state: session.state,
-      ...deriveAccessState(invite, session),
+      ...access,
       policy: buildInterviewPolicy(invite.expiresAt),
       roomName: session.roomName,
       events: events
@@ -385,6 +416,12 @@ export const appendSessionEvent = mutation({
     ),
   },
   handler: async (ctx, { sessionId, type, detail, state }) => {
+    const session = await ctx.db.get(sessionId)
+
+    if (!session) {
+      throw new ConvexError("Interview session not found.")
+    }
+
     await ctx.db.insert("sessionEvents", {
       sessionId,
       type,
@@ -393,23 +430,34 @@ export const appendSessionEvent = mutation({
     })
 
     if (state) {
-      await ctx.db.patch(sessionId, { state })
+      const nextState = transitionSessionSafely(
+        session.state as InterviewSessionState,
+        state as InterviewSessionState
+      )
+      const patch: Partial<Doc<"interviewSessions">> = {
+        state: nextState,
+      }
 
-      if (state === "processing" || state === "completed") {
-        const session = await ctx.db.get(sessionId)
+      if (
+        (nextState === "processing" || nextState === "completed") &&
+        !session.endedAt
+      ) {
+        patch.endedAt = new Date().toISOString()
+      }
 
-        if (session) {
-          const invite = await ctx.db.get(session.inviteId)
+      await ctx.db.patch(sessionId, patch)
 
-          await ctx.db.patch(session.inviteId, {
-            status: "completed",
+      if (nextState === "processing" || nextState === "completed") {
+        const invite = await ctx.db.get(session.inviteId)
+
+        await ctx.db.patch(session.inviteId, {
+          status: "completed",
+        })
+
+        if (invite?.eligibilityId) {
+          await ctx.db.patch(invite.eligibilityId, {
+            status: "submitted",
           })
-
-          if (invite?.eligibilityId) {
-            await ctx.db.patch(invite.eligibilityId, {
-              status: "submitted",
-            })
-          }
         }
       }
     }
@@ -431,20 +479,31 @@ export const upsertTranscriptSegment = mutation({
     endedAt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const existing = await ctx.db
+    const sourceSegmentId = resolveTranscriptLookupKey(args)
+    const indexedMatch = await ctx.db
       .query("transcriptSegments")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .collect()
-
-    const match = existing.find(
-      (segment) =>
-        segment.startedAt === args.startedAt &&
-        segment.speaker === args.speaker &&
-        segment.status === "partial"
-    )
+      .withIndex("by_session_and_source_segment_id", (q) =>
+        q.eq("sessionId", args.sessionId).eq("sourceSegmentId", sourceSegmentId)
+      )
+      .first()
+    const match =
+      indexedMatch ??
+      (
+        await ctx.db
+          .query("transcriptSegments")
+          .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+          .collect()
+      ).find(
+        (segment) =>
+          segment.sourceSegmentId === sourceSegmentId ||
+          (segment.startedAt === args.startedAt &&
+            segment.speaker === args.speaker &&
+            segment.status === "partial")
+      )
 
     if (match) {
       await ctx.db.patch(match._id, {
+        sourceSegmentId,
         text: args.text,
         status: args.status,
         endedAt: args.endedAt,
@@ -454,6 +513,7 @@ export const upsertTranscriptSegment = mutation({
 
     return await ctx.db.insert("transcriptSegments", {
       sessionId: args.sessionId,
+      sourceSegmentId,
       speaker: args.speaker,
       text: args.text,
       status: args.status,

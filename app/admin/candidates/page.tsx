@@ -3,6 +3,7 @@ import { fetchQuery } from "convex/nextjs"
 
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
+import { getServerConvexAuthToken } from "@/lib/clerk/server-token"
 import {
   formatConfidenceLabel,
   formatDateTime,
@@ -11,8 +12,11 @@ import {
 } from "@/lib/recruiter/format"
 
 export default async function AdminCandidatesPage() {
+  const token = await getServerConvexAuthToken()
   const candidates = process.env.NEXT_PUBLIC_CONVEX_URL
-    ? await fetchQuery(api.recruiter.listReviewCandidates, {}).catch(() => [])
+    ? await fetchQuery(api.recruiter.listReviewCandidates, {}, {
+        token: token ?? undefined,
+      }).catch(() => [])
     : []
 
   return (

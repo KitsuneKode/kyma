@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { RecruiterChat } from "@/components/recruiter/recruiter-chat"
 import { RecruiterNotes } from "@/components/recruiter/recruiter-notes"
 import { ReviewActions } from "@/components/recruiter/review-actions"
+import { getServerConvexAuthToken } from "@/lib/clerk/server-token"
 import {
   formatConfidenceLabel,
   formatDateTime,
@@ -26,9 +27,12 @@ export default async function CandidateReviewPage({
   params,
 }: CandidateReviewPageProps) {
   const { sessionId } = await params
+  const token = await getServerConvexAuthToken()
   const detail = process.env.NEXT_PUBLIC_CONVEX_URL
     ? await fetchQuery(api.recruiter.getCandidateReviewDetail, {
         sessionId: sessionId as Id<"interviewSessions">,
+      }, {
+        token: token ?? undefined,
       }).catch(() => null)
     : null
 

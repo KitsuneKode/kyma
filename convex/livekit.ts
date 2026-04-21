@@ -1,6 +1,8 @@
 import { v } from "convex/values"
 
 import { mutation } from "./_generated/server"
+import { transitionSessionSafely } from "@/lib/interview/session-machine"
+import type { InterviewSessionState } from "@/lib/interview/types"
 
 function mapArtifactStatus(event: string, hasError: boolean) {
   if (hasError) {
@@ -107,8 +109,12 @@ export const ingestWebhookEvent = mutation({
       args.event === "participant_joined" &&
       !["processing", "completed", "failed"].includes(session.state)
     ) {
+      const nextState = transitionSessionSafely(
+        session.state as InterviewSessionState,
+        "live"
+      )
       await ctx.db.patch(session._id, {
-        state: "live",
+        state: nextState,
         startedAt: session.startedAt ?? now,
       })
     }
@@ -118,8 +124,12 @@ export const ingestWebhookEvent = mutation({
         args.event === "participant_connection_aborted") &&
       !["processing", "completed", "failed"].includes(session.state)
     ) {
+      const nextState = transitionSessionSafely(
+        session.state as InterviewSessionState,
+        "interrupted"
+      )
       await ctx.db.patch(session._id, {
-        state: "interrupted",
+        state: nextState,
       })
     }
 

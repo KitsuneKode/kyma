@@ -1,7 +1,7 @@
-import { v } from "convex/values"
+import { ConvexError, v } from "convex/values"
 
 import type { Id } from "./_generated/dataModel"
-import { mutation, query, type QueryCtx } from "./_generated/server"
+import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server"
 
 const recommendationValidator = v.union(
   v.literal("strong_yes"),
@@ -35,6 +35,29 @@ const reviewDecisionValidator = v.union(
   v.literal("hold")
 )
 
+function shouldEnforceRecruiterAuth() {
+  return Boolean(
+    process.env.CLERK_SECRET_KEY?.trim() &&
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() &&
+      (process.env.CLERK_FRONTEND_API_URL?.trim() ||
+        process.env.CLERK_JWT_ISSUER_DOMAIN?.trim())
+  )
+}
+
+async function requireRecruiterIdentity(ctx: QueryCtx | MutationCtx) {
+  if (!shouldEnforceRecruiterAuth()) {
+    return null
+  }
+
+  const identity = await ctx.auth.getUserIdentity()
+
+  if (!identity) {
+    throw new ConvexError("You must be signed in to access recruiter data.")
+  }
+
+  return identity
+}
+
 function countWords(text: string) {
   return text
     .trim()
@@ -66,6 +89,8 @@ async function getLatestReviewDecision(ctx: QueryCtx, sessionId: Id<"interviewSe
 export const listReviewCandidates = query({
   args: {},
   handler: async (ctx) => {
+    await requireRecruiterIdentity(ctx)
+
     const sessions = await ctx.db.query("interviewSessions").collect()
     const sortedSessions = [...sessions].toSorted((left, right) =>
       (right.startedAt ?? "").localeCompare(left.startedAt ?? "")
@@ -109,11 +134,50 @@ export const listReviewCandidates = query({
   },
 })
 
+export const getSessionProcessingDetail = query({
+  args: {
+    sessionId: v.id("interviewSessions"),
+  },
+  handler: async (ctx, { sessionId }) => {
+    const session = await ctx.db.get(sessionId)
+
+    if (!session) {
+      return null
+    }
+
+    const invite = await ctx.db.get(session.inviteId)
+    const template = invite ? await ctx.db.get(invite.templateId) : null
+    const transcript = await ctx.db
+      .query("transcriptSegments")
+      .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+      .collect()
+
+    return {
+      sessionId: session._id,
+      candidate: {
+        name: invite?.candidateName ?? "Candidate",
+      },
+      template: {
+        name: template?.name ?? "AI Tutor Screener",
+      },
+      transcript: sortByIsoAsc(transcript).map((segment) => ({
+        speaker: segment.speaker,
+        text: segment.text,
+        status: segment.status,
+        startedAt: segment.startedAt,
+        endedAt: segment.endedAt,
+      })),
+    }
+  },
+})
+
 export const getCandidateReviewDetail = query({
   args: {
     sessionId: v.id("interviewSessions"),
   },
   handler: async (ctx, { sessionId }) => {
+    await requireRecruiterIdentity(ctx)
+
     const session = await ctx.db.get(sessionId)
 
     if (!session) {
@@ -390,6 +454,8 @@ export const submitReviewDecision = mutation({
     reviewerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireRecruiterIdentity(ctx)
+
     return await ctx.db.insert("reviewDecisions", {
       ...args,
       createdAt: new Date().toISOString(),
