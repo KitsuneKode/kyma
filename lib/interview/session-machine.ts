@@ -3,10 +3,10 @@ import { type InterviewSessionState } from "@/lib/interview/types"
 const TRANSITIONS: Record<InterviewSessionState, InterviewSessionState[]> = {
   created: ["ready", "failed"],
   ready: ["connecting", "failed"],
-  connecting: ["live", "failed", "reconnecting"],
+  connecting: ["live", "failed", "reconnecting", "interrupted"],
   live: ["reconnecting", "interrupted", "processing", "failed"],
   reconnecting: ["live", "interrupted", "failed"],
-  interrupted: ["connecting", "processing", "failed"],
+  interrupted: ["connecting", "live", "processing", "failed"],
   processing: ["completed", "failed"],
   completed: [],
   failed: [],
@@ -28,6 +28,13 @@ export function transitionSession(
   }
 
   return next
+}
+
+export function transitionSessionSafely(
+  current: InterviewSessionState,
+  next: InterviewSessionState
+) {
+  return canTransitionSession(current, next) ? next : current
 }
 
 export function getSessionStateLabel(state: InterviewSessionState) {

@@ -50,7 +50,7 @@ export async function processInterviewAssessment(
     detail: "Starting structured assessment generation.",
   })
 
-  const detail = await fetchQuery(api.recruiter.getCandidateReviewDetail, {
+  const detail = await fetchQuery(api.recruiter.getSessionProcessingDetail, {
     sessionId,
   })
 
