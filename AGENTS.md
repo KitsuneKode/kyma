@@ -45,6 +45,10 @@ This repo is building the Cuemath-style `AI Tutor Screener`:
 - predictable behavior under load and during failures, including session restarts, reconnects, and partial streams
 - If a tradeoff is required, choose correctness and robustness over short-term convenience.
 - Long-term maintainability is a core priority.
+- When session continuity is required, store compressed progress in `.context/session.md`.
+- Keep `.context/session.md` short and action-oriented, similar to a session handoff note:
+- include what was done, what is in progress, decisions made, blockers, and next steps
+- prefer file references over long pasted code or transcripts
 - Before adding new functionality, check whether shared logic should be extracted into a separate module.
 - Duplicate logic across files is a code smell and should be removed or consolidated.
 - Do not take shortcuts by adding one-off local logic when shared abstractions are the better long-term fit.

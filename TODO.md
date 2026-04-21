@@ -2,7 +2,7 @@
 
 ## Right Now
 
-- [ ] wire `Convex` dev workflow and generate backend stubs
+- [ ] set `CLERK_FRONTEND_API_URL` and rerun `npx convex dev --once`
 - [ ] create `LiveKit` server token creation path
 - [ ] create candidate invite creation flow
 - [ ] build bare candidate interview join page

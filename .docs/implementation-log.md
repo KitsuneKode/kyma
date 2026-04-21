@@ -16,16 +16,19 @@
   - `/admin`
   - `/interviews/[inviteId]`
 - added `TODO.md` to separate current work from future scope
+- added `ConvexProviderWithClerk` wiring and moved `ClerkProvider` to the root layout
+- added `convex/auth.config.ts` and a server-side `LiveKit` token route
+- bootstrapped a local Convex deployment, which wrote `NEXT_PUBLIC_CONVEX_URL` and deployment info to `.env.local`
 
 ### Current State
 
 - UI is intentionally minimal
-- realtime room creation is not wired yet
-- Convex schema exists, but generated backend functions are not created yet
+- realtime room token creation route exists at `app/api/livekit/token/route.ts`
+- Convex schema exists, but backend generation is blocked until `CLERK_FRONTEND_API_URL` is set
 - candidate flow is a functional shell for session-state-first development
 
 ### Next Recommended Step
 
-- wire `Convex` development setup and generated functions
-- implement `LiveKit` token creation on the server
+- set `CLERK_FRONTEND_API_URL` and rerun `npx convex dev --once`
+- add Convex queries and mutations for invites and sessions
 - persist lifecycle transitions instead of local-only state
