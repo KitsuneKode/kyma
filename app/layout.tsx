@@ -8,16 +8,21 @@ import "./globals.css"
 
 const fontSans = Outfit({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-sans",
 })
 
 const fontSerif = Merriweather({
   subsets: ["latin"],
+  display: "swap",
+  style: ["normal", "italic"],
   variable: "--font-serif",
+  weight: ["400", "700"],
 })
 
 const fontMono = JetBrains_Mono({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-mono",
 })
 
@@ -35,7 +40,7 @@ export default function RootLayout({
   const content = (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} antialiased`}
+        className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} font-sans antialiased`}
       >
         <Providers clerkEnabled={clerkEnabled}>{children}</Providers>
       </body>
