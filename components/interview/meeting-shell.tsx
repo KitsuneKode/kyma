@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import {
   ConnectionStateToast,
@@ -11,32 +11,35 @@ import {
   type LocalUserChoices,
   useCreateLayoutContext,
   useTracks,
-} from "@livekit/components-react";
-import { Track, type DisconnectReason, type Room } from "livekit-client";
+} from "@livekit/components-react"
+import { Track, type DisconnectReason, type Room } from "livekit-client"
 
-import { Button } from "@/components/ui/button";
-import { formatDurationPolicy } from "@/lib/interview/policy";
-import { type BootstrappedInterviewSession } from "@/lib/interview/bootstrap";
-import { type InterviewPolicy } from "@/lib/interview/types";
+import { Button } from "@/components/ui/button"
+import { formatDurationPolicy } from "@/lib/interview/policy"
+import { type BootstrappedInterviewSession } from "@/lib/interview/bootstrap"
+import { type InterviewPolicy } from "@/lib/interview/types"
 
 type MeetingShellProps = {
-  connectionError: string | null;
-  isSubmittingInterview: boolean;
-  onConnected: () => void;
-  onDisconnected?: (reason?: DisconnectReason) => void;
-  onError: (error: Error) => void;
-  onSubmitInterview: () => void | Promise<void>;
-  policy: InterviewPolicy;
-  preJoinChoices: LocalUserChoices;
-  room: Room;
-  session: BootstrappedInterviewSession;
-};
+  connectionError: string | null
+  isSubmittingInterview: boolean
+  onConnected: () => void
+  onDisconnected?: (reason?: DisconnectReason) => void
+  onError: (error: Error) => void
+  onSubmitInterview: () => void | Promise<void>
+  policy: InterviewPolicy
+  preJoinChoices: LocalUserChoices
+  room: Room
+  session: BootstrappedInterviewSession
+}
 
 function InterviewConference() {
-  const layoutContext = useCreateLayoutContext();
-  const tracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], {
-    onlySubscribed: false,
-  });
+  const layoutContext = useCreateLayoutContext()
+  const tracks = useTracks(
+    [{ source: Track.Source.Camera, withPlaceholder: true }],
+    {
+      onlySubscribed: false,
+    }
+  )
 
   return (
     <div className="lk-video-conference h-full">
@@ -63,7 +66,7 @@ function InterviewConference() {
       <RoomAudioRenderer />
       <ConnectionStateToast />
     </div>
-  );
+  )
 }
 
 export function MeetingShell({
@@ -82,16 +85,17 @@ export function MeetingShell({
     <div className="kyma-meeting-shell rounded-2xl border border-border/80 bg-card/90 p-4 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-background/70 px-4 py-3 shadow-sm">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
             Live Interview
           </p>
           <p className="mt-1 text-sm font-medium">
-            Submit the interview when the conversation is complete. If the built-in leave control is
-            used first, the session will be marked as interrupted.
+            Submit the interview when the conversation is complete. If the
+            built-in leave control is used first, the session will be marked as
+            interrupted.
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {formatDurationPolicy(policy)}. Single-use invite. Resume is available only until the
-            interview is submitted.
+            {formatDurationPolicy(policy)}. Single-use invite. Resume is
+            available only until the interview is submitted.
           </p>
         </div>
         <Button onClick={onSubmitInterview} disabled={isSubmittingInterview}>
@@ -137,5 +141,5 @@ export function MeetingShell({
         </div>
       ) : null}
     </div>
-  );
+  )
 }

@@ -1,16 +1,16 @@
-import Link from "next/link";
+import Link from "next/link"
 
-import { ConvexClientProvider } from "@/components/convex-client-provider";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
-import { ReactNode } from "react";
+import { ConvexClientProvider } from "@/components/convex-client-provider"
+import { ThemeProvider } from "@/components/theme-provider"
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs"
+import { ReactNode } from "react"
 
 export const Providers = ({
   children,
   clerkEnabled,
 }: {
-  children: ReactNode;
-  clerkEnabled: boolean;
+  children: ReactNode
+  clerkEnabled: boolean
 }) => {
   return (
     <ThemeProvider>
@@ -21,7 +21,10 @@ export const Providers = ({
               <Link className="font-semibold" href="/">
                 Kyma
               </Link>
-              <Link className="text-muted-foreground transition-colors hover:text-foreground" href="/admin">
+              <Link
+                className="text-muted-foreground transition-colors hover:text-foreground"
+                href="/admin"
+              >
                 Admin
               </Link>
               <Link
@@ -53,5 +56,5 @@ export const Providers = ({
         {children}
       </ConvexClientProvider>
     </ThemeProvider>
-  );
-};
+  )
+}

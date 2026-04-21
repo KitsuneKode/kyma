@@ -1,6 +1,11 @@
-import { AutoSubscribe, defineAgent, voice, type JobContext } from "@livekit/agents";
+import {
+  AutoSubscribe,
+  defineAgent,
+  voice,
+  type JobContext,
+} from "@livekit/agents"
 
-import { createDiagnosticLogger } from "@/lib/interview/diagnostics";
+import { createDiagnosticLogger } from "@/lib/interview/diagnostics"
 
 const DEFAULT_INSTRUCTIONS = `
 You are the first-pass interviewer for a tutor screening system.
@@ -20,23 +25,24 @@ Conversation rules:
 - keep the interview focused on soft skills and teaching ability
 
 For this first version, prioritize reliable, natural conversation over fancy behavior.
-`.trim();
+`.trim()
 
 function getAgentConfig() {
   return {
     stt: process.env.LIVEKIT_AGENT_STT_MODEL ?? "deepgram/nova-3",
     llm: process.env.LIVEKIT_AGENT_LLM_MODEL ?? "openai/gpt-4.1-mini",
     tts: process.env.LIVEKIT_AGENT_TTS_MODEL ?? "cartesia/sonic",
-    instructions: process.env.LIVEKIT_AGENT_INSTRUCTIONS ?? DEFAULT_INSTRUCTIONS,
-  };
+    instructions:
+      process.env.LIVEKIT_AGENT_INSTRUCTIONS ?? DEFAULT_INSTRUCTIONS,
+  }
 }
 
 async function startSession(ctx: JobContext) {
-  const config = getAgentConfig();
+  const config = getAgentConfig()
   const logger = createDiagnosticLogger("interviewer-agent", {
     actor: "agent",
     roomName: ctx.room.name,
-  });
+  })
   logger.info({
     event: "agent.session.bootstrap",
     detail: "Starting interviewer agent session.",
@@ -45,18 +51,18 @@ async function startSession(ctx: JobContext) {
       llm: config.llm,
       tts: config.tts,
     },
-  });
+  })
 
-  await ctx.connect(undefined, AutoSubscribe.AUDIO_ONLY);
+  await ctx.connect(undefined, AutoSubscribe.AUDIO_ONLY)
   logger.info({
     event: "agent.room.connected",
     detail: "Agent connected to LiveKit room.",
-  });
-  await ctx.waitForParticipant();
+  })
+  await ctx.waitForParticipant()
   logger.info({
     event: "agent.participant.detected",
     detail: "Candidate participant detected in room.",
-  });
+  })
 
   const session = new voice.AgentSession({
     stt: config.stt,
@@ -67,44 +73,44 @@ async function startSession(ctx: JobContext) {
         enabled: true,
       },
     },
-  });
+  })
 
   const agent = new voice.Agent({
     instructions: config.instructions,
-  });
+  })
 
   await session.start({
     agent,
     room: ctx.room,
-  });
+  })
   logger.info({
     event: "agent.session.started",
     detail: "Voice agent session started.",
-  });
+  })
 
   ctx.addShutdownCallback(async () => {
     logger.info({
       event: "agent.session.shutdown",
       detail: "Shutting down interviewer agent session.",
-    });
-    await session.close();
-  });
+    })
+    await session.close()
+  })
 
   await session.say(
     "Hello, welcome to the tutor screening interview. We will begin with a few short questions about how you teach and communicate.",
     {
       addToChatCtx: true,
       allowInterruptions: true,
-    },
-  );
+    }
+  )
   logger.info({
     event: "agent.first-utterance.sent",
     detail: "Initial interviewer greeting was sent.",
-  });
+  })
 }
 
 export default defineAgent({
   entry: async (ctx) => {
-    await startSession(ctx);
+    await startSession(ctx)
   },
-});
+})

@@ -1,11 +1,15 @@
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
+import { defineSchema, defineTable } from "convex/server"
+import { v } from "convex/values"
 
 export default defineSchema({
   assessmentTemplates: defineTable({
     name: v.string(),
     role: v.string(),
-    status: v.union(v.literal("draft"), v.literal("active"), v.literal("archived")),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("active"),
+      v.literal("archived")
+    ),
     createdBy: v.string(),
     rubricVersion: v.string(),
   }).index("by_status", ["status"]),
@@ -20,7 +24,7 @@ export default defineSchema({
       v.literal("opened"),
       v.literal("in_progress"),
       v.literal("completed"),
-      v.literal("expired"),
+      v.literal("expired")
     ),
     expiresAt: v.string(),
   })
@@ -38,7 +42,7 @@ export default defineSchema({
       v.literal("interrupted"),
       v.literal("processing"),
       v.literal("completed"),
-      v.literal("failed"),
+      v.literal("failed")
     ),
     provider: v.literal("livekit"),
     roomName: v.optional(v.string()),
@@ -56,7 +60,11 @@ export default defineSchema({
 
   transcriptSegments: defineTable({
     sessionId: v.id("interviewSessions"),
-    speaker: v.union(v.literal("agent"), v.literal("candidate"), v.literal("system")),
+    speaker: v.union(
+      v.literal("agent"),
+      v.literal("candidate"),
+      v.literal("system")
+    ),
     text: v.string(),
     status: v.union(v.literal("partial"), v.literal("final")),
     startedAt: v.string(),
@@ -70,10 +78,10 @@ export default defineSchema({
       v.literal("processing"),
       v.literal("completed"),
       v.literal("failed"),
-      v.literal("manual_review"),
+      v.literal("manual_review")
     ),
     overallRecommendation: v.optional(v.string()),
     confidence: v.optional(v.string()),
     summary: v.optional(v.string()),
   }).index("by_session", ["sessionId"]),
-});
+})
