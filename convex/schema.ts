@@ -39,11 +39,51 @@ export default defineSchema({
     rubricVersion: v.string(),
   }).index("by_status", ["status"]),
 
+  screeningBatches: defineTable({
+    name: v.string(),
+    templateId: v.id("assessmentTemplates"),
+    createdBy: v.string(),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("active"),
+      v.literal("closed"),
+      v.literal("archived")
+    ),
+    expiresAt: v.optional(v.string()),
+    allowedAttempts: v.number(),
+    createdAt: v.string(),
+  })
+    .index("by_status", ["status"])
+    .index("by_template", ["templateId"]),
+
+  candidateEligibility: defineTable({
+    batchId: v.id("screeningBatches"),
+    inviteId: v.id("candidateInvites"),
+    candidateName: v.string(),
+    candidateEmail: v.optional(v.string()),
+    allowedAttempts: v.number(),
+    attemptCount: v.number(),
+    status: v.union(
+      v.literal("eligible"),
+      v.literal("invited"),
+      v.literal("in_progress"),
+      v.literal("submitted"),
+      v.literal("revoked"),
+      v.literal("expired")
+    ),
+    createdAt: v.string(),
+  })
+    .index("by_batch", ["batchId"])
+    .index("by_invite", ["inviteId"])
+    .index("by_status", ["status"]),
+
   candidateInvites: defineTable({
     inviteToken: v.string(),
     candidateName: v.optional(v.string()),
     candidateEmail: v.optional(v.string()),
     templateId: v.id("assessmentTemplates"),
+    batchId: v.optional(v.id("screeningBatches")),
+    eligibilityId: v.optional(v.id("candidateEligibility")),
     status: v.union(
       v.literal("created"),
       v.literal("opened"),
@@ -87,6 +127,7 @@ export default defineSchema({
 
   transcriptSegments: defineTable({
     sessionId: v.id("interviewSessions"),
+    sourceSegmentId: v.optional(v.string()),
     speaker: v.union(
       v.literal("agent"),
       v.literal("candidate"),
@@ -96,7 +137,9 @@ export default defineSchema({
     status: v.union(v.literal("partial"), v.literal("final")),
     startedAt: v.string(),
     endedAt: v.optional(v.string()),
-  }).index("by_session", ["sessionId"]),
+  })
+    .index("by_session", ["sessionId"])
+    .index("by_session_and_source_segment_id", ["sessionId", "sourceSegmentId"]),
 
   recordingArtifacts: defineTable({
     sessionId: v.id("interviewSessions"),
@@ -190,4 +233,24 @@ export default defineSchema({
   })
     .index("by_report_and_created_at", ["reportId", "createdAt"])
     .index("by_session_and_created_at", ["sessionId", "createdAt"]),
+
+  recruiterNotes: defineTable({
+    sessionId: v.id("interviewSessions"),
+    reportId: v.optional(v.id("assessmentReports")),
+    authorId: v.optional(v.string()),
+    body: v.string(),
+    createdAt: v.string(),
+  })
+    .index("by_session_and_created_at", ["sessionId", "createdAt"])
+    .index("by_report_and_created_at", ["reportId", "createdAt"]),
+
+  reportChatMessages: defineTable({
+    sessionId: v.id("interviewSessions"),
+    reportId: v.optional(v.id("assessmentReports")),
+    role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
+    content: v.string(),
+    createdAt: v.string(),
+  })
+    .index("by_session_and_created_at", ["sessionId", "createdAt"])
+    .index("by_report_and_created_at", ["reportId", "createdAt"]),
 })

@@ -45,7 +45,7 @@ function countWords(text: string) {
 function sortByIsoAsc<T extends { createdAt?: string; startedAt?: string }>(
   items: T[]
 ) {
-  return [...items].sort((left, right) =>
+  return [...items].toSorted((left, right) =>
     (left.createdAt ?? left.startedAt ?? "").localeCompare(
       right.createdAt ?? right.startedAt ?? ""
     )
@@ -58,7 +58,7 @@ async function getLatestReviewDecision(ctx: QueryCtx, sessionId: Id<"interviewSe
     .withIndex("by_session_and_created_at", (q) => q.eq("sessionId", sessionId))
     .collect()
 
-  return decisions.sort((left, right) =>
+  return decisions.toSorted((left, right) =>
     right.createdAt.localeCompare(left.createdAt)
   )[0]
 }
@@ -67,7 +67,7 @@ export const listReviewCandidates = query({
   args: {},
   handler: async (ctx) => {
     const sessions = await ctx.db.query("interviewSessions").collect()
-    const sortedSessions = [...sessions].sort((left, right) =>
+    const sortedSessions = [...sessions].toSorted((left, right) =>
       (right.startedAt ?? "").localeCompare(left.startedAt ?? "")
     )
 
@@ -127,7 +127,8 @@ export const getCandidateReviewDetail = query({
       .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
       .first()
 
-    const [transcript, events, evidence, decisions, recordings] = await Promise.all([
+    const [transcript, events, evidence, decisions, recordings, notes, chatMessages] =
+      await Promise.all([
       ctx.db
         .query("transcriptSegments")
         .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
@@ -149,6 +150,14 @@ export const getCandidateReviewDetail = query({
       ctx.db
         .query("recordingArtifacts")
         .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+        .collect(),
+      ctx.db
+        .query("recruiterNotes")
+        .withIndex("by_session_and_created_at", (q) => q.eq("sessionId", sessionId))
+        .collect(),
+      ctx.db
+        .query("reportChatMessages")
+        .withIndex("by_session_and_created_at", (q) => q.eq("sessionId", sessionId))
         .collect(),
     ])
 
@@ -236,13 +245,27 @@ export const getCandidateReviewDetail = query({
         createdAt: item.createdAt,
       })),
       decisions: [...decisions]
-        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+        .toSorted((left, right) => right.createdAt.localeCompare(left.createdAt))
         .map((decision) => ({
           id: `${decision._id}`,
           decision: decision.decision,
           rationale: decision.rationale,
-        reviewerId: decision.reviewerId,
-        createdAt: decision.createdAt,
+          reviewerId: decision.reviewerId,
+          createdAt: decision.createdAt,
+        })),
+      notes: [...notes]
+        .toSorted((left, right) => right.createdAt.localeCompare(left.createdAt))
+        .map((note) => ({
+          id: `${note._id}`,
+          body: note.body,
+          authorId: note.authorId,
+          createdAt: note.createdAt,
+        })),
+      chatMessages: sortByIsoAsc(chatMessages).map((message) => ({
+        id: `${message._id}`,
+        role: message.role,
+        content: message.content,
+        createdAt: message.createdAt,
       })),
       recordings: sortByIsoAsc(recordings).map((artifact) => ({
         id: `${artifact._id}`,

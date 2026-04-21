@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values"
 
 import type { Doc } from "./_generated/dataModel"
 import { mutation, query, type MutationCtx } from "./_generated/server"
+import { ensureDefaultTemplate } from "./helpers/templates"
 
 const DEVELOPMENT_INVITE_TOKEN = "demo-invite"
 const DEFAULT_INTERVIEW_DURATION_MINUTES = 18
@@ -61,35 +62,6 @@ function deriveAccessState(
     accessState: "available" as const,
     accessMessage: undefined,
   }
-}
-
-async function ensureDefaultTemplate(
-  ctx: MutationCtx
-): Promise<Doc<"assessmentTemplates">> {
-  const existingTemplate = await ctx.db
-    .query("assessmentTemplates")
-    .withIndex("by_status", (q) => q.eq("status", "active"))
-    .first()
-
-  if (existingTemplate) {
-    return existingTemplate
-  }
-
-  const templateId = await ctx.db.insert("assessmentTemplates", {
-    name: "AI Tutor Screener",
-    role: "teacher",
-    status: "active",
-    createdBy: "system",
-    rubricVersion: "v1",
-  })
-
-  const template = await ctx.db.get(templateId)
-
-  if (!template) {
-    throw new ConvexError("Unable to create default template.")
-  }
-
-  return template
 }
 
 async function ensureInvite(
@@ -254,14 +226,14 @@ export const getPublicSessionDetail = query({
       policy: buildInterviewPolicy(invite.expiresAt),
       roomName: session.roomName,
       events: events
-        .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+        .toSorted((left, right) => left.createdAt.localeCompare(right.createdAt))
         .map((event) => ({
           type: event.type,
           detail: event.detail,
           createdAt: event.createdAt,
         })),
       transcript: transcript
-        .sort((left, right) => left.startedAt.localeCompare(right.startedAt))
+        .toSorted((left, right) => left.startedAt.localeCompare(right.startedAt))
         .map((segment) => ({
           id: `${segment._id}`,
           speaker: segment.speaker,
@@ -271,7 +243,7 @@ export const getPublicSessionDetail = query({
           endedAt: segment.endedAt,
         })),
       recordings: recordings
-        .sort((left, right) => left.updatedAt.localeCompare(right.updatedAt))
+        .toSorted((left, right) => left.updatedAt.localeCompare(right.updatedAt))
         .map((artifact) => ({
           id: `${artifact._id}`,
           provider: artifact.provider,
@@ -366,6 +338,17 @@ export const bootstrapPublicSession = mutation({
       status: "in_progress",
     })
 
+    if (invite.eligibilityId) {
+      const eligibility = await ctx.db.get(invite.eligibilityId)
+
+      if (eligibility) {
+        await ctx.db.patch(invite.eligibilityId, {
+          status: "in_progress",
+          attemptCount: eligibility.attemptCount + 1,
+        })
+      }
+    }
+
     await ctx.db.insert("sessionEvents", {
       sessionId,
       type: "room-token-requested",
@@ -416,9 +399,17 @@ export const appendSessionEvent = mutation({
         const session = await ctx.db.get(sessionId)
 
         if (session) {
+          const invite = await ctx.db.get(session.inviteId)
+
           await ctx.db.patch(session.inviteId, {
             status: "completed",
           })
+
+          if (invite?.eligibilityId) {
+            await ctx.db.patch(invite.eligibilityId, {
+              status: "submitted",
+            })
+          }
         }
       }
     }
