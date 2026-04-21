@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation } from "convex/react";
+import { Room, RoomEvent } from "livekit-client";
 
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
   isPreflightComplete,
   markPreflightStep,
 } from "@/lib/interview/preflight";
 import { getSessionStateLabel, transitionSession } from "@/lib/interview/session-machine";
-import { upsertTranscriptSegment } from "@/lib/interview/transcript";
+import { upsertTranscriptSegment as mergeTranscriptSegment } from "@/lib/interview/transcript";
 import { type InterviewSessionSnapshot } from "@/lib/interview/types";
 
 type InterviewWorkspaceProps = {
@@ -17,6 +20,13 @@ type InterviewWorkspaceProps = {
 
 export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps) {
   const [session, setSession] = useState(initialSnapshot);
+  const [participantName, setParticipantName] = useState("Demo Candidate");
+  const [roomName, setRoomName] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const roomRef = useRef<Room | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const appendSessionEvent = useMutation(api.interviews.appendSessionEvent);
+  const persistTranscriptSegment = useMutation(api.interviews.upsertTranscriptSegment);
 
   const allChecksPassed = useMemo(
     () => isPreflightComplete(session.preflight),
@@ -38,7 +48,21 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
     }));
   }
 
-  function startJoin() {
+  async function persistSessionEvent(type: string, detail: string, state?: InterviewSessionSnapshot["state"]) {
+    if (!sessionIdRef.current) {
+      return;
+    }
+
+    await appendSessionEvent({
+      sessionId: sessionIdRef.current as never,
+      type,
+      detail,
+      state,
+    }).catch(() => null);
+  }
+
+  async function startJoin() {
+    setConnectionError(null);
     setSession((current) => ({
       ...current,
       state: transitionSession(current.state, "connecting"),
@@ -51,8 +75,105 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
         },
       ],
     }));
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
 
-    window.setTimeout(() => {
+      const response = await fetch("/api/interviews/bootstrap", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inviteToken: session.inviteId,
+          participantName,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to start the interview.");
+      }
+
+      sessionIdRef.current = payload.sessionId;
+      setRoomName(payload.roomName);
+
+      const room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+      });
+      roomRef.current = room;
+
+      room
+        .on(RoomEvent.Reconnecting, () => {
+          setSession((current) => ({
+            ...current,
+            state: transitionSession(current.state, "reconnecting"),
+            events: [
+              ...current.events,
+              {
+                type: "reconnect-started",
+                detail: "Room reconnect started.",
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          }));
+          void persistSessionEvent("reconnect-started", "Room reconnect started.", "reconnecting");
+        })
+        .on(RoomEvent.Reconnected, () => {
+          setSession((current) => ({
+            ...current,
+            state: transitionSession(current.state, "live"),
+            events: [
+              ...current.events,
+              {
+                type: "reconnect-succeeded",
+                detail: "Room reconnect succeeded.",
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          }));
+          void persistSessionEvent("reconnect-succeeded", "Room reconnect succeeded.", "live");
+        })
+        .on(RoomEvent.Disconnected, () => {
+          setSession((current) => ({
+            ...current,
+            state:
+              current.state === "completed" || current.state === "failed"
+                ? current.state
+                : "interrupted",
+            events: [
+              ...current.events,
+              {
+                type: "participant-left",
+                detail: "Room disconnected.",
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          }));
+          void persistSessionEvent("participant-left", "Room disconnected.", "interrupted");
+        })
+        .on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+          if (track.kind === "audio") {
+            const audioElement = track.attach();
+            audioElement.autoplay = true;
+            document.body.appendChild(audioElement);
+          }
+
+          void persistTranscriptSegment({
+            sessionId: payload.sessionId,
+            segmentId: `${participant.identity}-${publication.trackSid}`,
+            speaker: participant.isAgent ? "agent" : "candidate",
+            text: `Track subscribed: ${publication.source}`,
+            status: "final",
+            startedAt: new Date().toISOString(),
+            endedAt: new Date().toISOString(),
+          }).catch(() => null);
+        });
+
+      await room.connect(payload.wsUrl, payload.token);
+      await room.localParticipant.setMicrophoneEnabled(true);
+
       setSession((current) => ({
         ...current,
         state: transitionSession(current.state, "live"),
@@ -60,21 +181,56 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
           ...current.events,
           {
             type: "participant-joined",
-            detail: "Candidate joined the interview room.",
+            detail: `Connected to room ${payload.roomName}.`,
             createdAt: new Date().toISOString(),
           },
         ],
-        transcript: upsertTranscriptSegment(current.transcript, {
-          id: "agent-greeting",
-          speaker: "agent",
+        transcript: mergeTranscriptSegment(current.transcript, {
+          id: "system-livekit-connected",
+          speaker: "system",
           status: "final",
-          text: "Welcome. We are ready to begin the interview.",
+          text: "LiveKit room connected and microphone enabled.",
           startedAt: new Date().toISOString(),
           endedAt: new Date().toISOString(),
         }),
       }));
-    }, 600);
+
+      await persistSessionEvent("participant-joined", `Connected to room ${payload.roomName}.`, "live");
+      await persistTranscriptSegment({
+        sessionId: payload.sessionId,
+        segmentId: "system-livekit-connected",
+        speaker: "system",
+        text: "LiveKit room connected and microphone enabled.",
+        status: "final",
+        startedAt: new Date().toISOString(),
+        endedAt: new Date().toISOString(),
+      }).catch(() => null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to join interview.";
+      setConnectionError(message);
+      setSession((current) => ({
+        ...current,
+        state: "failed",
+        events: [
+          ...current.events,
+          {
+            type: "session-failed",
+            detail: message,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      }));
+      await persistSessionEvent("session-failed", message, "failed");
+    }
   }
+
+  useEffect(() => {
+    return () => {
+      if (roomRef.current) {
+        void roomRef.current.disconnect();
+      }
+    };
+  }, []);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -92,6 +248,19 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
           <div className="rounded-full border px-3 py-1 text-xs font-medium">
             {getSessionStateLabel(session.state)}
           </div>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          <label className="block text-sm font-semibold" htmlFor="participant-name">
+            Candidate name
+          </label>
+          <input
+            id="participant-name"
+            className="w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none ring-0"
+            value={participantName}
+            onChange={(event) => setParticipantName(event.target.value)}
+            placeholder="Enter the candidate's name"
+          />
         </div>
 
         <div className="mt-6 space-y-3">
@@ -128,11 +297,14 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
           </Button>
           <Button
             variant="outline"
-            disabled={session.state !== "live"}
+            disabled={session.state !== "live" && session.state !== "reconnecting"}
             onClick={() =>
               setSession((current) => ({
                 ...current,
-                state: transitionSession(current.state, "reconnecting"),
+                state:
+                  current.state === "live"
+                    ? transitionSession(current.state, "reconnecting")
+                    : "reconnecting",
                 events: [
                   ...current.events,
                   {
@@ -147,9 +319,27 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
             Simulate Reconnect
           </Button>
         </div>
+
+        {connectionError ? (
+          <p className="mt-4 text-sm text-destructive">{connectionError}</p>
+        ) : null}
       </section>
 
       <section className="space-y-6">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-sm font-semibold">Realtime Status</h2>
+          <div className="mt-4 grid gap-3 text-sm">
+            <div className="flex justify-between gap-4 rounded-lg border px-4 py-3">
+              <span className="text-muted-foreground">Invite</span>
+              <span className="font-medium">{session.inviteId}</span>
+            </div>
+            <div className="flex justify-between gap-4 rounded-lg border px-4 py-3">
+              <span className="text-muted-foreground">Room</span>
+              <span className="font-medium">{roomName ?? "Not connected yet"}</span>
+            </div>
+          </div>
+        </div>
+
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-sm font-semibold">Session Timeline</h2>
           <div className="mt-4 space-y-3">

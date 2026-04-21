@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AccessToken } from "livekit-server-sdk";
 import { z } from "zod";
 
-import { getLivekitEnv } from "@/lib/livekit/config";
+import { createParticipantToken } from "@/lib/livekit/token";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -22,37 +21,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid token request." }, { status: 400 });
   }
 
-  const env = getLivekitEnv();
-
-  if (!env.NEXT_PUBLIC_LIVEKIT_URL || !env.LIVEKIT_API_KEY || !env.LIVEKIT_API_SECRET) {
-    return NextResponse.json({ error: "LiveKit server is not configured." }, { status: 500 });
-  }
-
   const { roomName, participantName, canPublish, canSubscribe } = parsed.data;
 
-  const accessToken = new AccessToken(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, {
-    identity: participantName,
-    ttl: "15m",
-  });
-
-  accessToken.addGrant({
-    room: roomName,
-    roomJoin: true,
-    canPublish,
-    canSubscribe,
-  });
-
-  return NextResponse.json(
-    {
-      token: await accessToken.toJwt(),
+  try {
+    const response = await createParticipantToken({
       roomName,
       participantName,
-      wsUrl: env.NEXT_PUBLIC_LIVEKIT_URL,
-    },
-    {
+      canPublish,
+      canSubscribe,
+    });
+
+    return NextResponse.json(response, {
       headers: {
         "Cache-Control": "no-store",
       },
-    },
-  );
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to create LiveKit token.";
+
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

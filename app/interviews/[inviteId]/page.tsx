@@ -1,3 +1,6 @@
+import { fetchQuery } from "convex/nextjs";
+
+import { api } from "@/convex/_generated/api";
 import { InterviewWorkspace } from "@/components/interview/interview-workspace";
 import { createDefaultPreflightSteps } from "@/lib/interview/preflight";
 import { type InterviewSessionSnapshot } from "@/lib/interview/types";
@@ -10,11 +13,17 @@ type InterviewPageProps = {
 
 export default async function InterviewPage({ params }: InterviewPageProps) {
   const { inviteId } = await params;
+  const publicSnapshot =
+    process.env.NEXT_PUBLIC_CONVEX_URL
+      ? await fetchQuery(api.interviews.getPublicInterviewSnapshot, {
+          inviteToken: inviteId,
+        }).catch(() => null)
+      : null;
 
   const snapshot: InterviewSessionSnapshot = {
     inviteId,
-    templateName: "AI Tutor Screener",
-    state: "ready",
+    templateName: publicSnapshot?.templateName ?? "AI Tutor Screener",
+    state: publicSnapshot?.state ?? "ready",
     events: [
       {
         type: "invite-opened",
