@@ -610,6 +610,27 @@ export function InterviewWorkspace({
         "Interview submitted for post-call processing.",
         "processing"
       )
+      if (sessionIdRef.current) {
+        const response = await fetch("/api/interviews/process", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sessionId: sessionIdRef.current,
+          }),
+        })
+
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as
+            | { error?: string }
+            | null
+          throw new Error(
+            payload?.error ??
+              "Unable to start interview processing for this session."
+          )
+        }
+      }
       await room.disconnect(true)
       setBootstrappedSession(null)
       setView("processing")
