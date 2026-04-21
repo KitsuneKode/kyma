@@ -85,6 +85,24 @@ export type TranscriptSegment = {
   endedAt?: string
 }
 
+export type RecordingArtifact = {
+  id: string
+  provider: "livekit"
+  egressId: string
+  artifactKey: string
+  roomName: string
+  artifactType: "audio" | "video" | "composite" | "segments"
+  status: "starting" | "active" | "complete" | "failed"
+  filename?: string
+  location?: string
+  manifestLocation?: string
+  startedAt?: string
+  endedAt?: string
+  durationMs?: number
+  sizeBytes?: number
+  error?: string
+}
+
 export type InterviewSessionSnapshot = {
   inviteId: string
   sessionId?: string
@@ -98,4 +116,5 @@ export type InterviewSessionSnapshot = {
   events: SessionEvent[]
   preflight: PreflightStep[]
   transcript: TranscriptSegment[]
+  recordings: RecordingArtifact[]
 }
