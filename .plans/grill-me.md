@@ -2,81 +2,103 @@
 
 This is the brutal alignment sheet for the product. Each question includes the recommended answer so we can move quickly without pretending every branch is equally good.
 
-## 1. Are we building a demo or a credible hiring tool?
+## 1. Are we building a fake AI demo, or a working first product?
 
 ### Recommended answer
 
-Build a credible MVP for real screening, but scope it so the core loop is rock solid.
+Build a working first product. It can be narrow, but the core loop must be real.
 
-## 2. Is video required for version one?
-
-### Recommended answer
-
-No. Audio-first wins. Video adds complexity without meaningfully improving the first hiring signal.
-
-## 3. Should browser Web Speech be the main STT approach?
+## 2. Should we build the meeting UI ourselves?
 
 ### Recommended answer
 
-No. Use browser mic capture, but let a realtime voice stack handle the actual interview pipeline.
+No. We should wrap `LiveKit` components instead of replacing them.
 
-## 4. Are we choosing LiveKit or Stream first?
-
-### Recommended answer
-
-LiveKit first. It is the stronger fit for an agent-centric realtime interview product.
-
-## 5. Is AI SDK enough for realtime voice by itself?
+## 3. What should our custom frontend code do, then?
 
 ### Recommended answer
 
-No. AI SDK is excellent for structured generation and agent logic, but it is not the media transport layer.
+Own the product shell around the room:
 
-## 6. Should Convex own the source of truth?
+- invite flow
+- session bootstrap
+- transcript rail
+- assessment rail
+- recruiter review
 
-### Recommended answer
+Do not own the low-level meeting mechanics.
 
-Yes. All sessions, transcripts, reports, templates, and dashboard reads should live there.
-
-## 7. Do candidates need authentication?
-
-### Recommended answer
-
-No for MVP. Use secure invite links. Keep login only for admins and recruiters.
-
-## 8. Is the teaching simulation in MVP or later?
+## 4. Should `demo-invite` stay special-cased?
 
 ### Recommended answer
 
-MVP should include a simplified version where the interviewer shifts into a weak-student persona. A separate student agent can come later.
+Yes, but only as a demo invite token. The meeting path behind it must still be real.
 
-## 9. Will the final result be pass/fail only?
-
-### Recommended answer
-
-Absolutely not. We need scored dimensions, evidence, concerns, and confidence.
-
-## 10. What makes this stand out from a basic AI interviewer?
+## 5. Is the first candidate experience a custom lobby or a LiveKit prejoin?
 
 ### Recommended answer
 
-- realtime, natural-feeling voice flow
-- strong preflight and candidate experience
-- evidence-backed rubric
-- weak-student teaching simulation
-- polished recruiter dashboard
+Use `LiveKit PreJoin` first. It already solves the problem we were custom-building badly.
 
-## 11. What should we refuse to overbuild right now?
+## 6. Is video required for version one?
 
 ### Recommended answer
 
-- custom media infra
-- true multi-agent theatrics in v1
-- elaborate video UX
-- too many template types
-- deep analytics before reports are trustworthy
+No, but video-capable UI should exist because LiveKit already supports it and the prejoin/call surfaces assume it well.
 
-## 12. What are the real risks that could sink the product?
+## 7. Are we choosing LiveKit or Stream first?
+
+### Recommended answer
+
+LiveKit first. The transcript-backed meeting and agent flow fits it better.
+
+## 8. Should browser Web Speech be the main STT approach?
+
+### Recommended answer
+
+No. Browser mic capture is fine, but the realtime voice path should not depend on browser Web Speech.
+
+## 9. Is AI SDK enough for realtime voice by itself?
+
+### Recommended answer
+
+No. `AI SDK` is for structured generation and orchestration, not the room transport layer.
+
+## 10. Should Convex own the source of truth?
+
+### Recommended answer
+
+Yes. Sessions, reports, transcript segments, and review state should live there.
+
+## 11. Do candidates need authentication?
+
+### Recommended answer
+
+No for MVP. Invite links are enough. Admin auth is where Clerk matters.
+
+## 12. What should the first version look like on screen?
+
+### Recommended answer
+
+A very clear product shell:
+
+- left/main: LiveKit prejoin or meeting surface
+- right rail: transcript, session facts, and later evidence
+- top metadata: invite, template, status
+
+No custom meeting chrome unless LiveKit cannot provide it.
+
+## 13. What should we refuse to overbuild right now?
+
+### Recommended answer
+
+- custom meeting controls
+- custom participant grids
+- flashy AI theatrics
+- deep dashboard work before interviews function
+- multi-agent room choreography
+
+## 14. What are the real risks that could sink the product?
 
 ### Recommended answer
 
@@ -86,58 +108,68 @@ Absolutely not. We need scored dimensions, evidence, concerns, and confidence.
 - rubric outputs without trustworthy evidence
 - spending too much time on dashboard chrome before the interview loop works
 
-## 13. What matters more: wow factor or dependable behavior?
+## 15. What matters more: wow factor or dependable behavior?
 
 ### Recommended answer
 
 Dependable behavior. If we have to choose, we should sacrifice novelty before we sacrifice correctness, recovery, and predictability.
 
-## 14. What is our source of truth during failures?
+## 16. What is our source of truth during failures?
 
 ### Recommended answer
 
 Convex. Session lifecycle, transcript chunks, report state, and recovery checkpoints should be persisted so the UI can recover from reconnects and partial failures.
 
-## 15. What happens if the live session drops mid-interview?
+## 17. What happens if the live session drops mid-interview?
 
 ### Recommended answer
 
 The product should not lose the interview record. We need resumable session state, explicit reconnect UI, and a session status model that distinguishes `live`, `reconnecting`, `interrupted`, `completed`, and `failed`.
 
-## 16. Should we optimize for fully realtime scoring during the call?
+## 18. Should we optimize for fully realtime scoring during the call?
 
 ### Recommended answer
 
 No for MVP. Capture strong telemetry and transcript data live, but do the authoritative assessment after the session in a durable background pipeline.
 
-## 17. What is the safer first architecture: realtime speech-to-speech model or explicit STT -> LLM -> TTS?
+## 19. What is the safer first architecture: realtime speech-to-speech model or explicit STT -> LLM -> TTS?
 
 ### Recommended answer
 
 For reliability, start with an explicit `STT -> LLM -> TTS` pipeline unless realtime model quality clearly beats it in testing. The explicit pipeline is easier to observe, debug, retry, and score.
 
-## 18. Should partial transcripts affect final scoring immediately?
+## 20. Should partial transcripts affect final scoring immediately?
 
 ### Recommended answer
 
 No. Partial transcripts are for UX and live feedback only. Final scoring should use stabilized transcripts and post-processed evidence.
 
-## 19. Where should we spend abstraction effort early?
+## 21. Where should we spend abstraction effort early?
 
 ### Recommended answer
 
-On session state, transcript persistence, report contracts, and provider boundaries. Those are the layers most likely to change and most dangerous to duplicate.
+On:
 
-## 20. What should the very first technical milestone prove?
+- session state
+- transcript persistence
+- report contracts
+- provider boundaries
+- shared invite/bootstrap helpers
+
+Those are the layers most likely to change and most dangerous to duplicate.
+
+## 22. What should the very first technical milestone prove?
 
 ### Recommended answer
 
-One candidate can join, speak, be heard, get responses with acceptable latency, reconnect without losing the session, and produce a persisted transcript plus a structured post-call report.
+One candidate can enter a real LiveKit prejoin, join a room, meet the interviewer agent, complete a short session, reconnect without losing the session, and trigger durable post-call processing.
 
 ## Locked Decisions
 
 - product: `AI Tutor Screener`
-- MVP medium: `audio-first`
+- MVP shape: `real meeting flow first`
+- meeting UI: `LiveKit prefabs first`
+- MVP medium: `audio-first with video-capable room UI`
 - realtime stack: `LiveKit`
 - app backend: `Convex`
 - auth: `Clerk`

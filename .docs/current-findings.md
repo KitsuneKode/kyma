@@ -88,6 +88,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - browser Web Speech should not be the primary production STT path
 - LiveKit tokens can include room config with agent dispatch, so the frontend can stay stable while the agent worker arrives later
 - LiveKit Node agents are an official supported path and should be the agent-kit direction for this repo
+- the working v1 product direction is documented in `.docs/v1-product-livekit-plan.md`
 
 ## Next Best Work
 

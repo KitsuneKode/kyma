@@ -11,10 +11,22 @@
 
 1. Open invite link.
 2. Read simple expectations and privacy notice.
-3. Complete preflight.
-4. Start live interview.
+3. Complete a real `LiveKit PreJoin` device and media check.
+4. Enter the live interview room.
 5. Answer warm-up, scenario, and teaching questions.
-6. Finish with clear next-step messaging.
+6. Finish with clear next-step messaging and a visible processing state.
+
+## Working Version One
+
+Version one should feel like a real product already:
+
+- invite page is simple and clear
+- prejoin is a real media setup step
+- live meeting uses a standard meeting surface
+- transcript and session context sit beside the call
+- post-call status is explicit and not hidden
+
+We should not custom-build a fake meeting shell when a stable one already exists in `LiveKit`.
 
 ## Interview Stages
 
@@ -134,3 +146,11 @@ type AssessmentReport = {
 - evidence-per-dimension requirement
 - human review step for low-confidence reports
 - fallback typed rescue for severe audio failure
+
+## Build Principle
+
+For the meeting experience:
+
+- use `LiveKit` UI components and connection primitives first
+- use `shadcn/ui` blocks and components around them
+- use custom UI only where product-specific assessment needs are not covered by existing components
