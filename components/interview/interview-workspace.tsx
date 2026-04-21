@@ -3,7 +3,14 @@
 import { type LocalUserChoices } from "@livekit/components-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useMutation, useQuery } from "convex/react"
-import { type DisconnectReason, Room, RoomEvent } from "livekit-client"
+import {
+  type DisconnectReason,
+  Room,
+  RoomEvent,
+  type Participant,
+  type TrackPublication,
+  type TranscriptionSegment,
+} from "livekit-client"
 
 import { api } from "@/convex/_generated/api"
 import { InviteLobby } from "@/components/interview/invite-lobby"
@@ -38,6 +45,71 @@ function createLocalEvent(
     detail,
     createdAt: new Date().toISOString(),
   }
+}
+
+function toIsoTimestamp(timestamp: number) {
+  return new Date(timestamp).toISOString()
+}
+
+function getTranscriptSpeaker(
+  room: Room,
+  participant?: Participant,
+  publication?: TrackPublication
+) {
+  if (!participant) {
+    return publication ? "agent" : "system"
+  }
+
+  if (
+    participant.isLocal ||
+    participant.identity === room.localParticipant.identity
+  ) {
+    return "candidate"
+  }
+
+  return "agent"
+}
+
+function upsertLocalTranscriptSegment(
+  transcript: InterviewSessionSnapshot["transcript"],
+  segment: {
+    id: string
+    speaker: InterviewSessionSnapshot["transcript"][number]["speaker"]
+    text: string
+    status: InterviewSessionSnapshot["transcript"][number]["status"]
+    startedAt: string
+    endedAt?: string
+  }
+) {
+  const index = transcript.findIndex((item) => item.id === segment.id)
+
+  if (index === -1) {
+    return [...transcript, segment]
+  }
+
+  const next = [...transcript]
+  next[index] = {
+    ...next[index],
+    ...segment,
+  }
+  return next
+}
+
+function summarizeTranscriptEvent(
+  speaker: InterviewSessionSnapshot["transcript"][number]["speaker"],
+  text: string
+) {
+  const speakerLabel =
+    speaker === "candidate"
+      ? "Candidate"
+      : speaker === "agent"
+        ? "Interviewer"
+        : "System"
+  const normalized = text.trim().replace(/\s+/g, " ")
+  const excerpt =
+    normalized.length > 120 ? `${normalized.slice(0, 117).trimEnd()}...` : normalized
+
+  return `${speakerLabel}: ${excerpt}`
 }
 
 export function InterviewWorkspace({
@@ -75,6 +147,9 @@ export function InterviewWorkspace({
   const roomNameRef = useRef<string | null>(initialSnapshot.roomName ?? null)
   const participantNameRef = useRef(participantName)
   const appendSessionEvent = useMutation(api.interviews.appendSessionEvent)
+  const upsertTranscriptSegment = useMutation(
+    api.interviews.upsertTranscriptSegment
+  )
   const persistedSession = useQuery(api.interviews.getPublicSessionDetail, {
     inviteToken: initialSnapshot.inviteId,
   })
@@ -262,11 +337,87 @@ export function InterviewWorkspace({
       )
     }
 
+    function handleTranscriptionReceived(
+      transcription: TranscriptionSegment[],
+      participant?: Participant,
+      publication?: TrackPublication
+    ) {
+      const speaker = getTranscriptSpeaker(room, participant, publication)
+      const participantIdentity = participant?.identity
+
+      logger.debug({
+        event: "transcription.received",
+        detail: `Received ${transcription.length} transcription segment(s).`,
+        sessionId: sessionIdRef.current ?? undefined,
+        roomName: roomNameRef.current ?? undefined,
+        participantIdentity,
+        meta: {
+          speaker,
+          publicationSid: publication?.trackSid,
+        },
+      })
+
+      for (const segment of transcription) {
+        const startedAt = toIsoTimestamp(segment.startTime)
+        const endedAt = segment.endTime
+          ? toIsoTimestamp(segment.endTime)
+          : undefined
+        const status = segment.final ? "final" : "partial"
+
+        setSession((current) => ({
+          ...current,
+          transcript: upsertLocalTranscriptSegment(current.transcript, {
+            id: segment.id,
+            speaker,
+            text: segment.text,
+            status,
+            startedAt,
+            endedAt,
+          }),
+        }))
+
+        void upsertTranscriptSegment({
+          sessionId: sessionIdRef.current as never,
+          segmentId: segment.id,
+          speaker,
+          text: segment.text,
+          status,
+          startedAt,
+          endedAt,
+        }).catch((error) => {
+          logger.error({
+            event: "transcription.persist.failed",
+            detail: "Unable to persist transcription segment.",
+            sessionId: sessionIdRef.current ?? undefined,
+            roomName: roomNameRef.current ?? undefined,
+            participantIdentity,
+            error,
+            meta: {
+              speaker,
+              segmentId: segment.id,
+              status,
+            },
+          })
+        })
+
+        if (status === "final" && segment.text.trim()) {
+          const detail = summarizeTranscriptEvent(speaker, segment.text)
+
+          setSession((current) => ({
+            ...current,
+            events: [...current.events, createLocalEvent("transcript-final", detail)],
+          }))
+          void persistEffectEvent("transcript-final", detail)
+        }
+      }
+    }
+
     room.on(RoomEvent.ParticipantConnected, handleParticipantConnected)
     room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected)
     room.on(RoomEvent.Reconnecting, handleReconnecting)
     room.on(RoomEvent.Reconnected, handleReconnected)
     room.on(RoomEvent.Disconnected, handleDisconnected)
+    room.on(RoomEvent.TranscriptionReceived, handleTranscriptionReceived)
 
     return () => {
       room.off(RoomEvent.ParticipantConnected, handleParticipantConnected)
@@ -274,8 +425,9 @@ export function InterviewWorkspace({
       room.off(RoomEvent.Reconnecting, handleReconnecting)
       room.off(RoomEvent.Reconnected, handleReconnected)
       room.off(RoomEvent.Disconnected, handleDisconnected)
+      room.off(RoomEvent.TranscriptionReceived, handleTranscriptionReceived)
     }
-  }, [appendSessionEvent, logger, room])
+  }, [appendSessionEvent, logger, room, upsertTranscriptSegment])
 
   useEffect(() => {
     return () => {
