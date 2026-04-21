@@ -1,15 +1,19 @@
+import Link from "next/link"
+
+import { Button } from "@/components/ui/button"
+
 const nowTasks = [
-  "Invite generation",
+  "Candidate review queue",
   "Session lifecycle persistence",
-  "Room token flow",
   "Live transcript storage",
+  "Report and evidence schema",
 ]
 
 const futureTasks = [
-  "Weak-student mode",
-  "Separate student agent",
-  "Recruiter observer mode",
-  "Assessment analytics",
+  "Screening creation",
+  "Candidate eligibility gating",
+  "Replay and recording review",
+  "Grounded recruiter AI chat",
 ]
 
 export default function AdminPage() {
@@ -21,9 +25,15 @@ export default function AdminPage() {
         </p>
         <h1 className="mt-1 text-2xl font-semibold">Build Queue</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Minimal working shell for the recruiter side while the realtime
-          interview core is being built first.
+          The recruiter side is now moving from placeholder shell into a real
+          review workflow. This page is the handoff point into the actual admin
+          surfaces we are building next.
         </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Button nativeButton={false} render={<Link href="/admin/candidates" />}>
+            Open Candidate Queue
+          </Button>
+        </div>
       </section>
 
       <section className="grid gap-6 md:grid-cols-2">

@@ -30,6 +30,8 @@ This file is the fast restart point for future agents. Read this before re-resea
 - bootstrap route returns a real LiveKit token
 - candidate page connects to a LiveKit room using the selected prejoin device IDs
 - candidate page now listens to LiveKit transcription events and persists transcript segments into Convex during the live room
+- recruiter-side review surfaces now exist at `/admin/candidates` and `/admin/candidates/[sessionId]`
+- report, dimension-evidence, and review-decision data models now exist in Convex
 - invite links now surface explicit `expired`, `consumed`, and `unavailable` states in the candidate flow
 - submitted interviews now lock the invite so the same screening cannot be started twice
 - interview policy is now visible in the lobby and session rail: target duration, single-use behavior, and link expiry
@@ -40,6 +42,8 @@ This file is the fast restart point for future agents. Read this before re-resea
 
 - `/`
 - `/admin`
+- `/admin/candidates`
+- `/admin/candidates/[sessionId]`
 - `/interviews/[inviteId]`
 - `/api/interviews/bootstrap`
 - `/api/livekit/token`
@@ -51,6 +55,9 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `app/api/interviews/bootstrap/route.ts`: server bootstrap path
 - `app/api/livekit/token/route.ts`: generic token path
 - `components/interview/interview-workspace.tsx`: candidate-side join flow
+- `convex/recruiter.ts`: recruiter-side read models, report persistence, review decisions
+- `app/admin/candidates/page.tsx`: recruiter queue
+- `app/admin/candidates/[sessionId]/page.tsx`: recruiter detail page
 - `lib/livekit/token.ts`: shared LiveKit token creation with optional agent dispatch
 - `agents/interviewer.ts`: first LiveKit interviewer agent
 - `agents/worker.ts`: LiveKit Node worker entrypoint
@@ -65,6 +72,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - duplicate-media-acquisition risk is reduced by passing selected device IDs through join, but the long-term best path is still tighter room lifecycle control
 - current invite/time-limit policy is app-level and defaulted, not yet template-driven
 - transcript persistence now depends on transcription events being emitted by the LiveKit/agent path, so final quality still depends on the chosen STT/runtime provider
+- recruiter report detail exists, but the assessment pipeline still does not automatically generate report/evidence data
 
 ## Environment Variables That Matter Right Now
 
@@ -96,6 +104,8 @@ This file is the fast restart point for future agents. Read this before re-resea
 10. submit the interview, then reload the invite and confirm it no longer allows a second attempt
 11. try an invalid invite id and confirm the unavailable screen renders
 12. confirm the agent greets the candidate warmly and waits for readiness before starting the actual interview
+13. open `/admin/candidates` and confirm sessions show up in the recruiter queue
+14. open `/admin/candidates/[sessionId]` for a real session and confirm transcript/session detail renders even before report generation exists
 
 ## Research Findings Worth Not Repeating
 
@@ -108,9 +118,10 @@ This file is the fast restart point for future agents. Read this before re-resea
 ## Next Best Work
 
 - add Convex queries/mutations for admin invite creation
-- persist more session lifecycle transitions from the client
 - validate the LiveKit Node agent against the chosen STT/LLM/TTS model strings in a live room
 - move transcript and evidence generation from raw room capture into the post-call assessment pipeline
+- persist recruiter decisions and notes from the detail view
+- add screening creation and candidate eligibility management
 - add BYOK planning and env boundaries without coupling them into the first working path
 
 ## Local Developer Experience

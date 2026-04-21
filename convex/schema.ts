@@ -1,6 +1,31 @@
 import { defineSchema, defineTable } from "convex/server"
 import { v } from "convex/values"
 
+const recommendationValidator = v.union(
+  v.literal("strong_yes"),
+  v.literal("yes"),
+  v.literal("mixed"),
+  v.literal("no")
+)
+
+const confidenceValidator = v.union(
+  v.literal("high"),
+  v.literal("medium"),
+  v.literal("low")
+)
+
+const rubricDimensionValidator = v.union(
+  v.literal("clarity"),
+  v.literal("simplification"),
+  v.literal("patience"),
+  v.literal("warmth"),
+  v.literal("listening"),
+  v.literal("fluency"),
+  v.literal("adaptability"),
+  v.literal("engagement"),
+  v.literal("accuracy")
+)
+
 export default defineSchema({
   assessmentTemplates: defineTable({
     name: v.string(),
@@ -80,8 +105,54 @@ export default defineSchema({
       v.literal("failed"),
       v.literal("manual_review")
     ),
-    overallRecommendation: v.optional(v.string()),
-    confidence: v.optional(v.string()),
+    overallRecommendation: v.optional(recommendationValidator),
+    confidence: v.optional(confidenceValidator),
     summary: v.optional(v.string()),
-  }).index("by_session", ["sessionId"]),
+    weightedScore: v.optional(v.number()),
+    hardGateTriggered: v.optional(v.boolean()),
+    topStrengths: v.optional(v.array(v.string())),
+    topConcerns: v.optional(v.array(v.string())),
+    transcriptQualityNote: v.optional(v.string()),
+    dimensionScores: v.optional(
+      v.array(
+        v.object({
+          dimension: rubricDimensionValidator,
+          score: v.number(),
+          rationale: v.string(),
+        })
+      )
+    ),
+    generatedAt: v.optional(v.string()),
+  })
+    .index("by_session", ["sessionId"])
+    .index("by_status", ["status"]),
+
+  dimensionEvidence: defineTable({
+    reportId: v.id("assessmentReports"),
+    sessionId: v.id("interviewSessions"),
+    dimension: rubricDimensionValidator,
+    snippet: v.string(),
+    rationale: v.string(),
+    startedAt: v.optional(v.string()),
+    endedAt: v.optional(v.string()),
+    createdAt: v.string(),
+  })
+    .index("by_report", ["reportId"])
+    .index("by_session", ["sessionId"]),
+
+  reviewDecisions: defineTable({
+    reportId: v.id("assessmentReports"),
+    sessionId: v.id("interviewSessions"),
+    decision: v.union(
+      v.literal("advance"),
+      v.literal("reject"),
+      v.literal("manual_review"),
+      v.literal("hold")
+    ),
+    rationale: v.optional(v.string()),
+    reviewerId: v.optional(v.string()),
+    createdAt: v.string(),
+  })
+    .index("by_report_and_created_at", ["reportId", "createdAt"])
+    .index("by_session_and_created_at", ["sessionId", "createdAt"]),
 })
