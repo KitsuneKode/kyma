@@ -35,6 +35,9 @@ It answers:
 ### Recording
 
 - Egress overview: https://docs.livekit.io/home/egress/overview
+- Composite recording: https://docs.livekit.io/transport/media/ingress-egress/egress/composite-recording/
+- Webhooks and events: https://docs.livekit.io/intro/basics/rooms-participants-tracks/webhooks-events/
+- JS `WebhookReceiver`: https://docs.livekit.io/reference/server-sdk-js/classes/WebhookReceiver.html
 
 ## Convex
 
@@ -81,6 +84,16 @@ The fastest way to create reliability is to keep each system responsible for one
 - evidence extraction
 - report generation
 - indexing transcript and report data for recruiter AI chat
+
+## Inngest
+
+- Serving functions in Next.js: https://www.inngest.com/docs/learn/serving-inngest-functions
+- Next.js quickstart: https://www.inngest.com/docs/getting-started/nextjs-quick-start
+- Sending events: https://www.inngest.com/docs/events
+- `createFunction()` reference: https://www.inngest.com/docs/reference/typescript/functions/create
+- `step.ai.wrap()` and AI orchestration: https://www.inngest.com/docs/features/inngest-functions/steps-workflows/step-ai-orchestration
+- AgentKit overview: https://agentkit.inngest.com/
+- AgentKit agents concepts: https://agentkit.inngest.com/concepts/agents
 
 ## Recommended Routing Pattern
 
