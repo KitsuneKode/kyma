@@ -7,6 +7,7 @@ import { type DisconnectReason, Room, RoomEvent } from "livekit-client";
 
 import { api } from "@/convex/_generated/api";
 import { InviteLobby } from "@/components/interview/invite-lobby";
+import { InviteAccessScreen } from "@/components/interview/invite-access-screen";
 import { MeetingShell } from "@/components/interview/meeting-shell";
 import { SessionOverview } from "@/components/interview/session-overview";
 import { SessionTimeline } from "@/components/interview/session-timeline";
@@ -436,6 +437,7 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
             onDisconnected={handleRoomDisconnected}
             onError={handleRoomError}
             onSubmitInterview={handleSubmitInterview}
+            policy={hydratedSession.policy}
             preJoinChoices={preJoinChoices}
             room={room}
             session={bootstrappedSession}
@@ -453,6 +455,12 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
               artifacts, and report pipeline to generate an evidence-backed assessment next.
             </p>
           </div>
+        ) : hydratedSession.accessState !== "available" ? (
+          <InviteAccessScreen
+            accessMessage={hydratedSession.accessMessage}
+            accessState={hydratedSession.accessState}
+            inviteId={hydratedSession.inviteId}
+          />
         ) : (
           <InviteLobby
             candidateName={participantName}

@@ -1,5 +1,7 @@
 import {
   PRE_FLIGHT_STEPS,
+  type InviteAccessState,
+  type InterviewPolicy,
   type InterviewSessionSnapshot,
   type InterviewSessionState,
   type PreflightStep,
@@ -9,6 +11,7 @@ import {
   type TranscriptSegmentSpeaker,
   type TranscriptSegmentStatus,
 } from "@/lib/interview/types";
+import { DEFAULT_INTERVIEW_POLICY } from "@/lib/interview/policy";
 import { createDefaultPreflightSteps } from "@/lib/interview/preflight";
 
 type RawSessionEvent = Partial<Omit<SessionEvent, "type">> & {
@@ -23,7 +26,14 @@ type RawTranscriptSegment = Partial<Omit<TranscriptSegment, "speaker" | "status"
 type PublicSessionDetail = Partial<
   Pick<
     InterviewSessionSnapshot,
-    "inviteId" | "sessionId" | "candidateName" | "templateName" | "roomName"
+    | "inviteId"
+    | "sessionId"
+    | "candidateName"
+    | "templateName"
+    | "roomName"
+    | "accessState"
+    | "accessMessage"
+    | "policy"
   >
 > & {
   state?: string;
@@ -110,6 +120,11 @@ function normalizeTranscriptSegment(
 export function createInitialInterviewSnapshot(
   inviteId: string,
   publicSession?: PublicSessionDetail | null,
+  fallback?: {
+    accessState?: InviteAccessState;
+    accessMessage?: string;
+    policy?: Partial<InterviewPolicy>;
+  },
 ): InterviewSessionSnapshot {
   const events: SessionEvent[] =
     publicSession?.events?.length
@@ -128,6 +143,13 @@ export function createInitialInterviewSnapshot(
     candidateName: publicSession?.candidateName,
     templateName: publicSession?.templateName ?? "AI Tutor Screener",
     state: normalizeState(publicSession?.state),
+    accessState: publicSession?.accessState ?? fallback?.accessState ?? "available",
+    accessMessage: publicSession?.accessMessage ?? fallback?.accessMessage,
+    policy: {
+      ...DEFAULT_INTERVIEW_POLICY,
+      ...fallback?.policy,
+      ...publicSession?.policy,
+    },
     roomName: publicSession?.roomName,
     events,
     preflight: createDefaultPreflightSteps(),
@@ -149,6 +171,13 @@ export function mergeInterviewSnapshot(
     candidateName: publicSession.candidateName ?? base.candidateName,
     templateName: publicSession.templateName ?? base.templateName,
     state: normalizeState(publicSession.state),
+    accessState: publicSession.accessState ?? base.accessState,
+    accessMessage: publicSession.accessMessage ?? base.accessMessage,
+    policy: {
+      ...DEFAULT_INTERVIEW_POLICY,
+      ...base.policy,
+      ...publicSession.policy,
+    },
     roomName: publicSession.roomName ?? base.roomName,
     events: publicSession.events?.length ? publicSession.events.map(normalizeEvent) : base.events,
     preflight: normalizePreflight(base.preflight),

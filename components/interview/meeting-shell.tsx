@@ -15,7 +15,9 @@ import {
 import { Track, type DisconnectReason, type Room } from "livekit-client";
 
 import { Button } from "@/components/ui/button";
+import { formatDurationPolicy } from "@/lib/interview/policy";
 import { type BootstrappedInterviewSession } from "@/lib/interview/bootstrap";
+import { type InterviewPolicy } from "@/lib/interview/types";
 
 type MeetingShellProps = {
   connectionError: string | null;
@@ -24,6 +26,7 @@ type MeetingShellProps = {
   onDisconnected?: (reason?: DisconnectReason) => void;
   onError: (error: Error) => void;
   onSubmitInterview: () => void | Promise<void>;
+  policy: InterviewPolicy;
   preJoinChoices: LocalUserChoices;
   room: Room;
   session: BootstrappedInterviewSession;
@@ -70,6 +73,7 @@ export function MeetingShell({
   onDisconnected,
   onError,
   onSubmitInterview,
+  policy,
   preJoinChoices,
   room,
   session,
@@ -84,6 +88,10 @@ export function MeetingShell({
           <p className="mt-1 text-sm font-medium">
             Submit the interview when the conversation is complete. If the built-in leave control is
             used first, the session will be marked as interrupted.
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {formatDurationPolicy(policy)}. Single-use invite. Resume is available only until the
+            interview is submitted.
           </p>
         </div>
         <Button onClick={onSubmitInterview} disabled={isSubmittingInterview}>

@@ -29,6 +29,9 @@ This file is the fast restart point for future agents. Read this before re-resea
 - bootstrap route creates or reuses an interview session in Convex
 - bootstrap route returns a real LiveKit token
 - candidate page connects to a LiveKit room using the selected prejoin device IDs
+- invite links now surface explicit `expired`, `consumed`, and `unavailable` states in the candidate flow
+- submitted interviews now lock the invite so the same screening cannot be started twice
+- interview policy is now visible in the lobby and session rail: target duration, single-use behavior, and link expiry
 - `/admin` is Clerk-protected when Clerk env is configured
 
 ## Important Routes
@@ -58,6 +61,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - LiveKit room connection works only when `NEXT_PUBLIC_LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are set
 - actual conversational agent behavior still needs a running LiveKit agent worker and model/provider keys
 - duplicate-media-acquisition risk is reduced by passing selected device IDs through join, but the long-term best path is still tighter room lifecycle control
+- current invite/time-limit policy is app-level and defaulted, not yet template-driven
 
 ## Environment Variables That Matter Right Now
 
@@ -85,6 +89,8 @@ This file is the fast restart point for future agents. Read this before re-resea
 6. click `Join interview`
 7. confirm room connection and selected media publication
 8. if running `bun run agent:dev`, confirm the interviewer agent joins the same room
+9. submit the interview, then reload the invite and confirm it no longer allows a second attempt
+10. try an invalid invite id and confirm the unavailable screen renders
 
 ## Research Findings Worth Not Repeating
 
