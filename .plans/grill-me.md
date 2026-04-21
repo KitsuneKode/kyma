@@ -164,6 +164,124 @@ Those are the layers most likely to change and most dangerous to duplicate.
 
 One candidate can enter a real LiveKit prejoin, join a room, meet the interviewer agent, complete a short session, reconnect without losing the session, and trigger durable post-call processing.
 
+## 23. Should recommendation be a single weighted average?
+
+### Recommended answer
+
+No. Use a two-layer decision model:
+
+- hard gates for disqualifying issues
+- weighted scoring for the rest
+
+This reduces false confidence and matches how real screening decisions work.
+
+## 24. What should count as a hard gate?
+
+### Recommended answer
+
+Only issues that make the candidate unsafe or clearly unsuitable for the next round:
+
+- cannot communicate understandably in English for the role
+- repeatedly gives misleading or incorrect teaching guidance without recovery
+- shows impatience, dismissiveness, or poor student handling
+- cannot simplify at all when explicitly asked
+
+Everything else should affect recommendation strength, not auto-fail.
+
+## 25. What makes a rubric trustworthy instead of AI-flavored guesswork?
+
+### Recommended answer
+
+Every scored dimension should require:
+
+- at least one concrete evidence snippet
+- a short rationale tied to candidate behavior
+- a confidence level
+- transcript quality awareness
+
+No evidence should mean no strong claim.
+
+## 26. What pattern should the evaluation pipeline follow?
+
+### Recommended answer
+
+Keep it explicit:
+
+1. collect session artifacts
+2. stabilize transcript
+3. extract evidence by dimension
+4. score dimensions from evidence
+5. apply gates and recommendation rules
+6. generate recruiter-facing summary
+
+Do not ask one model call to invent everything end-to-end.
+
+## 27. What should version one of the interviewer actually do?
+
+### Recommended answer
+
+Run a fixed stage structure with light adaptation:
+
+- warm-up
+- communication and simplification prompt
+- patience and empathy scenario
+- ambiguity / student-confusion scenario
+- short wrap-up
+
+That gives consistency without feeling robotic.
+
+## 28. Is the weak-student agent required for v1?
+
+### Recommended answer
+
+No. For v1, the interviewer can run a guided teaching simulation itself. A separate weak-student live agent is milestone two.
+
+## 29. How do we reduce decision fatigue for builders and reviewers?
+
+### Recommended answer
+
+Standardize these early:
+
+- one canonical session state machine
+- one rubric schema
+- one report contract
+- one recommendation policy
+- one transcript evidence format
+- one recruiter review layout
+
+When those are stable, new features plug in instead of rewriting policy each time.
+
+## 30. What should the leaderboard optimize for?
+
+### Recommended answer
+
+Triage, not truth.
+
+It should help recruiters prioritize review by showing:
+
+- recommendation
+- confidence
+- evidence availability
+- major strengths
+- major concerns
+- manual-review required flag
+
+It should never imply the model is the final hiring authority.
+
+## 31. What is the right agent architecture for the first live system?
+
+### Recommended answer
+
+One interviewer agent with modular internals:
+
+- live conversation policy
+- session memory
+- transcript stream
+- evidence extractor
+- report generator
+
+Keep multi-agent orchestration for later unless the single-agent path clearly blocks evaluation quality.
+
 ## Locked Decisions
 
 - product: `AI Tutor Screener`
@@ -176,6 +294,9 @@ One candidate can enter a real LiveKit prejoin, join a room, meet the interviewe
 - UI kit: `shadcn/ui`
 - agent logic and structured outputs: `AI SDK`
 - background workflows: `Inngest`
+- recommendation model: `hard gates + weighted rubric`, not pure average
+- evaluator pattern: `evidence first, scoring second, recommendation third`
+- v1 live runtime: `single interviewer agent`
 
 ## Open Questions
 

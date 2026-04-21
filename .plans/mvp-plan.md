@@ -39,14 +39,17 @@ The first version succeeds when:
 - transcript persistence and later search
 - assessment and ranking output
 - recruiter dashboard and review workflow
+- recommendation policy and hard-gate rules
 
 ## Core Entities
 
 - `assessmentTemplates`
 - `candidateInvites`
+- `candidateEligibility`
 - `interviewSessions`
 - `sessionEvents`
 - `transcriptSegments`
+- `dimensionEvidence`
 - `assessmentReports`
 - `reviewNotes`
 
@@ -74,7 +77,9 @@ The first version succeeds when:
 
 - finalize transcript and session artifacts after the call ends
 - run report generation through `Inngest`
+- extract evidence before scoring
 - generate structured rubric output with evidence
+- apply hard-gate recommendation rules
 - add confidence and manual-review flags
 
 ## Phase 3: Recruiter Review
@@ -90,6 +95,7 @@ The first version succeeds when:
 - add weak-student simulation mode
 - score teaching adaptability and simplification separately
 - surface this as a differentiated section in the report
+- consider separate student-agent orchestration only after single-agent reliability is proven
 
 ## Version One Screen Map
 
@@ -133,4 +139,5 @@ This is the work to do before any more ranking or dashboard depth:
 2. keep only thin app-owned wrappers around the LiveKit experience
 3. verify one real meeting path with agent join
 4. ensure reconnect and leave states persist correctly
-5. only after that, move to reports, ranking, and recruiter review
+5. lock the rubric schema, evidence contract, and recommendation policy
+6. only after that, move to reports, ranking, and recruiter review

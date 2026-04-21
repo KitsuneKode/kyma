@@ -33,8 +33,10 @@ export default function Page() {
           durability before design polish or secondary features.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Button render={<Link href="/interviews/demo-invite" />}>Open Candidate Flow</Button>
-          <Button variant="outline" render={<Link href="/admin" />}>
+          <Button nativeButton={false} render={<Link href="/interviews/demo-invite" />}>
+            Open Candidate Flow
+          </Button>
+          <Button nativeButton={false} variant="outline" render={<Link href="/admin" />}>
             Open Admin Shell
           </Button>
         </div>

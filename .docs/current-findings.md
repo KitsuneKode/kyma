@@ -24,10 +24,11 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `bun run lint` passes
 - `bun run build` passes
 - `/interviews/demo-invite` renders a candidate flow
+- candidate flow now uses `LiveKit PreJoin` plus a composed meeting shell built from LiveKit React components
 - candidate join triggers a real backend bootstrap route
 - bootstrap route creates or reuses an interview session in Convex
 - bootstrap route returns a real LiveKit token
-- candidate page connects to a LiveKit room and enables microphone
+- candidate page connects to a LiveKit room using the selected prejoin device IDs
 - `/admin` is Clerk-protected when Clerk env is configured
 
 ## Important Routes
@@ -56,6 +57,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - Clerk env is still required for full admin/auth testing
 - LiveKit room connection works only when `NEXT_PUBLIC_LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are set
 - actual conversational agent behavior still needs a running LiveKit agent worker and model/provider keys
+- duplicate-media-acquisition risk is reduced by passing selected device IDs through join, but the long-term best path is still tighter room lifecycle control
 
 ## Environment Variables That Matter Right Now
 
