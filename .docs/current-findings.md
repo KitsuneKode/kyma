@@ -35,6 +35,8 @@ This file is the fast restart point for future agents. Read this before re-resea
 - interview processing can now be triggered through `/api/interviews/process`
 - Inngest is now wired at `/api/inngest`, with an inline fallback processor when enqueueing is unavailable
 - recruiter-side review surfaces now exist at `/admin/candidates` and `/admin/candidates/[sessionId]`
+- admin screening batch flows now exist at `/admin/screenings`, `/admin/screenings/new`, and `/admin/screenings/[batchId]`
+- recruiter detail now supports human notes and grounded recruiter chat
 - report, dimension-evidence, and review-decision data models now exist in Convex
 - invite links now surface explicit `expired`, `consumed`, and `unavailable` states in the candidate flow
 - submitted interviews now lock the invite so the same screening cannot be started twice
@@ -48,19 +50,25 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `/admin`
 - `/admin/candidates`
 - `/admin/candidates/[sessionId]`
+- `/admin/screenings`
+- `/admin/screenings/new`
+- `/admin/screenings/[batchId]`
 - `/interviews/[inviteId]`
 - `/api/inngest`
 - `/api/interviews/bootstrap`
 - `/api/interviews/process`
 - `/api/livekit/token`
 - `/api/livekit/webhook`
+- `/api/recruiter/report-chat`
 
 ## Important Files
 
 - `convex/schema.ts`: current schema
 - `convex/interviews.ts`: public snapshot, bootstrap, event persistence, transcript persistence
+- `convex/admin.ts`: screening creation, eligibility, recruiter notes, and recruiter chat persistence
 - `app/api/interviews/bootstrap/route.ts`: server bootstrap path
 - `app/api/livekit/token/route.ts`: generic token path
+- `app/api/recruiter/report-chat/route.ts`: grounded recruiter chat endpoint
 - `components/interview/interview-workspace.tsx`: candidate-side join flow
 - `convex/recruiter.ts`: recruiter-side read models, report persistence, review decisions
 - `convex/livekit.ts`: webhook-driven room/event and recording-artifact ingestion
@@ -68,6 +76,12 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `lib/assessment/process-session.ts`: shared report-processing pipeline
 - `app/admin/candidates/page.tsx`: recruiter queue
 - `app/admin/candidates/[sessionId]/page.tsx`: recruiter detail page
+- `app/admin/screenings/page.tsx`: screening batch list
+- `app/admin/screenings/new/page.tsx`: screening creation flow
+- `app/admin/screenings/[batchId]/page.tsx`: invite/eligibility detail
+- `components/recruiter/recruiter-notes.tsx`: recruiter note entry
+- `components/recruiter/recruiter-chat.tsx`: grounded recruiter chat UI
+- `lib/recruiter/report-chat.ts`: recruiter-chat prompt grounding and fallback
 - `lib/livekit/token.ts`: shared LiveKit token creation with optional agent dispatch
 - `lib/livekit/recording.ts`: room-composite recording bootstrap
 - `agents/interviewer.ts`: first LiveKit interviewer agent
@@ -86,6 +100,9 @@ This file is the fast restart point for future agents. Read this before re-resea
 - recording URLs depend on LiveKit egress plus object storage credentials being configured
 - the report pipeline now generates first-pass evidence and scoring automatically, but it is deterministic and intentionally conservative
 - webhook-driven room sync exists, and Inngest is wired, but the model-based/AI reviewer layer still has not been added
+- screening creation currently uses the default template and app-level expiry/attempt policies, not template-driven controls yet
+- recruiter chat is grounded and usable, but it still needs true model-provider configuration or later BYOK to move beyond the fallback path
+- primary repo lint/format is now `oxlint` + `oxfmt`; `eslint` remains available as `bun run lint:eslint` when needed
 
 ## Environment Variables That Matter Right Now
 
@@ -133,6 +150,8 @@ This file is the fast restart point for future agents. Read this before re-resea
 14. open `/admin/candidates/[sessionId]` for a real session and confirm transcript/session detail renders even before report generation exists
 15. if LiveKit webhook delivery is configured, confirm session events and recording artifacts start appearing from webhook traffic
 16. submit the interview and confirm a report plus evidence appear on the recruiter detail page after processing
+17. create a screening batch at `/admin/screenings/new` and confirm invite links are generated for the eligible candidates
+18. on a recruiter detail page, save a note and ask a recruiter-chat question
 
 ## Research Findings Worth Not Repeating
 
@@ -144,6 +163,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - LiveKit egress is the right path for recruiter-facing replay artifacts and downloadable recordings
 - the first reliable report pipeline should be deterministic and evidence-backed before adding model-based grading
 - the working v1 product direction is documented in `.docs/v1-product-livekit-plan.md`
+- `oxlint` and `oxfmt` are now the primary local quality tools for the product code; generated/vendor-like files are intentionally ignored there
 
 ## Source Index
 
@@ -165,12 +185,12 @@ Use these first before re-researching the current implementation choices:
 
 ## Next Best Work
 
-- add Convex queries/mutations for admin invite creation
 - validate the LiveKit Node agent against the chosen STT/LLM/TTS model strings in a live room
-- persist recruiter decisions and notes from the detail view
-- add grounded recruiter AI chat on top of the now-stable report contract
-- add screening creation and candidate eligibility management
+- move screening creation from default-template mode to richer template-controlled policy mode
+- add recruiter note authorship and a richer audit trail
+- add model-backed recruiter chat once provider/BYOK boundaries are decided
 - add BYOK planning and env boundaries without coupling them into the first working path
+- continue extracting shared domain constants and validators as the Convex surface grows
 
 ## Local Developer Experience
 
@@ -179,4 +199,7 @@ Use these first before re-researching the current implementation choices:
 - `bun run convex:dev` starts Convex watch mode
 - `bun run dev:stack` starts Next.js plus Convex together
 - `bun run dev:full` also starts the LiveKit worker
+- `bun run lint` uses `oxlint`
+- `bun run lint:eslint` keeps the old ESLint path available for deeper framework-specific checks
+- `bun run format` uses `oxfmt`
 - public candidate-flow work can proceed without Clerk configured

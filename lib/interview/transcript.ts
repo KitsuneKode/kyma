@@ -34,5 +34,5 @@ export function mergeTranscriptSegments(
 export function getStableTranscript(segments: TranscriptSegment[]) {
   return segments
     .filter((segment) => segment.status === "final")
-    .sort((left, right) => left.startedAt.localeCompare(right.startedAt))
+    .toSorted((left, right) => left.startedAt.localeCompare(right.startedAt))
 }

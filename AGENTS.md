@@ -45,6 +45,11 @@ This repo is building the Cuemath-style `AI Tutor Screener`:
 - predictable behavior under load and during failures, including session restarts, reconnects, and partial streams
 - If a tradeoff is required, choose correctness and robustness over short-term convenience.
 - Long-term maintainability is a core priority.
+- Long-term maintainability is a core priority.
+- Before adding new functionality, check whether shared logic should be extracted.
+- Duplicate logic across files is a design smell and should usually be refactored.
+- Do not solve problems with isolated local patches when the cleaner fix is a shared abstraction.
+- Do not be afraid to reshape existing code when it improves the long-term design.
 - When session continuity is required, store compressed progress in `.context/session.md`.
 - Keep `.context/session.md` short and action-oriented, similar to a session handoff note:
 - include what was done, what is in progress, decisions made, blockers, and next steps
@@ -66,6 +71,7 @@ This repo is building the Cuemath-style `AI Tutor Screener`:
 - redesign surface, current routes, and UI handoff: `.docs/redesign-handoff.md`
 - recruiter review and evaluation product requirements: `.docs/recruiter-review-prd.md`
 - LiveKit, Convex, schema, and backend boundaries: `.docs/livekit-convex-implementation-guide.md`
+- security, maintainability, and BYOK guardrails: `.docs/security-and-maintainability.md`
 - vendor and stack comparison: `.docs/stack-research.md`
 - interview and rubric design: `.docs/interview-system.md`
 - phased delivery plan: `.plans/mvp-plan.md`
