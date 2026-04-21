@@ -71,8 +71,11 @@ export type TranscriptSegment = {
 
 export type InterviewSessionSnapshot = {
   inviteId: string;
+  sessionId?: string;
+  candidateName?: string;
   templateName: string;
   state: InterviewSessionState;
+  roomName?: string;
   events: SessionEvent[];
   preflight: PreflightStep[];
   transcript: TranscriptSegment[];
