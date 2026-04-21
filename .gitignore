@@ -11,10 +11,11 @@
 # testing
 /coverage
 
+.codex
 # next.js
 /.next/
 /out/
-
+skills-lock.json
 # production
 /build
 

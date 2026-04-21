@@ -34,14 +34,18 @@ bun install
 
 2. Copy environment values into `.env.local`.
 
-Required keys:
+Required for the public interview flow:
 
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
-- `CLERK_FRONTEND_API_URL`
+- `NEXT_PUBLIC_CONVEX_URL` after Convex bootstrap
 - `NEXT_PUBLIC_LIVEKIT_URL`
 - `LIVEKIT_API_KEY`
 - `LIVEKIT_API_SECRET`
+
+Required for admin/auth-enabled local dev:
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+- `CLERK_FRONTEND_API_URL` or `CLERK_JWT_ISSUER_DOMAIN`
 
 Optional right now:
 
@@ -53,19 +57,39 @@ Optional right now:
 3. Bootstrap Convex locally:
 
 ```bash
-CONVEX_AGENT_MODE=anonymous npx convex dev --once
+bun run convex:once
 ```
 
-4. Start the app:
+4. Start the local app stack:
 
 ```bash
 bun run dev
 ```
 
-5. Start the interviewer worker in a second terminal:
+This starts Next.js only.
+
+5. Start Convex in a second terminal:
+
+```bash
+bun run convex:dev
+```
+
+6. Start the interviewer worker in a third terminal when you need realtime voice behavior:
 
 ```bash
 bun run agent:dev
+```
+
+Or start web + Convex together:
+
+```bash
+bun run dev:stack
+```
+
+Or start everything together:
+
+```bash
+bun run dev:full
 ```
 
 ## How To Test The Current Flow
@@ -78,6 +102,26 @@ bun run agent:dev
 6. If the LiveKit worker is running and `LIVEKIT_AGENT_NAME` matches, confirm the interviewer agent joins the room
 
 If `LIVEKIT_AGENT_NAME` is configured and an agent worker is running, the token path is already set up to dispatch that agent into the room.
+
+## Local Setup Modes
+
+### Public flow mode
+
+Use this when you are building the candidate experience or Convex session model without admin auth work.
+
+- Clerk env vars are optional
+- Convex starts without configured auth providers
+- `/admin` renders as an unprotected shell in local dev
+
+### Full admin mode
+
+Use this when you are working on authenticated admin features.
+
+- set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- set `CLERK_SECRET_KEY`
+- set `CLERK_FRONTEND_API_URL` or `CLERK_JWT_ISSUER_DOMAIN`
+- keep `NEXT_PUBLIC_CONVEX_URL` from your Convex bootstrap
+- rerun `bun run convex:once` after auth config changes
 
 ## What We Are Building Right Now
 

@@ -5,11 +5,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:web": "next dev --turbopack",
+    "dev:stack": "bun run scripts/dev.mjs",
+    "dev:full": "KYMA_DEV_WITH_AGENT=1 bun run scripts/dev.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
+    "convex:dev": "CONVEX_AGENT_MODE=anonymous npx convex dev",
+    "convex:once": "CONVEX_AGENT_MODE=anonymous npx convex dev --once",
     "agent:dev": "bun run agents/worker.ts dev",
     "agent:start": "bun run agents/worker.ts start"
   },

@@ -5,10 +5,7 @@ import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ReactNode, useMemo } from "react";
 
-import { hasClerkCredentials } from "@/lib/clerk/config";
-
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-const clerkEnabled = hasClerkCredentials();
 
 let convexClient: ConvexReactClient | null = null;
 
@@ -21,7 +18,13 @@ function getConvexClient() {
   return convexClient;
 }
 
-export function ConvexClientProvider({ children }: { children: ReactNode }) {
+export function ConvexClientProvider({
+  children,
+  clerkEnabled,
+}: {
+  children: ReactNode;
+  clerkEnabled: boolean;
+}) {
   const client = useMemo(() => getConvexClient(), []);
 
   if (!client) {
