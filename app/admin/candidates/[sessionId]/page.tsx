@@ -5,6 +5,7 @@ import type { ReactNode } from "react"
 import type { Id } from "@/convex/_generated/dataModel"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
+import { ReviewActions } from "@/components/recruiter/review-actions"
 import {
   formatConfidenceLabel,
   formatDateTime,
@@ -243,6 +244,16 @@ export default async function CandidateReviewPage({
         </div>
 
         <aside className="flex flex-col gap-6">
+          <InfoCard
+            title="Review action"
+            description="Record the recruiter decision without leaving this page."
+          >
+            <ReviewActions
+              reportId={detail.report?.id}
+              sessionId={detail.session.id}
+            />
+          </InfoCard>
+
           <InfoCard
             title="Review timeline"
             description="Session lifecycle and recruiter decisions."
