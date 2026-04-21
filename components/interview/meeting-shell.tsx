@@ -1,11 +1,18 @@
 "use client";
 
 import {
+  ConnectionStateToast,
+  ControlBar,
+  GridLayout,
+  LayoutContextProvider,
   LiveKitRoom,
-  VideoConference,
+  ParticipantTile,
+  RoomAudioRenderer,
   type LocalUserChoices,
+  useCreateLayoutContext,
+  useTracks,
 } from "@livekit/components-react";
-import { type DisconnectReason, type Room } from "livekit-client";
+import { Track, type DisconnectReason, type Room } from "livekit-client";
 
 import { Button } from "@/components/ui/button";
 import { type BootstrappedInterviewSession } from "@/lib/interview/bootstrap";
@@ -21,6 +28,40 @@ type MeetingShellProps = {
   room: Room;
   session: BootstrappedInterviewSession;
 };
+
+function InterviewConference() {
+  const layoutContext = useCreateLayoutContext();
+  const tracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], {
+    onlySubscribed: false,
+  });
+
+  return (
+    <div className="lk-video-conference h-full">
+      <LayoutContextProvider value={layoutContext}>
+        <div className="lk-video-conference-inner">
+          <div className="lk-grid-layout-wrapper">
+            <GridLayout tracks={tracks} className="h-full">
+              <ParticipantTile />
+            </GridLayout>
+          </div>
+          <ControlBar
+            controls={{
+              microphone: true,
+              camera: true,
+              screenShare: false,
+              chat: false,
+              settings: false,
+              leave: false,
+            }}
+            saveUserChoices={false}
+          />
+        </div>
+      </LayoutContextProvider>
+      <RoomAudioRenderer />
+      <ConnectionStateToast />
+    </div>
+  );
+}
 
 export function MeetingShell({
   connectionError,
@@ -59,14 +100,26 @@ export function MeetingShell({
           token={session.token}
           serverUrl={session.wsUrl}
           connect
-          audio={preJoinChoices.audioEnabled}
-          video={preJoinChoices.videoEnabled}
+          audio={
+            preJoinChoices.audioEnabled
+              ? {
+                  deviceId: preJoinChoices.audioDeviceId || "default",
+                }
+              : false
+          }
+          video={
+            preJoinChoices.videoEnabled
+              ? {
+                  deviceId: preJoinChoices.videoDeviceId || "default",
+                }
+              : false
+          }
           onConnected={onConnected}
           onDisconnected={onDisconnected}
           onError={onError}
           className="h-[720px]"
         >
-          <VideoConference className="h-full" />
+          <InterviewConference />
         </LiveKitRoom>
       </div>
 

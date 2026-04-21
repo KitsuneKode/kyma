@@ -80,7 +80,7 @@ export function InviteLobby({
             }}
             joinLabel={isBootstrapping ? "Preparing interview..." : "Join interview"}
             userLabel="Candidate name"
-            persistUserChoices
+            persistUserChoices={false}
             onSubmit={onSubmit}
             onError={(error) => {
               console.error("[kyma:prejoin] prejoin.error", error);
