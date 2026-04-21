@@ -22,17 +22,23 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
 
   const snapshot: InterviewSessionSnapshot = {
     inviteId,
+    sessionId: publicSnapshot?.sessionId,
+    candidateName: publicSnapshot?.candidateName,
     templateName: publicSnapshot?.templateName ?? "AI Tutor Screener",
     state: publicSnapshot?.state ?? "ready",
-    events: [
-      {
-        type: "invite-opened",
-        detail: "Candidate opened the interview invite.",
-        createdAt: new Date().toISOString(),
-      },
-    ],
+    roomName: publicSnapshot?.roomName,
+    events:
+      publicSnapshot?.events.length
+        ? publicSnapshot.events
+        : [
+            {
+              type: "invite-opened",
+              detail: "Candidate opened the interview invite.",
+              createdAt: new Date().toISOString(),
+            },
+          ],
     preflight: createDefaultPreflightSteps(),
-    transcript: [],
+    transcript: publicSnapshot?.transcript ?? [],
   };
 
   return (

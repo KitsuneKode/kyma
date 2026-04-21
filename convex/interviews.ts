@@ -102,6 +102,91 @@ export const getPublicInterviewSnapshot = query({
   },
 });
 
+export const getPublicSessionDetail = query({
+  args: {
+    inviteToken: v.string(),
+  },
+  handler: async (ctx, { inviteToken }) => {
+    const invite = await ctx.db
+      .query("candidateInvites")
+      .withIndex("by_invite_token", (q) => q.eq("inviteToken", inviteToken))
+      .first();
+
+    if (!invite && inviteToken !== DEVELOPMENT_INVITE_TOKEN) {
+      return null;
+    }
+
+    if (!invite) {
+      return {
+        inviteId: inviteToken,
+        sessionId: undefined,
+        candidateName: "Demo Candidate",
+        templateName: "AI Tutor Screener",
+        state: "ready" as const,
+        roomName: undefined,
+        events: [],
+        transcript: [],
+      };
+    }
+
+    const template = await ctx.db.get(invite.templateId);
+    const session = await ctx.db
+      .query("interviewSessions")
+      .withIndex("by_invite", (q) => q.eq("inviteId", invite._id))
+      .first();
+
+    if (!session) {
+      return {
+        inviteId: invite._id,
+        sessionId: undefined,
+        candidateName: invite.candidateName ?? "Candidate",
+        templateName: template?.name ?? "AI Tutor Screener",
+        state: "ready" as const,
+        roomName: undefined,
+        events: [],
+        transcript: [],
+      };
+    }
+
+    const [events, transcript] = await Promise.all([
+      ctx.db
+        .query("sessionEvents")
+        .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+        .collect(),
+      ctx.db
+        .query("transcriptSegments")
+        .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+        .collect(),
+    ]);
+
+    return {
+      inviteId: invite._id,
+      sessionId: session._id,
+      candidateName: invite.candidateName ?? "Candidate",
+      templateName: template?.name ?? "AI Tutor Screener",
+      state: session.state,
+      roomName: session.roomName,
+      events: events
+        .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+        .map((event) => ({
+          type: event.type,
+          detail: event.detail,
+          createdAt: event.createdAt,
+        })),
+      transcript: transcript
+        .sort((left, right) => left.startedAt.localeCompare(right.startedAt))
+        .map((segment) => ({
+          id: `${segment._id}`,
+          speaker: segment.speaker,
+          text: segment.text,
+          status: segment.status,
+          startedAt: segment.startedAt,
+          endedAt: segment.endedAt,
+        })),
+    };
+  },
+});
+
 export const bootstrapPublicSession = mutation({
   args: {
     inviteToken: v.string(),

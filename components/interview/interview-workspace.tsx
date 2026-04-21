@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Room, RoomEvent } from "livekit-client";
 
 import { api } from "@/convex/_generated/api";
@@ -20,18 +20,51 @@ type InterviewWorkspaceProps = {
 
 export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps) {
   const [session, setSession] = useState(initialSnapshot);
-  const [participantName, setParticipantName] = useState("Demo Candidate");
-  const [roomName, setRoomName] = useState<string | null>(null);
+  const [participantName, setParticipantName] = useState(
+    initialSnapshot.candidateName ?? "Demo Candidate",
+  );
+  const [roomName, setRoomName] = useState<string | null>(initialSnapshot.roomName ?? null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
-  const sessionIdRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string | null>(initialSnapshot.sessionId ?? null);
   const appendSessionEvent = useMutation(api.interviews.appendSessionEvent);
   const persistTranscriptSegment = useMutation(api.interviews.upsertTranscriptSegment);
+  const persistedSession = useQuery(api.interviews.getPublicSessionDetail, {
+    inviteToken: initialSnapshot.inviteId,
+  });
+  const hydratedSession: InterviewSessionSnapshot = useMemo(
+    () =>
+      persistedSession
+        ? {
+            ...session,
+            sessionId: persistedSession.sessionId ?? session.sessionId,
+            candidateName: persistedSession.candidateName ?? session.candidateName,
+            templateName: persistedSession.templateName ?? session.templateName,
+            state: persistedSession.state ?? session.state,
+            roomName: persistedSession.roomName ?? session.roomName,
+            events: persistedSession.events.length ? persistedSession.events : session.events,
+            transcript: persistedSession.transcript.length
+              ? persistedSession.transcript
+              : session.transcript,
+          }
+        : session,
+    [persistedSession, session],
+  );
 
   const allChecksPassed = useMemo(
-    () => isPreflightComplete(session.preflight),
-    [session.preflight],
+    () => isPreflightComplete(hydratedSession.preflight),
+    [hydratedSession.preflight],
   );
+  const displayRoomName =
+    roomName ?? hydratedSession.roomName ?? persistedSession?.roomName ?? null;
+
+  useEffect(() => {
+    if (!persistedSession) {
+      return;
+    }
+
+    sessionIdRef.current = persistedSession.sessionId ?? null;
+  }, [persistedSession]);
 
   function passStep(stepKey: (typeof session.preflight)[number]["key"]) {
     setSession((current) => ({
@@ -105,6 +138,23 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
       roomRef.current = room;
 
       room
+        .on(RoomEvent.ParticipantConnected, (participant) => {
+          const detail = `${participant.identity} joined the room.`;
+
+          setSession((current) => ({
+            ...current,
+            events: [
+              ...current.events,
+              {
+                type: "participant-joined",
+                detail,
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          }));
+
+          void persistSessionEvent("participant-joined", detail, "live");
+        })
         .on(RoomEvent.Reconnecting, () => {
           setSession((current) => ({
             ...current,
@@ -164,7 +214,7 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
             sessionId: payload.sessionId,
             segmentId: `${participant.identity}-${publication.trackSid}`,
             speaker: participant.isAgent ? "agent" : "candidate",
-            text: `Track subscribed: ${publication.source}`,
+            text: `${participant.identity} audio track subscribed (${publication.source}).`,
             status: "final",
             startedAt: new Date().toISOString(),
             endedAt: new Date().toISOString(),
@@ -240,13 +290,13 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Candidate Workspace
             </p>
-            <h1 className="text-2xl font-semibold">{initialSnapshot.templateName}</h1>
+            <h1 className="text-2xl font-semibold">{hydratedSession.templateName}</h1>
             <p className="max-w-xl text-sm text-muted-foreground">
               Minimal functional shell for the first reliable voice interview flow.
             </p>
           </div>
           <div className="rounded-full border px-3 py-1 text-xs font-medium">
-            {getSessionStateLabel(session.state)}
+            {getSessionStateLabel(hydratedSession.state)}
           </div>
         </div>
 
@@ -266,7 +316,7 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
         <div className="mt-6 space-y-3">
           <h2 className="text-sm font-semibold">Preflight</h2>
           <div className="space-y-2">
-            {session.preflight.map((step) => (
+            {hydratedSession.preflight.map((step) => (
               <div
                 key={step.key}
                 className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3"
@@ -292,12 +342,17 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <Button disabled={!allChecksPassed || session.state !== "ready"} onClick={startJoin}>
+          <Button
+            disabled={!allChecksPassed || hydratedSession.state !== "ready"}
+            onClick={startJoin}
+          >
             Join Interview
           </Button>
           <Button
             variant="outline"
-            disabled={session.state !== "live" && session.state !== "reconnecting"}
+            disabled={
+              hydratedSession.state !== "live" && hydratedSession.state !== "reconnecting"
+            }
             onClick={() =>
               setSession((current) => ({
                 ...current,
@@ -331,11 +386,15 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
           <div className="mt-4 grid gap-3 text-sm">
             <div className="flex justify-between gap-4 rounded-lg border px-4 py-3">
               <span className="text-muted-foreground">Invite</span>
-              <span className="font-medium">{session.inviteId}</span>
+              <span className="font-medium">{hydratedSession.inviteId}</span>
             </div>
             <div className="flex justify-between gap-4 rounded-lg border px-4 py-3">
               <span className="text-muted-foreground">Room</span>
-              <span className="font-medium">{roomName ?? "Not connected yet"}</span>
+              <span className="font-medium">{displayRoomName ?? "Not connected yet"}</span>
+            </div>
+            <div className="flex justify-between gap-4 rounded-lg border px-4 py-3">
+              <span className="text-muted-foreground">Session</span>
+              <span className="font-medium">{hydratedSession.sessionId ?? "Not created yet"}</span>
             </div>
           </div>
         </div>
@@ -343,7 +402,7 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-sm font-semibold">Session Timeline</h2>
           <div className="mt-4 space-y-3">
-            {session.events.map((event) => (
+            {hydratedSession.events.map((event: InterviewSessionSnapshot["events"][number]) => (
               <div key={`${event.type}-${event.createdAt}`} className="rounded-lg border px-4 py-3">
                 <p className="text-sm font-medium">{event.type}</p>
                 <p className="text-xs text-muted-foreground">{event.detail}</p>
@@ -355,19 +414,21 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-sm font-semibold">Transcript</h2>
           <div className="mt-4 space-y-3">
-            {session.transcript.length === 0 ? (
+            {hydratedSession.transcript.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Transcript segments will appear here once the live room is wired.
               </p>
             ) : (
-              session.transcript.map((segment) => (
+              hydratedSession.transcript.map(
+                (segment: InterviewSessionSnapshot["transcript"][number]) => (
                 <div key={segment.id} className="rounded-lg border px-4 py-3">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {segment.speaker}
                   </p>
                   <p className="mt-1 text-sm">{segment.text}</p>
                 </div>
-              ))
+                ),
+              )
             )}
           </div>
         </div>
