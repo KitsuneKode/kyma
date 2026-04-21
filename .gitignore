@@ -8,6 +8,11 @@
 !.yarn/releases
 !.yarn/versions
 
+Problems.md
+/.claude/
+transcript.txt
+document.pdf
+
 # testing
 /coverage
 

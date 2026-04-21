@@ -3,6 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Outfit, Merriweather, JetBrains_Mono } from "next/font/google";
 import { hasClerkServerCredentials } from "@/lib/clerk/config";
 import { Providers } from "./providers";
+import "@livekit/components-styles";
 import "./globals.css";
 
 const fontSans = Outfit({
