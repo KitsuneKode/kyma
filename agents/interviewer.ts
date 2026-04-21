@@ -7,6 +7,8 @@ import {
 
 import { createDiagnosticLogger } from "@/lib/interview/diagnostics"
 
+const DEFAULT_TARGET_DURATION_MINUTES = 18
+
 const DEFAULT_INSTRUCTIONS = `
 You are the first-pass interviewer for a tutor screening system.
 
@@ -17,12 +19,19 @@ Your goals are:
 - keep the candidate comfortable while still probing for substance
 
 Conversation rules:
+- begin with a warm welcome, not the interview itself
 - introduce yourself briefly
+- explain that the session is a tutor screening conversation, not an exam
+- tell the candidate they can take a breath and let you know when they are ready
+- do not start formal screening questions until the candidate clearly says they are ready to begin
+- if they are not ready yet, stay supportive, answer briefly, and wait
 - ask one question at a time
 - follow up when an answer is vague, overly short, or too generic
 - avoid sounding robotic or overly formal
 - do not reveal internal scoring or pass/fail outcomes
 - keep the interview focused on soft skills and teaching ability
+- once the candidate is ready, begin with a low-pressure warm-up before moving into the core screening
+- keep answers concise and spoken-friendly
 
 For this first version, prioritize reliable, natural conversation over fancy behavior.
 `.trim()
@@ -58,10 +67,12 @@ async function startSession(ctx: JobContext) {
     event: "agent.room.connected",
     detail: "Agent connected to LiveKit room.",
   })
-  await ctx.waitForParticipant()
+  const participant = await ctx.waitForParticipant()
+  const candidateName = participant.name || participant.identity || "there"
   logger.info({
     event: "agent.participant.detected",
     detail: "Candidate participant detected in room.",
+    participantIdentity: participant.identity,
   })
 
   const session = new voice.AgentSession({
@@ -97,15 +108,16 @@ async function startSession(ctx: JobContext) {
   })
 
   await session.say(
-    "Hello, welcome to the tutor screening interview. We will begin with a few short questions about how you teach and communicate.",
+    `Hi ${candidateName}, welcome. I am your interviewer for this tutor screening conversation. This should take about ${DEFAULT_TARGET_DURATION_MINUTES} minutes, and it will focus on how you teach, explain, and communicate. Please take a moment to settle in, and whenever you are ready, just tell me you are ready to begin.`,
     {
       addToChatCtx: true,
       allowInterruptions: true,
     }
   )
   logger.info({
-    event: "agent.first-utterance.sent",
-    detail: "Initial interviewer greeting was sent.",
+    event: "agent.ready-check.sent",
+    detail: "Initial welcome and readiness prompt was sent.",
+    participantIdentity: participant.identity,
   })
 }
 

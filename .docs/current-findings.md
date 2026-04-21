@@ -29,9 +29,11 @@ This file is the fast restart point for future agents. Read this before re-resea
 - bootstrap route creates or reuses an interview session in Convex
 - bootstrap route returns a real LiveKit token
 - candidate page connects to a LiveKit room using the selected prejoin device IDs
+- candidate page now listens to LiveKit transcription events and persists transcript segments into Convex during the live room
 - invite links now surface explicit `expired`, `consumed`, and `unavailable` states in the candidate flow
 - submitted interviews now lock the invite so the same screening cannot be started twice
 - interview policy is now visible in the lobby and session rail: target duration, single-use behavior, and link expiry
+- interviewer runtime now opens with a welcome + readiness prompt before formal screening begins
 - `/admin` is Clerk-protected when Clerk env is configured
 
 ## Important Routes
@@ -62,6 +64,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - actual conversational agent behavior still needs a running LiveKit agent worker and model/provider keys
 - duplicate-media-acquisition risk is reduced by passing selected device IDs through join, but the long-term best path is still tighter room lifecycle control
 - current invite/time-limit policy is app-level and defaulted, not yet template-driven
+- transcript persistence now depends on transcription events being emitted by the LiveKit/agent path, so final quality still depends on the chosen STT/runtime provider
 
 ## Environment Variables That Matter Right Now
 
@@ -89,8 +92,10 @@ This file is the fast restart point for future agents. Read this before re-resea
 6. click `Join interview`
 7. confirm room connection and selected media publication
 8. if running `bun run agent:dev`, confirm the interviewer agent joins the same room
-9. submit the interview, then reload the invite and confirm it no longer allows a second attempt
-10. try an invalid invite id and confirm the unavailable screen renders
+9. speak in the room and confirm transcript segments start appearing in the transcript rail
+10. submit the interview, then reload the invite and confirm it no longer allows a second attempt
+11. try an invalid invite id and confirm the unavailable screen renders
+12. confirm the agent greets the candidate warmly and waits for readiness before starting the actual interview
 
 ## Research Findings Worth Not Repeating
 
@@ -104,8 +109,8 @@ This file is the fast restart point for future agents. Read this before re-resea
 
 - add Convex queries/mutations for admin invite creation
 - persist more session lifecycle transitions from the client
-- add transcript rendering from persisted Convex data rather than local placeholder state
 - validate the LiveKit Node agent against the chosen STT/LLM/TTS model strings in a live room
+- move transcript and evidence generation from raw room capture into the post-call assessment pipeline
 - add BYOK planning and env boundaries without coupling them into the first working path
 
 ## Local Developer Experience
