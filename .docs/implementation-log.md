@@ -19,6 +19,7 @@
 - added `ConvexProviderWithClerk` wiring and moved `ClerkProvider` to the root layout
 - added `convex/auth.config.ts` and a server-side `LiveKit` token route
 - bootstrapped a local Convex deployment, which wrote `NEXT_PUBLIC_CONVEX_URL` and deployment info to `.env.local`
+- added a first `LiveKit Agents` Node worker scaffold under `agents/`
 
 ### Current State
 
@@ -26,9 +27,10 @@
 - realtime room token creation route exists at `app/api/livekit/token/route.ts`
 - Convex schema exists, but backend generation is blocked until `CLERK_FRONTEND_API_URL` is set
 - candidate flow is a functional shell for session-state-first development
+- LiveKit agent dispatch is wired through token room config when `LIVEKIT_AGENT_NAME` is set
 
 ### Next Recommended Step
 
 - set `CLERK_FRONTEND_API_URL` and rerun `npx convex dev --once`
 - add Convex queries and mutations for invites and sessions
-- persist lifecycle transitions instead of local-only state
+- validate the first LiveKit interviewer worker in a live room
