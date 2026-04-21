@@ -9,6 +9,7 @@
  */
 
 import type * as interviews from "../interviews.js";
+import type * as livekit from "../livekit.js";
 import type * as recruiter from "../recruiter.js";
 
 import type {
@@ -19,6 +20,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   interviews: typeof interviews;
+  livekit: typeof livekit;
   recruiter: typeof recruiter;
 }>;
 

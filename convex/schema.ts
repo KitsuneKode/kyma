@@ -74,7 +74,9 @@ export default defineSchema({
     startedAt: v.optional(v.string()),
     endedAt: v.optional(v.string()),
     failureReason: v.optional(v.string()),
-  }).index("by_invite", ["inviteId"]),
+  })
+    .index("by_invite", ["inviteId"])
+    .index("by_room_name", ["roomName"]),
 
   sessionEvents: defineTable({
     sessionId: v.id("interviewSessions"),
@@ -95,6 +97,39 @@ export default defineSchema({
     startedAt: v.string(),
     endedAt: v.optional(v.string()),
   }).index("by_session", ["sessionId"]),
+
+  recordingArtifacts: defineTable({
+    sessionId: v.id("interviewSessions"),
+    provider: v.literal("livekit"),
+    egressId: v.string(),
+    artifactKey: v.string(),
+    roomName: v.string(),
+    artifactType: v.union(
+      v.literal("audio"),
+      v.literal("video"),
+      v.literal("composite"),
+      v.literal("segments")
+    ),
+    status: v.union(
+      v.literal("starting"),
+      v.literal("active"),
+      v.literal("complete"),
+      v.literal("failed")
+    ),
+    filename: v.optional(v.string()),
+    location: v.optional(v.string()),
+    manifestLocation: v.optional(v.string()),
+    startedAt: v.optional(v.string()),
+    endedAt: v.optional(v.string()),
+    durationMs: v.optional(v.number()),
+    sizeBytes: v.optional(v.number()),
+    error: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_session", ["sessionId"])
+    .index("by_egress_id", ["egressId"])
+    .index("by_artifact_key", ["artifactKey"]),
 
   assessmentReports: defineTable({
     sessionId: v.id("interviewSessions"),

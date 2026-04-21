@@ -10,6 +10,7 @@ import {
   type TranscriptSegment,
   type TranscriptSegmentSpeaker,
   type TranscriptSegmentStatus,
+  type RecordingArtifact,
 } from "@/lib/interview/types"
 import { DEFAULT_INTERVIEW_POLICY } from "@/lib/interview/policy"
 import { createDefaultPreflightSteps } from "@/lib/interview/preflight"
@@ -25,6 +26,11 @@ type RawTranscriptSegment = Partial<
   status?: string
 }
 
+type RawRecordingArtifact = Partial<RecordingArtifact> & {
+  artifactType?: string
+  status?: string
+}
+
 type PublicSessionDetail = Partial<
   Pick<
     InterviewSessionSnapshot,
@@ -36,6 +42,7 @@ type PublicSessionDetail = Partial<
     | "accessState"
     | "accessMessage"
     | "policy"
+    | "recordings"
   >
 > & {
   state?: string
@@ -86,6 +93,20 @@ const TRANSCRIPT_STATUS_SET = new Set<TranscriptSegmentStatus>([
   "final",
 ])
 
+const RECORDING_ARTIFACT_TYPE_SET = new Set<RecordingArtifact["artifactType"]>([
+  "audio",
+  "video",
+  "composite",
+  "segments",
+])
+
+const RECORDING_STATUS_SET = new Set<RecordingArtifact["status"]>([
+  "starting",
+  "active",
+  "complete",
+  "failed",
+])
+
 function normalizeState(state: string | undefined): InterviewSessionState {
   if (state && SESSION_STATE_SET.has(state as InterviewSessionState)) {
     return state as InterviewSessionState
@@ -121,6 +142,35 @@ function normalizeTranscriptSegment(
       : "final",
     startedAt: segment.startedAt ?? new Date().toISOString(),
     endedAt: segment.endedAt,
+  }
+}
+
+function normalizeRecordingArtifact(
+  artifact: RawRecordingArtifact,
+  index: number
+): RecordingArtifact {
+  return {
+    id: artifact.id ?? `recording-${index}`,
+    provider: "livekit",
+    egressId: artifact.egressId ?? `egress-${index}`,
+    artifactKey: artifact.artifactKey ?? `artifact-${index}`,
+    roomName: artifact.roomName ?? "",
+    artifactType: RECORDING_ARTIFACT_TYPE_SET.has(
+      artifact.artifactType as RecordingArtifact["artifactType"]
+    )
+      ? (artifact.artifactType as RecordingArtifact["artifactType"])
+      : "composite",
+    status: RECORDING_STATUS_SET.has(artifact.status as RecordingArtifact["status"])
+      ? (artifact.status as RecordingArtifact["status"])
+      : "starting",
+    filename: artifact.filename,
+    location: artifact.location,
+    manifestLocation: artifact.manifestLocation,
+    startedAt: artifact.startedAt,
+    endedAt: artifact.endedAt,
+    durationMs: artifact.durationMs,
+    sizeBytes: artifact.sizeBytes,
+    error: artifact.error,
   }
 }
 
@@ -162,6 +212,8 @@ export function createInitialInterviewSnapshot(
     preflight: createDefaultPreflightSteps(),
     transcript:
       publicSession?.transcript?.map(normalizeTranscriptSegment) ?? [],
+    recordings:
+      publicSession?.recordings?.map(normalizeRecordingArtifact) ?? [],
   }
 }
 
@@ -194,6 +246,9 @@ export function mergeInterviewSnapshot(
     transcript: publicSession.transcript?.length
       ? publicSession.transcript.map(normalizeTranscriptSegment)
       : base.transcript,
+    recordings: publicSession.recordings?.length
+      ? publicSession.recordings.map(normalizeRecordingArtifact)
+      : base.recordings,
   }
 }
 

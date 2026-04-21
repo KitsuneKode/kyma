@@ -273,6 +273,58 @@ export default async function CandidateReviewPage({
           </InfoCard>
 
           <InfoCard
+            title="Recordings"
+            description="LiveKit-owned replay artifacts that later feed recruiter playback."
+          >
+            <div className="flex flex-col gap-3">
+              {detail.recordings.length ? (
+                detail.recordings.map((artifact) => (
+                  <div key={artifact.id} className="rounded-lg border px-4 py-3">
+                    <p className="font-medium">
+                      {formatStatusLabel(artifact.artifactType)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatStatusLabel(artifact.status)}
+                    </p>
+                    {artifact.location ? (
+                      <a
+                        href={artifact.location}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 block text-sm text-primary underline-offset-4 hover:underline"
+                      >
+                        Open artifact
+                      </a>
+                    ) : artifact.manifestLocation ? (
+                      <a
+                        href={artifact.manifestLocation}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 block text-sm text-primary underline-offset-4 hover:underline"
+                      >
+                        Open manifest
+                      </a>
+                    ) : (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Waiting for storage location.
+                      </p>
+                    )}
+                    {artifact.error ? (
+                      <p className="mt-2 text-sm text-destructive">
+                        {artifact.error}
+                      </p>
+                    ) : null}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No recording artifacts have been captured yet.
+                </p>
+              )}
+            </div>
+          </InfoCard>
+
+          <InfoCard
             title="Session events"
             description="Operational timeline from the room lifecycle."
           >

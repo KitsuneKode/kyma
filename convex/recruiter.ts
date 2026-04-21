@@ -127,7 +127,7 @@ export const getCandidateReviewDetail = query({
       .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
       .first()
 
-    const [transcript, events, evidence, decisions] = await Promise.all([
+    const [transcript, events, evidence, decisions, recordings] = await Promise.all([
       ctx.db
         .query("transcriptSegments")
         .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
@@ -145,6 +145,10 @@ export const getCandidateReviewDetail = query({
       ctx.db
         .query("reviewDecisions")
         .withIndex("by_session_and_created_at", (q) => q.eq("sessionId", sessionId))
+        .collect(),
+      ctx.db
+        .query("recordingArtifacts")
+        .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
         .collect(),
     ])
 
@@ -237,9 +241,26 @@ export const getCandidateReviewDetail = query({
           id: `${decision._id}`,
           decision: decision.decision,
           rationale: decision.rationale,
-          reviewerId: decision.reviewerId,
-          createdAt: decision.createdAt,
-        })),
+        reviewerId: decision.reviewerId,
+        createdAt: decision.createdAt,
+      })),
+      recordings: sortByIsoAsc(recordings).map((artifact) => ({
+        id: `${artifact._id}`,
+        egressId: artifact.egressId,
+        artifactKey: artifact.artifactKey,
+        roomName: artifact.roomName,
+        provider: artifact.provider,
+        artifactType: artifact.artifactType,
+        status: artifact.status,
+        filename: artifact.filename,
+        location: artifact.location,
+        manifestLocation: artifact.manifestLocation,
+        startedAt: artifact.startedAt,
+        endedAt: artifact.endedAt,
+        durationMs: artifact.durationMs,
+        sizeBytes: artifact.sizeBytes,
+        error: artifact.error,
+      })),
     }
   },
 })

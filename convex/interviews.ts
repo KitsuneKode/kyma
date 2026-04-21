@@ -201,6 +201,7 @@ export const getPublicSessionDetail = query({
         roomName: undefined,
         events: [],
         transcript: [],
+        recordings: [],
       }
     }
 
@@ -224,16 +225,21 @@ export const getPublicSessionDetail = query({
         roomName: undefined,
         events: [],
         transcript: [],
+        recordings: [],
       }
     }
 
-    const [events, transcript] = await Promise.all([
+    const [events, transcript, recordings] = await Promise.all([
       ctx.db
         .query("sessionEvents")
         .withIndex("by_session", (q) => q.eq("sessionId", session._id))
         .collect(),
       ctx.db
         .query("transcriptSegments")
+        .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+        .collect(),
+      ctx.db
+        .query("recordingArtifacts")
         .withIndex("by_session", (q) => q.eq("sessionId", session._id))
         .collect(),
     ])
@@ -263,6 +269,25 @@ export const getPublicSessionDetail = query({
           status: segment.status,
           startedAt: segment.startedAt,
           endedAt: segment.endedAt,
+        })),
+      recordings: recordings
+        .sort((left, right) => left.updatedAt.localeCompare(right.updatedAt))
+        .map((artifact) => ({
+          id: `${artifact._id}`,
+          provider: artifact.provider,
+          egressId: artifact.egressId,
+          artifactKey: artifact.artifactKey,
+          roomName: artifact.roomName,
+          artifactType: artifact.artifactType,
+          status: artifact.status,
+          filename: artifact.filename,
+          location: artifact.location,
+          manifestLocation: artifact.manifestLocation,
+          startedAt: artifact.startedAt,
+          endedAt: artifact.endedAt,
+          durationMs: artifact.durationMs,
+          sizeBytes: artifact.sizeBytes,
+          error: artifact.error,
         })),
     }
   },

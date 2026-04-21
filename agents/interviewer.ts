@@ -6,6 +6,7 @@ import {
 } from "@livekit/agents"
 
 import { createDiagnosticLogger } from "@/lib/interview/diagnostics"
+import { maybeStartRoomRecording } from "@/lib/livekit/recording"
 
 const DEFAULT_TARGET_DURATION_MINUTES = 18
 
@@ -67,6 +68,18 @@ async function startSession(ctx: JobContext) {
     event: "agent.room.connected",
     detail: "Agent connected to LiveKit room.",
   })
+  const roomName = ctx.room.name
+  try {
+    if (roomName) {
+      await maybeStartRoomRecording(roomName)
+    }
+  } catch (error) {
+    logger.warn({
+      event: "agent.recording.start.failed",
+      detail: "Unable to start LiveKit room recording.",
+      error,
+    })
+  }
   const participant = await ctx.waitForParticipant()
   const candidateName = participant.name || participant.identity || "there"
   logger.info({
