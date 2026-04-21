@@ -6,6 +6,7 @@ import { Room, RoomEvent } from "livekit-client";
 
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { createDiagnosticLogger, createRequestId } from "@/lib/interview/diagnostics";
 import { mergeInterviewSnapshot } from "@/lib/interview/snapshot";
 import { isPreflightComplete, markPreflightStep } from "@/lib/interview/preflight";
 import { getSessionStateLabel, transitionSession } from "@/lib/interview/session-machine";
@@ -77,6 +78,7 @@ async function playSpeakerTone() {
 }
 
 export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps) {
+  const [requestId] = useState(() => createRequestId("client"));
   const [session, setSession] = useState(() => {
     const browserStatus =
       typeof window === "undefined" ? "pending" : isSupportedBrowser() ? "passed" : "failed";
@@ -121,6 +123,15 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
     () => mergeInterviewSnapshot(session, persistedSession ?? null),
     [persistedSession, session],
   );
+  const logger = useMemo(
+    () =>
+      createDiagnosticLogger("candidate-ui", {
+        actor: "candidate",
+        requestId,
+        inviteToken: initialSnapshot.inviteId,
+      }),
+    [initialSnapshot.inviteId, requestId],
+  );
   const allChecksPassed = useMemo(
     () => isPreflightComplete(hydratedSession.preflight),
     [hydratedSession.preflight],
@@ -130,6 +141,11 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
 
   useEffect(() => {
     function syncNetworkStatus() {
+      logger.info({
+        event: "prejoin.network.checked",
+        detail: "Updated network availability during candidate flow.",
+        stateTo: navigator.onLine ? "passed" : "failed",
+      });
       setSession((current) => ({
         ...current,
         preflight: markPreflightStep(
@@ -148,7 +164,7 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
       window.removeEventListener("online", syncNetworkStatus);
       window.removeEventListener("offline", syncNetworkStatus);
     };
-  }, []);
+  }, [logger]);
 
   useEffect(() => {
     if (!previewVideoRef.current) {
@@ -209,6 +225,11 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
 
   async function runDeviceCheck() {
     setConnectionError(null);
+    logger.info({
+      event: "prejoin.device-check.started",
+      detail: "Candidate started media device check.",
+      participantIdentity: participantName,
+    });
 
     try {
       previewStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -243,6 +264,15 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
           },
         ],
       }));
+      logger.info({
+        event: "prejoin.device-check.succeeded",
+        detail: "Candidate media device check succeeded.",
+        participantIdentity: participantName,
+        meta: {
+          cameraEnabled,
+          deviceSummary: `${audioInputs}/${videoInputs}`,
+        },
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to access microphone and camera devices.";
@@ -254,15 +284,31 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
         ...current,
         preflight: markPreflightStep(current.preflight, "microphone-check", "failed"),
       }));
+      logger.error({
+        event: "prejoin.device-check.failed",
+        detail: message,
+        participantIdentity: participantName,
+        error,
+      });
     }
   }
 
   async function handleSpeakerTest() {
     setConnectionError(null);
+    logger.info({
+      event: "prejoin.speaker-test.started",
+      detail: "Candidate started speaker playback test.",
+      participantIdentity: participantName,
+    });
 
     try {
       await playSpeakerTone();
       setSpeakerTonePlayed(true);
+      logger.info({
+        event: "prejoin.speaker-test.succeeded",
+        detail: "Speaker playback test completed.",
+        participantIdentity: participantName,
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to run the speaker playback check.";
@@ -273,6 +319,12 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
         ...current,
         preflight: markPreflightStep(current.preflight, "speaker-check", "failed"),
       }));
+      logger.error({
+        event: "prejoin.speaker-test.failed",
+        detail: message,
+        participantIdentity: participantName,
+        error,
+      });
     }
   }
 
@@ -297,6 +349,13 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
 
   async function startJoin() {
     setConnectionError(null);
+    logger.info({
+      event: "room.connect.intent",
+      detail: "Candidate requested interview room join.",
+      participantIdentity: participantName,
+      stateFrom: hydratedSession.state,
+      stateTo: "connecting",
+    });
 
     if (!previewStreamRef.current) {
       await runDeviceCheck();
@@ -335,6 +394,13 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
 
       sessionIdRef.current = payload.sessionId;
       setRoomName(payload.roomName);
+      logger.info({
+        event: "bootstrap.succeeded",
+        detail: "Client bootstrap completed successfully.",
+        participantIdentity: participantName,
+        sessionId: payload.sessionId,
+        roomName: payload.roomName,
+      });
 
       const room = new Room({
         adaptiveStream: true,
@@ -346,6 +412,13 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
       room
         .on(RoomEvent.ParticipantConnected, (participant) => {
           const detail = `${participant.identity} joined the room.`;
+          logger.info({
+            event: "room.participant.connected",
+            detail,
+            sessionId: sessionIdRef.current ?? undefined,
+            roomName: payload.roomName,
+            participantIdentity: participant.identity,
+          });
 
           syncPresence(room);
           setSession((current) => ({
@@ -364,6 +437,13 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
         })
         .on(RoomEvent.ParticipantDisconnected, (participant) => {
           const detail = `${participant.identity} left the room.`;
+          logger.warn({
+            event: "room.participant.disconnected",
+            detail,
+            sessionId: sessionIdRef.current ?? undefined,
+            roomName: payload.roomName,
+            participantIdentity: participant.identity,
+          });
 
           syncPresence(room);
           setSession((current) => ({
@@ -381,6 +461,14 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
           void persistSessionEvent("participant-left", detail, hydratedSession.state);
         })
         .on(RoomEvent.Reconnecting, () => {
+          logger.warn({
+            event: "room.reconnecting",
+            detail: "Room reconnect started.",
+            sessionId: sessionIdRef.current ?? undefined,
+            roomName: payload.roomName,
+            stateFrom: "live",
+            stateTo: "reconnecting",
+          });
           setSession((current) => ({
             ...current,
             state: transitionSession(current.state, "reconnecting"),
@@ -397,6 +485,14 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
           void persistSessionEvent("reconnect-started", "Room reconnect started.", "reconnecting");
         })
         .on(RoomEvent.Reconnected, () => {
+          logger.info({
+            event: "room.reconnected",
+            detail: "Room reconnect succeeded.",
+            sessionId: sessionIdRef.current ?? undefined,
+            roomName: payload.roomName,
+            stateFrom: "reconnecting",
+            stateTo: "live",
+          });
           syncPresence(room);
           setSession((current) => ({
             ...current,
@@ -414,6 +510,17 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
           void persistSessionEvent("reconnect-succeeded", "Room reconnect succeeded.", "live");
         })
         .on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+          logger.debug({
+            event: "room.track.subscribed",
+            detail: "Remote media track subscribed.",
+            sessionId: sessionIdRef.current ?? undefined,
+            roomName: payload.roomName,
+            participantIdentity: participant.identity,
+            meta: {
+              kind: track.kind,
+              source: publication.source,
+            },
+          });
           if (track.kind === "audio") {
             const audioElement = track.attach();
             audioElement.autoplay = true;
@@ -431,6 +538,12 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
           }).catch(() => null);
         })
         .on(RoomEvent.Disconnected, () => {
+          logger.warn({
+            event: "room.disconnected",
+            detail: "Room disconnected.",
+            sessionId: sessionIdRef.current ?? undefined,
+            roomName: payload.roomName,
+          });
           syncPresence(room);
           setSession((current) => ({
             ...current,
@@ -452,6 +565,13 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
         });
 
       await room.connect(payload.wsUrl, payload.token);
+      logger.info({
+        event: "room.connect.succeeded",
+        detail: "LiveKit room connection succeeded.",
+        sessionId: payload.sessionId,
+        roomName: payload.roomName,
+        participantIdentity: participantName,
+      });
       await room.localParticipant.setMicrophoneEnabled(true);
       await room.localParticipant.setCameraEnabled(cameraEnabled);
 
@@ -492,6 +612,14 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
       const message = error instanceof Error ? error.message : "Unable to join interview.";
 
       setConnectionError(message);
+      logger.error({
+        event: "room.connect.failed",
+        detail: message,
+        participantIdentity: participantName,
+        sessionId: sessionIdRef.current ?? undefined,
+        roomName: roomName ?? undefined,
+        error,
+      });
       setSession((current) => ({
         ...current,
         state: "failed",
@@ -517,6 +645,13 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
     }
 
     const enabled = !room.localParticipant.isMicrophoneEnabled;
+    logger.info({
+      event: enabled ? "room.mic.enabled" : "room.mic.disabled",
+      detail: enabled ? "Candidate enabled microphone." : "Candidate muted microphone.",
+      sessionId: sessionIdRef.current ?? undefined,
+      roomName: displayRoomName ?? undefined,
+      participantIdentity: participantName,
+    });
 
     await room.localParticipant.setMicrophoneEnabled(enabled);
     setSession((current) => ({
@@ -541,6 +676,13 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
     }
 
     const enabled = !room.localParticipant.isCameraEnabled;
+    logger.info({
+      event: enabled ? "room.camera.enabled" : "room.camera.disabled",
+      detail: enabled ? "Candidate enabled camera." : "Candidate disabled camera.",
+      sessionId: sessionIdRef.current ?? undefined,
+      roomName: displayRoomName ?? undefined,
+      participantIdentity: participantName,
+    });
 
     await room.localParticipant.setCameraEnabled(enabled);
     setCameraEnabled(enabled);
@@ -551,6 +693,13 @@ export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps)
       return;
     }
 
+    logger.info({
+      event: "room.leave.intent",
+      detail: "Candidate requested to leave the interview room.",
+      sessionId: sessionIdRef.current ?? undefined,
+      roomName: displayRoomName ?? undefined,
+      participantIdentity: participantName,
+    });
     await roomRef.current.disconnect(true);
     setPresence([]);
     setSession((current) => ({
