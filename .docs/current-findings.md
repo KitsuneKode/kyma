@@ -28,7 +28,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - bootstrap route creates or reuses an interview session in Convex
 - bootstrap route returns a real LiveKit token
 - candidate page connects to a LiveKit room and enables microphone
-- `/admin` is Clerk-protected through middleware
+- `/admin` is Clerk-protected when Clerk env is configured
 
 ## Important Routes
 
@@ -53,15 +53,15 @@ This file is the fast restart point for future agents. Read this before re-resea
 
 ## Current Blockers
 
-- `CLERK_FRONTEND_API_URL` must be set for full Convex auth sync
+- Clerk env is still required for full admin/auth testing
 - LiveKit room connection works only when `NEXT_PUBLIC_LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are set
 - actual conversational agent behavior still needs a running LiveKit agent worker and model/provider keys
 
 ## Environment Variables That Matter Right Now
 
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
-- `CLERK_FRONTEND_API_URL`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` for admin auth
+- `CLERK_SECRET_KEY` for admin auth
+- `CLERK_FRONTEND_API_URL` or `CLERK_JWT_ISSUER_DOMAIN` for Clerk-backed Convex auth
 - `NEXT_PUBLIC_CONVEX_URL`
 - `NEXT_PUBLIC_LIVEKIT_URL`
 - `LIVEKIT_API_KEY`
@@ -73,8 +73,8 @@ This file is the fast restart point for future agents. Read this before re-resea
 
 ## Testing Path Right Now
 
-1. ensure `.env.local` contains Clerk and LiveKit credentials
-2. ensure `NEXT_PUBLIC_CONVEX_URL` exists from `npx convex dev --once`
+1. ensure `.env.local` contains LiveKit credentials, plus Clerk credentials when testing admin/auth paths
+2. ensure `NEXT_PUBLIC_CONVEX_URL` exists from `bun run convex:once`
 3. visit `/interviews/demo-invite`
 4. enter candidate name
 5. pass preflight steps
@@ -96,3 +96,12 @@ This file is the fast restart point for future agents. Read this before re-resea
 - add transcript rendering from persisted Convex data rather than local placeholder state
 - validate the LiveKit Node agent against the chosen STT/LLM/TTS model strings in a live room
 - add BYOK planning and env boundaries without coupling them into the first working path
+
+## Local Developer Experience
+
+- `bun run convex:once` bootstraps Convex and writes `NEXT_PUBLIC_CONVEX_URL`
+- `bun run dev` starts Next.js only
+- `bun run convex:dev` starts Convex watch mode
+- `bun run dev:stack` starts Next.js plus Convex together
+- `bun run dev:full` also starts the LiveKit worker
+- public candidate-flow work can proceed without Clerk configured
