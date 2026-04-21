@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Outfit, Merriweather, JetBrains_Mono } from "next/font/google";
+import { hasClerkCredentials } from "@/lib/clerk/config";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -29,15 +30,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <body
-          className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} antialiased`}
-        >
-          <Providers>{children}</Providers>
-        </body>
-      </html>
-    </ClerkProvider>
+  const content = (
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} antialiased`}
+      >
+        <Providers>{children}</Providers>
+      </body>
+    </html>
   );
+
+  if (!hasClerkCredentials()) {
+    return content;
+  }
+
+  return <ClerkProvider>{content}</ClerkProvider>;
 }

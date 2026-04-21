@@ -2,10 +2,13 @@ import Link from "next/link";
 
 import { ConvexClientProvider } from "@/components/convex-client-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { hasClerkCredentials } from "@/lib/clerk/config";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { ReactNode } from "react";
 
 export const Providers = ({ children }: { children: ReactNode }) => {
+  const hasClerk = hasClerkCredentials();
+
   return (
     <ThemeProvider>
       <ConvexClientProvider>
@@ -26,13 +29,21 @@ export const Providers = ({ children }: { children: ReactNode }) => {
               </Link>
             </div>
             <div className="flex items-center gap-4">
-              <Show when="signed-out">
-                <SignInButton />
-                <SignUpButton />
-              </Show>
-              <Show when="signed-in">
-                <UserButton />
-              </Show>
+              {hasClerk ? (
+                <>
+                  <Show when="signed-out">
+                    <SignInButton />
+                    <SignUpButton />
+                  </Show>
+                  <Show when="signed-in">
+                    <UserButton />
+                  </Show>
+                </>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  Clerk disabled for local public-flow testing
+                </span>
+              )}
             </div>
           </div>
         </header>
