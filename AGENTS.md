@@ -62,6 +62,7 @@ This repo is building the Cuemath-style `AI Tutor Screener`:
 
 - architecture and system decisions: `.docs/architecture.md`
 - current high-signal implementation and research state: `.docs/current-findings.md`
+- v1 product and LiveKit implementation direction: `.docs/v1-product-livekit-plan.md`
 - vendor and stack comparison: `.docs/stack-research.md`
 - interview and rubric design: `.docs/interview-system.md`
 - phased delivery plan: `.plans/mvp-plan.md`
