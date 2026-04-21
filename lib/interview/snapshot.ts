@@ -1,0 +1,167 @@
+import {
+  PRE_FLIGHT_STEPS,
+  type InterviewSessionSnapshot,
+  type InterviewSessionState,
+  type PreflightStep,
+  type SessionEvent,
+  type SessionEventType,
+  type TranscriptSegment,
+  type TranscriptSegmentSpeaker,
+  type TranscriptSegmentStatus,
+} from "@/lib/interview/types";
+import { createDefaultPreflightSteps } from "@/lib/interview/preflight";
+
+type RawSessionEvent = Partial<Omit<SessionEvent, "type">> & {
+  type?: string;
+};
+
+type RawTranscriptSegment = Partial<Omit<TranscriptSegment, "speaker" | "status">> & {
+  speaker?: string;
+  status?: string;
+};
+
+type PublicSessionDetail = Partial<
+  Pick<
+    InterviewSessionSnapshot,
+    "inviteId" | "sessionId" | "candidateName" | "templateName" | "roomName"
+  >
+> & {
+  state?: string;
+  events?: RawSessionEvent[];
+  transcript?: RawTranscriptSegment[];
+};
+
+const SESSION_STATE_SET = new Set<InterviewSessionState>([
+  "created",
+  "ready",
+  "connecting",
+  "live",
+  "reconnecting",
+  "interrupted",
+  "processing",
+  "completed",
+  "failed",
+]);
+
+const SESSION_EVENT_TYPE_SET = new Set<SessionEventType>([
+  "invite-opened",
+  "preflight-started",
+  "preflight-completed",
+  "room-token-requested",
+  "participant-connecting",
+  "participant-joined",
+  "participant-left",
+  "agent-speaking",
+  "candidate-speaking",
+  "reconnect-started",
+  "reconnect-succeeded",
+  "reconnect-failed",
+  "transcript-partial",
+  "transcript-final",
+  "processing-started",
+  "processing-completed",
+  "session-failed",
+]);
+
+const TRANSCRIPT_SPEAKER_SET = new Set<TranscriptSegmentSpeaker>([
+  "agent",
+  "candidate",
+  "system",
+]);
+
+const TRANSCRIPT_STATUS_SET = new Set<TranscriptSegmentStatus>(["partial", "final"]);
+
+function normalizeState(state: string | undefined): InterviewSessionState {
+  if (state && SESSION_STATE_SET.has(state as InterviewSessionState)) {
+    return state as InterviewSessionState;
+  }
+
+  return "ready";
+}
+
+function normalizeEvent(event: RawSessionEvent): SessionEvent {
+  return {
+    type: SESSION_EVENT_TYPE_SET.has(event.type as SessionEventType)
+      ? (event.type as SessionEventType)
+      : "invite-opened",
+    detail: event.detail ?? "Session event captured.",
+    createdAt: event.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function normalizeTranscriptSegment(
+  segment: RawTranscriptSegment,
+  index: number,
+): TranscriptSegment {
+  return {
+    id: segment.id ?? `segment-${index}`,
+    speaker: TRANSCRIPT_SPEAKER_SET.has(segment.speaker as TranscriptSegmentSpeaker)
+      ? (segment.speaker as TranscriptSegmentSpeaker)
+      : "system",
+    text: segment.text ?? "",
+    status: TRANSCRIPT_STATUS_SET.has(segment.status as TranscriptSegmentStatus)
+      ? (segment.status as TranscriptSegmentStatus)
+      : "final",
+    startedAt: segment.startedAt ?? new Date().toISOString(),
+    endedAt: segment.endedAt,
+  };
+}
+
+export function createInitialInterviewSnapshot(
+  inviteId: string,
+  publicSession?: PublicSessionDetail | null,
+): InterviewSessionSnapshot {
+  const events: SessionEvent[] =
+    publicSession?.events?.length
+      ? publicSession.events.map(normalizeEvent)
+      : [
+          {
+            type: "invite-opened",
+            detail: "Candidate opened the interview invite.",
+            createdAt: new Date().toISOString(),
+          },
+        ];
+
+  return {
+    inviteId,
+    sessionId: publicSession?.sessionId,
+    candidateName: publicSession?.candidateName,
+    templateName: publicSession?.templateName ?? "AI Tutor Screener",
+    state: normalizeState(publicSession?.state),
+    roomName: publicSession?.roomName,
+    events,
+    preflight: createDefaultPreflightSteps(),
+    transcript: publicSession?.transcript?.map(normalizeTranscriptSegment) ?? [],
+  };
+}
+
+export function mergeInterviewSnapshot(
+  base: InterviewSessionSnapshot,
+  publicSession?: PublicSessionDetail | null,
+): InterviewSessionSnapshot {
+  if (!publicSession) {
+    return base;
+  }
+
+  return {
+    ...base,
+    sessionId: publicSession.sessionId ?? base.sessionId,
+    candidateName: publicSession.candidateName ?? base.candidateName,
+    templateName: publicSession.templateName ?? base.templateName,
+    state: normalizeState(publicSession.state),
+    roomName: publicSession.roomName ?? base.roomName,
+    events: publicSession.events?.length ? publicSession.events.map(normalizeEvent) : base.events,
+    preflight: normalizePreflight(base.preflight),
+    transcript: publicSession.transcript?.length
+      ? publicSession.transcript.map(normalizeTranscriptSegment)
+      : base.transcript,
+  };
+}
+
+function normalizePreflight(preflight: PreflightStep[]): PreflightStep[] {
+  if (preflight.length === PRE_FLIGHT_STEPS.length) {
+    return preflight;
+  }
+
+  return createDefaultPreflightSteps();
+}
