@@ -1,9 +1,10 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
+import { hasClerkServerCredentials } from "@/lib/clerk/config";
+
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
-const hasClerk =
-  Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) && Boolean(process.env.CLERK_SECRET_KEY);
+const hasClerk = hasClerkServerCredentials();
 
 export default hasClerk
   ? clerkMiddleware(async (auth, req) => {
