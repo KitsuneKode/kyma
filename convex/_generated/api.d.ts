@@ -9,6 +9,7 @@
  */
 
 import type * as interviews from "../interviews.js";
+import type * as recruiter from "../recruiter.js";
 
 import type {
   ApiFromModules,
@@ -18,6 +19,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   interviews: typeof interviews;
+  recruiter: typeof recruiter;
 }>;
 
 /**
