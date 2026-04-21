@@ -1,6 +1,7 @@
 import { RoomAgentDispatch, RoomConfiguration } from "@livekit/protocol";
 import { AccessToken } from "livekit-server-sdk";
 
+import { createDiagnosticLogger } from "@/lib/interview/diagnostics";
 import { getLivekitEnv } from "@/lib/livekit/config";
 
 type CreateParticipantTokenInput = {
@@ -10,6 +11,7 @@ type CreateParticipantTokenInput = {
   canPublish?: boolean;
   canSubscribe?: boolean;
   agentMetadata?: string;
+  requestId?: string;
 };
 
 export async function createParticipantToken({
@@ -19,10 +21,21 @@ export async function createParticipantToken({
   canPublish = true,
   canSubscribe = true,
   agentMetadata,
+  requestId,
 }: CreateParticipantTokenInput) {
+  const logger = createDiagnosticLogger("livekit-token", {
+    actor: "server",
+    requestId,
+    roomName,
+    participantIdentity: participantName,
+  });
   const env = getLivekitEnv();
 
   if (!env.NEXT_PUBLIC_LIVEKIT_URL || !env.LIVEKIT_API_KEY || !env.LIVEKIT_API_SECRET) {
+    logger.error({
+      event: "livekit.config.missing",
+      detail: "LiveKit server credentials are not configured.",
+    });
     throw new Error("LiveKit server is not configured.");
   }
 
@@ -39,6 +52,14 @@ export async function createParticipantToken({
     canPublish,
     canSubscribe,
   });
+  logger.debug({
+    event: "livekit.grants.created",
+    detail: "LiveKit grants created for participant.",
+    meta: {
+      canPublish,
+      canSubscribe,
+    },
+  });
 
   if (env.LIVEKIT_AGENT_NAME) {
     accessToken.roomConfig = new RoomConfiguration({
@@ -49,10 +70,23 @@ export async function createParticipantToken({
         }),
       ],
     });
+    logger.info({
+      event: "livekit.agent.dispatch.included",
+      detail: "Agent dispatch configuration attached to token.",
+      meta: {
+        agentName: env.LIVEKIT_AGENT_NAME,
+      },
+    });
   }
 
+  const token = await accessToken.toJwt();
+  logger.info({
+    event: "livekit.token.created",
+    detail: "LiveKit access token created.",
+  });
+
   return {
-    token: await accessToken.toJwt(),
+    token,
     roomName,
     participantName,
     wsUrl: env.NEXT_PUBLIC_LIVEKIT_URL,
