@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 88,
+  "ignorePatterns": [
+    ".next/**",
+    "node_modules/**",
+    "convex/_generated/**",
+    ".agents/**",
+    ".claude/**",
+    ".context/**",
+    "coverage/**",
+    "dist/**"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "ignorePatterns": [
+    ".next/**",
+    "node_modules/**",
+    "convex/_generated/**",
+    ".agents/**",
+    ".claude/**",
+    ".context/**",
+    "coverage/**",
+    "dist/**"
+  ]
+}

@@ -13,6 +13,8 @@ The goal is to help a hiring or operations team send a candidate a link, run a s
 - connect the browser client to a LiveKit room with audio and video enabled
 - dispatch a LiveKit interviewer agent into the room when the worker is running
 - inspect the admin shell at `/admin`
+- create screening batches at `/admin/screenings`
+- review candidates, notes, recordings, and recruiter chat at `/admin/candidates`
 
 ## Current Stack
 
@@ -138,10 +140,10 @@ Use this when you are working on authenticated admin features.
 
 ## Near-Term Roadmap
 
-- post-call assessment generation
 - weak-student teaching simulation
-- richer recruiter review screens
+- richer template-driven screening controls
 - BYOK model/provider support so runtime cost can be shifted per workspace
+- stronger replay validation and recruiter copilot quality
 
 ## Current Agent Runtime
 
@@ -154,3 +156,4 @@ Use this when you are working on authenticated admin features.
 
 - The README is intentionally product- and developer-facing.
 - Deeper architecture and planning details live elsewhere in the repo.
+- `bun run lint` now uses `oxlint`, `bun run format` now uses `oxfmt`, and `bun run lint:eslint` remains available for deeper framework-specific checks.

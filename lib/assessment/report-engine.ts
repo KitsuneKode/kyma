@@ -237,7 +237,7 @@ function pickEvidence(
         score: keywordScore + lengthScore - uncertaintyPenalty,
       }
     })
-    .sort((left, right) => right.score - left.score)
+    .toSorted((left, right) => right.score - left.score)
 
   const best = scoredSegments[0]
 
@@ -346,7 +346,7 @@ function pickTopDimensions(
   dimensionScores: DimensionScore[],
   direction: "high" | "low"
 ) {
-  const sorted = [...dimensionScores].sort((left, right) =>
+  const sorted = [...dimensionScores].toSorted((left, right) =>
     direction === "high" ? right.score - left.score : left.score - right.score
   )
 
