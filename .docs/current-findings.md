@@ -145,6 +145,24 @@ This file is the fast restart point for future agents. Read this before re-resea
 - the first reliable report pipeline should be deterministic and evidence-backed before adding model-based grading
 - the working v1 product direction is documented in `.docs/v1-product-livekit-plan.md`
 
+## Source Index
+
+Use these first before re-researching the current implementation choices:
+
+- LiveKit React components: https://docs.livekit.io/reference/components/react/
+- LiveKit React guide: https://docs.livekit.io/reference/components/react/guide/
+- LiveKit webhooks and room events: https://docs.livekit.io/intro/basics/rooms-participants-tracks/webhooks-events/
+- LiveKit JS `WebhookReceiver`: https://docs.livekit.io/reference/server-sdk-js/classes/WebhookReceiver.html
+- LiveKit egress/composite recording: https://docs.livekit.io/transport/media/ingress-egress/egress/composite-recording/
+- Inngest Next.js serving: https://www.inngest.com/docs/learn/serving-inngest-functions
+- Inngest Next.js quickstart: https://www.inngest.com/docs/getting-started/nextjs-quick-start
+- Inngest event sending: https://www.inngest.com/docs/events
+- Inngest `createFunction()` reference: https://www.inngest.com/docs/reference/typescript/functions/create
+- Inngest AI orchestration: https://www.inngest.com/docs/features/inngest-functions/steps-workflows/step-ai-orchestration
+- AgentKit overview: https://agentkit.inngest.com/
+- Convex schemas: https://docs.convex.dev/database/schemas
+- Convex indexes: https://docs.convex.dev/database/reading-data/indexes/
+
 ## Next Best Work
 
 - add Convex queries/mutations for admin invite creation
