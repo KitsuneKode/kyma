@@ -1,30 +1,43 @@
-import { Geist, Geist_Mono } from "next/font/google"
+import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
+import { Outfit, Merriweather, JetBrains_Mono } from "next/font/google";
+import { Providers } from "./providers";
+import "./globals.css";
 
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { cn } from "@/lib/utils";
+const fontSans = Outfit({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'})
+const fontSerif = Merriweather({
+  subsets: ["latin"],
+  variable: "--font-serif",
+});
 
-const fontMono = Geist_Mono({
+const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
-})
+});
+
+export const metadata: Metadata = {
+  title: "Kyma",
+  description: "Reliable realtime tutor screening.",
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", geist.variable)}
-    >
-      <body>
-        <ThemeProvider>{children}</ThemeProvider>
-      </body>
-    </html>
-  )
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body
+          className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} antialiased`}
+        >
+          <Providers>{children}</Providers>
+        </body>
+      </html>
+    </ClerkProvider>
+  );
 }
