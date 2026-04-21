@@ -5,6 +5,8 @@ import type { ReactNode } from "react"
 import type { Id } from "@/convex/_generated/dataModel"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
+import { RecruiterChat } from "@/components/recruiter/recruiter-chat"
+import { RecruiterNotes } from "@/components/recruiter/recruiter-notes"
 import { ReviewActions } from "@/components/recruiter/review-actions"
 import {
   formatConfidenceLabel,
@@ -241,6 +243,17 @@ export default async function CandidateReviewPage({
               </p>
             )}
           </InfoCard>
+
+          <InfoCard
+            title="Recruiter notes"
+            description="Capture human observations alongside the structured report."
+          >
+            <RecruiterNotes
+              sessionId={detail.session.id}
+              reportId={detail.report?.id}
+              notes={detail.notes}
+            />
+          </InfoCard>
         </div>
 
         <aside className="flex flex-col gap-6">
@@ -333,6 +346,17 @@ export default async function CandidateReviewPage({
                 </p>
               )}
             </div>
+          </InfoCard>
+
+          <InfoCard
+            title="Recruiter copilot"
+            description="Ask grounded questions about the transcript, evidence, and recommendation."
+          >
+            <RecruiterChat
+              sessionId={detail.session.id}
+              reportId={detail.report?.id}
+              initialMessages={detail.chatMessages}
+            />
           </InfoCard>
 
           <InfoCard

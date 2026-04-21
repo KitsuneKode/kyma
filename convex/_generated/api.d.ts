@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
+import type * as helpers_templates from "../helpers/templates.js";
 import type * as interviews from "../interviews.js";
 import type * as livekit from "../livekit.js";
 import type * as recruiter from "../recruiter.js";
@@ -19,6 +21,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
+  "helpers/templates": typeof helpers_templates;
   interviews: typeof interviews;
   livekit: typeof livekit;
   recruiter: typeof recruiter;

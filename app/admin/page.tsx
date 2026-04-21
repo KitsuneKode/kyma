@@ -33,6 +33,13 @@ export default function AdminPage() {
           <Button nativeButton={false} render={<Link href="/admin/candidates" />}>
             Open Candidate Queue
           </Button>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link href="/admin/screenings" />}
+          >
+            Open Screenings
+          </Button>
         </div>
       </section>
 
