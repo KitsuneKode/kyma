@@ -2,6 +2,7 @@
 
 import { PreJoin, type LocalUserChoices } from "@livekit/components-react";
 
+import { formatDurationPolicy, formatExpiryLabel } from "@/lib/interview/policy";
 import { type InterviewSessionSnapshot } from "@/lib/interview/types";
 
 type InviteLobbyProps = {
@@ -56,6 +57,29 @@ export function InviteLobby({
             <li>Real-time voice and video room powered by LiveKit</li>
             <li>Post-call assessment with evidence-backed rubric output</li>
           </ul>
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-border/80 bg-background/70 p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Interview policy
+            </p>
+            <p className="mt-2 font-medium">{formatDurationPolicy(initialSnapshot.policy)}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {initialSnapshot.policy.allowsResume
+                ? "Resume is supported until the interview is submitted."
+                : "This interview is single-pass once it starts."}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/80 bg-background/70 p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Link validity
+            </p>
+            <p className="mt-2 font-medium">{formatExpiryLabel(initialSnapshot.policy.expiresAt)}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Single-use invite. Re-entry is only allowed for the same active session.
+            </p>
+          </div>
         </div>
       </section>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDurationPolicy, formatExpiryLabel } from "@/lib/interview/policy";
 import { type InterviewSessionSnapshot } from "@/lib/interview/types";
 import { getSessionStateLabel } from "@/lib/interview/session-machine";
 
@@ -39,6 +40,14 @@ export function SessionOverview({ connectionError, snapshot }: SessionOverviewPr
         <div className="flex justify-between gap-4 rounded-xl border border-border/80 bg-background/70 px-4 py-3">
           <span className="text-muted-foreground">Session</span>
           <span className="font-medium">{snapshot.sessionId ?? "Not created yet"}</span>
+        </div>
+        <div className="flex justify-between gap-4 rounded-xl border border-border/80 bg-background/70 px-4 py-3">
+          <span className="text-muted-foreground">Interview policy</span>
+          <span className="font-medium">{formatDurationPolicy(snapshot.policy)}</span>
+        </div>
+        <div className="flex justify-between gap-4 rounded-xl border border-border/80 bg-background/70 px-4 py-3">
+          <span className="text-muted-foreground">Link valid until</span>
+          <span className="font-medium">{formatExpiryLabel(snapshot.policy.expiresAt)}</span>
         </div>
       </div>
 

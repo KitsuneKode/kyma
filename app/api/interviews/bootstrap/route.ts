@@ -86,6 +86,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to bootstrap interview.";
+    const status =
+      message === "This interview link has expired."
+        ? 410
+        : message === "This interview has already been submitted."
+          ? 409
+          : 500;
     logger.error({
       event: "bootstrap.failed",
       detail: message,
@@ -94,6 +100,6 @@ export async function POST(request: NextRequest) {
       error,
     });
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status });
   }
 }

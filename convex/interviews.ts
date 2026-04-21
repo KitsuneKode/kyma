@@ -4,6 +4,67 @@ import type { Doc } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 
 const DEVELOPMENT_INVITE_TOKEN = "demo-invite";
+const DEFAULT_INTERVIEW_DURATION_MINUTES = 18;
+
+function isInviteExpired(expiresAt: string) {
+  const parsed = Date.parse(expiresAt);
+
+  if (Number.isNaN(parsed)) {
+    return false;
+  }
+
+  return parsed <= Date.now();
+}
+
+function buildInterviewPolicy(expiresAt?: string) {
+  return {
+    durationMode: "timed" as const,
+    targetDurationMinutes: DEFAULT_INTERVIEW_DURATION_MINUTES,
+    allowsResume: true,
+    maxAttempts: 1,
+    expiresAt,
+  };
+}
+
+function deriveAccessState(
+  invite:
+    | Pick<Doc<"candidateInvites">, "status" | "expiresAt">
+    | null,
+  session:
+    | Pick<Doc<"interviewSessions">, "state">
+    | null,
+) {
+  if (!invite) {
+    return {
+      accessState: "available" as const,
+      accessMessage: undefined,
+    };
+  }
+
+  if (invite.status === "expired" || isInviteExpired(invite.expiresAt)) {
+    return {
+      accessState: "expired" as const,
+      accessMessage: "This interview link has expired. Please request a new one from the recruiter.",
+    };
+  }
+
+  if (
+    invite.status === "completed" ||
+    session?.state === "processing" ||
+    session?.state === "completed"
+  ) {
+    return {
+      accessState: "consumed" as const,
+      accessMessage:
+        "This invite has already been used for a submitted interview and cannot be started again.",
+    };
+  }
+
+  return {
+    accessState: "available" as const,
+    accessMessage: undefined,
+  };
+}
 
 async function ensureDefaultTemplate(ctx: MutationCtx): Promise<Doc<"assessmentTemplates">> {
   const existingTemplate = await ctx.db
@@ -84,6 +145,11 @@ export const getPublicInterviewSnapshot = query({
         templateName: "AI Tutor Screener",
         candidateName: "Demo Candidate",
         state: "ready" as const,
+        accessState: "available" as const,
+        accessMessage: undefined,
+        policy: buildInterviewPolicy(
+          new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
+        ),
       };
     }
 
@@ -98,6 +164,8 @@ export const getPublicInterviewSnapshot = query({
       templateName: template?.name ?? "AI Tutor Screener",
       candidateName: invite.candidateName ?? "Candidate",
       state: session?.state ?? ("ready" as const),
+      ...deriveAccessState(invite, session),
+      policy: buildInterviewPolicy(invite.expiresAt),
     };
   },
 });
@@ -123,6 +191,11 @@ export const getPublicSessionDetail = query({
         candidateName: "Demo Candidate",
         templateName: "AI Tutor Screener",
         state: "ready" as const,
+        accessState: "available" as const,
+        accessMessage: undefined,
+        policy: buildInterviewPolicy(
+          new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
+        ),
         roomName: undefined,
         events: [],
         transcript: [],
@@ -136,12 +209,16 @@ export const getPublicSessionDetail = query({
       .first();
 
     if (!session) {
+      const access = deriveAccessState(invite, null);
+
       return {
         inviteId: invite._id,
         sessionId: undefined,
         candidateName: invite.candidateName ?? "Candidate",
         templateName: template?.name ?? "AI Tutor Screener",
         state: "ready" as const,
+        ...access,
+        policy: buildInterviewPolicy(invite.expiresAt),
         roomName: undefined,
         events: [],
         transcript: [],
@@ -165,6 +242,8 @@ export const getPublicSessionDetail = query({
       candidateName: invite.candidateName ?? "Candidate",
       templateName: template?.name ?? "AI Tutor Screener",
       state: session.state,
+      ...deriveAccessState(invite, session),
+      policy: buildInterviewPolicy(invite.expiresAt),
       roomName: session.roomName,
       events: events
         .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
@@ -194,6 +273,34 @@ export const bootstrapPublicSession = mutation({
   },
   handler: async (ctx, { inviteToken, participantName }) => {
     const invite = await ensureInvite(ctx, inviteToken);
+    const existingSession = await ctx.db
+      .query("interviewSessions")
+      .withIndex("by_invite", (q) => q.eq("inviteId", invite._id))
+      .first();
+
+    if (invite.status === "expired" || isInviteExpired(invite.expiresAt)) {
+      if (invite.status !== "expired") {
+        await ctx.db.patch(invite._id, {
+          status: "expired",
+        });
+      }
+
+      throw new ConvexError("This interview link has expired.");
+    }
+
+    if (
+      invite.status === "completed" ||
+      existingSession?.state === "processing" ||
+      existingSession?.state === "completed"
+    ) {
+      if (invite.status !== "completed") {
+        await ctx.db.patch(invite._id, {
+          status: "completed",
+        });
+      }
+
+      throw new ConvexError("This interview has already been submitted.");
+    }
 
     if (!invite.candidateName) {
       await ctx.db.patch(invite._id, {
@@ -207,10 +314,6 @@ export const bootstrapPublicSession = mutation({
     }
 
     const template = await ctx.db.get(invite.templateId);
-    const existingSession = await ctx.db
-      .query("interviewSessions")
-      .withIndex("by_invite", (q) => q.eq("inviteId", invite._id))
-      .first();
 
     if (existingSession && existingSession.roomName) {
       return {
@@ -281,6 +384,16 @@ export const appendSessionEvent = mutation({
 
     if (state) {
       await ctx.db.patch(sessionId, { state });
+
+      if (state === "processing" || state === "completed") {
+        const session = await ctx.db.get(sessionId);
+
+        if (session) {
+          await ctx.db.patch(session.inviteId, {
+            status: "completed",
+          });
+        }
+      }
     }
   },
 });

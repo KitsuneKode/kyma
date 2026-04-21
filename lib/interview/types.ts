@@ -12,6 +12,18 @@ export const SESSION_STATES = [
 
 export type InterviewSessionState = (typeof SESSION_STATES)[number];
 
+export type InviteAccessState = "available" | "expired" | "consumed" | "unavailable";
+
+export type InterviewDurationMode = "timed" | "flexible";
+
+export type InterviewPolicy = {
+  durationMode: InterviewDurationMode;
+  targetDurationMinutes?: number;
+  allowsResume: boolean;
+  maxAttempts: number;
+  expiresAt?: string;
+};
+
 export const PRE_FLIGHT_STEPS = [
   "browser-check",
   "microphone-check",
@@ -75,6 +87,9 @@ export type InterviewSessionSnapshot = {
   candidateName?: string;
   templateName: string;
   state: InterviewSessionState;
+  accessState: InviteAccessState;
+  accessMessage?: string;
+  policy: InterviewPolicy;
   roomName?: string;
   events: SessionEvent[];
   preflight: PreflightStep[];
