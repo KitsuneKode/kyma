@@ -1,8 +1,8 @@
 {
   "name": "kyma",
   "version": "0.0.1",
-  "type": "module",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "dev:web": "next dev --turbopack",
@@ -13,8 +13,8 @@
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
-    "convex:dev": "CONVEX_AGENT_MODE=anonymous npx convex dev",
-    "convex:once": "CONVEX_AGENT_MODE=anonymous npx convex dev --once",
+    "convex:dev": "CONVEX_AGENT_MODE=anonymous bunx convex dev",
+    "convex:once": "CONVEX_AGENT_MODE=anonymous bunx convex dev --once",
     "agent:dev": "bun run agents/worker.ts dev",
     "agent:start": "bun run agents/worker.ts start"
   },

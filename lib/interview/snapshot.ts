@@ -10,18 +10,20 @@ import {
   type TranscriptSegment,
   type TranscriptSegmentSpeaker,
   type TranscriptSegmentStatus,
-} from "@/lib/interview/types";
-import { DEFAULT_INTERVIEW_POLICY } from "@/lib/interview/policy";
-import { createDefaultPreflightSteps } from "@/lib/interview/preflight";
+} from "@/lib/interview/types"
+import { DEFAULT_INTERVIEW_POLICY } from "@/lib/interview/policy"
+import { createDefaultPreflightSteps } from "@/lib/interview/preflight"
 
 type RawSessionEvent = Partial<Omit<SessionEvent, "type">> & {
-  type?: string;
-};
+  type?: string
+}
 
-type RawTranscriptSegment = Partial<Omit<TranscriptSegment, "speaker" | "status">> & {
-  speaker?: string;
-  status?: string;
-};
+type RawTranscriptSegment = Partial<
+  Omit<TranscriptSegment, "speaker" | "status">
+> & {
+  speaker?: string
+  status?: string
+}
 
 type PublicSessionDetail = Partial<
   Pick<
@@ -36,10 +38,10 @@ type PublicSessionDetail = Partial<
     | "policy"
   >
 > & {
-  state?: string;
-  events?: RawSessionEvent[];
-  transcript?: RawTranscriptSegment[];
-};
+  state?: string
+  events?: RawSessionEvent[]
+  transcript?: RawTranscriptSegment[]
+}
 
 const SESSION_STATE_SET = new Set<InterviewSessionState>([
   "created",
@@ -51,7 +53,7 @@ const SESSION_STATE_SET = new Set<InterviewSessionState>([
   "processing",
   "completed",
   "failed",
-]);
+])
 
 const SESSION_EVENT_TYPE_SET = new Set<SessionEventType>([
   "invite-opened",
@@ -71,22 +73,25 @@ const SESSION_EVENT_TYPE_SET = new Set<SessionEventType>([
   "processing-started",
   "processing-completed",
   "session-failed",
-]);
+])
 
 const TRANSCRIPT_SPEAKER_SET = new Set<TranscriptSegmentSpeaker>([
   "agent",
   "candidate",
   "system",
-]);
+])
 
-const TRANSCRIPT_STATUS_SET = new Set<TranscriptSegmentStatus>(["partial", "final"]);
+const TRANSCRIPT_STATUS_SET = new Set<TranscriptSegmentStatus>([
+  "partial",
+  "final",
+])
 
 function normalizeState(state: string | undefined): InterviewSessionState {
   if (state && SESSION_STATE_SET.has(state as InterviewSessionState)) {
-    return state as InterviewSessionState;
+    return state as InterviewSessionState
   }
 
-  return "ready";
+  return "ready"
 }
 
 function normalizeEvent(event: RawSessionEvent): SessionEvent {
@@ -96,16 +101,18 @@ function normalizeEvent(event: RawSessionEvent): SessionEvent {
       : "invite-opened",
     detail: event.detail ?? "Session event captured.",
     createdAt: event.createdAt ?? new Date().toISOString(),
-  };
+  }
 }
 
 function normalizeTranscriptSegment(
   segment: RawTranscriptSegment,
-  index: number,
+  index: number
 ): TranscriptSegment {
   return {
     id: segment.id ?? `segment-${index}`,
-    speaker: TRANSCRIPT_SPEAKER_SET.has(segment.speaker as TranscriptSegmentSpeaker)
+    speaker: TRANSCRIPT_SPEAKER_SET.has(
+      segment.speaker as TranscriptSegmentSpeaker
+    )
       ? (segment.speaker as TranscriptSegmentSpeaker)
       : "system",
     text: segment.text ?? "",
@@ -114,28 +121,27 @@ function normalizeTranscriptSegment(
       : "final",
     startedAt: segment.startedAt ?? new Date().toISOString(),
     endedAt: segment.endedAt,
-  };
+  }
 }
 
 export function createInitialInterviewSnapshot(
   inviteId: string,
   publicSession?: PublicSessionDetail | null,
   fallback?: {
-    accessState?: InviteAccessState;
-    accessMessage?: string;
-    policy?: Partial<InterviewPolicy>;
-  },
+    accessState?: InviteAccessState
+    accessMessage?: string
+    policy?: Partial<InterviewPolicy>
+  }
 ): InterviewSessionSnapshot {
-  const events: SessionEvent[] =
-    publicSession?.events?.length
-      ? publicSession.events.map(normalizeEvent)
-      : [
-          {
-            type: "invite-opened",
-            detail: "Candidate opened the interview invite.",
-            createdAt: new Date().toISOString(),
-          },
-        ];
+  const events: SessionEvent[] = publicSession?.events?.length
+    ? publicSession.events.map(normalizeEvent)
+    : [
+        {
+          type: "invite-opened",
+          detail: "Candidate opened the interview invite.",
+          createdAt: new Date().toISOString(),
+        },
+      ]
 
   return {
     inviteId,
@@ -143,7 +149,8 @@ export function createInitialInterviewSnapshot(
     candidateName: publicSession?.candidateName,
     templateName: publicSession?.templateName ?? "AI Tutor Screener",
     state: normalizeState(publicSession?.state),
-    accessState: publicSession?.accessState ?? fallback?.accessState ?? "available",
+    accessState:
+      publicSession?.accessState ?? fallback?.accessState ?? "available",
     accessMessage: publicSession?.accessMessage ?? fallback?.accessMessage,
     policy: {
       ...DEFAULT_INTERVIEW_POLICY,
@@ -153,16 +160,17 @@ export function createInitialInterviewSnapshot(
     roomName: publicSession?.roomName,
     events,
     preflight: createDefaultPreflightSteps(),
-    transcript: publicSession?.transcript?.map(normalizeTranscriptSegment) ?? [],
-  };
+    transcript:
+      publicSession?.transcript?.map(normalizeTranscriptSegment) ?? [],
+  }
 }
 
 export function mergeInterviewSnapshot(
   base: InterviewSessionSnapshot,
-  publicSession?: PublicSessionDetail | null,
+  publicSession?: PublicSessionDetail | null
 ): InterviewSessionSnapshot {
   if (!publicSession) {
-    return base;
+    return base
   }
 
   return {
@@ -179,18 +187,20 @@ export function mergeInterviewSnapshot(
       ...publicSession.policy,
     },
     roomName: publicSession.roomName ?? base.roomName,
-    events: publicSession.events?.length ? publicSession.events.map(normalizeEvent) : base.events,
+    events: publicSession.events?.length
+      ? publicSession.events.map(normalizeEvent)
+      : base.events,
     preflight: normalizePreflight(base.preflight),
     transcript: publicSession.transcript?.length
       ? publicSession.transcript.map(normalizeTranscriptSegment)
       : base.transcript,
-  };
+  }
 }
 
 function normalizePreflight(preflight: PreflightStep[]): PreflightStep[] {
   if (preflight.length === PRE_FLIGHT_STEPS.length) {
-    return preflight;
+    return preflight
   }
 
-  return createDefaultPreflightSteps();
+  return createDefaultPreflightSteps()
 }

@@ -3,26 +3,26 @@ const nowTasks = [
   "Session lifecycle persistence",
   "Room token flow",
   "Live transcript storage",
-];
+]
 
 const futureTasks = [
   "Weak-student mode",
   "Separate student agent",
   "Recruiter observer mode",
   "Assessment analytics",
-];
+]
 
 export default function AdminPage() {
   return (
     <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-5xl flex-col gap-6 px-6 py-10">
       <section className="rounded-xl border bg-card p-6 shadow-sm">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Admin Workspace
         </p>
         <h1 className="mt-1 text-2xl font-semibold">Build Queue</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Minimal working shell for the recruiter side while the realtime interview core is being
-          built first.
+          Minimal working shell for the recruiter side while the realtime
+          interview core is being built first.
         </p>
       </section>
 
@@ -50,5 +50,5 @@ export default function AdminPage() {
         </div>
       </section>
     </main>
-  );
+  )
 }

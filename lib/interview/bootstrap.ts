@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod"
 
 const bootstrapResponseSchema = z.object({
   inviteId: z.string(),
@@ -8,13 +8,15 @@ const bootstrapResponseSchema = z.object({
   token: z.string(),
   participantName: z.string(),
   wsUrl: z.string(),
-});
+})
 
-export type BootstrappedInterviewSession = z.infer<typeof bootstrapResponseSchema>;
+export type BootstrappedInterviewSession = z.infer<
+  typeof bootstrapResponseSchema
+>
 
 export async function bootstrapInterviewSession(input: {
-  inviteToken: string;
-  participantName: string;
+  inviteToken: string
+  participantName: string
 }) {
   const response = await fetch("/api/interviews/bootstrap", {
     method: "POST",
@@ -22,17 +24,17 @@ export async function bootstrapInterviewSession(input: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(input),
-  });
+  })
 
-  const payload = await response.json().catch(() => null);
+  const payload = await response.json().catch(() => null)
 
   if (!response.ok) {
     throw new Error(
       payload && typeof payload === "object" && "error" in payload
         ? String(payload.error)
-        : "Failed to bootstrap interview.",
-    );
+        : "Failed to bootstrap interview."
+    )
   }
 
-  return bootstrapResponseSchema.parse(payload);
+  return bootstrapResponseSchema.parse(payload)
 }
