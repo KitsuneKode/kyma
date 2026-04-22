@@ -47,7 +47,7 @@ const NAV_ITEMS = [
   },
   {
     title: 'Settings',
-    url: '#',
+    url: '/admin/settings',
     icon: IconSettings,
     exact: false,
   },
