@@ -12,6 +12,12 @@ Problems.md
 /.claude/
 transcript.txt
 document.pdf
+.agents
+.claude 
+.kiro
+.pi
+.qoder
+.windsurf
 
 # testing
 /coverage
