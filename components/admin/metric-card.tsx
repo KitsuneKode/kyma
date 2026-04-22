@@ -8,13 +8,13 @@ export function MetricCard({
   value,
   detail,
   delay = 0,
-  icon: Icon,
+  icon,
 }: {
   label: string
   value: string
   detail?: string
   delay?: number
-  icon?: React.ElementType<{ className?: string }>
+  icon?: React.ReactNode
 }) {
   return (
     <motion.div
@@ -27,9 +27,9 @@ export function MetricCard({
         <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
           {label}
         </p>
-        {Icon && (
+        {icon && (
           <div className="rounded-xl bg-primary/5 p-2 text-primary/70 transition-colors group-hover:text-primary">
-            <Icon className="h-5 w-5" />
+            {icon}
           </div>
         )}
       </div>

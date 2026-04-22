@@ -55,21 +55,21 @@ export default async function AdminPage() {
           value={String(sessionsToday)}
           detail="Candidate interviews started today."
           delay={0.1}
-          icon={IconLayoutDashboard}
+          icon={<IconLayoutDashboard className="h-5 w-5" />}
         />
         <MetricCard
           label="Reports pending"
           value={String(reportsPending)}
           detail="Sessions waiting for completed assessment reports."
           delay={0.2}
-          icon={IconUsers}
+          icon={<IconUsers className="h-5 w-5" />}
         />
         <MetricCard
           label="Active batches"
           value={String(activeBatches)}
           detail="Screening batches currently accepting attempts."
           delay={0.3}
-          icon={IconFolder}
+          icon={<IconFolder className="h-5 w-5" />}
         />
       </section>
 
@@ -91,6 +91,7 @@ export default async function AdminPage() {
             <Button
               className="rounded-xl px-6 transition-all active:scale-[0.96]"
               render={<Link href="/admin/candidates" />}
+              nativeButton={false}
             >
               Open candidate queue
             </Button>
@@ -115,12 +116,14 @@ export default async function AdminPage() {
               variant="outline"
               className="rounded-xl px-6 ring-1 ring-border transition-all active:scale-[0.96]"
               render={<Link href="/admin/screenings" />}
+              nativeButton={false}
             >
               Manage screenings
             </Button>
             <Button
               className="rounded-xl px-6 transition-all active:scale-[0.96]"
               render={<Link href="/admin/screenings/new" />}
+              nativeButton={false}
             >
               Create batch
             </Button>

@@ -6,14 +6,12 @@ import Image from 'next/image'
 import {
   IconMicrophone,
   IconShieldCheck,
-  IconDatabase,
-  IconUserScan,
-  IconList,
+  IconBrain,
+  IconClockPlay,
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { TextEffect } from '@/components/ui/text-effect'
 import { AnimatedGroup } from '@/components/ui/animated-group'
-
 import { type Variants } from 'motion/react'
 
 const transitionVariants: { item: Variants } = {
@@ -58,7 +56,7 @@ export function PremiumHero() {
           <AnimatedGroup variants={transitionVariants}>
             <div className="group mx-auto flex w-fit cursor-default items-center gap-4 rounded-full border border-border/50 bg-muted/20 p-1 pl-4 shadow-sm backdrop-blur-md transition-all duration-300 hover:bg-muted/40">
               <span className="text-sm font-medium tracking-wide text-foreground uppercase">
-                AI-Powered Tutor Screening
+                The AI Tutor Screener
               </span>
               <span className="block h-4 w-px bg-border"></span>
 
@@ -72,7 +70,7 @@ export function PremiumHero() {
             preset="fade-in-blur"
             speedSegment={0.3}
             as="h1"
-            className="mx-auto mt-8 max-w-4xl font-serif text-5xl font-medium tracking-tight text-balance md:text-7xl lg:mt-12 xl:text-[5rem]"
+            className="mx-auto mt-8 max-w-5xl font-serif text-5xl font-medium tracking-tight text-balance md:text-7xl lg:mt-12 xl:text-[5rem]"
           >
             Screen tutors with evidence, not guesswork
           </TextEffect>
@@ -82,11 +80,12 @@ export function PremiumHero() {
             speedSegment={0.3}
             delay={0.5}
             as="p"
-            className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-balance text-muted-foreground"
+            className="mx-auto mt-8 max-w-3xl text-lg leading-relaxed text-balance text-muted-foreground"
           >
-            Kyma runs structured voice interviews with AI, then delivers
-            rubric-scored reports so your team can make confident hiring
-            decisions in minutes.
+            Kyma runs structured live interviews assessing clarity, patience,
+            and student-safe judgment. We deliver rubric-scored reports with
+            exact citations, so your hiring managers make confident decisions in
+            minutes.
           </TextEffect>
 
           <AnimatedGroup
@@ -110,10 +109,10 @@ export function PremiumHero() {
               <Button
                 size="lg"
                 className="rounded-xl px-8 text-base shadow-inner transition-transform active:scale-[0.96]"
-                render={<Link href="/interviews/demo-invite" />}
+                render={<Link href="#demo" />}
                 nativeButton={false}
               >
-                <span className="text-nowrap">Try a demo interview</span>
+                <span className="text-nowrap">Watch product demo</span>
               </Button>
             </div>
             <Button
@@ -121,10 +120,10 @@ export function PremiumHero() {
               size="lg"
               variant="ghost"
               className="h-12 rounded-xl px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30 active:scale-[0.96]"
-              render={<Link href="/admin" />}
+              render={<Link href="/interviews/demo-invite" />}
               nativeButton={false}
             >
-              <span className="text-nowrap">Recruiter login</span>
+              <span className="text-nowrap">Try the candidate flow</span>
             </Button>
           </AnimatedGroup>
         </div>
@@ -146,17 +145,17 @@ export function PremiumHero() {
             <div className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-2xl ring-1 ring-white/10 backdrop-blur-3xl">
               <div className="relative overflow-hidden rounded-2xl ring-1 ring-border/20">
                 <Image
-                  className="relative hidden aspect-[16/9] w-full rounded-xl border border-white/5 object-cover dark:block"
+                  className="relative hidden w-full rounded-xl border border-white/5 object-cover dark:block"
                   src="/mockups/hero.png"
-                  alt="Kyma dashboard preview"
+                  alt="Kyma recruiter dashboard showing candidate analysis"
                   width={2400}
                   height={1350}
                   priority
                 />
                 <Image
-                  className="relative aspect-[16/9] w-full rounded-xl border border-black/5 object-cover dark:hidden"
+                  className="relative w-full rounded-xl border border-black/5 object-cover dark:hidden"
                   src="/mockups/hero.png"
-                  alt="Kyma dashboard preview"
+                  alt="Kyma recruiter dashboard showing candidate analysis"
                   width={2400}
                   height={1350}
                   priority
@@ -169,13 +168,25 @@ export function PremiumHero() {
 
       <div className="mx-auto mt-24 max-w-7xl px-6 pb-24 md:mt-32 md:pb-32">
         <p className="mb-12 text-center text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-          Built on proven infrastructure
+          Evaluate for what matters in tutoring
         </p>
-        <div className="grid grid-cols-2 items-center justify-items-center gap-8 opacity-60 grayscale transition-all duration-500 hover:opacity-100 hover:grayscale-0 md:grid-cols-4">
-          <IconShieldCheck className="h-10 w-10 text-foreground" stroke={1.5} />
-          <IconList className="h-10 w-10 text-foreground" stroke={1.5} />
-          <IconDatabase className="h-10 w-10 text-foreground" stroke={1.5} />
-          <IconUserScan className="h-10 w-10 text-foreground" stroke={1.5} />
+        <div className="grid grid-cols-2 items-center justify-items-center gap-8 opacity-70 transition-all duration-500 hover:opacity-100 md:grid-cols-4">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <IconShieldCheck className="h-8 w-8 text-foreground" stroke={1.5} />
+            <span className="text-sm font-medium">Student-Safe Judgment</span>
+          </div>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <IconBrain className="h-8 w-8 text-foreground" stroke={1.5} />
+            <span className="text-sm font-medium">Concept Simplification</span>
+          </div>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <IconClockPlay className="h-8 w-8 text-foreground" stroke={1.5} />
+            <span className="text-sm font-medium">Adaptive Patience</span>
+          </div>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <IconMicrophone className="h-8 w-8 text-foreground" stroke={1.5} />
+            <span className="text-sm font-medium">Communication Clarity</span>
+          </div>
         </div>
       </div>
     </section>
