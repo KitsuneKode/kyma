@@ -90,15 +90,6 @@ export const HeroHeader = () => {
               <div className="flex w-full flex-col items-center space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
                 <ThemeToggle />
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full px-5 text-sm font-medium transition-transform hover:bg-muted/30 active:scale-[0.96]"
-                  render={<Link href="/interviews" />}
-                  nativeButton={false}
-                >
-                  <span>Candidate Portal</span>
-                </Button>
-                <Button
                   size="sm"
                   variant={isScrolled ? 'default' : 'outline'}
                   className={cn(
@@ -108,7 +99,7 @@ export const HeroHeader = () => {
                   render={<Link href="/admin" />}
                   nativeButton={false}
                 >
-                  <span>Recruiter Sign In</span>
+                  <span>Sign In / Dashboard</span>
                 </Button>
               </div>
             </div>
