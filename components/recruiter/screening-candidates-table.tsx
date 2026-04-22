@@ -59,14 +59,27 @@ export function ScreeningCandidatesTable({
       {
         accessorKey: 'inviteToken',
         header: 'Invite path',
-        cell: ({ row }) =>
-          row.original.inviteToken ? (
-            <code className="rounded bg-muted/40 px-2 py-1 text-xs tabular-nums">
-              /interviews/{row.original.inviteToken}
-            </code>
-          ) : (
-            <span className="text-muted-foreground">Pending</span>
-          ),
+        cell: ({ row }) => {
+          if (!row.original.inviteToken) {
+            return <span className="text-muted-foreground">Pending</span>
+          }
+          const inviteUrl = `/interviews/${row.original.inviteToken}`
+          return (
+            <div className="flex items-center gap-2">
+              <a
+                href={inviteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-primary transition-colors hover:bg-primary/20"
+              >
+                <span>{row.original.inviteToken}</span>
+                <span className="opacity-0 transition-opacity group-hover:opacity-100">
+                  →
+                </span>
+              </a>
+            </div>
+          )
+        },
       },
     ],
     []
