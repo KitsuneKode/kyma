@@ -20,24 +20,28 @@ export function InviteLobby({
   isBootstrapping,
   onSubmit,
 }: InviteLobbyProps) {
+  const companyName = initialSnapshot.templateName?.trim()
+  const prejoinHeader = companyName
+    ? `${companyName} interview on Kyma`
+    : 'Kyma Interview'
+
   return (
     <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-      <section className="rounded-2xl border border-border/80 bg-card/90 p-6 shadow-sm">
+      <section className="rounded-2xl bg-card/90 p-6 shadow-sm">
         <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
-          Cuemath Tutor Screening
+          {prejoinHeader}
         </p>
         <h1 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-balance">
-          Join a real screening session with an AI interviewer.
+          Join your scheduled interview session.
         </h1>
         <p className="mt-3 max-w-xl text-sm leading-6 text-pretty text-muted-foreground">
-          This first version is intentionally focused on a reliable interview
-          flow: media check, live conversation, and durable session records for
-          review. We are using the invite route as the product demo path, not as
-          a fake simulator.
+          This session includes a short setup check, a live voice conversation,
+          and final submission for recruiter review. Most interviews finish
+          within {formatDurationPolicy(initialSnapshot.policy).toLowerCase()}.
         </p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-border/80 bg-background/70 p-4 shadow-sm">
+          <div className="rounded-xl bg-background/70 p-4 shadow-sm">
             <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
               Invite
             </p>
@@ -47,21 +51,23 @@ export function InviteLobby({
             <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
               Template
             </p>
-            <p className="mt-2 font-medium">{initialSnapshot.templateName}</p>
+            <p className="mt-2 font-medium">
+              {initialSnapshot.templateName || 'Interview Session'}
+            </p>
           </div>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-border/80 bg-background/70 p-5 shadow-sm">
+        <div className="mt-6 rounded-2xl bg-background/70 p-5 shadow-sm">
           <p className="text-sm font-semibold">What to expect</p>
           <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-            <li>Short warm-up, explanation, and scenario-based questions</li>
-            <li>Real-time voice and video room powered by LiveKit</li>
-            <li>Post-call assessment with evidence-backed rubric output</li>
+            <li>Confirm your camera and microphone, then join the room.</li>
+            <li>Complete the interview in one sitting if possible.</li>
+            <li>Submit your interview so the recruiter can review it.</li>
           </ul>
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-border/80 bg-background/70 p-4 shadow-sm">
+          <div className="rounded-xl bg-background/70 p-4 shadow-sm">
             <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
               Interview policy
             </p>
@@ -82,14 +88,14 @@ export function InviteLobby({
               {formatExpiryLabel(initialSnapshot.policy.expiresAt)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Single-use invite. Re-entry is only allowed for the same active
+              Single-use invite. Re-entry is allowed only for the same active
               session.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="relative rounded-2xl border border-border/80 bg-card/90 p-6 shadow-sm">
+      <section className="relative rounded-2xl bg-card/90 p-6 shadow-sm">
         <div className="mb-5">
           <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
             Prejoin
@@ -98,12 +104,11 @@ export function InviteLobby({
             Check your setup before joining
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Use the LiveKit prejoin flow to choose devices, preview media, and
-            enter the room with the right settings.
+            Choose your devices, preview media, and join when you are ready.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border/80 bg-background/80 p-4 shadow-sm">
+        <div className="rounded-2xl bg-background/80 p-4 shadow-sm">
           <PreJoin
             defaults={{
               username: candidateName,
@@ -111,7 +116,7 @@ export function InviteLobby({
               videoEnabled: true,
             }}
             joinLabel={
-              isBootstrapping ? 'Preparing interview...' : 'Join interview'
+              isBootstrapping ? 'Preparing interview…' : 'Join interview'
             }
             userLabel="Candidate name"
             persistUserChoices={false}
@@ -130,8 +135,8 @@ export function InviteLobby({
 
         {isBootstrapping ? (
           <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-background/70 backdrop-blur-sm">
-            <div className="rounded-2xl border border-border/80 bg-card px-4 py-3 text-sm font-medium shadow-sm">
-              Preparing room and agent dispatch...
+            <div className="rounded-2xl bg-card px-4 py-3 text-sm font-medium shadow-sm">
+              Preparing interview…
             </div>
           </div>
         ) : null}

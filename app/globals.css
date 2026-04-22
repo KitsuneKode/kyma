@@ -208,10 +208,3 @@
     letter-spacing: var(--tracking-normal);
   }
 }
-
-@layer components {
-  .kyma-meeting-shell .lk-disconnect-button,
-  .kyma-meeting-shell .lk-chat-toggle {
-    display: none;
-  }
-}

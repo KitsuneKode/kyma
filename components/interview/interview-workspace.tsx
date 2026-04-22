@@ -1,6 +1,7 @@
 'use client'
 
 import { type LocalUserChoices } from '@livekit/components-react'
+import { motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import {
@@ -20,6 +21,9 @@ import { MeetingShell } from '@/components/interview/meeting-shell'
 import { SessionOverview } from '@/components/interview/session-overview'
 import { SessionTimeline } from '@/components/interview/session-timeline'
 import { TranscriptRail } from '@/components/interview/transcript-rail'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useMotionPreset } from '@/lib/motion/use-motion'
 import {
   bootstrapInterviewSession,
   type BootstrappedInterviewSession,
@@ -115,9 +119,44 @@ function summarizeTranscriptEvent(
   return `${speakerLabel}: ${excerpt}`
 }
 
+type ProcessingStageState = 'complete' | 'active' | 'pending'
+
+function ProcessingStageRow({
+  label,
+  state,
+}: {
+  label: string
+  state: ProcessingStageState
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl bg-background/70 px-4 py-3 shadow-sm">
+      <p
+        className={
+          state === 'pending'
+            ? 'text-sm text-muted-foreground'
+            : 'text-sm font-medium text-foreground'
+        }
+      >
+        {label}
+      </p>
+      {state === 'complete' ? (
+        <span
+          className="inline-flex size-5 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700"
+          aria-hidden
+        >
+          ✓
+        </span>
+      ) : state === 'active' ? (
+        <Skeleton className="h-4 w-20" />
+      ) : null}
+    </div>
+  )
+}
+
 export function InterviewWorkspace({
   initialSnapshot,
 }: InterviewWorkspaceProps) {
+  const processingMotion = useMotionPreset('enter')
   const [requestId] = useState(() => createRequestId('client'))
   const [view, setView] = useState<InterviewView>(() =>
     initialSnapshot.state === 'processing' ||
@@ -650,6 +689,7 @@ export function InterviewWorkspace({
     completionRequestedRef.current = true
     setIsSubmittingInterview(true)
     setConnectionError(null)
+    setView('processing')
     logger.info({
       event: 'session.processing.started',
       detail: 'Candidate submitted the interview for post-call processing.',
@@ -737,19 +777,48 @@ export function InterviewWorkspace({
             session={bootstrappedSession}
           />
         ) : view === 'processing' ? (
-          <div className="rounded-2xl border border-border/80 bg-card/90 p-8 shadow-sm">
+          <motion.div
+            {...processingMotion}
+            className="rounded-2xl bg-card/90 p-8 shadow-sm"
+          >
             <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
               Processing
             </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-              The interview has been submitted for review.
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-balance">
+              Interview submitted
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              The live session is complete. We will use the persisted session
-              data, transcript artifacts, and report pipeline to generate an
-              evidence-backed assessment next.
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-pretty text-muted-foreground">
+              You can close this page safely. The recruiter review is prepared
+              from your saved transcript and session evidence.
             </p>
-          </div>
+            <div className="mt-6 grid gap-3">
+              <ProcessingStageRow label="Transcript saved" state="complete" />
+              <ProcessingStageRow label="Assessment running" state="active" />
+              <ProcessingStageRow label="Report ready" state="pending" />
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">
+              The team will review the conversation and follow up with you.
+            </p>
+            {connectionError ? (
+              <div className="mt-6 rounded-xl bg-destructive/10 p-4 shadow-sm">
+                <p className="text-sm font-semibold text-destructive">
+                  Processing could not be completed
+                </p>
+                <p className="mt-1 text-sm text-destructive/90">
+                  We could not submit your interview for final processing.
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <Button onClick={handleSubmitInterview} size="sm">
+                    Retry submission
+                  </Button>
+                  <p className="text-xs text-destructive/90">
+                    If retry fails, contact the recruiter and share your invite
+                    token.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+          </motion.div>
         ) : hydratedSession.accessState !== 'available' ? (
           <InviteAccessScreen
             accessMessage={hydratedSession.accessMessage}

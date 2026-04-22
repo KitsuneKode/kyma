@@ -85,8 +85,8 @@ export function MeetingShell({
   session,
 }: MeetingShellProps) {
   return (
-    <div className="kyma-meeting-shell rounded-2xl border border-border/80 bg-card/90 p-4 shadow-sm">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-background/70 px-4 py-3 shadow-sm">
+    <div className="rounded-2xl bg-card/90 p-4 shadow-sm">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-background/70 px-4 py-3 shadow-sm">
         <div>
           <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
             Live Interview
@@ -107,7 +107,7 @@ export function MeetingShell({
           </p>
         </div>
         <Button onClick={onSubmitInterview} disabled={isSubmittingInterview}>
-          {isSubmittingInterview ? 'Submitting...' : 'Submit Interview'}
+          {isSubmittingInterview ? 'Submitting…' : 'Submit interview'}
         </Button>
       </div>
 
@@ -137,7 +137,7 @@ export function MeetingShell({
           onConnected={onConnected}
           onDisconnected={onDisconnected}
           onError={onError}
-          className="h-[720px]"
+          className="h-[min(720px,calc(100svh-200px))]"
         >
           <InterviewConference />
         </LiveKitRoom>
