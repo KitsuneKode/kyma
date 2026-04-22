@@ -15,6 +15,9 @@
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "convex:dev": "CONVEX_AGENT_MODE=anonymous bunx convex dev",
     "convex:once": "CONVEX_AGENT_MODE=anonymous bunx convex dev --once",
     "agent:dev": "bun run agents/worker.ts dev",
@@ -56,6 +59,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@kitsunekode/sweep": "^0.1.0",
+    "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.2.1",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
@@ -68,6 +72,7 @@
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4.2.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
   }
 }
