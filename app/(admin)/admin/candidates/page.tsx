@@ -23,7 +23,7 @@ export default async function AdminCandidatesPage() {
     : []
 
   return (
-    <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-7xl flex-col gap-6 px-6 py-10">
+    <div className="flex w-full flex-col gap-8">
       <PageHeader
         eyebrow="Recruiter workspace"
         title="Candidate review queue"
@@ -93,6 +93,6 @@ export default async function AdminCandidatesPage() {
           />
         ) : null}
       </section>
-    </main>
+    </div>
   )
 }

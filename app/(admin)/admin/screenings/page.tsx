@@ -22,7 +22,7 @@ export default async function AdminScreeningsPage() {
     : []
 
   return (
-    <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-7xl flex-col gap-6 px-6 py-10">
+    <div className="flex w-full flex-col gap-8">
       <PageHeader
         eyebrow="Screening ops"
         title="Screening batches"
@@ -63,6 +63,6 @@ export default async function AdminScreeningsPage() {
           />
         ) : null}
       </section>
-    </main>
+    </div>
   )
 }

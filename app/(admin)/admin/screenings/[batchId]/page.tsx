@@ -37,7 +37,7 @@ export default async function ScreeningDetailPage({
 
   if (!detail) {
     return (
-      <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-5xl flex-col gap-6 px-6 py-10">
+      <div className="flex w-full flex-col gap-8">
         <AdminStatePanel
           eyebrow="Screening ops"
           title="Screening batch not found"
@@ -52,12 +52,12 @@ export default async function ScreeningDetailPage({
             </Button>
           }
         />
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-7xl flex-col gap-6 px-6 py-10">
+    <div className="flex w-full flex-col gap-8">
       <PageHeader
         eyebrow="Screening ops"
         title={detail.batch.name}
@@ -104,6 +104,6 @@ export default async function ScreeningDetailPage({
           />
         ) : null}
       </section>
-    </main>
+    </div>
   )
 }
