@@ -1,6 +1,10 @@
 import { v } from "convex/values"
 
 import { mutation, query } from "./_generated/server"
+import {
+  getRecruiterActorId,
+  requireRecruiterIdentity,
+} from "./helpers/auth"
 import { ensureDefaultTemplate } from "./helpers/templates"
 
 function slugify(value: string) {
@@ -24,6 +28,8 @@ function buildInviteToken(candidateName: string) {
 export const listScreeningBatches = query({
   args: {},
   handler: async (ctx) => {
+    await requireRecruiterIdentity(ctx)
+
     const batches = await ctx.db.query("screeningBatches").collect()
 
     return await Promise.all(
@@ -63,6 +69,8 @@ export const getScreeningBatchDetail = query({
     batchId: v.id("screeningBatches"),
   },
   handler: async (ctx, { batchId }) => {
+    await requireRecruiterIdentity(ctx)
+
     const batch = await ctx.db.get(batchId)
 
     if (!batch) {
@@ -125,12 +133,13 @@ export const createScreeningBatch = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const createdBy = await getRecruiterActorId(ctx)
     const template = await ensureDefaultTemplate(ctx)
     const now = new Date().toISOString()
     const batchId = await ctx.db.insert("screeningBatches", {
       name: args.name,
       templateId: template._id,
-      createdBy: args.createdBy ?? "admin",
+      createdBy: createdBy ?? args.createdBy ?? "admin",
       status: "active",
       expiresAt: args.expiresAt,
       allowedAttempts: args.allowedAttempts,
@@ -178,8 +187,11 @@ export const addRecruiterNote = mutation({
     body: v.string(),
   },
   handler: async (ctx, args) => {
+    const authorId = await getRecruiterActorId(ctx)
+
     return await ctx.db.insert("recruiterNotes", {
       ...args,
+      authorId: authorId ?? args.authorId,
       createdAt: new Date().toISOString(),
     })
   },
@@ -193,6 +205,8 @@ export const addReportChatMessage = mutation({
     content: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireRecruiterIdentity(ctx)
+
     return await ctx.db.insert("reportChatMessages", {
       ...args,
       createdAt: new Date().toISOString(),

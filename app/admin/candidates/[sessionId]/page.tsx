@@ -64,6 +64,8 @@ export default async function CandidateReviewPage({
     )
   }
 
+  const teachingSimulation = summarizeTeachingSimulation(detail.events)
+
   return (
     <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-7xl flex-col gap-6 px-6 py-10">
       <section className="rounded-xl border bg-card p-6 shadow-sm">
@@ -143,6 +145,39 @@ export default async function CandidateReviewPage({
               />
               <InfoRow label="Ended" value={formatDateTime(detail.session.endedAt)} />
             </dl>
+          </InfoCard>
+
+          <InfoCard
+            title="Teaching simulation"
+            description="Signals from the child-persona segment and visual teaching artifacts."
+          >
+            <dl className="grid gap-4 md:grid-cols-3">
+              <InfoRow
+                label="Status"
+                value={
+                  teachingSimulation.completed
+                    ? "Completed"
+                    : teachingSimulation.started
+                      ? "Started"
+                      : "Not reached"
+                }
+              />
+              <InfoRow
+                label="Screen share"
+                value={teachingSimulation.screenShared ? "Used" : "Not used"}
+              />
+              <InfoRow
+                label="Started at"
+                value={formatOptionalDateTime(teachingSimulation.startedAt)}
+              />
+            </dl>
+            <p className="mt-4 text-sm text-muted-foreground">
+              {teachingSimulation.completed
+                ? "The candidate reached the live teaching segment, which is the strongest signal for simplification, patience, and adaptability."
+                : teachingSimulation.started
+                  ? "The teaching simulation began but did not fully complete, so reviewers should inspect the transcript and timeline before trusting the report too strongly."
+                  : "This session never reached the live teaching segment, so the current report is based mainly on conversational evidence."}
+            </p>
           </InfoCard>
 
           <InfoCard
@@ -496,4 +531,32 @@ function SummaryList({
       )}
     </div>
   )
+}
+
+function summarizeTeachingSimulation(
+  events: Array<{
+    type: string
+    createdAt: string
+  }>
+) {
+  const startedEvent = events.find(
+    (event) => event.type === "teaching-simulation-started"
+  )
+  const completedEvent = events.find(
+    (event) => event.type === "teaching-simulation-completed"
+  )
+  const screenShareEvent = events.find(
+    (event) => event.type === "candidate-screen-share-started"
+  )
+
+  return {
+    started: Boolean(startedEvent),
+    completed: Boolean(completedEvent),
+    screenShared: Boolean(screenShareEvent),
+    startedAt: startedEvent?.createdAt,
+  }
+}
+
+function formatOptionalDateTime(value?: string) {
+  return value ? formatDateTime(value) : "Not available"
 }

@@ -7,6 +7,7 @@ import { getLivekitEnv } from "@/lib/livekit/config"
 type CreateParticipantTokenInput = {
   roomName: string
   participantName: string
+  participantIdentity?: string
   metadata?: string
   canPublish?: boolean
   canSubscribe?: boolean
@@ -17,17 +18,19 @@ type CreateParticipantTokenInput = {
 export async function createParticipantToken({
   roomName,
   participantName,
+  participantIdentity,
   metadata,
   canPublish = true,
   canSubscribe = true,
   agentMetadata,
   requestId,
 }: CreateParticipantTokenInput) {
+  const identity = participantIdentity ?? participantName
   const logger = createDiagnosticLogger("livekit-token", {
     actor: "server",
     requestId,
     roomName,
-    participantIdentity: participantName,
+    participantIdentity: identity,
   })
   const env = getLivekitEnv()
 
@@ -47,7 +50,7 @@ export async function createParticipantToken({
     env.LIVEKIT_API_KEY,
     env.LIVEKIT_API_SECRET,
     {
-      identity: participantName,
+      identity,
       name: participantName,
       metadata,
       ttl: "15m",

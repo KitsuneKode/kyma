@@ -7,10 +7,12 @@ import { createDiagnosticLogger } from "@/lib/interview/diagnostics"
 import { buildAssessmentReport } from "./report-engine"
 
 type SessionId = Id<"interviewSessions">
+const PROCESSING_WRITE_KEY = process.env.KYMA_PROCESSING_WRITE_KEY?.trim()
 
 export async function markAssessmentProcessing(sessionId: SessionId) {
   await fetchMutation(api.recruiter.saveAssessmentReport, {
     sessionId,
+    processingKey: PROCESSING_WRITE_KEY,
     status: "processing",
     summary: "Assessment processing has been requested.",
   })
@@ -22,6 +24,7 @@ export async function markAssessmentFailed(
 ) {
   await fetchMutation(api.recruiter.saveAssessmentReport, {
     sessionId,
+    processingKey: PROCESSING_WRITE_KEY,
     status: "failed",
     summary: reason,
     topConcerns: ["processing failure"],
@@ -63,10 +66,12 @@ export async function processInterviewAssessment(
     candidateName: detail.candidate.name,
     templateName: detail.template.name,
     transcript: detail.transcript,
+    events: detail.events,
   })
 
   await fetchMutation(api.recruiter.saveAssessmentReport, {
     sessionId,
+    processingKey: PROCESSING_WRITE_KEY,
     status: report.status,
     overallRecommendation: report.overallRecommendation,
     confidence: report.confidence,

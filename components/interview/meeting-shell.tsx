@@ -35,7 +35,10 @@ type MeetingShellProps = {
 function InterviewConference() {
   const layoutContext = useCreateLayoutContext()
   const tracks = useTracks(
-    [{ source: Track.Source.Camera, withPlaceholder: true }],
+    [
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+      { source: Track.Source.Camera, withPlaceholder: true },
+    ],
     {
       onlySubscribed: false,
     }
@@ -54,7 +57,7 @@ function InterviewConference() {
             controls={{
               microphone: true,
               camera: true,
-              screenShare: false,
+              screenShare: true,
               chat: false,
               settings: false,
               leave: false,
@@ -96,6 +99,11 @@ export function MeetingShell({
           <p className="mt-1 text-xs text-muted-foreground">
             {formatDurationPolicy(policy)}. Single-use invite. Resume is
             available only until the interview is submitted.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            When the interviewer switches into the teaching simulation, you can
+            optionally share your screen to teach with Excalidraw, slides, or a
+            sketch pad.
           </p>
         </div>
         <Button onClick={onSubmitInterview} disabled={isSubmittingInterview}>
