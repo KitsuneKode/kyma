@@ -37,8 +37,8 @@
   --sidebar-accent-foreground: #2e2e2e;
   --sidebar-border: #d2cbbb;
   --sidebar-ring: #2e2e2e;
-  --font-sans: Outfit, ui-sans-serif, sans-serif, system-ui;
-  --font-serif: Merriweather, ui-serif, serif;
+  --font-sans: Nunito, ui-sans-serif, sans-serif, system-ui;
+  --font-serif: Lora, ui-serif, serif;
   --font-mono: 'JetBrains Mono', monospace;
   --radius: 0.625rem;
   --shadow-x: 0px;
@@ -106,8 +106,8 @@
   --sidebar-accent-foreground: #d1cfc0;
   --sidebar-border: #2c2c2c;
   --sidebar-ring: #d1cfc0;
-  --font-sans: Outfit, ui-sans-serif, sans-serif, system-ui;
-  --font-serif: Merriweather, ui-serif, serif;
+  --font-sans: Nunito, ui-sans-serif, sans-serif, system-ui;
+  --font-serif: Lora, ui-serif, serif;
   --font-mono: 'JetBrains Mono', monospace;
   --radius: 0.5rem;
   --shadow-x: 0px;
