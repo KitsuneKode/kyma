@@ -69,23 +69,17 @@ Design direction:
 
 Purpose:
 
-- current recruiter/admin placeholder shell
-- currently only communicates build focus and future scope
+- recruiter hub and entry to screening + review flows
 
 Current state:
 
-- not a real product workspace yet
-- just a temporary holding page
+- **Implemented:** Clerk-gated shell when Clerk env is configured; links to candidates and screenings.
+- Child routes ship real flows: `/admin/candidates` (queue), `/admin/candidates/[sessionId]` (detail, transcript, report, notes, copilot chat), `/admin/screenings` (batches), `/admin/screenings/new` (batch creation), `/admin/screenings/[batchId]` (invites per batch).
 
 Design direction:
 
-- should become recruiter command center
-- should eventually contain:
-  - screening list
-  - candidate list
-  - leaderboard/table
-  - review queue
-  - screening creation entry
+- evolve toward a calmer recruiter command center (density, wayfinding, review speed)
+- keep LiveKit meeting UX on `/interviews/*`; admin stays artifact- and decision-focused
 
 ### `/interviews/[inviteId]`
 
@@ -103,24 +97,30 @@ Current behavior:
 Current screen states inside this route:
 
 1. `unavailable`
+
 - invalid or revoked invite
 
 2. `expired`
+
 - link expired
 
 3. `consumed`
+
 - already used for a submitted interview
 
 4. `prejoin`
+
 - candidate enters name
 - selects mic/camera
 - previews media via LiveKit `PreJoin`
 
 5. `meeting`
+
 - candidate joins actual LiveKit room
 - meeting shell shows policy/status and side rails
 
 6. `processing`
+
 - shown after submit while downstream report generation is pending
 
 This route should become the best-designed part of the product first.
