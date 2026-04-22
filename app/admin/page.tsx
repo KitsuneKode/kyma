@@ -1,20 +1,20 @@
-import Link from "next/link"
+import Link from "next/link";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 
 const nowTasks = [
   "Candidate review queue",
   "Session lifecycle persistence",
   "Live transcript storage",
   "Report and evidence schema",
-]
+];
 
 const futureTasks = [
   "Screening creation",
   "Candidate eligibility gating",
   "Replay and recording review",
   "Grounded recruiter AI chat",
-]
+];
 
 export default function AdminPage() {
   return (
@@ -25,9 +25,9 @@ export default function AdminPage() {
         </p>
         <h1 className="mt-1 text-2xl font-semibold">Build Queue</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          The recruiter side is now moving from placeholder shell into a real
-          review workflow. This page is the handoff point into the actual admin
-          surfaces we are building next.
+          The recruiter side is now moving from placeholder shell into a real review
+          workflow. This page is the handoff point into the actual admin surfaces we are
+          building next.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Button nativeButton={false} render={<Link href="/admin/candidates" />}>
@@ -67,5 +67,5 @@ export default function AdminPage() {
         </div>
       </section>
     </main>
-  )
+  );
 }

@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { type SessionEvent } from "@/lib/interview/types"
+import { type SessionEvent } from "@/lib/interview/types";
 
 type SessionTimelineProps = {
-  events: SessionEvent[]
-}
+  events: SessionEvent[];
+};
 
 export function SessionTimeline({ events }: SessionTimelineProps) {
   return (
@@ -32,5 +32,5 @@ export function SessionTimeline({ events }: SessionTimelineProps) {
         )}
       </div>
     </section>
-  )
+  );
 }

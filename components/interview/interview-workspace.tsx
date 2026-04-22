@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { type LocalUserChoices } from "@livekit/components-react"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useMutation, useQuery } from "convex/react"
+import { type LocalUserChoices } from "@livekit/components-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import {
   type DisconnectReason,
   Room,
@@ -11,149 +11,136 @@ import {
   Track,
   type TrackPublication,
   type TranscriptionSegment,
-} from "livekit-client"
+} from "livekit-client";
 
-import { api } from "@/convex/_generated/api"
-import { InviteLobby } from "@/components/interview/invite-lobby"
-import { InviteAccessScreen } from "@/components/interview/invite-access-screen"
-import { MeetingShell } from "@/components/interview/meeting-shell"
-import { SessionOverview } from "@/components/interview/session-overview"
-import { SessionTimeline } from "@/components/interview/session-timeline"
-import { TranscriptRail } from "@/components/interview/transcript-rail"
+import { api } from "@/convex/_generated/api";
+import { InviteLobby } from "@/components/interview/invite-lobby";
+import { InviteAccessScreen } from "@/components/interview/invite-access-screen";
+import { MeetingShell } from "@/components/interview/meeting-shell";
+import { SessionOverview } from "@/components/interview/session-overview";
+import { SessionTimeline } from "@/components/interview/session-timeline";
+import { TranscriptRail } from "@/components/interview/transcript-rail";
 import {
   bootstrapInterviewSession,
   type BootstrappedInterviewSession,
-} from "@/lib/interview/bootstrap"
-import {
-  createDiagnosticLogger,
-  createRequestId,
-} from "@/lib/interview/diagnostics"
-import { mergeInterviewSnapshot } from "@/lib/interview/snapshot"
-import { type InterviewSessionSnapshot } from "@/lib/interview/types"
+} from "@/lib/interview/bootstrap";
+import { createDiagnosticLogger, createRequestId } from "@/lib/interview/diagnostics";
+import { mergeInterviewSnapshot } from "@/lib/interview/snapshot";
+import { type InterviewSessionSnapshot } from "@/lib/interview/types";
 
 type InterviewWorkspaceProps = {
-  initialSnapshot: InterviewSessionSnapshot
-}
+  initialSnapshot: InterviewSessionSnapshot;
+};
 
-type InterviewView = "prejoin" | "meeting" | "processing"
+type InterviewView = "prejoin" | "meeting" | "processing";
 
 function createLocalEvent(
   type: InterviewSessionSnapshot["events"][number]["type"],
-  detail: string
+  detail: string,
 ) {
   return {
     type,
     detail,
     createdAt: new Date().toISOString(),
-  }
+  };
 }
 
 function toIsoTimestamp(timestamp: number) {
-  return new Date(timestamp).toISOString()
+  return new Date(timestamp).toISOString();
 }
 
 function getTranscriptSpeaker(
   room: Room,
   participant?: Participant,
-  publication?: TrackPublication
+  publication?: TrackPublication,
 ) {
   if (!participant) {
-    return publication ? "agent" : "system"
+    return publication ? "agent" : "system";
   }
 
-  if (
-    participant.isLocal ||
-    participant.identity === room.localParticipant.identity
-  ) {
-    return "candidate"
+  if (participant.isLocal || participant.identity === room.localParticipant.identity) {
+    return "candidate";
   }
 
-  return "agent"
+  return "agent";
 }
 
 function upsertLocalTranscriptSegment(
   transcript: InterviewSessionSnapshot["transcript"],
   segment: {
-    id: string
-    speaker: InterviewSessionSnapshot["transcript"][number]["speaker"]
-    text: string
-    status: InterviewSessionSnapshot["transcript"][number]["status"]
-    startedAt: string
-    endedAt?: string
-  }
+    id: string;
+    speaker: InterviewSessionSnapshot["transcript"][number]["speaker"];
+    text: string;
+    status: InterviewSessionSnapshot["transcript"][number]["status"];
+    startedAt: string;
+    endedAt?: string;
+  },
 ) {
-  const index = transcript.findIndex((item) => item.id === segment.id)
+  const index = transcript.findIndex((item) => item.id === segment.id);
 
   if (index === -1) {
-    return [...transcript, segment]
+    return [...transcript, segment];
   }
 
-  const next = [...transcript]
+  const next = [...transcript];
   next[index] = {
     ...next[index],
     ...segment,
-  }
-  return next
+  };
+  return next;
 }
 
 function summarizeTranscriptEvent(
   speaker: InterviewSessionSnapshot["transcript"][number]["speaker"],
-  text: string
+  text: string,
 ) {
   const speakerLabel =
     speaker === "candidate"
       ? "Candidate"
       : speaker === "agent"
         ? "Interviewer"
-        : "System"
-  const normalized = text.trim().replace(/\s+/g, " ")
+        : "System";
+  const normalized = text.trim().replace(/\s+/g, " ");
   const excerpt =
-    normalized.length > 120 ? `${normalized.slice(0, 117).trimEnd()}...` : normalized
+    normalized.length > 120 ? `${normalized.slice(0, 117).trimEnd()}...` : normalized;
 
-  return `${speakerLabel}: ${excerpt}`
+  return `${speakerLabel}: ${excerpt}`;
 }
 
-export function InterviewWorkspace({
-  initialSnapshot,
-}: InterviewWorkspaceProps) {
-  const [requestId] = useState(() => createRequestId("client"))
+export function InterviewWorkspace({ initialSnapshot }: InterviewWorkspaceProps) {
+  const [requestId] = useState(() => createRequestId("client"));
   const [view, setView] = useState<InterviewView>(() =>
-    initialSnapshot.state === "processing" ||
-    initialSnapshot.state === "completed"
+    initialSnapshot.state === "processing" || initialSnapshot.state === "completed"
       ? "processing"
-      : "prejoin"
-  )
-  const [session, setSession] = useState(initialSnapshot)
+      : "prejoin",
+  );
+  const [session, setSession] = useState(initialSnapshot);
   const [participantName, setParticipantName] = useState(
-    initialSnapshot.candidateName ?? "Demo Candidate"
-  )
-  const [preJoinChoices, setPreJoinChoices] = useState<LocalUserChoices | null>(
-    null
-  )
+    initialSnapshot.candidateName ?? "Demo Candidate",
+  );
+  const [preJoinChoices, setPreJoinChoices] = useState<LocalUserChoices | null>(null);
   const [bootstrappedSession, setBootstrappedSession] =
-    useState<BootstrappedInterviewSession | null>(null)
-  const [connectionError, setConnectionError] = useState<string | null>(null)
-  const [isBootstrapping, setIsBootstrapping] = useState(false)
-  const [isSubmittingInterview, setIsSubmittingInterview] = useState(false)
+    useState<BootstrappedInterviewSession | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [isBootstrapping, setIsBootstrapping] = useState(false);
+  const [isSubmittingInterview, setIsSubmittingInterview] = useState(false);
   const room = useMemo(
     () =>
       new Room({
         adaptiveStream: true,
         dynacast: true,
       }),
-    []
-  )
-  const completionRequestedRef = useRef(false)
-  const sessionIdRef = useRef<string | null>(initialSnapshot.sessionId ?? null)
-  const roomNameRef = useRef<string | null>(initialSnapshot.roomName ?? null)
-  const participantNameRef = useRef(participantName)
-  const appendSessionEvent = useMutation(api.interviews.appendSessionEvent)
-  const upsertTranscriptSegment = useMutation(
-    api.interviews.upsertTranscriptSegment
-  )
+    [],
+  );
+  const completionRequestedRef = useRef(false);
+  const sessionIdRef = useRef<string | null>(initialSnapshot.sessionId ?? null);
+  const roomNameRef = useRef<string | null>(initialSnapshot.roomName ?? null);
+  const participantNameRef = useRef(participantName);
+  const appendSessionEvent = useMutation(api.interviews.appendSessionEvent);
+  const upsertTranscriptSegment = useMutation(api.interviews.upsertTranscriptSegment);
   const persistedSession = useQuery(api.interviews.getPublicSessionDetail, {
     inviteToken: initialSnapshot.inviteId,
-  })
+  });
 
   const logger = useMemo(
     () =>
@@ -162,30 +149,30 @@ export function InterviewWorkspace({
         requestId,
         inviteToken: initialSnapshot.inviteId,
       }),
-    [initialSnapshot.inviteId, requestId]
-  )
+    [initialSnapshot.inviteId, requestId],
+  );
   const hydratedSession = useMemo(
     () => mergeInterviewSnapshot(session, persistedSession ?? null),
-    [persistedSession, session]
-  )
+    [persistedSession, session],
+  );
 
   useEffect(() => {
-    sessionIdRef.current = hydratedSession.sessionId ?? null
-    roomNameRef.current = hydratedSession.roomName ?? null
-  }, [hydratedSession.roomName, hydratedSession.sessionId])
+    sessionIdRef.current = hydratedSession.sessionId ?? null;
+    roomNameRef.current = hydratedSession.roomName ?? null;
+  }, [hydratedSession.roomName, hydratedSession.sessionId]);
 
   useEffect(() => {
-    participantNameRef.current = participantName
-  }, [participantName])
+    participantNameRef.current = participantName;
+  }, [participantName]);
 
   useEffect(() => {
     async function persistEffectEvent(
       type: string,
       detail: string,
-      state?: InterviewSessionSnapshot["state"]
+      state?: InterviewSessionSnapshot["state"],
     ) {
       if (!sessionIdRef.current) {
-        return
+        return;
       }
 
       await appendSessionEvent({
@@ -193,99 +180,93 @@ export function InterviewWorkspace({
         type,
         detail,
         state,
-      }).catch(() => null)
+      }).catch(() => null);
     }
 
     function handleParticipantConnected(
       participant: Room["remoteParticipants"] extends Map<string, infer Value>
         ? Value
-        : never
+        : never,
     ) {
-      const detail = `${participant.identity} joined the room.`
+      const detail = `${participant.identity} joined the room.`;
       logger.info({
         event: "room.participant.connected",
         detail,
         sessionId: sessionIdRef.current ?? undefined,
         roomName: roomNameRef.current ?? undefined,
         participantIdentity: participant.identity,
-      })
+      });
       setSession((current) => ({
         ...current,
-        events: [
-          ...current.events,
-          createLocalEvent("participant-joined", detail),
-        ],
-      }))
-      void persistEffectEvent("participant-joined", detail, "live")
+        events: [...current.events, createLocalEvent("participant-joined", detail)],
+      }));
+      void persistEffectEvent("participant-joined", detail, "live");
     }
 
     function handleParticipantDisconnected(
       participant: Room["remoteParticipants"] extends Map<string, infer Value>
         ? Value
-        : never
+        : never,
     ) {
-      const detail = `${participant.identity} left the room.`
+      const detail = `${participant.identity} left the room.`;
       logger.warn({
         event: "room.participant.disconnected",
         detail,
         sessionId: sessionIdRef.current ?? undefined,
         roomName: roomNameRef.current ?? undefined,
         participantIdentity: participant.identity,
-      })
+      });
       setSession((current) => ({
         ...current,
-        events: [
-          ...current.events,
-          createLocalEvent("participant-left", detail),
-        ],
-      }))
-      void persistEffectEvent("participant-left", detail)
+        events: [...current.events, createLocalEvent("participant-left", detail)],
+      }));
+      void persistEffectEvent("participant-left", detail);
     }
 
     function handleLocalTrackPublished(publication: TrackPublication) {
       if (publication.source !== Track.Source.ScreenShare) {
-        return
+        return;
       }
 
-      const detail = "Candidate started screen sharing for the teaching segment."
+      const detail = "Candidate started screen sharing for the teaching segment.";
       logger.info({
         event: "room.screen-share.started",
         detail,
         sessionId: sessionIdRef.current ?? undefined,
         roomName: roomNameRef.current ?? undefined,
         participantIdentity: room.localParticipant.identity,
-      })
+      });
       setSession((current) => ({
         ...current,
         events: [
           ...current.events,
           createLocalEvent("candidate-screen-share-started", detail),
         ],
-      }))
-      void persistEffectEvent("candidate-screen-share-started", detail, "live")
+      }));
+      void persistEffectEvent("candidate-screen-share-started", detail, "live");
     }
 
     function handleLocalTrackUnpublished(publication: TrackPublication) {
       if (publication.source !== Track.Source.ScreenShare) {
-        return
+        return;
       }
 
-      const detail = "Candidate stopped screen sharing."
+      const detail = "Candidate stopped screen sharing.";
       logger.info({
         event: "room.screen-share.stopped",
         detail,
         sessionId: sessionIdRef.current ?? undefined,
         roomName: roomNameRef.current ?? undefined,
         participantIdentity: room.localParticipant.identity,
-      })
+      });
       setSession((current) => ({
         ...current,
         events: [
           ...current.events,
           createLocalEvent("candidate-screen-share-stopped", detail),
         ],
-      }))
-      void persistEffectEvent("candidate-screen-share-stopped", detail, "live")
+      }));
+      void persistEffectEvent("candidate-screen-share-stopped", detail, "live");
     }
 
     function handleReconnecting() {
@@ -296,7 +277,7 @@ export function InterviewWorkspace({
         roomName: roomNameRef.current ?? undefined,
         stateFrom: "live",
         stateTo: "reconnecting",
-      })
+      });
       setSession((current) => ({
         ...current,
         state: "reconnecting",
@@ -304,12 +285,12 @@ export function InterviewWorkspace({
           ...current.events,
           createLocalEvent("reconnect-started", "Room reconnect started."),
         ],
-      }))
+      }));
       void persistEffectEvent(
         "reconnect-started",
         "Room reconnect started.",
-        "reconnecting"
-      )
+        "reconnecting",
+      );
     }
 
     function handleReconnected() {
@@ -320,7 +301,7 @@ export function InterviewWorkspace({
         roomName: roomNameRef.current ?? undefined,
         stateFrom: "reconnecting",
         stateTo: "live",
-      })
+      });
       setSession((current) => ({
         ...current,
         state: "live",
@@ -328,25 +309,24 @@ export function InterviewWorkspace({
           ...current.events,
           createLocalEvent("reconnect-succeeded", "Room reconnect succeeded."),
         ],
-      }))
+      }));
       void persistEffectEvent(
         "reconnect-succeeded",
         "Room reconnect succeeded.",
-        "live"
-      )
+        "live",
+      );
     }
 
     function handleDisconnected() {
       if (completionRequestedRef.current) {
         logger.info({
           event: "room.disconnected.after-submit",
-          detail:
-            "Room disconnected after the candidate submitted the interview.",
+          detail: "Room disconnected after the candidate submitted the interview.",
           sessionId: sessionIdRef.current ?? undefined,
           roomName: roomNameRef.current ?? undefined,
-        })
-        setBootstrappedSession(null)
-        setView("processing")
+        });
+        setBootstrappedSession(null);
+        setView("processing");
         setSession((current) => ({
           ...current,
           state: "processing",
@@ -354,11 +334,11 @@ export function InterviewWorkspace({
             ...current.events,
             createLocalEvent(
               "participant-left",
-              "Candidate left the room after submitting the interview."
+              "Candidate left the room after submitting the interview.",
             ),
           ],
-        }))
-        return
+        }));
+        return;
       }
 
       logger.warn({
@@ -366,9 +346,9 @@ export function InterviewWorkspace({
         detail: "Room disconnected before the interview was submitted.",
         sessionId: sessionIdRef.current ?? undefined,
         roomName: roomNameRef.current ?? undefined,
-      })
-      setBootstrappedSession(null)
-      setView("prejoin")
+      });
+      setBootstrappedSession(null);
+      setView("prejoin");
       setSession((current) => ({
         ...current,
         state: "interrupted",
@@ -376,21 +356,17 @@ export function InterviewWorkspace({
           ...current.events,
           createLocalEvent("participant-left", "Room disconnected."),
         ],
-      }))
-      void persistEffectEvent(
-        "participant-left",
-        "Room disconnected.",
-        "interrupted"
-      )
+      }));
+      void persistEffectEvent("participant-left", "Room disconnected.", "interrupted");
     }
 
     function handleTranscriptionReceived(
       transcription: TranscriptionSegment[],
       participant?: Participant,
-      publication?: TrackPublication
+      publication?: TrackPublication,
     ) {
-      const speaker = getTranscriptSpeaker(room, participant, publication)
-      const participantIdentity = participant?.identity
+      const speaker = getTranscriptSpeaker(room, participant, publication);
+      const participantIdentity = participant?.identity;
 
       logger.debug({
         event: "transcription.received",
@@ -402,14 +378,12 @@ export function InterviewWorkspace({
           speaker,
           publicationSid: publication?.trackSid,
         },
-      })
+      });
 
       for (const segment of transcription) {
-        const startedAt = toIsoTimestamp(segment.startTime)
-        const endedAt = segment.endTime
-          ? toIsoTimestamp(segment.endTime)
-          : undefined
-        const status = segment.final ? "final" : "partial"
+        const startedAt = toIsoTimestamp(segment.startTime);
+        const endedAt = segment.endTime ? toIsoTimestamp(segment.endTime) : undefined;
+        const status = segment.final ? "final" : "partial";
 
         setSession((current) => ({
           ...current,
@@ -421,7 +395,7 @@ export function InterviewWorkspace({
             startedAt,
             endedAt,
           }),
-        }))
+        }));
 
         void upsertTranscriptSegment({
           sessionId: sessionIdRef.current as never,
@@ -444,55 +418,55 @@ export function InterviewWorkspace({
               segmentId: segment.id,
               status,
             },
-          })
-        })
+          });
+        });
 
         if (status === "final" && segment.text.trim()) {
-          const detail = summarizeTranscriptEvent(speaker, segment.text)
+          const detail = summarizeTranscriptEvent(speaker, segment.text);
 
           setSession((current) => ({
             ...current,
             events: [...current.events, createLocalEvent("transcript-final", detail)],
-          }))
-          void persistEffectEvent("transcript-final", detail)
+          }));
+          void persistEffectEvent("transcript-final", detail);
         }
       }
     }
 
-    room.on(RoomEvent.ParticipantConnected, handleParticipantConnected)
-    room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected)
-    room.on(RoomEvent.LocalTrackPublished, handleLocalTrackPublished)
-    room.on(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished)
-    room.on(RoomEvent.Reconnecting, handleReconnecting)
-    room.on(RoomEvent.Reconnected, handleReconnected)
-    room.on(RoomEvent.Disconnected, handleDisconnected)
-    room.on(RoomEvent.TranscriptionReceived, handleTranscriptionReceived)
+    room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
+    room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
+    room.on(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
+    room.on(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished);
+    room.on(RoomEvent.Reconnecting, handleReconnecting);
+    room.on(RoomEvent.Reconnected, handleReconnected);
+    room.on(RoomEvent.Disconnected, handleDisconnected);
+    room.on(RoomEvent.TranscriptionReceived, handleTranscriptionReceived);
 
     return () => {
-      room.off(RoomEvent.ParticipantConnected, handleParticipantConnected)
-      room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected)
-      room.off(RoomEvent.LocalTrackPublished, handleLocalTrackPublished)
-      room.off(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished)
-      room.off(RoomEvent.Reconnecting, handleReconnecting)
-      room.off(RoomEvent.Reconnected, handleReconnected)
-      room.off(RoomEvent.Disconnected, handleDisconnected)
-      room.off(RoomEvent.TranscriptionReceived, handleTranscriptionReceived)
-    }
-  }, [appendSessionEvent, logger, room, upsertTranscriptSegment])
+      room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
+      room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
+      room.off(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
+      room.off(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished);
+      room.off(RoomEvent.Reconnecting, handleReconnecting);
+      room.off(RoomEvent.Reconnected, handleReconnected);
+      room.off(RoomEvent.Disconnected, handleDisconnected);
+      room.off(RoomEvent.TranscriptionReceived, handleTranscriptionReceived);
+    };
+  }, [appendSessionEvent, logger, room, upsertTranscriptSegment]);
 
   useEffect(() => {
     return () => {
-      void room.disconnect()
-    }
-  }, [room])
+      void room.disconnect();
+    };
+  }, [room]);
 
   async function persistSessionEvent(
     type: string,
     detail: string,
-    state?: InterviewSessionSnapshot["state"]
+    state?: InterviewSessionSnapshot["state"],
   ) {
     if (!sessionIdRef.current) {
-      return
+      return;
     }
 
     await appendSessionEvent({
@@ -500,38 +474,37 @@ export function InterviewWorkspace({
       type,
       detail,
       state,
-    }).catch(() => null)
+    }).catch(() => null);
   }
 
   async function handlePreJoinSubmit(choices: LocalUserChoices) {
-    const candidateName = choices.username.trim() || participantName
+    const candidateName = choices.username.trim() || participantName;
 
-    setConnectionError(null)
-    setIsBootstrapping(true)
-    setPreJoinChoices(choices)
-    setParticipantName(candidateName)
-    completionRequestedRef.current = false
+    setConnectionError(null);
+    setIsBootstrapping(true);
+    setPreJoinChoices(choices);
+    setParticipantName(candidateName);
+    completionRequestedRef.current = false;
     logger.info({
       event: "prejoin.completed",
-      detail:
-        "Candidate completed LiveKit prejoin and requested room bootstrap.",
+      detail: "Candidate completed LiveKit prejoin and requested room bootstrap.",
       participantIdentity: candidateName,
       meta: {
         audioEnabled: choices.audioEnabled,
         videoEnabled: choices.videoEnabled,
       },
-    })
+    });
 
     try {
       const payload = await bootstrapInterviewSession({
         inviteToken: initialSnapshot.inviteId,
         participantName: candidateName,
-      })
+      });
 
-      sessionIdRef.current = payload.sessionId
-      roomNameRef.current = payload.roomName
-      setBootstrappedSession(payload)
-      setView("meeting")
+      sessionIdRef.current = payload.sessionId;
+      roomNameRef.current = payload.roomName;
+      setBootstrappedSession(payload);
+      setView("meeting");
       setSession((current) => ({
         ...current,
         sessionId: payload.sessionId,
@@ -543,41 +516,35 @@ export function InterviewWorkspace({
           ...current.events,
           createLocalEvent(
             "room-token-requested",
-            "Candidate requested room credentials."
+            "Candidate requested room credentials.",
           ),
         ],
-      }))
+      }));
       logger.info({
         event: "bootstrap.succeeded",
-        detail:
-          "Interview bootstrap succeeded and the room is ready to connect.",
+        detail: "Interview bootstrap succeeded and the room is ready to connect.",
         participantIdentity: candidateName,
         sessionId: payload.sessionId,
         roomName: payload.roomName,
-      })
+      });
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to prepare interview room."
+        error instanceof Error ? error.message : "Unable to prepare interview room.";
 
-      setConnectionError(message)
+      setConnectionError(message);
       setSession((current) => ({
         ...current,
         state: "ready",
-        events: [
-          ...current.events,
-          createLocalEvent("session-failed", message),
-        ],
-      }))
+        events: [...current.events, createLocalEvent("session-failed", message)],
+      }));
       logger.error({
         event: "bootstrap.failed",
         detail: message,
         participantIdentity: candidateName,
         error,
-      })
+      });
     } finally {
-      setIsBootstrapping(false)
+      setIsBootstrapping(false);
     }
   }
 
@@ -588,8 +555,8 @@ export function InterviewWorkspace({
       participantIdentity: participantNameRef.current,
       sessionId: sessionIdRef.current ?? undefined,
       roomName: roomNameRef.current ?? undefined,
-    })
-    setConnectionError(null)
+    });
+    setConnectionError(null);
     setSession((current) => ({
       ...current,
       state: "live",
@@ -597,15 +564,15 @@ export function InterviewWorkspace({
         ...current.events,
         createLocalEvent(
           "participant-joined",
-          `Connected to room ${roomNameRef.current ?? bootstrappedSession?.roomName ?? "interview room"}.`
+          `Connected to room ${roomNameRef.current ?? bootstrappedSession?.roomName ?? "interview room"}.`,
         ),
       ],
-    }))
+    }));
     await persistSessionEvent(
       "participant-joined",
       `Connected to room ${roomNameRef.current ?? bootstrappedSession?.roomName ?? "interview room"}.`,
-      "live"
-    )
+      "live",
+    );
   }
 
   function handleRoomDisconnected(reason?: DisconnectReason) {
@@ -617,11 +584,11 @@ export function InterviewWorkspace({
       meta: {
         reason: reason ?? "unknown",
       },
-    })
+    });
   }
 
   function handleRoomError(error: Error) {
-    setConnectionError(error.message)
+    setConnectionError(error.message);
     logger.error({
       event: "room.connect.failed",
       detail: error.message,
@@ -629,20 +596,20 @@ export function InterviewWorkspace({
       roomName: roomNameRef.current ?? undefined,
       participantIdentity: participantNameRef.current,
       error,
-    })
+    });
   }
 
   async function handleSubmitInterview() {
-    completionRequestedRef.current = true
-    setIsSubmittingInterview(true)
-    setConnectionError(null)
+    completionRequestedRef.current = true;
+    setIsSubmittingInterview(true);
+    setConnectionError(null);
     logger.info({
       event: "session.processing.started",
       detail: "Candidate submitted the interview for post-call processing.",
       sessionId: sessionIdRef.current ?? undefined,
       roomName: roomNameRef.current ?? undefined,
       participantIdentity: participantNameRef.current,
-    })
+    });
 
     try {
       setSession((current) => ({
@@ -652,15 +619,15 @@ export function InterviewWorkspace({
           ...current.events,
           createLocalEvent(
             "processing-started",
-            "Interview submitted for post-call processing."
+            "Interview submitted for post-call processing.",
           ),
         ],
-      }))
+      }));
       await persistSessionEvent(
         "processing-started",
         "Interview submitted for post-call processing.",
-        "processing"
-      )
+        "processing",
+      );
       if (sessionIdRef.current) {
         const response = await fetch("/api/interviews/process", {
           method: "POST",
@@ -670,29 +637,28 @@ export function InterviewWorkspace({
           body: JSON.stringify({
             sessionId: sessionIdRef.current,
           }),
-        })
+        });
 
         if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as
-            | { error?: string }
-            | null
+          const payload = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
           throw new Error(
-            payload?.error ??
-              "Unable to start interview processing for this session."
-          )
+            payload?.error ?? "Unable to start interview processing for this session.",
+          );
         }
       }
-      await room.disconnect(true)
-      setBootstrappedSession(null)
-      setView("processing")
+      await room.disconnect(true);
+      setBootstrappedSession(null);
+      setView("processing");
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "Unable to submit the interview for processing."
+          : "Unable to submit the interview for processing.";
 
-      setConnectionError(message)
-      completionRequestedRef.current = false
+      setConnectionError(message);
+      completionRequestedRef.current = false;
       logger.error({
         event: "session.processing.failed",
         detail: message,
@@ -700,9 +666,9 @@ export function InterviewWorkspace({
         roomName: roomNameRef.current ?? undefined,
         participantIdentity: participantNameRef.current,
         error,
-      })
+      });
     } finally {
-      setIsSubmittingInterview(false)
+      setIsSubmittingInterview(false);
     }
   }
 
@@ -731,9 +697,9 @@ export function InterviewWorkspace({
               The interview has been submitted for review.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              The live session is complete. We will use the persisted session
-              data, transcript artifacts, and report pipeline to generate an
-              evidence-backed assessment next.
+              The live session is complete. We will use the persisted session data,
+              transcript artifacts, and report pipeline to generate an evidence-backed
+              assessment next.
             </p>
           </div>
         ) : hydratedSession.accessState !== "available" ? (
@@ -754,13 +720,10 @@ export function InterviewWorkspace({
       </section>
 
       <aside className="space-y-6">
-        <SessionOverview
-          connectionError={connectionError}
-          snapshot={hydratedSession}
-        />
+        <SessionOverview connectionError={connectionError} snapshot={hydratedSession} />
         <SessionTimeline events={hydratedSession.events} />
         <TranscriptRail transcript={hydratedSession.transcript} />
       </aside>
     </div>
-  )
+  );
 }

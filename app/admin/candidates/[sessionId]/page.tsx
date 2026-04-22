@@ -1,40 +1,44 @@
-import Link from "next/link"
-import { fetchQuery } from "convex/nextjs"
-import type { ReactNode } from "react"
+import Link from "next/link";
+import { fetchQuery } from "convex/nextjs";
+import type { ReactNode } from "react";
 
-import type { Id } from "@/convex/_generated/dataModel"
-import { api } from "@/convex/_generated/api"
-import { Button } from "@/components/ui/button"
-import { RecruiterChat } from "@/components/recruiter/recruiter-chat"
-import { RecruiterNotes } from "@/components/recruiter/recruiter-notes"
-import { ReviewActions } from "@/components/recruiter/review-actions"
-import { getServerConvexAuthToken } from "@/lib/clerk/server-token"
+import type { Id } from "@/convex/_generated/dataModel";
+import { api } from "@/convex/_generated/api";
+import { Button } from "@/components/ui/button";
+import { RecruiterChat } from "@/components/recruiter/recruiter-chat";
+import { RecruiterNotes } from "@/components/recruiter/recruiter-notes";
+import { ReviewActions } from "@/components/recruiter/review-actions";
+import { getServerConvexAuthToken } from "@/lib/clerk/server-token";
 import {
   formatConfidenceLabel,
   formatDateTime,
   formatDimensionLabel,
   formatRecommendationLabel,
   formatStatusLabel,
-} from "@/lib/recruiter/format"
+} from "@/lib/recruiter/format";
 
 type CandidateReviewPageProps = {
   params: Promise<{
-    sessionId: string
-  }>
-}
+    sessionId: string;
+  }>;
+};
 
 export default async function CandidateReviewPage({
   params,
 }: CandidateReviewPageProps) {
-  const { sessionId } = await params
-  const token = await getServerConvexAuthToken()
+  const { sessionId } = await params;
+  const token = await getServerConvexAuthToken();
   const detail = process.env.NEXT_PUBLIC_CONVEX_URL
-    ? await fetchQuery(api.recruiter.getCandidateReviewDetail, {
-        sessionId: sessionId as Id<"interviewSessions">,
-      }, {
-        token: token ?? undefined,
-      }).catch(() => null)
-    : null
+    ? await fetchQuery(
+        api.recruiter.getCandidateReviewDetail,
+        {
+          sessionId: sessionId as Id<"interviewSessions">,
+        },
+        {
+          token: token ?? undefined,
+        },
+      ).catch(() => null)
+    : null;
 
   if (!detail) {
     return (
@@ -61,10 +65,10 @@ export default async function CandidateReviewPage({
           </div>
         </section>
       </main>
-    )
+    );
   }
 
-  const teachingSimulation = summarizeTeachingSimulation(detail.events)
+  const teachingSimulation = summarizeTeachingSimulation(detail.events);
 
   return (
     <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-7xl flex-col gap-6 px-6 py-10">
@@ -79,8 +83,8 @@ export default async function CandidateReviewPage({
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
               Review the transcript, session behavior, evidence, and current
-              recommendation in one place. This is the operational screen the
-              product will grow around.
+              recommendation in one place. This is the operational screen the product
+              will grow around.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -244,8 +248,8 @@ export default async function CandidateReviewPage({
             ) : (
               <p className="text-sm text-muted-foreground">
                 No assessment report exists yet. The session and transcript are
-                available, but the evidence/report pipeline still needs to write
-                into the recruiter review layer.
+                available, but the evidence/report pipeline still needs to write into
+                the recruiter review layer.
               </p>
             )}
           </InfoCard>
@@ -263,7 +267,9 @@ export default async function CandidateReviewPage({
                         {formatDimensionLabel(item.dimension)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {item.startedAt ? formatDateTime(item.startedAt) : "No timestamp"}
+                        {item.startedAt
+                          ? formatDateTime(item.startedAt)
+                          : "No timestamp"}
                       </p>
                     </div>
                     <blockquote className="mt-3 rounded-lg bg-muted/40 px-4 py-3 text-sm leading-6">
@@ -277,8 +283,8 @@ export default async function CandidateReviewPage({
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                No evidence has been generated yet. This will be populated by
-                the transcript-to-report pipeline.
+                No evidence has been generated yet. This will be populated by the
+                transcript-to-report pipeline.
               </p>
             )}
           </InfoCard>
@@ -300,10 +306,7 @@ export default async function CandidateReviewPage({
             title="Review action"
             description="Record the recruiter decision without leaving this page."
           >
-            <ReviewActions
-              reportId={detail.report?.id}
-              sessionId={detail.session.id}
-            />
+            <ReviewActions reportId={detail.report?.id} sessionId={detail.session.id} />
           </InfoCard>
 
           <InfoCard
@@ -373,9 +376,7 @@ export default async function CandidateReviewPage({
                       </p>
                     )}
                     {artifact.error ? (
-                      <p className="mt-2 text-sm text-destructive">
-                        {artifact.error}
-                      </p>
+                      <p className="mt-2 text-sm text-destructive">{artifact.error}</p>
                     ) : null}
                   </div>
                 ))
@@ -406,9 +407,7 @@ export default async function CandidateReviewPage({
               {detail.events.map((event) => (
                 <div key={event.id} className="rounded-lg border px-4 py-3">
                   <p className="font-medium">{formatStatusLabel(event.type)}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {event.detail}
-                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">{event.detail}</p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {formatDateTime(event.createdAt)}
                   </p>
@@ -422,8 +421,8 @@ export default async function CandidateReviewPage({
       <section className="rounded-xl border bg-card p-6 shadow-sm">
         <h2 className="text-sm font-semibold">Transcript</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          This is the durable transcript artifact that later report generation
-          and recruiter AI chat will build on.
+          This is the durable transcript artifact that later report generation and
+          recruiter AI chat will build on.
         </p>
 
         <div className="mt-6 flex flex-col gap-3">
@@ -456,7 +455,7 @@ export default async function CandidateReviewPage({
         </div>
       </section>
     </main>
-  )
+  );
 }
 
 function MetricCard({
@@ -464,9 +463,9 @@ function MetricCard({
   value,
   detail,
 }: {
-  label: string
-  value: string
-  detail: string
+  label: string;
+  value: string;
+  detail: string;
 }) {
   return (
     <div className="rounded-xl border bg-card p-5 shadow-sm">
@@ -476,7 +475,7 @@ function MetricCard({
       <p className="mt-3 text-3xl font-semibold tracking-tight">{value}</p>
       <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
     </div>
-  )
+  );
 }
 
 function InfoCard({
@@ -484,9 +483,9 @@ function InfoCard({
   description,
   children,
 }: {
-  title: string
-  description: string
-  children: ReactNode
+  title: string;
+  description: string;
+  children: ReactNode;
 }) {
   return (
     <section className="rounded-xl border bg-card p-6 shadow-sm">
@@ -494,7 +493,7 @@ function InfoCard({
       <p className="mt-2 text-sm text-muted-foreground">{description}</p>
       <div className="mt-6">{children}</div>
     </section>
-  )
+  );
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -505,7 +504,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       </dt>
       <dd className="mt-2 text-sm font-medium">{value}</dd>
     </div>
-  )
+  );
 }
 
 function SummaryList({
@@ -513,9 +512,9 @@ function SummaryList({
   items,
   emptyLabel,
 }: {
-  label: string
-  items: string[]
-  emptyLabel: string
+  label: string;
+  items: string[];
+  emptyLabel: string;
 }) {
   return (
     <div className="rounded-lg border px-4 py-4">
@@ -530,33 +529,33 @@ function SummaryList({
         <p className="mt-3 text-sm text-muted-foreground">{emptyLabel}</p>
       )}
     </div>
-  )
+  );
 }
 
 function summarizeTeachingSimulation(
   events: Array<{
-    type: string
-    createdAt: string
-  }>
+    type: string;
+    createdAt: string;
+  }>,
 ) {
   const startedEvent = events.find(
-    (event) => event.type === "teaching-simulation-started"
-  )
+    (event) => event.type === "teaching-simulation-started",
+  );
   const completedEvent = events.find(
-    (event) => event.type === "teaching-simulation-completed"
-  )
+    (event) => event.type === "teaching-simulation-completed",
+  );
   const screenShareEvent = events.find(
-    (event) => event.type === "candidate-screen-share-started"
-  )
+    (event) => event.type === "candidate-screen-share-started",
+  );
 
   return {
     started: Boolean(startedEvent),
     completed: Boolean(completedEvent),
     screenShared: Boolean(screenShareEvent),
     startedAt: startedEvent?.createdAt,
-  }
+  };
 }
 
 function formatOptionalDateTime(value?: string) {
-  return value ? formatDateTime(value) : "Not available"
+  return value ? formatDateTime(value) : "Not available";
 }

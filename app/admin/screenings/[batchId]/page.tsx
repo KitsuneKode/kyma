@@ -1,30 +1,34 @@
-import Link from "next/link"
-import { fetchQuery } from "convex/nextjs"
+import Link from "next/link";
+import { fetchQuery } from "convex/nextjs";
 
-import type { Id } from "@/convex/_generated/dataModel"
-import { api } from "@/convex/_generated/api"
-import { Button } from "@/components/ui/button"
-import { getServerConvexAuthToken } from "@/lib/clerk/server-token"
-import { formatDateTime, formatStatusLabel } from "@/lib/recruiter/format"
+import type { Id } from "@/convex/_generated/dataModel";
+import { api } from "@/convex/_generated/api";
+import { Button } from "@/components/ui/button";
+import { getServerConvexAuthToken } from "@/lib/clerk/server-token";
+import { formatDateTime, formatStatusLabel } from "@/lib/recruiter/format";
 
 type ScreeningDetailPageProps = {
   params: Promise<{
-    batchId: string
-  }>
-}
+    batchId: string;
+  }>;
+};
 
 export default async function ScreeningDetailPage({
   params,
 }: ScreeningDetailPageProps) {
-  const { batchId } = await params
-  const token = await getServerConvexAuthToken()
+  const { batchId } = await params;
+  const token = await getServerConvexAuthToken();
   const detail = process.env.NEXT_PUBLIC_CONVEX_URL
-    ? await fetchQuery(api.admin.getScreeningBatchDetail, {
-        batchId: batchId as Id<"screeningBatches">,
-      }, {
-        token: token ?? undefined,
-      }).catch(() => null)
-    : null
+    ? await fetchQuery(
+        api.admin.getScreeningBatchDetail,
+        {
+          batchId: batchId as Id<"screeningBatches">,
+        },
+        {
+          token: token ?? undefined,
+        },
+      ).catch(() => null)
+    : null;
 
   if (!detail) {
     return (
@@ -47,7 +51,7 @@ export default async function ScreeningDetailPage({
           </div>
         </section>
       </main>
-    )
+    );
   }
 
   return (
@@ -153,7 +157,7 @@ export default async function ScreeningDetailPage({
         </div>
       </section>
     </main>
-  )
+  );
 }
 
 function MetricCard({
@@ -161,9 +165,9 @@ function MetricCard({
   value,
   detail,
 }: {
-  label: string
-  value: string
-  detail?: string
+  label: string;
+  value: string;
+  detail?: string;
 }) {
   return (
     <div className="rounded-xl border bg-card p-5 shadow-sm">
@@ -173,5 +177,5 @@ function MetricCard({
       <p className="mt-3 text-xl font-semibold tracking-tight">{value}</p>
       {detail ? <p className="mt-2 text-sm text-muted-foreground">{detail}</p> : null}
     </div>
-  )
+  );
 }

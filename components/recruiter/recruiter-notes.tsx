@@ -1,55 +1,55 @@
-"use client"
+"use client";
 
-import { startTransition, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useMutation } from "convex/react"
+import { startTransition, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMutation } from "convex/react";
 
-import { api } from "@/convex/_generated/api"
-import type { Id } from "@/convex/_generated/dataModel"
-import { Button } from "@/components/ui/button"
-import { formatDateTime } from "@/lib/recruiter/format"
-import { cn } from "@/lib/utils"
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/recruiter/format";
+import { cn } from "@/lib/utils";
 
 type RecruiterNote = {
-  id: string
-  body: string
-  authorId?: string
-  createdAt: string
-}
+  id: string;
+  body: string;
+  authorId?: string;
+  createdAt: string;
+};
 
 export function RecruiterNotes({
   sessionId,
   reportId,
   notes,
 }: {
-  sessionId: string
-  reportId?: string
-  notes: RecruiterNote[]
+  sessionId: string;
+  reportId?: string;
+  notes: RecruiterNote[];
 }) {
-  const router = useRouter()
-  const addRecruiterNote = useMutation(api.admin.addRecruiterNote)
-  const [value, setValue] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
+  const router = useRouter();
+  const addRecruiterNote = useMutation(api.admin.addRecruiterNote);
+  const [value, setValue] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   async function handleSave() {
     if (!value.trim()) {
-      return
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
       await addRecruiterNote({
         sessionId: sessionId as Id<"interviewSessions">,
         reportId: reportId as Id<"assessmentReports"> | undefined,
         body: value.trim(),
-      })
-      setValue("")
+      });
+      setValue("");
       startTransition(() => {
-        router.refresh()
-      })
+        router.refresh();
+      });
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
   }
 
@@ -78,7 +78,7 @@ export function RecruiterNotes({
         placeholder="Capture your recruiter observations here."
         className={cn(
           "min-h-28 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none transition-colors",
-          "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
         )}
       />
 
@@ -88,5 +88,5 @@ export function RecruiterNotes({
         </Button>
       </div>
     </div>
-  )
+  );
 }
