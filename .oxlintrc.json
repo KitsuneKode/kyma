@@ -9,7 +9,7 @@
     "correctness": "error",
     "suspicious": "warn"
   },
-  "plugins": ["eslint", "react", "unicorn", "oxc", "typescript", "nextjs"],
+  "plugins": ["unicorn", "oxc", "typescript", "nextjs"],
   "ignorePatterns": [
     ".next/**",
     "node_modules/**",

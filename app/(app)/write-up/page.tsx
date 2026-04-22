@@ -1,19 +1,19 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import type { Metadata } from "next";
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
+import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: "Kyma Write-Up",
-  description: "Product and engineering write-up for Kyma.",
-};
+  title: 'Kyma Write-Up',
+  description: 'Product and engineering write-up for Kyma.',
+}
 
 async function readWriteUp() {
-  const filePath = path.join(process.cwd(), "WRITE_UP.md");
-  return fs.readFile(filePath, "utf-8");
+  const filePath = path.join(process.cwd(), 'WRITE_UP.md')
+  return fs.readFile(filePath, 'utf-8')
 }
 
 export default async function WriteUpPage() {
-  const content = await readWriteUp();
+  const content = await readWriteUp()
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -28,10 +28,10 @@ export default async function WriteUpPage() {
       </section>
 
       <article className="mt-6 rounded-2xl border bg-card p-6 shadow-sm md:p-8">
-        <pre className="overflow-x-auto whitespace-pre-wrap text-sm leading-7">
+        <pre className="overflow-x-auto text-sm leading-7 whitespace-pre-wrap">
           {content}
         </pre>
       </article>
     </main>
-  );
+  )
 }

@@ -1,7 +1,7 @@
-import Link from "next/link";
+import Link from 'next/link'
 
-import { ScreeningCreationForm } from "@/components/admin/screening-creation-form";
-import { Button } from "@/components/ui/button";
+import { ScreeningCreationForm } from '@/components/admin/screening-creation-form'
+import { Button } from '@/components/ui/button'
 
 export default function NewScreeningPage() {
   return (
@@ -16,8 +16,9 @@ export default function NewScreeningPage() {
               Create screening batch
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-              This is the first real admin creation flow. It creates invite links for an
-              allowed list of candidates instead of leaving access open.
+              This is the first real admin creation flow. It creates invite
+              links for an allowed list of candidates instead of leaving access
+              open.
             </p>
           </div>
           <Button
@@ -34,5 +35,5 @@ export default function NewScreeningPage() {
         <ScreeningCreationForm />
       </section>
     </main>
-  );
+  )
 }

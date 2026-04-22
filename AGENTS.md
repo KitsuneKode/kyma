@@ -35,7 +35,7 @@ This repo is building the Cuemath-style `AI Tutor Screener`:
 - dev: `bun run dev`
 - lint: `bun run lint`
 - typecheck: `bun run typecheck`
-- format: `bun run format`
+- fmt: `bun run fmt`
 - tests (Vitest): `bun run test` and `bun run test:watch` (avoid plain `bun test`)
 
 ## Working Rules
@@ -60,7 +60,7 @@ This repo is building the Cuemath-style `AI Tutor Screener`:
 - Do not take shortcuts by adding one-off local logic when shared abstractions are the better long-term fit.
 - Keep `AGENTS.md` compact. Put durable details in `.docs/`, plans in `.plans/`.
 - Prefer extending existing components over bespoke primitives.
-- Run `bun run format` before linting, typechecking, or committing to avoid large formatter-only diffs.
+- Run `bun run fmt` before linting, typechecking, or committing to avoid large formatter-only diffs.
 - Do not use browser Web Speech as the primary production architecture; keep it as a fallback or prototype path only.
 - Optimize MVP around a polished audio interview before adding rich video features.
 - Every scoring output must be structured, evidence-backed, and reviewable by a human.

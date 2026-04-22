@@ -1,14 +1,14 @@
-import Link from "next/link";
-import type { Icon } from "@tabler/icons-react";
-import { IconChevronRight } from "@tabler/icons-react";
+import Link from 'next/link'
+import type { Icon } from '@tabler/icons-react'
+import { IconChevronRight } from '@tabler/icons-react'
 
-import { LogoIcon } from "@/components/marketing/logo";
+import { LogoIcon } from '@/components/marketing/logo'
 
 export type MarketingSocialProofProps = {
-  title: string;
-  href: string;
-  icons: Icon[];
-};
+  title: string
+  href: string
+  icons: Icon[]
+}
 
 export function MarketingSocialProof({
   title,
@@ -19,7 +19,10 @@ export function MarketingSocialProof({
     <section className="bg-background pt-16 pb-16 md:pb-32">
       <div className="group relative m-auto max-w-5xl px-6">
         <div className="absolute inset-0 z-10 flex scale-95 items-center justify-center opacity-0 duration-500 group-hover:scale-100 group-hover:opacity-100">
-          <Link href={href} className="block text-sm duration-150 hover:opacity-75">
+          <Link
+            href={href}
+            className="block text-sm duration-150 hover:opacity-75"
+          >
             <span>{title}</span>
             <IconChevronRight className="ml-1 inline-block size-3" />
           </Link>
@@ -39,5 +42,5 @@ export function MarketingSocialProof({
         </div>
       </div>
     </section>
-  );
+  )
 }

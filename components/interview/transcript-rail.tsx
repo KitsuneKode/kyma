@@ -1,10 +1,10 @@
-"use client";
+'use client'
 
-import { type TranscriptSegment } from "@/lib/interview/types";
+import { type TranscriptSegment } from '@/lib/interview/types'
 
 type TranscriptRailProps = {
-  transcript: TranscriptSegment[];
-};
+  transcript: TranscriptSegment[]
+}
 
 export function TranscriptRail({ transcript }: TranscriptRailProps) {
   return (
@@ -15,8 +15,8 @@ export function TranscriptRail({ transcript }: TranscriptRailProps) {
       <div className="mt-4 space-y-3">
         {transcript.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/80 bg-background/50 px-4 py-4 text-sm leading-6 text-muted-foreground">
-            Transcript segments will appear here once the agent runtime or post-call
-            processing writes real transcription data.
+            Transcript segments will appear here once the agent runtime or
+            post-call processing writes real transcription data.
           </div>
         ) : (
           transcript.map((segment) => (
@@ -33,5 +33,5 @@ export function TranscriptRail({ transcript }: TranscriptRailProps) {
         )}
       </div>
     </section>
-  );
+  )
 }

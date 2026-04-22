@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   ConnectionStateToast,
@@ -11,29 +11,29 @@ import {
   type LocalUserChoices,
   useCreateLayoutContext,
   useTracks,
-} from "@livekit/components-react";
-import { Track, type DisconnectReason, type Room } from "livekit-client";
+} from '@livekit/components-react'
+import { Track, type DisconnectReason, type Room } from 'livekit-client'
 
-import { Button } from "@/components/ui/button";
-import { formatDurationPolicy } from "@/lib/interview/policy";
-import { type BootstrappedInterviewSession } from "@/lib/interview/bootstrap";
-import { type InterviewPolicy } from "@/lib/interview/types";
+import { Button } from '@/components/ui/button'
+import { formatDurationPolicy } from '@/lib/interview/policy'
+import { type BootstrappedInterviewSession } from '@/lib/interview/bootstrap'
+import { type InterviewPolicy } from '@/lib/interview/types'
 
 type MeetingShellProps = {
-  connectionError: string | null;
-  isSubmittingInterview: boolean;
-  onConnected: () => void;
-  onDisconnected?: (reason?: DisconnectReason) => void;
-  onError: (error: Error) => void;
-  onSubmitInterview: () => void | Promise<void>;
-  policy: InterviewPolicy;
-  preJoinChoices: LocalUserChoices;
-  room: Room;
-  session: BootstrappedInterviewSession;
-};
+  connectionError: string | null
+  isSubmittingInterview: boolean
+  onConnected: () => void
+  onDisconnected?: (reason?: DisconnectReason) => void
+  onError: (error: Error) => void
+  onSubmitInterview: () => void | Promise<void>
+  policy: InterviewPolicy
+  preJoinChoices: LocalUserChoices
+  room: Room
+  session: BootstrappedInterviewSession
+}
 
 function InterviewConference() {
-  const layoutContext = useCreateLayoutContext();
+  const layoutContext = useCreateLayoutContext()
   const tracks = useTracks(
     [
       { source: Track.Source.ScreenShare, withPlaceholder: false },
@@ -41,8 +41,8 @@ function InterviewConference() {
     ],
     {
       onlySubscribed: false,
-    },
-  );
+    }
+  )
 
   return (
     <div className="lk-video-conference h-full">
@@ -69,7 +69,7 @@ function InterviewConference() {
       <RoomAudioRenderer />
       <ConnectionStateToast />
     </div>
-  );
+  )
 }
 
 export function MeetingShell({
@@ -92,21 +92,22 @@ export function MeetingShell({
             Live Interview
           </p>
           <p className="mt-1 text-sm font-medium">
-            Submit the interview when the conversation is complete. If the built-in
-            leave control is used first, the session will be marked as interrupted.
+            Submit the interview when the conversation is complete. If the
+            built-in leave control is used first, the session will be marked as
+            interrupted.
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {formatDurationPolicy(policy)}. Single-use invite. Resume is available only
-            until the interview is submitted.
+            {formatDurationPolicy(policy)}. Single-use invite. Resume is
+            available only until the interview is submitted.
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
             When the interviewer switches into the teaching simulation, you can
-            optionally share your screen to teach with Excalidraw, slides, or a sketch
-            pad.
+            optionally share your screen to teach with Excalidraw, slides, or a
+            sketch pad.
           </p>
         </div>
         <Button onClick={onSubmitInterview} disabled={isSubmittingInterview}>
-          {isSubmittingInterview ? "Submitting..." : "Submit Interview"}
+          {isSubmittingInterview ? 'Submitting...' : 'Submit Interview'}
         </Button>
       </div>
 
@@ -122,14 +123,14 @@ export function MeetingShell({
           audio={
             preJoinChoices.audioEnabled
               ? {
-                  deviceId: preJoinChoices.audioDeviceId || "default",
+                  deviceId: preJoinChoices.audioDeviceId || 'default',
                 }
               : false
           }
           video={
             preJoinChoices.videoEnabled
               ? {
-                  deviceId: preJoinChoices.videoDeviceId || "default",
+                  deviceId: preJoinChoices.videoDeviceId || 'default',
                 }
               : false
           }
@@ -148,5 +149,5 @@ export function MeetingShell({
         </div>
       ) : null}
     </div>
-  );
+  )
 }

@@ -115,7 +115,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - recruiter chat is grounded and usable, but it still needs true model-provider configuration or later BYOK to move beyond the fallback path
 - the child persona currently relies on prompt + TTS configuration rather than a dedicated voice-cloning path
 - native collaborative whiteboard is still deferred; current recommended visual-teaching path is screen share with tools like Excalidraw
-- primary repo lint/format is now `oxlint` + `oxfmt`; `eslint` remains available as `bun run lint:eslint` when needed
+- primary repo lint/format is now `oxlint` + `oxfmt`
 
 ## Environment Variables That Matter Right Now
 
@@ -224,7 +224,7 @@ Use these first before re-researching the current implementation choices:
 - `bun run dev:stack` starts Next.js plus Convex together
 - `bun run dev:full` also starts the LiveKit worker
 - `bun run lint` uses `oxlint`
-- `bun run lint:eslint` keeps the old ESLint path available for deeper framework-specific checks
+- `bun run lint:fix` runs `oxlint --fix` for automated lint remediation
 - `bun run test` runs Vitest; `bun run test:e2e` runs Playwright (see `playwright.config.ts`)
-- `bun run format` uses `oxfmt`
+- `bun run fmt` uses `oxfmt`; `bun run fmt:check` validates formatting in CI/local checks
 - public candidate-flow work can proceed without Clerk configured

@@ -1,18 +1,18 @@
-import { SignUp } from "@clerk/nextjs";
-import { redirect } from "next/navigation";
+import { SignUp } from '@clerk/nextjs'
+import { redirect } from 'next/navigation'
 
-import { getUserAppAccess } from "@/lib/auth/access";
-import { hasClerkServerCredentials } from "@/lib/clerk/config";
+import { getUserAppAccess } from '@/lib/auth/access'
+import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 export default async function SignUpPage() {
   if (!hasClerkServerCredentials()) {
-    redirect("/");
+    redirect('/')
   }
 
-  const access = await getUserAppAccess();
+  const access = await getUserAppAccess()
   if (access.isSignedIn) {
-    redirect("/admin");
+    redirect('/admin')
   }
 
-  return <SignUp />;
+  return <SignUp />
 }

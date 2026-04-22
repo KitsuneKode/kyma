@@ -1,77 +1,83 @@
-import { fetchMutation, fetchQuery } from "convex/nextjs";
+import { fetchMutation, fetchQuery } from 'convex/nextjs'
 
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
-import { createDiagnosticLogger } from "@/lib/interview/diagnostics";
+import { api } from '@/convex/_generated/api'
+import type { Id } from '@/convex/_generated/dataModel'
+import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
 
-import { buildAssessmentReport, type AssessmentComputation } from "./report-engine";
+import {
+  buildAssessmentReport,
+  type AssessmentComputation,
+} from './report-engine'
 
-type SessionId = Id<"interviewSessions">;
-const PROCESSING_WRITE_KEY = process.env.KYMA_PROCESSING_WRITE_KEY?.trim();
+type SessionId = Id<'interviewSessions'>
+const PROCESSING_WRITE_KEY = process.env.KYMA_PROCESSING_WRITE_KEY?.trim()
 
 export async function markAssessmentProcessing(sessionId: SessionId) {
   const detail = await fetchQuery(api.recruiter.getSessionProcessingDetail, {
     sessionId,
-  });
+  })
 
-  if (detail?.report?.status === "completed") {
-    return;
+  if (detail?.report?.status === 'completed') {
+    return
   }
 
   await fetchMutation(api.recruiter.saveAssessmentReport, {
     sessionId,
     processingKey: PROCESSING_WRITE_KEY,
-    status: "processing",
-    summary: "Assessment processing has been requested.",
-  });
+    status: 'processing',
+    summary: 'Assessment processing has been requested.',
+  })
 }
 
-export async function markAssessmentFailed(sessionId: SessionId, reason: string) {
+export async function markAssessmentFailed(
+  sessionId: SessionId,
+  reason: string
+) {
   await fetchMutation(api.recruiter.saveAssessmentReport, {
     sessionId,
     processingKey: PROCESSING_WRITE_KEY,
-    status: "failed",
+    status: 'failed',
     summary: reason,
-    topConcerns: ["processing failure"],
-  });
+    topConcerns: ['processing failure'],
+  })
 
   await fetchMutation(api.interviews.appendSessionEvent, {
     sessionId,
-    type: "processing-failed",
+    type: 'processing-failed',
     detail: reason,
-    state: "failed",
-  });
+    state: 'failed',
+  })
 }
 
 export async function processInterviewAssessment(
   sessionId: SessionId,
-  source: "inline" | "inngest",
+  source: 'inline' | 'inngest'
 ): Promise<AssessmentComputation | null> {
-  const logger = createDiagnosticLogger("assessment-pipeline", {
-    actor: "server",
+  const logger = createDiagnosticLogger('assessment-pipeline', {
+    actor: 'server',
     sessionId,
     meta: { source },
-  });
+  })
 
   logger.info({
-    event: "assessment.processing.started",
-    detail: "Starting structured assessment generation.",
-  });
+    event: 'assessment.processing.started',
+    detail: 'Starting structured assessment generation.',
+  })
 
   const detail = await fetchQuery(api.recruiter.getSessionProcessingDetail, {
     sessionId,
-  });
+  })
 
   if (!detail) {
-    throw new Error("Session detail is unavailable for assessment processing.");
+    throw new Error('Session detail is unavailable for assessment processing.')
   }
 
-  if (detail.report?.status === "completed") {
+  if (detail.report?.status === 'completed') {
     logger.info({
-      event: "assessment.processing.skip",
-      detail: "Report already completed; skipping duplicate processing.",
-    });
-    return null;
+      event: 'assessment.processing.skip',
+      detail: 'Report already completed; skipping duplicate processing.',
+    })
+    return null
   }
 
   const report = buildAssessmentReport({
@@ -80,7 +86,7 @@ export async function processInterviewAssessment(
     templateName: detail.template.name,
     transcript: detail.transcript,
     events: detail.events,
-  });
+  })
 
   await fetchMutation(api.recruiter.saveAssessmentReport, {
     sessionId,
@@ -97,27 +103,27 @@ export async function processInterviewAssessment(
     dimensionScores: report.dimensionScores,
     evidence: report.evidence,
     policySnapshot: detail.policySnapshot,
-  });
+  })
 
   await fetchMutation(api.interviews.appendSessionEvent, {
     sessionId,
-    type: "processing-completed",
+    type: 'processing-completed',
     detail:
-      report.status === "manual_review"
-        ? "Assessment report generated and routed to manual review."
-        : "Assessment report generated successfully.",
-    state: "completed",
-  });
+      report.status === 'manual_review'
+        ? 'Assessment report generated and routed to manual review.'
+        : 'Assessment report generated successfully.',
+    state: 'completed',
+  })
 
   logger.info({
-    event: "assessment.processing.completed",
-    detail: "Structured assessment generation completed.",
+    event: 'assessment.processing.completed',
+    detail: 'Structured assessment generation completed.',
     meta: {
       recommendation: report.overallRecommendation,
       confidence: report.confidence,
       status: report.status,
     },
-  });
+  })
 
-  return report;
+  return report
 }

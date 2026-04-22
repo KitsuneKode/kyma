@@ -1,19 +1,19 @@
-import { currentUser } from "@clerk/nextjs/server";
+import { currentUser } from '@clerk/nextjs/server'
 
 export type UserAppAccess = {
-  isSignedIn: boolean;
-  role: "signed-in" | "anonymous";
-};
+  isSignedIn: boolean
+  role: 'signed-in' | 'anonymous'
+}
 
 export async function getUserAppAccess(): Promise<UserAppAccess> {
-  const user = await currentUser();
+  const user = await currentUser()
 
   if (!user) {
-    return { isSignedIn: false, role: "anonymous" };
+    return { isSignedIn: false, role: 'anonymous' }
   }
 
   return {
     isSignedIn: true,
-    role: "signed-in",
-  };
+    role: 'signed-in',
+  }
 }

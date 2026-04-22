@@ -1,40 +1,40 @@
-import Link from "next/link";
-import Image from "next/image";
-import { IconArrowRight } from "@tabler/icons-react";
+import Link from 'next/link'
+import Image from 'next/image'
+import { IconArrowRight } from '@tabler/icons-react'
 
-import { AnimatedGroup } from "@/components/ui/animated-group";
-import { TextEffect } from "@/components/ui/text-effect";
-import { Button } from "@/components/ui/button";
+import { AnimatedGroup } from '@/components/ui/animated-group'
+import { TextEffect } from '@/components/ui/text-effect'
+import { Button } from '@/components/ui/button'
 
 const transitionVariants = {
   item: {
     hidden: {
       opacity: 0,
-      filter: "blur(12px)",
+      filter: 'blur(12px)',
       y: 12,
     },
     visible: {
       opacity: 1,
-      filter: "blur(0px)",
+      filter: 'blur(0px)',
       y: 0,
       transition: {
-        type: "spring" as const,
+        type: 'spring' as const,
         bounce: 0.3,
         duration: 1.5,
       },
     },
   },
-};
+}
 
 export type MarketingHeroMainProps = {
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  primaryCta: { label: string; href: string };
-  secondaryCta: { label: string; href: string };
-  showcaseDarkSrc: string;
-  showcaseLightSrc: string;
-};
+  eyebrow: string
+  title: string
+  subtitle: string
+  primaryCta: { label: string; href: string }
+  secondaryCta: { label: string; href: string }
+  showcaseDarkSrc: string
+  showcaseLightSrc: string
+}
 
 export function MarketingHeroMain({
   eyebrow,
@@ -66,7 +66,7 @@ export function MarketingHeroMain({
                 opacity: 1,
                 y: 0,
                 transition: {
-                  type: "spring" as const,
+                  type: 'spring' as const,
                   bounce: 0.3,
                   duration: 2,
                 },
@@ -206,5 +206,5 @@ export function MarketingHeroMain({
         </AnimatedGroup>
       </div>
     </section>
-  );
+  )
 }

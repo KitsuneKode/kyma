@@ -1,11 +1,11 @@
-import Link from "next/link";
-import type { ReactNode } from "react";
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import Link from 'next/link'
+import type { ReactNode } from 'react'
+import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
 
-import { hasClerkServerCredentials } from "@/lib/clerk/config";
+import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const clerkEnabled = hasClerkServerCredentials();
+  const clerkEnabled = hasClerkServerCredentials()
 
   return (
     <>
@@ -49,5 +49,5 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </header>
       {children}
     </>
-  );
+  )
 }

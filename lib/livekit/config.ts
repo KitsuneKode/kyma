@@ -1,4 +1,4 @@
-import { env } from "@/lib/env";
+import { env } from '@/lib/env'
 
 export function getLivekitEnv() {
   return {
@@ -13,24 +13,29 @@ export function getLivekitEnv() {
     LIVEKIT_RECORDING_TEMPLATE_URL: env.LIVEKIT_RECORDING_TEMPLATE_URL,
     LIVEKIT_RECORDING_STORAGE_BUCKET: env.LIVEKIT_RECORDING_STORAGE_BUCKET,
     LIVEKIT_RECORDING_STORAGE_REGION: env.LIVEKIT_RECORDING_STORAGE_REGION,
-    LIVEKIT_RECORDING_STORAGE_ACCESS_KEY: env.LIVEKIT_RECORDING_STORAGE_ACCESS_KEY,
-    LIVEKIT_RECORDING_STORAGE_SECRET_KEY: env.LIVEKIT_RECORDING_STORAGE_SECRET_KEY,
-  };
+    LIVEKIT_RECORDING_STORAGE_ACCESS_KEY:
+      env.LIVEKIT_RECORDING_STORAGE_ACCESS_KEY,
+    LIVEKIT_RECORDING_STORAGE_SECRET_KEY:
+      env.LIVEKIT_RECORDING_STORAGE_SECRET_KEY,
+  }
 }
 
 export function hasLivekitServerCredentials() {
-  const env = getLivekitEnv();
+  const livekitEnv = getLivekitEnv()
 
   return Boolean(
-    env.NEXT_PUBLIC_LIVEKIT_URL && env.LIVEKIT_API_KEY && env.LIVEKIT_API_SECRET,
-  );
+    livekitEnv.NEXT_PUBLIC_LIVEKIT_URL &&
+    livekitEnv.LIVEKIT_API_KEY &&
+    livekitEnv.LIVEKIT_API_SECRET
+  )
 }
 
 export function getLivekitWebhookSigningCredentials() {
-  const env = getLivekitEnv();
+  const livekitEnv = getLivekitEnv()
 
   return {
-    apiKey: env.LIVEKIT_WEBHOOK_API_KEY ?? env.LIVEKIT_API_KEY,
-    apiSecret: env.LIVEKIT_WEBHOOK_API_SECRET ?? env.LIVEKIT_API_SECRET,
-  };
+    apiKey: livekitEnv.LIVEKIT_WEBHOOK_API_KEY ?? livekitEnv.LIVEKIT_API_KEY,
+    apiSecret:
+      livekitEnv.LIVEKIT_WEBHOOK_API_SECRET ?? livekitEnv.LIVEKIT_API_SECRET,
+  }
 }

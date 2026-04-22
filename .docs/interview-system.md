@@ -73,27 +73,27 @@ Mix fixed and adaptive questions.
 
 ```ts
 type AssessmentReport = {
-  overallRecommendation: "strong_yes" | "yes" | "mixed" | "no";
-  confidence: "high" | "medium" | "low";
-  summary: string;
+  overallRecommendation: 'strong_yes' | 'yes' | 'mixed' | 'no'
+  confidence: 'high' | 'medium' | 'low'
+  summary: string
   dimensions: Array<{
     key:
-      | "clarity"
-      | "warmth"
-      | "patience"
-      | "simplification"
-      | "listening"
-      | "fluency"
-      | "adaptability"
-      | "accuracy"
-      | "engagement";
-    score: 1 | 2 | 3 | 4 | 5;
-    rationale: string;
-    evidence: string[];
-  }>;
-  redFlags: string[];
-  followUpAreas: string[];
-};
+      | 'clarity'
+      | 'warmth'
+      | 'patience'
+      | 'simplification'
+      | 'listening'
+      | 'fluency'
+      | 'adaptability'
+      | 'accuracy'
+      | 'engagement'
+    score: 1 | 2 | 3 | 4 | 5
+    rationale: string
+    evidence: string[]
+  }>
+  redFlags: string[]
+  followUpAreas: string[]
+}
 ```
 
 ## Recommendation Pattern

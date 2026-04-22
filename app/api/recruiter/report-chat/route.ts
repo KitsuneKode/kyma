@@ -1,36 +1,38 @@
-import { fetchMutation, fetchQuery } from "convex/nextjs";
-import { NextRequest, NextResponse } from "next/server";
+import { fetchMutation, fetchQuery } from 'convex/nextjs'
+import { NextRequest, NextResponse } from 'next/server'
 
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
-import { getServerConvexAuthToken } from "@/lib/clerk/server-token";
-import { rateLimitAllow } from "@/lib/http/rate-limit";
+import { api } from '@/convex/_generated/api'
+import type { Id } from '@/convex/_generated/dataModel'
+import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
+import { rateLimitAllow } from '@/lib/http/rate-limit'
 import {
   answerRecruiterQuestion,
   GROUNDING_VERSION,
-} from "@/lib/recruiter/report-chat";
-import { reportChatBodySchema } from "@/lib/validation/interview-api";
+} from '@/lib/recruiter/report-chat'
+import { reportChatBodySchema } from '@/lib/validation/interview-api'
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function POST(request: NextRequest) {
   try {
-    const token = await getServerConvexAuthToken();
+    const token = await getServerConvexAuthToken()
     const clientIp =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      request.headers.get("x-real-ip") ??
-      "unknown";
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      request.headers.get('x-real-ip') ??
+      'unknown'
 
-    const body = reportChatBodySchema.parse(await request.json());
-    const sessionId = body.sessionId as Id<"interviewSessions">;
-    const reportId = body.reportId as Id<"assessmentReports"> | undefined;
+    const body = reportChatBodySchema.parse(await request.json())
+    const sessionId = body.sessionId as Id<'interviewSessions'>
+    const reportId = body.reportId as Id<'assessmentReports'> | undefined
 
-    if (!rateLimitAllow(["report-chat", clientIp, `${sessionId}`], 45, 60_000)) {
+    if (
+      !rateLimitAllow(['report-chat', clientIp, `${sessionId}`], 45, 60_000)
+    ) {
       return NextResponse.json(
-        { error: "Too many chat requests. Please wait a moment." },
-        { status: 429 },
-      );
+        { error: 'Too many chat requests. Please wait a moment.' },
+        { status: 429 }
+      )
     }
 
     const detail = await fetchQuery(
@@ -40,14 +42,14 @@ export async function POST(request: NextRequest) {
       },
       {
         token: token ?? undefined,
-      },
-    );
+      }
+    )
 
     if (!detail) {
       return NextResponse.json(
-        { error: "Candidate review detail is unavailable." },
-        { status: 404 },
-      );
+        { error: 'Candidate review detail is unavailable.' },
+        { status: 404 }
+      )
     }
 
     await fetchMutation(
@@ -55,48 +57,50 @@ export async function POST(request: NextRequest) {
       {
         sessionId,
         reportId,
-        role: "user",
+        role: 'user',
         content: body.question,
       },
       {
         token: token ?? undefined,
-      },
-    );
+      }
+    )
 
-    const answer = await answerRecruiterQuestion(body.question, detail);
+    const answer = await answerRecruiterQuestion(body.question, detail)
 
     await fetchMutation(
       api.admin.addReportChatMessage,
       {
         sessionId,
         reportId,
-        role: "assistant",
+        role: 'assistant',
         content: answer.text,
         answerSource: answer.source,
         modelId: answer.modelId,
         citationsJson:
-          answer.citations.length > 0 ? JSON.stringify(answer.citations) : undefined,
+          answer.citations.length > 0
+            ? JSON.stringify(answer.citations)
+            : undefined,
         groundingVersion: GROUNDING_VERSION,
       },
       {
         token: token ?? undefined,
-      },
-    );
+      }
+    )
 
     return NextResponse.json({
       answer: answer.text,
       source: answer.source,
       citations: answer.citations,
-    });
+    })
   } catch (error) {
     return NextResponse.json(
       {
         error:
           error instanceof Error
             ? error.message
-            : "Unable to answer the recruiter question.",
+            : 'Unable to answer the recruiter question.',
       },
-      { status: 400 },
-    );
+      { status: 400 }
+    )
   }
 }

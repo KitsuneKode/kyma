@@ -1,35 +1,35 @@
-import Link from "next/link";
-import { fetchQuery } from "convex/nextjs";
+import Link from 'next/link'
+import { fetchQuery } from 'convex/nextjs'
 
-import type { Id } from "@/convex/_generated/dataModel";
-import { api } from "@/convex/_generated/api";
-import { Button } from "@/components/ui/button";
-import { getServerConvexAuthToken } from "@/lib/clerk/server-token";
-import { formatDateTime, formatStatusLabel } from "@/lib/recruiter/format";
-import { env } from "@/lib/env";
+import type { Id } from '@/convex/_generated/dataModel'
+import { api } from '@/convex/_generated/api'
+import { Button } from '@/components/ui/button'
+import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
+import { formatDateTime, formatStatusLabel } from '@/lib/recruiter/format'
+import { env } from '@/lib/env'
 
 type ScreeningDetailPageProps = {
   params: Promise<{
-    batchId: string;
-  }>;
-};
+    batchId: string
+  }>
+}
 
 export default async function ScreeningDetailPage({
   params,
 }: ScreeningDetailPageProps) {
-  const { batchId } = await params;
-  const token = await getServerConvexAuthToken();
+  const { batchId } = await params
+  const token = await getServerConvexAuthToken()
   const detail = env.NEXT_PUBLIC_CONVEX_URL
     ? await fetchQuery(
         api.admin.getScreeningBatchDetail,
         {
-          batchId: batchId as Id<"screeningBatches">,
+          batchId: batchId as Id<'screeningBatches'>,
         },
         {
           token: token ?? undefined,
-        },
+        }
       ).catch(() => null)
-    : null;
+    : null
 
   if (!detail) {
     return (
@@ -39,7 +39,8 @@ export default async function ScreeningDetailPage({
             Screening batch not found
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">
-            The batch may not exist yet, or Convex is unavailable in this environment.
+            The batch may not exist yet, or Convex is unavailable in this
+            environment.
           </p>
           <div className="mt-6">
             <Button
@@ -52,7 +53,7 @@ export default async function ScreeningDetailPage({
           </div>
         </section>
       </main>
-    );
+    )
   }
 
   return (
@@ -67,8 +68,8 @@ export default async function ScreeningDetailPage({
               {detail.batch.name}
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-              This batch controls who is allowed to access the interview and how many
-              attempts they get before the invite flow is closed.
+              This batch controls who is allowed to access the interview and how
+              many attempts they get before the invite flow is closed.
             </p>
           </div>
           <div className="flex gap-3">
@@ -84,7 +85,10 @@ export default async function ScreeningDetailPage({
       </section>
 
       <section className="grid gap-4 md:grid-cols-4">
-        <MetricCard label="Status" value={formatStatusLabel(detail.batch.status)} />
+        <MetricCard
+          label="Status"
+          value={formatStatusLabel(detail.batch.status)}
+        />
         <MetricCard
           label="Template"
           value={detail.batch.templateName}
@@ -114,7 +118,7 @@ export default async function ScreeningDetailPage({
 
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="bg-muted/40 text-left text-xs tracking-wide text-muted-foreground uppercase">
               <tr>
                 <th className="px-6 py-3 font-medium">Candidate</th>
                 <th className="px-6 py-3 font-medium">Eligibility</th>
@@ -128,7 +132,7 @@ export default async function ScreeningDetailPage({
                   <td className="px-6 py-4">
                     <div className="font-medium">{candidate.candidateName}</div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      {candidate.candidateEmail ?? "No email captured"}
+                      {candidate.candidateEmail ?? 'No email captured'}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -158,7 +162,7 @@ export default async function ScreeningDetailPage({
         </div>
       </section>
     </main>
-  );
+  )
 }
 
 function MetricCard({
@@ -166,9 +170,9 @@ function MetricCard({
   value,
   detail,
 }: {
-  label: string;
-  value: string;
-  detail?: string;
+  label: string
+  value: string
+  detail?: string
 }) {
   return (
     <div className="rounded-xl border bg-card p-5 shadow-sm">
@@ -176,7 +180,9 @@ function MetricCard({
         {label}
       </p>
       <p className="mt-3 text-xl font-semibold tracking-tight">{value}</p>
-      {detail ? <p className="mt-2 text-sm text-muted-foreground">{detail}</p> : null}
+      {detail ? (
+        <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
+      ) : null}
     </div>
-  );
+  )
 }

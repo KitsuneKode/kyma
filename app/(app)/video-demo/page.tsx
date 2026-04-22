@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+import type { Metadata } from 'next'
+import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: "Kyma Video Demo",
-  description: "Kyma product demo and walkthrough links.",
-};
+  title: 'Kyma Video Demo',
+  description: 'Kyma product demo and walkthrough links.',
+}
 
 export default function VideoDemoPage() {
   return (
@@ -13,10 +13,12 @@ export default function VideoDemoPage() {
         <p className="text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase">
           Kyma
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Video Demo</h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+          Video Demo
+        </h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Demo video is being finalized. Use the write-up and script links below for
-          full context in the meantime.
+          Demo video is being finalized. Use the write-up and script links below
+          for full context in the meantime.
         </p>
 
         <div className="mt-6 flex flex-wrap gap-3">
@@ -29,5 +31,5 @@ export default function VideoDemoPage() {
         </div>
       </section>
     </main>
-  );
+  )
 }

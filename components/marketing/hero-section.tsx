@@ -10,11 +10,11 @@ import {
   IconSettings,
   IconShieldCheck,
   IconSparkles,
-} from "@tabler/icons-react";
-import { HeroHeader } from "@/components/marketing/header";
-import { MarketingPageComposer } from "@/components/marketing/page-composer";
-import { MarketingHeroMain } from "@/components/marketing/sections/hero-main";
-import { MarketingSocialProof } from "@/components/marketing/sections/social-proof";
+} from '@tabler/icons-react'
+import { HeroHeader } from '@/components/marketing/header'
+import { MarketingPageComposer } from '@/components/marketing/page-composer'
+import { MarketingHeroMain } from '@/components/marketing/sections/hero-main'
+import { MarketingSocialProof } from '@/components/marketing/sections/social-proof'
 
 const trustIcons = [
   IconBolt,
@@ -28,31 +28,38 @@ const trustIcons = [
   IconMessage2,
   IconRocket,
   IconBrandFigma,
-];
+]
 
 export default function HeroSection() {
   const sections = [
     {
-      id: "hero-main",
+      id: 'hero-main',
       node: (
         <MarketingHeroMain
           eyebrow="Introducing Support for AI Models"
           title="Modern Solutions for Customer Engagement"
           subtitle="Highly customizable components for building modern websites and applications that look and feel the way you mean it."
-          primaryCta={{ label: "Start Building", href: "/interviews/demo-invite" }}
-          secondaryCta={{ label: "Request a demo", href: "/video-demo" }}
+          primaryCta={{
+            label: 'Start Building',
+            href: '/interviews/demo-invite',
+          }}
+          secondaryCta={{ label: 'Request a demo', href: '/video-demo' }}
           showcaseDarkSrc="/mail2.png"
           showcaseLightSrc="/mail2-light.png"
         />
       ),
     },
     {
-      id: "social-proof",
+      id: 'social-proof',
       node: (
-        <MarketingSocialProof title="Meet Our Customers" href="/" icons={trustIcons} />
+        <MarketingSocialProof
+          title="Meet Our Customers"
+          href="/"
+          icons={trustIcons}
+        />
       ),
     },
-  ];
+  ]
 
   return (
     <>
@@ -69,5 +76,5 @@ export default function HeroSection() {
         <MarketingPageComposer sections={sections} />
       </main>
     </>
-  );
+  )
 }
