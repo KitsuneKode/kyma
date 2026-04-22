@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 
 export type MarketingSection = {
   id: string
@@ -10,5 +10,11 @@ export function MarketingPageComposer({
 }: {
   sections: MarketingSection[]
 }) {
-  return <>{sections.map((section) => section.node)}</>
+  return (
+    <>
+      {sections.map((section) => (
+        <Fragment key={section.id}>{section.node}</Fragment>
+      ))}
+    </>
+  )
 }
