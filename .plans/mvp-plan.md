@@ -133,11 +133,6 @@ The first version succeeds when:
 
 ## Immediate Now
 
-This is the work to do before any more ranking or dashboard depth:
+The MVP loop above (prejoin → room → processing → report → recruiter review) is **shipped in code**. Ongoing work is **operational hardening and policy**, not rebuilding that loop.
 
-1. refactor `/interviews/[inviteId]` around LiveKit prefabs
-2. keep only thin app-owned wrappers around the LiveKit experience
-3. verify one real meeting path with agent join
-4. ensure reconnect and leave states persist correctly
-5. lock the rubric schema, evidence contract, and recommendation policy
-6. only after that, move to reports, ranking, and recruiter review
+Follow **`.docs/next-phase-prd.md`** for the current wave: live validation, template-driven policy, recruiter copilot hardening, security/BYOK boundaries. Historical build order in this file remains for context only.
