@@ -1,51 +1,50 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 
-import {
-  Message,
-  MessageContent,
-} from "@/components/ai-elements/message"
-import { Button } from "@/components/ui/button"
-import { formatDateTime } from "@/lib/recruiter/format"
-import { cn } from "@/lib/utils"
+import { Message, MessageContent } from "@/components/ai-elements/message";
+import { Button } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/recruiter/format";
+import { cn } from "@/lib/utils";
 
 type ChatMessage = {
-  id: string
-  role: "user" | "assistant" | "system"
-  content: string
-  createdAt: string
-}
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  createdAt: string;
+  answerSource?: "fallback" | "model";
+  citationsJson?: string;
+};
 
 export function RecruiterChat({
   sessionId,
   reportId,
   initialMessages,
 }: {
-  sessionId: string
-  reportId?: string
-  initialMessages: ChatMessage[]
+  sessionId: string;
+  reportId?: string;
+  initialMessages: ChatMessage[];
 }) {
-  const [messages, setMessages] = useState(initialMessages)
-  const [question, setQuestion] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [messages, setMessages] = useState(initialMessages);
+  const [question, setQuestion] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit() {
     if (!question.trim()) {
-      return
+      return;
     }
 
-    setIsSubmitting(true)
-    setError(null)
+    setIsSubmitting(true);
+    setError(null);
 
     const optimisticUserMessage: ChatMessage = {
       id: `local-user-${Date.now()}`,
       role: "user",
       content: question.trim(),
       createdAt: new Date().toISOString(),
-    }
-    setMessages((current) => [...current, optimisticUserMessage])
+    };
+    setMessages((current) => [...current, optimisticUserMessage]);
 
     try {
       const response = await fetch("/api/recruiter/report-chat", {
@@ -58,13 +57,18 @@ export function RecruiterChat({
           reportId,
           question: question.trim(),
         }),
-      })
+      });
 
-      const payload = (await response.json()) as { answer?: string; error?: string }
-      const answer = payload.answer
+      const payload = (await response.json()) as {
+        answer?: string;
+        error?: string;
+        source?: "fallback" | "model";
+        citations?: Array<{ ref: string; label: string; kind: string }>;
+      };
+      const answer = payload.answer;
 
       if (!response.ok || !answer) {
-        throw new Error(payload.error ?? "Unable to answer the recruiter question.")
+        throw new Error(payload.error ?? "Unable to answer the recruiter question.");
       }
 
       setMessages((current) => [
@@ -74,17 +78,22 @@ export function RecruiterChat({
           role: "assistant",
           content: answer,
           createdAt: new Date().toISOString(),
+          answerSource: payload.source,
+          citationsJson:
+            payload.citations && payload.citations.length > 0
+              ? JSON.stringify(payload.citations)
+              : undefined,
         },
-      ])
-      setQuestion("")
+      ]);
+      setQuestion("");
     } catch (submitError) {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Unable to answer the recruiter question."
-      )
+          : "Unable to answer the recruiter question.",
+      );
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
@@ -97,20 +106,26 @@ export function RecruiterChat({
               <MessageContent
                 className={cn(
                   "rounded-lg border px-4 py-3",
-                  message.role === "assistant" ? "bg-background" : "bg-secondary"
+                  message.role === "assistant" ? "bg-background" : "bg-secondary",
                 )}
               >
                 <p className="text-xs text-muted-foreground">
                   {message.role} · {formatDateTime(message.createdAt)}
+                  {message.answerSource ? ` · source: ${message.answerSource}` : ""}
                 </p>
                 <p className="mt-2 leading-6">{message.content}</p>
+                {message.citationsJson ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Citations: {message.citationsJson}
+                  </p>
+                ) : null}
               </MessageContent>
             </Message>
           ))
         ) : (
           <p className="text-sm text-muted-foreground">
-            No recruiter chat yet. Ask about strengths, risks, recommendation,
-            or missing evidence.
+            No recruiter chat yet. Ask about strengths, risks, recommendation, or
+            missing evidence.
           </p>
         )}
       </div>
@@ -121,7 +136,7 @@ export function RecruiterChat({
         placeholder="Ask about the candidate’s strengths, risks, or recommendation."
         className={cn(
           "min-h-24 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none transition-colors",
-          "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
         )}
       />
 
@@ -133,5 +148,5 @@ export function RecruiterChat({
         </Button>
       </div>
     </div>
-  )
+  );
 }
