@@ -3,6 +3,7 @@ import { fetchMutation, fetchQuery } from 'convex/nextjs'
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
+import { serverEnv } from '@/lib/env/server'
 
 import {
   buildAssessmentReport,
@@ -10,7 +11,7 @@ import {
 } from './report-engine'
 
 type SessionId = Id<'interviewSessions'>
-const PROCESSING_WRITE_KEY = process.env.KYMA_PROCESSING_WRITE_KEY?.trim()
+const PROCESSING_WRITE_KEY = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
 
 export async function markAssessmentProcessing(sessionId: SessionId) {
   const detail = await fetchQuery(api.recruiter.getSessionProcessingDetail, {

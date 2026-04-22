@@ -1,4 +1,5 @@
-import { env } from '@/lib/env'
+import { resolveRuntimeMode } from '@/lib/runtime-mode'
+import { publicEnv } from '@/lib/env/public'
 
 type DiagnosticLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -27,9 +28,10 @@ type DiagnosticLogger = {
 }
 
 function shouldLogDiagnostics() {
-  return (
-    env.NODE_ENV !== 'production' || env.NEXT_PUBLIC_ENABLE_DEV_TRACE === '1'
-  )
+  const runtimeMode = resolveRuntimeMode(process.env.NODE_ENV)
+  const devTraceEnabled = publicEnv.NEXT_PUBLIC_ENABLE_DEV_TRACE === '1'
+
+  return runtimeMode !== 'production' || devTraceEnabled
 }
 
 function normalizeError(error: unknown) {

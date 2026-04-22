@@ -1,4 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const mockServerEnv = vi.hoisted(() => ({
+  KYMA_REVIEW_CHAT_MODEL: undefined as string | undefined,
+}))
+
+vi.mock('@/lib/env/server', () => ({
+  serverEnv: mockServerEnv,
+}))
 
 import { answerRecruiterQuestion } from './report-chat'
 
@@ -30,10 +38,11 @@ const baseDetail = {
 }
 
 describe('answerRecruiterQuestion fallback', () => {
-  it('mentions strengths when asked', async () => {
-    const prev = process.env.KYMA_REVIEW_CHAT_MODEL
-    delete process.env.KYMA_REVIEW_CHAT_MODEL
+  beforeEach(() => {
+    mockServerEnv.KYMA_REVIEW_CHAT_MODEL = undefined
+  })
 
+  it('mentions strengths when asked', async () => {
     const answer = await answerRecruiterQuestion(
       'What are the candidate strengths?',
       baseDetail
@@ -41,9 +50,5 @@ describe('answerRecruiterQuestion fallback', () => {
 
     expect(answer.text.toLowerCase()).toContain('clarity')
     expect(answer.source).toBe('fallback')
-
-    if (prev !== undefined) {
-      process.env.KYMA_REVIEW_CHAT_MODEL = prev
-    }
   })
 })

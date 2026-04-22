@@ -1,4 +1,5 @@
 import { generateText } from 'ai'
+import { serverEnv } from '@/lib/env/server'
 
 export type RecruiterCitation = {
   kind: 'evidence' | 'transcript' | 'dimension'
@@ -159,7 +160,7 @@ export async function answerRecruiterQuestion(
   question: string,
   detail: DetailShape
 ): Promise<RecruiterAnswer> {
-  const configuredModel = process.env.KYMA_REVIEW_CHAT_MODEL
+  const configuredModel = serverEnv.KYMA_REVIEW_CHAT_MODEL
 
   if (!configuredModel) {
     return fallbackAnswer(question, detail)

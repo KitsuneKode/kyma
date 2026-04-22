@@ -2,8 +2,10 @@ import { fetchQuery } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
 import { InterviewWorkspace } from '@/components/interview/interview-workspace'
-import { env } from '@/lib/env'
+import { publicEnv } from '@/lib/env/public'
+import { serverEnv } from '@/lib/env/server'
 import { createInitialInterviewSnapshot } from '@/lib/interview/snapshot'
+import { isDevelopmentMode } from '@/lib/runtime-mode'
 
 type InterviewPageProps = {
   params: Promise<{
@@ -12,7 +14,8 @@ type InterviewPageProps = {
 }
 
 const DEMO_INVITE_ENABLED =
-  env.NODE_ENV !== 'production' || env.KYMA_ENABLE_DEMO_INVITE === '1'
+  isDevelopmentMode(serverEnv.NODE_ENV) ||
+  serverEnv.KYMA_ENABLE_DEMO_INVITE === '1'
 
 function isEnabledDemoInviteToken(inviteId: string) {
   return inviteId === 'demo-invite' && DEMO_INVITE_ENABLED
@@ -20,7 +23,7 @@ function isEnabledDemoInviteToken(inviteId: string) {
 
 export default async function InterviewPage({ params }: InterviewPageProps) {
   const { inviteId } = await params
-  const publicSnapshot = env.NEXT_PUBLIC_CONVEX_URL
+  const publicSnapshot = publicEnv.NEXT_PUBLIC_CONVEX_URL
     ? await fetchQuery(api.interviews.getPublicSessionDetail, {
         inviteToken: inviteId,
       }).catch(() => null)

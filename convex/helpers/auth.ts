@@ -1,13 +1,14 @@
 import { ConvexError } from 'convex/values'
 
 import type { MutationCtx, QueryCtx } from '../_generated/server'
+import { convexEnv } from '../../lib/env/convex'
 
 function hasRecruiterAuthConfig() {
   return Boolean(
-    process.env.CLERK_SECRET_KEY?.trim() &&
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() &&
-    (process.env.CLERK_FRONTEND_API_URL?.trim() ||
-      process.env.CLERK_JWT_ISSUER_DOMAIN?.trim())
+    convexEnv.CLERK_SECRET_KEY?.trim() &&
+    convexEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() &&
+    (convexEnv.CLERK_FRONTEND_API_URL?.trim() ||
+      convexEnv.CLERK_JWT_ISSUER_DOMAIN?.trim())
   )
 }
 

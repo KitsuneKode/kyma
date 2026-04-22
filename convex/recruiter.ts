@@ -5,6 +5,7 @@ import { mutation, query, type QueryCtx } from './_generated/server'
 import { getRecruiterActorId, requireRecruiterIdentity } from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
 import { resolveInterviewPolicyFromInvite } from './helpers/interviewPolicy'
+import { convexEnv } from '../lib/env/convex'
 
 const recommendationValidator = v.union(
   v.literal('strong_yes'),
@@ -443,7 +444,7 @@ export const saveAssessmentReport = mutation({
   },
   handler: async (ctx, args) => {
     const configuredProcessingKey =
-      process.env.KYMA_PROCESSING_WRITE_KEY?.trim() || undefined
+      convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim() || undefined
 
     if (configuredProcessingKey) {
       if (args.processingKey?.trim() !== configuredProcessingKey) {

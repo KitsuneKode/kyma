@@ -10,11 +10,13 @@ import {
   type InterviewPolicy,
 } from './helpers/interviewPolicy'
 import { ensureDefaultTemplate } from './helpers/templates'
+import { isDevelopmentMode } from '../lib/runtime-mode'
+import { convexEnv } from '../lib/env/convex'
 
 const DEVELOPMENT_INVITE_TOKEN = 'demo-invite'
 const DEMO_INVITE_ENABLED =
-  process.env.NODE_ENV !== 'production' ||
-  process.env.KYMA_ENABLE_DEMO_INVITE === '1'
+  isDevelopmentMode(convexEnv.NODE_ENV) ||
+  convexEnv.KYMA_ENABLE_DEMO_INVITE === '1'
 
 function isEnabledDemoInviteToken(inviteToken: string) {
   return inviteToken === DEVELOPMENT_INVITE_TOKEN && DEMO_INVITE_ENABLED

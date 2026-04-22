@@ -11,6 +11,7 @@ import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
 import { maybeStartRoomRecording } from '@/lib/livekit/recording'
+import { agentEnv } from '@/lib/env/agent'
 
 const DEFAULT_TARGET_DURATION_MINUTES = 18
 
@@ -80,53 +81,25 @@ type SessionEventRecorder = {
   append: (type: string, detail: string) => Promise<void>
 }
 
-function emitDebugLog(
-  hypothesisId: string,
-  location: string,
-  message: string,
-  data: Record<string, unknown>
-) {
-  // #region agent log
-  fetch('http://127.0.0.1:7775/ingest/c816eaeb-acd1-4edb-bd45-1464db25af33', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': 'af8e6a',
-    },
-    body: JSON.stringify({
-      sessionId: 'af8e6a',
-      runId: 'baseline',
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion
-}
-
 function getAgentConfig() {
   return {
-    stt: process.env.LIVEKIT_AGENT_STT_MODEL ?? 'deepgram/nova-3',
-    llm: process.env.LIVEKIT_AGENT_LLM_MODEL ?? 'openai/gpt-4.1-mini',
-    tts: process.env.LIVEKIT_AGENT_TTS_MODEL ?? 'cartesia/sonic',
+    stt: agentEnv.LIVEKIT_AGENT_STT_MODEL ?? 'deepgram/nova-3',
+    llm: agentEnv.LIVEKIT_AGENT_LLM_MODEL ?? 'openai/gpt-4.1-mini',
+    tts: agentEnv.LIVEKIT_AGENT_TTS_MODEL ?? 'cartesia/sonic',
     childTts:
-      process.env.LIVEKIT_AGENT_CHILD_TTS_MODEL ??
-      process.env.LIVEKIT_AGENT_TTS_MODEL ??
+      agentEnv.LIVEKIT_AGENT_CHILD_TTS_MODEL ??
+      agentEnv.LIVEKIT_AGENT_TTS_MODEL ??
       'cartesia/sonic',
     wrapUpTts:
-      process.env.LIVEKIT_AGENT_WRAP_TTS_MODEL ??
-      process.env.LIVEKIT_AGENT_TTS_MODEL ??
+      agentEnv.LIVEKIT_AGENT_WRAP_TTS_MODEL ??
+      agentEnv.LIVEKIT_AGENT_TTS_MODEL ??
       'cartesia/sonic',
     interviewerInstructions:
-      process.env.LIVEKIT_AGENT_INSTRUCTIONS ??
-      DEFAULT_INTERVIEWER_INSTRUCTIONS,
+      agentEnv.LIVEKIT_AGENT_INSTRUCTIONS ?? DEFAULT_INTERVIEWER_INSTRUCTIONS,
     childInstructions:
-      process.env.LIVEKIT_AGENT_CHILD_INSTRUCTIONS ??
-      DEFAULT_CHILD_INSTRUCTIONS,
+      agentEnv.LIVEKIT_AGENT_CHILD_INSTRUCTIONS ?? DEFAULT_CHILD_INSTRUCTIONS,
     wrapUpInstructions:
-      process.env.LIVEKIT_AGENT_WRAP_UP_INSTRUCTIONS ??
+      agentEnv.LIVEKIT_AGENT_WRAP_UP_INSTRUCTIONS ??
       DEFAULT_WRAP_UP_INSTRUCTIONS,
   }
 }
@@ -241,31 +214,6 @@ class WrapUpInterviewerAgent extends voice.Agent {
 
 async function startSession(ctx: JobContext) {
   const config = getAgentConfig()
-  emitDebugLog(
-    'H1',
-    'agents/interviewer.ts:startSession',
-    'agent config loaded',
-    {
-      stt: config.stt,
-      llm: config.llm,
-      tts: config.tts,
-      childTts: config.childTts,
-      wrapUpTts: config.wrapUpTts,
-    }
-  )
-  emitDebugLog(
-    'H3',
-    'agents/interviewer.ts:startSession',
-    'instruction pacing hints extracted',
-    {
-      hasAskShortQuestionsHint: config.interviewerInstructions.includes(
-        'ask short, clear questions'
-      ),
-      hasConciseHint: config.interviewerInstructions.includes(
-        'keep answers concise and spoken-friendly'
-      ),
-    }
-  )
   const logger = createDiagnosticLogger('interviewer-agent', {
     actor: 'agent',
     roomName: ctx.room.name,
@@ -328,15 +276,6 @@ async function startSession(ctx: JobContext) {
       },
     },
   })
-  emitDebugLog(
-    'H2',
-    'agents/interviewer.ts:AgentSession',
-    'turn handling configured',
-    {
-      interruptionEnabled: true,
-    }
-  )
-
   let teachingSimulationStarted = false
 
   const wrapUpAgent = new WrapUpInterviewerAgent(
@@ -407,19 +346,6 @@ async function startSession(ctx: JobContext) {
     if (!event.isFinal) {
       return
     }
-    emitDebugLog(
-      'H4',
-      'agents/interviewer.ts:UserInputTranscribed',
-      'final user transcript received',
-      {
-        transcriptLength: event.transcript.trim().length,
-        transcriptWordCount: event.transcript
-          .trim()
-          .split(/\s+/)
-          .filter(Boolean).length,
-      }
-    )
-
     logger.debug({
       event: 'agent.user.transcribed',
       detail: 'Captured final user transcript in agent session.',
