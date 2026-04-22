@@ -41,19 +41,23 @@ The redesign can change layout and presentation aggressively, but it should pres
 
 ## Current Routes
 
+Route architecture now uses App Router groups:
+
+- `(marketing)` for `/`
+- `(auth)` for `/sign-in` and `/sign-up`
+- `(app)` for authenticated operator pages (`/admin*`, `/video-demo`, `/write-up`)
+
 ### `/`
 
 Purpose:
 
-- current lightweight landing/home shell
-- links to candidate flow and admin shell
-- explains stack direction and execution pillars
+- marketing/product entry page built from reusable `components/marketing/*` sections
+- primary entry to candidate flow and authenticated operator shell
 
 Current state:
 
-- technically fine
-- visually weak
-- reads like an internal scaffold, not a product homepage
+- section-composed marketing home (`hero` + social proof) with reusable primitives
+- intentionally structured for iterative redesign via section-level updates
 
 Design direction:
 
@@ -64,6 +68,18 @@ Design direction:
   - what the product does
   - why it is better
   - where recruiter and candidate flows begin
+
+### `/sign-in` and `/sign-up`
+
+Purpose:
+
+- dedicated authentication surface under `(auth)` group
+- decouples auth UX from both marketing and operator shells
+
+Current behavior:
+
+- Clerk-backed catch-all pages (`[[...sign-in]]` and `[[...sign-up]]`)
+- signed-in users are redirected to `/admin`
 
 ### `/admin`
 
@@ -333,6 +349,7 @@ The redesign should not collapse everything into one giant page component.
 Keep clean boundaries between:
 
 - marketing/home
+- auth pages
 - recruiter workspace
 - candidate interview flow
 - session review detail

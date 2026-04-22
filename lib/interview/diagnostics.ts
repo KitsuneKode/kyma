@@ -1,3 +1,5 @@
+import { env } from "@/lib/env";
+
 type DiagnosticLevel = "debug" | "info" | "warn" | "error";
 
 type DiagnosticPayload = {
@@ -25,10 +27,7 @@ type DiagnosticLogger = {
 };
 
 function shouldLogDiagnostics() {
-  return (
-    process.env.NODE_ENV !== "production" ||
-    process.env.NEXT_PUBLIC_ENABLE_DEV_TRACE === "1"
-  );
+  return env.NODE_ENV !== "production" || env.NEXT_PUBLIC_ENABLE_DEV_TRACE === "1";
 }
 
 function normalizeError(error: unknown) {

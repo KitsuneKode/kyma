@@ -69,6 +69,11 @@ This repo is building the Cuemath-style `AI Tutor Screener`:
 - current high-signal implementation and research state: `.docs/current-findings.md`
 - v1 product and LiveKit implementation direction: `.docs/v1-product-livekit-plan.md`
 - redesign surface, current routes, and UI handoff: `.docs/redesign-handoff.md`
+- marketing section API and composition contract: `.docs/marketing-section-contract.md`
+- auth surfaces and route guard boundaries: `.docs/auth-and-access-boundaries.md`
+- typed environment variable model and policies: `.docs/env-model.md`
+- practical redesign execution checklist: `.docs/ui-redesign-playbook.md`
+- redesign risk register and mitigations: `.docs/redesign-risk-register.md`
 - recruiter review and evaluation product requirements: `.docs/recruiter-review-prd.md`
 - next implementation handoff and priorities: `.docs/next-phase-prd.md`
 - LiveKit, Convex, schema, and backend boundaries: `.docs/livekit-convex-implementation-guide.md`

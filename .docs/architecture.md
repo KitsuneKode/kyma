@@ -75,6 +75,16 @@ Use `LiveKit + Convex + Clerk + shadcn/ui + AI SDK + Inngest`.
 
 ## System Boundaries
 
+## Application Shell Architecture
+
+Next.js App Router is organized with route groups to keep UI responsibilities isolated:
+
+- `(marketing)` for public-facing product surfaces and conversion pages.
+- `(auth)` for Clerk sign-in and sign-up pages with a focused auth layout.
+- `(app)` for authenticated operator surfaces like admin and internal tools.
+
+Root `app/layout.tsx` owns only shared infra concerns (fonts, providers, Clerk bootstrapping), while shell-specific chrome lives in each route group layout. This prevents provider-level UI coupling and keeps redesign work localized.
+
 ### Frontend
 
 Next.js handles:
