@@ -1,24 +1,23 @@
-import { v } from "convex/values"
+import { v } from "convex/values";
 
-import type { Id } from "./_generated/dataModel"
-import { mutation, query, type QueryCtx } from "./_generated/server"
-import {
-  getRecruiterActorId,
-  requireRecruiterIdentity,
-} from "./helpers/auth"
+import type { Id } from "./_generated/dataModel";
+import { mutation, query, type QueryCtx } from "./_generated/server";
+import { getRecruiterActorId, requireRecruiterIdentity } from "./helpers/auth";
+import { logAuditEvent } from "./helpers/audit";
+import { resolveInterviewPolicyFromInvite } from "./helpers/interviewPolicy";
 
 const recommendationValidator = v.union(
   v.literal("strong_yes"),
   v.literal("yes"),
   v.literal("mixed"),
-  v.literal("no")
-)
+  v.literal("no"),
+);
 
 const confidenceValidator = v.union(
   v.literal("high"),
   v.literal("medium"),
-  v.literal("low")
-)
+  v.literal("low"),
+);
 
 const rubricDimensionValidator = v.union(
   v.literal("clarity"),
@@ -29,53 +28,65 @@ const rubricDimensionValidator = v.union(
   v.literal("fluency"),
   v.literal("adaptability"),
   v.literal("engagement"),
-  v.literal("accuracy")
-)
+  v.literal("accuracy"),
+);
 
 const reviewDecisionValidator = v.union(
   v.literal("advance"),
   v.literal("reject"),
   v.literal("manual_review"),
-  v.literal("hold")
-)
+  v.literal("hold"),
+);
+
+const interviewPolicySnapshotValidator = v.object({
+  targetDurationMinutes: v.number(),
+  allowsResume: v.boolean(),
+  maxAttempts: v.number(),
+  rubricVersion: v.string(),
+  templateId: v.string(),
+  templateName: v.optional(v.string()),
+  interviewStyleMode: v.optional(
+    v.union(v.literal("standard"), v.literal("intensive")),
+  ),
+});
 
 function countWords(text: string) {
-  return text
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length
+  return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
 function sortByIsoAsc<T extends { createdAt?: string; startedAt?: string }>(
-  items: T[]
+  items: T[],
 ) {
   return [...items].toSorted((left, right) =>
     (left.createdAt ?? left.startedAt ?? "").localeCompare(
-      right.createdAt ?? right.startedAt ?? ""
-    )
-  )
+      right.createdAt ?? right.startedAt ?? "",
+    ),
+  );
 }
 
-async function getLatestReviewDecision(ctx: QueryCtx, sessionId: Id<"interviewSessions">) {
+async function getLatestReviewDecision(
+  ctx: QueryCtx,
+  sessionId: Id<"interviewSessions">,
+) {
   const decisions = await ctx.db
     .query("reviewDecisions")
     .withIndex("by_session_and_created_at", (q) => q.eq("sessionId", sessionId))
-    .collect()
+    .collect();
 
   return decisions.toSorted((left, right) =>
-    right.createdAt.localeCompare(left.createdAt)
-  )[0]
+    right.createdAt.localeCompare(left.createdAt),
+  )[0];
 }
 
 export const listReviewCandidates = query({
   args: {},
   handler: async (ctx) => {
-    await requireRecruiterIdentity(ctx)
+    await requireRecruiterIdentity(ctx);
 
-    const sessions = await ctx.db.query("interviewSessions").collect()
+    const sessions = await ctx.db.query("interviewSessions").collect();
     const sortedSessions = [...sessions].toSorted((left, right) =>
-      (right.startedAt ?? "").localeCompare(left.startedAt ?? "")
-    )
+      (right.startedAt ?? "").localeCompare(left.startedAt ?? ""),
+    );
 
     return await Promise.all(
       sortedSessions.map(async (session) => {
@@ -86,9 +97,9 @@ export const listReviewCandidates = query({
             .withIndex("by_session", (q) => q.eq("sessionId", session._id))
             .first(),
           getLatestReviewDecision(ctx, session._id),
-        ])
+        ]);
 
-        const template = invite ? await ctx.db.get(invite.templateId) : null
+        const template = invite ? await ctx.db.get(invite.templateId) : null;
 
         return {
           sessionId: session._id,
@@ -109,25 +120,39 @@ export const listReviewCandidates = query({
           topConcerns: report?.topConcerns ?? [],
           latestDecision: latestDecision?.decision,
           latestDecisionAt: latestDecision?.createdAt,
-        }
-      })
-    )
+        };
+      }),
+    );
   },
-})
+});
 
 export const getSessionProcessingDetail = query({
   args: {
     sessionId: v.id("interviewSessions"),
   },
   handler: async (ctx, { sessionId }) => {
-    const session = await ctx.db.get(sessionId)
+    const session = await ctx.db.get(sessionId);
 
     if (!session) {
-      return null
+      return null;
     }
 
-    const invite = await ctx.db.get(session.inviteId)
-    const template = invite ? await ctx.db.get(invite.templateId) : null
+    const invite = await ctx.db.get(session.inviteId);
+
+    if (!invite) {
+      return null;
+    }
+
+    const template = await ctx.db.get(invite.templateId);
+    const { snapshot: policySnapshot } = await resolveInterviewPolicyFromInvite(
+      ctx,
+      invite,
+    );
+    const report = await ctx.db
+      .query("assessmentReports")
+      .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+      .first();
+
     const [transcript, events] = await Promise.all([
       ctx.db
         .query("transcriptSegments")
@@ -137,16 +162,23 @@ export const getSessionProcessingDetail = query({
         .query("sessionEvents")
         .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
         .collect(),
-    ])
+    ]);
 
     return {
       sessionId: session._id,
       candidate: {
-        name: invite?.candidateName ?? "Candidate",
+        name: invite.candidateName ?? "Candidate",
       },
       template: {
         name: template?.name ?? "AI Tutor Screener",
       },
+      policySnapshot,
+      report: report
+        ? {
+            id: report._id,
+            status: report.status,
+          }
+        : null,
       transcript: sortByIsoAsc(transcript).map((segment) => ({
         speaker: segment.speaker,
         text: segment.text,
@@ -159,71 +191,71 @@ export const getSessionProcessingDetail = query({
         detail: event.detail,
         createdAt: event.createdAt,
       })),
-    }
+    };
   },
-})
+});
 
 export const getCandidateReviewDetail = query({
   args: {
     sessionId: v.id("interviewSessions"),
   },
   handler: async (ctx, { sessionId }) => {
-    await requireRecruiterIdentity(ctx)
+    await requireRecruiterIdentity(ctx);
 
-    const session = await ctx.db.get(sessionId)
+    const session = await ctx.db.get(sessionId);
 
     if (!session) {
-      return null
+      return null;
     }
 
-    const invite = await ctx.db.get(session.inviteId)
-    const template = invite ? await ctx.db.get(invite.templateId) : null
+    const invite = await ctx.db.get(session.inviteId);
+    const template = invite ? await ctx.db.get(invite.templateId) : null;
     const report = await ctx.db
       .query("assessmentReports")
       .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
-      .first()
+      .first();
 
     const [transcript, events, evidence, decisions, recordings, notes, chatMessages] =
       await Promise.all([
-      ctx.db
-        .query("transcriptSegments")
-        .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
-        .collect(),
-      ctx.db
-        .query("sessionEvents")
-        .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
-        .collect(),
-      report
-        ? ctx.db
-            .query("dimensionEvidence")
-            .withIndex("by_report", (q) => q.eq("reportId", report._id))
-            .collect()
-        : [],
-      ctx.db
-        .query("reviewDecisions")
-        .withIndex("by_session_and_created_at", (q) => q.eq("sessionId", sessionId))
-        .collect(),
-      ctx.db
-        .query("recordingArtifacts")
-        .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
-        .collect(),
-      ctx.db
-        .query("recruiterNotes")
-        .withIndex("by_session_and_created_at", (q) => q.eq("sessionId", sessionId))
-        .collect(),
-      ctx.db
-        .query("reportChatMessages")
-        .withIndex("by_session_and_created_at", (q) => q.eq("sessionId", sessionId))
-        .collect(),
-    ])
+        ctx.db
+          .query("transcriptSegments")
+          .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+          .collect(),
+        ctx.db
+          .query("sessionEvents")
+          .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+          .collect(),
+        report
+          ? ctx.db
+              .query("dimensionEvidence")
+              .withIndex("by_report", (q) => q.eq("reportId", report._id))
+              .collect()
+          : [],
+        ctx.db
+          .query("reviewDecisions")
+          .withIndex("by_session_and_created_at", (q) => q.eq("sessionId", sessionId))
+          .collect(),
+        ctx.db
+          .query("recordingArtifacts")
+          .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+          .collect(),
+        ctx.db
+          .query("recruiterNotes")
+          .withIndex("by_session_and_created_at", (q) => q.eq("sessionId", sessionId))
+          .collect(),
+        ctx.db
+          .query("reportChatMessages")
+          .withIndex("by_session_and_created_at", (q) => q.eq("sessionId", sessionId))
+          .collect(),
+      ]);
 
-    const finalTranscript = transcript.filter((segment) => segment.status === "final")
+    const finalTranscript = transcript.filter((segment) => segment.status === "final");
     const candidateTranscript = finalTranscript.filter(
-      (segment) => segment.speaker === "candidate"
-    )
+      (segment) => segment.speaker === "candidate",
+    );
     const agentTranscript = finalTranscript.filter(
-      (segment) => segment.speaker === "agent"
-    )
+      (segment) => segment.speaker === "agent",
+    );
 
     return {
       session: {
@@ -262,6 +294,7 @@ export const getCandidateReviewDetail = query({
             transcriptQualityNote: report.transcriptQualityNote,
             generatedAt: report.generatedAt,
             dimensionScores: report.dimensionScores ?? [],
+            policySnapshot: report.policySnapshot,
           }
         : null,
       transcriptMetrics: {
@@ -270,11 +303,11 @@ export const getCandidateReviewDetail = query({
         agentTurns: agentTranscript.length,
         candidateWords: candidateTranscript.reduce(
           (total, segment) => total + countWords(segment.text),
-          0
+          0,
         ),
         agentWords: agentTranscript.reduce(
           (total, segment) => total + countWords(segment.text),
-          0
+          0,
         ),
       },
       transcript: sortByIsoAsc(transcript).map((segment) => ({
@@ -322,6 +355,10 @@ export const getCandidateReviewDetail = query({
         role: message.role,
         content: message.content,
         createdAt: message.createdAt,
+        answerSource: message.answerSource,
+        modelId: message.modelId,
+        citationsJson: message.citationsJson,
+        groundingVersion: message.groundingVersion,
       })),
       recordings: sortByIsoAsc(recordings).map((artifact) => ({
         id: `${artifact._id}`,
@@ -340,9 +377,9 @@ export const getCandidateReviewDetail = query({
         sizeBytes: artifact.sizeBytes,
         error: artifact.error,
       })),
-    }
+    };
   },
-})
+});
 
 export const saveAssessmentReport = mutation({
   args: {
@@ -353,7 +390,7 @@ export const saveAssessmentReport = mutation({
       v.literal("processing"),
       v.literal("completed"),
       v.literal("failed"),
-      v.literal("manual_review")
+      v.literal("manual_review"),
     ),
     overallRecommendation: v.optional(recommendationValidator),
     confidence: v.optional(confidenceValidator),
@@ -369,8 +406,8 @@ export const saveAssessmentReport = mutation({
           dimension: rubricDimensionValidator,
           score: v.number(),
           rationale: v.string(),
-        })
-      )
+        }),
+      ),
     ),
     evidence: v.optional(
       v.array(
@@ -380,25 +417,26 @@ export const saveAssessmentReport = mutation({
           rationale: v.string(),
           startedAt: v.optional(v.string()),
           endedAt: v.optional(v.string()),
-        })
-      )
+        }),
+      ),
     ),
+    policySnapshot: v.optional(interviewPolicySnapshotValidator),
   },
   handler: async (ctx, args) => {
     const configuredProcessingKey =
-      process.env.KYMA_PROCESSING_WRITE_KEY?.trim() || undefined
+      process.env.KYMA_PROCESSING_WRITE_KEY?.trim() || undefined;
 
     if (configuredProcessingKey) {
       if (args.processingKey?.trim() !== configuredProcessingKey) {
-        await requireRecruiterIdentity(ctx)
+        await requireRecruiterIdentity(ctx);
       }
     }
 
-    const now = new Date().toISOString()
+    const now = new Date().toISOString();
     const existingReport = await ctx.db
       .query("assessmentReports")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .first()
+      .first();
 
     const reportFields = {
       sessionId: args.sessionId,
@@ -413,19 +451,20 @@ export const saveAssessmentReport = mutation({
       transcriptQualityNote: args.transcriptQualityNote,
       dimensionScores: args.dimensionScores,
       generatedAt: now,
-    }
+      ...(args.policySnapshot ? { policySnapshot: args.policySnapshot } : {}),
+    };
 
     const reportId = existingReport
       ? (await ctx.db.patch(existingReport._id, reportFields), existingReport._id)
-      : await ctx.db.insert("assessmentReports", reportFields)
+      : await ctx.db.insert("assessmentReports", reportFields);
 
     if (args.evidence) {
       const existingEvidence = await ctx.db
         .query("dimensionEvidence")
         .withIndex("by_report", (q) => q.eq("reportId", reportId))
-        .collect()
+        .collect();
 
-      await Promise.all(existingEvidence.map((item) => ctx.db.delete(item._id)))
+      await Promise.all(existingEvidence.map((item) => ctx.db.delete(item._id)));
 
       await Promise.all(
         args.evidence.map((item) =>
@@ -438,14 +477,14 @@ export const saveAssessmentReport = mutation({
             startedAt: item.startedAt,
             endedAt: item.endedAt,
             createdAt: now,
-          })
-        )
-      )
+          }),
+        ),
+      );
     }
 
-    return reportId
+    return reportId;
   },
-})
+});
 
 export const submitReviewDecision = mutation({
   args: {
@@ -456,13 +495,25 @@ export const submitReviewDecision = mutation({
     reviewerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireRecruiterIdentity(ctx)
-    const reviewerId = await getRecruiterActorId(ctx)
+    await requireRecruiterIdentity(ctx);
+    const reviewerId = await getRecruiterActorId(ctx);
 
-    return await ctx.db.insert("reviewDecisions", {
+    const decisionId = await ctx.db.insert("reviewDecisions", {
       ...args,
       reviewerId,
       createdAt: new Date().toISOString(),
-    })
+    });
+
+    await logAuditEvent(ctx, {
+      actorId: reviewerId ?? undefined,
+      action: "review_decision.submitted",
+      resource: `session:${args.sessionId}`,
+      metadata: {
+        reportId: args.reportId,
+        decision: args.decision,
+      },
+    });
+
+    return decisionId;
   },
-})
+});

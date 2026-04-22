@@ -1,57 +1,104 @@
-import { ConvexError, v } from "convex/values"
+import { ConvexError, v } from "convex/values";
 
-import type { Doc } from "./_generated/dataModel"
-import { mutation, query, type MutationCtx } from "./_generated/server"
-import { transitionSessionSafely } from "@/lib/interview/session-machine"
-import type { InterviewSessionState } from "@/lib/interview/types"
-import { ensureDefaultTemplate } from "./helpers/templates"
+import type { Doc, Id } from "./_generated/dataModel";
+import { mutation, query, type MutationCtx } from "./_generated/server";
+import { transitionSessionSafely } from "../lib/interview/session-machine";
+import type { InterviewSessionState } from "../lib/interview/types";
+import {
+  DEFAULT_INTERVIEW_DURATION_MINUTES,
+  resolveInterviewPolicyFromInvite,
+  type InterviewPolicy,
+} from "./helpers/interviewPolicy";
+import { ensureDefaultTemplate } from "./helpers/templates";
 
-const DEVELOPMENT_INVITE_TOKEN = "demo-invite"
-const DEFAULT_INTERVIEW_DURATION_MINUTES = 18
+const DEVELOPMENT_INVITE_TOKEN = "demo-invite";
 
-function isInviteExpired(expiresAt: string) {
-  const parsed = Date.parse(expiresAt)
+const WRITE_WINDOW_MS = 60_000;
+const MAX_TRANSCRIPT_WRITES_PER_WINDOW = 120;
+const MAX_SESSION_EVENTS_PER_WINDOW = 90;
 
-  if (Number.isNaN(parsed)) {
-    return false
-  }
-
-  return parsed <= Date.now()
-}
-
-function buildInterviewPolicy(expiresAt?: string) {
+function defaultDemoPolicy(expiresAt: string): InterviewPolicy {
   return {
-    durationMode: "timed" as const,
+    durationMode: "timed",
     targetDurationMinutes: DEFAULT_INTERVIEW_DURATION_MINUTES,
     allowsResume: true,
     maxAttempts: 1,
     expiresAt,
+    rubricVersion: "v1",
+    templateName: "AI Tutor Screener",
+    interviewStyleMode: "standard",
+  };
+}
+
+async function assertTranscriptWriteThrottle(
+  ctx: MutationCtx,
+  sessionId: Id<"interviewSessions">,
+) {
+  const since = new Date(Date.now() - WRITE_WINDOW_MS).toISOString();
+  const segments = await ctx.db
+    .query("transcriptSegments")
+    .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+    .collect();
+  const recent = segments.filter((segment) => segment.startedAt >= since);
+
+  if (recent.length > MAX_TRANSCRIPT_WRITES_PER_WINDOW) {
+    throw new ConvexError(
+      "Transcript update rate exceeded. Please wait a moment and try again.",
+    );
   }
 }
 
-function resolveTranscriptLookupKey(args: {
-  segmentId: string
-  speaker: "agent" | "candidate" | "system"
-  startedAt: string
-}) {
-  const normalizedSegmentId = args.segmentId.trim()
+async function assertSessionEventThrottle(
+  ctx: MutationCtx,
+  sessionId: Id<"interviewSessions">,
+) {
+  const since = new Date(Date.now() - WRITE_WINDOW_MS).toISOString();
+  const events = await ctx.db
+    .query("sessionEvents")
+    .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+    .collect();
+  const recent = events.filter((event) => event.createdAt >= since);
 
-  if (normalizedSegmentId) {
-    return normalizedSegmentId
+  if (recent.length > MAX_SESSION_EVENTS_PER_WINDOW) {
+    throw new ConvexError(
+      "Session event rate exceeded. Please wait a moment and try again.",
+    );
+  }
+}
+
+function isInviteExpired(expiresAt: string) {
+  const parsed = Date.parse(expiresAt);
+
+  if (Number.isNaN(parsed)) {
+    return false;
   }
 
-  return `${args.speaker}:${args.startedAt}`
+  return parsed <= Date.now();
+}
+
+function resolveTranscriptLookupKey(args: {
+  segmentId: string;
+  speaker: "agent" | "candidate" | "system";
+  startedAt: string;
+}) {
+  const normalizedSegmentId = args.segmentId.trim();
+
+  if (normalizedSegmentId) {
+    return normalizedSegmentId;
+  }
+
+  return `${args.speaker}:${args.startedAt}`;
 }
 
 function deriveAccessState(
   invite: Pick<Doc<"candidateInvites">, "status" | "expiresAt"> | null,
-  session: Pick<Doc<"interviewSessions">, "state"> | null
+  session: Pick<Doc<"interviewSessions">, "state"> | null,
 ) {
   if (!invite) {
     return {
       accessState: "available" as const,
       accessMessage: undefined,
-    }
+    };
   }
 
   if (invite.status === "expired" || isInviteExpired(invite.expiresAt)) {
@@ -59,7 +106,7 @@ function deriveAccessState(
       accessState: "expired" as const,
       accessMessage:
         "This interview link has expired. Please request a new one from the recruiter.",
-    }
+    };
   }
 
   if (
@@ -71,48 +118,48 @@ function deriveAccessState(
       accessState: "consumed" as const,
       accessMessage:
         "This invite has already been used for a submitted interview and cannot be started again.",
-    }
+    };
   }
 
   return {
     accessState: "available" as const,
     accessMessage: undefined,
-  }
+  };
 }
 
 async function ensureInvite(
   ctx: MutationCtx,
-  inviteToken: string
+  inviteToken: string,
 ): Promise<Doc<"candidateInvites">> {
   const existingInvite = await ctx.db
     .query("candidateInvites")
     .withIndex("by_invite_token", (q) => q.eq("inviteToken", inviteToken))
-    .first()
+    .first();
 
   if (existingInvite) {
-    return existingInvite
+    return existingInvite;
   }
 
   if (inviteToken !== DEVELOPMENT_INVITE_TOKEN) {
-    throw new ConvexError("Invite not found.")
+    throw new ConvexError("Invite not found.");
   }
 
-  const template = await ensureDefaultTemplate(ctx)
+  const template = await ensureDefaultTemplate(ctx);
   const inviteId = await ctx.db.insert("candidateInvites", {
     inviteToken,
     candidateName: "Demo Candidate",
     templateId: template._id,
     status: "created",
     expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
-  })
+  });
 
-  const invite = await ctx.db.get(inviteId)
+  const invite = await ctx.db.get(inviteId);
 
   if (!invite) {
-    throw new ConvexError("Unable to create development invite.")
+    throw new ConvexError("Unable to create development invite.");
   }
 
-  return invite
+  return invite;
 }
 
 export const getPublicInterviewSnapshot = query({
@@ -123,10 +170,10 @@ export const getPublicInterviewSnapshot = query({
     const invite = await ctx.db
       .query("candidateInvites")
       .withIndex("by_invite_token", (q) => q.eq("inviteToken", inviteToken))
-      .first()
+      .first();
 
     if (!invite && inviteToken !== DEVELOPMENT_INVITE_TOKEN) {
-      return null
+      return null;
     }
 
     if (!invite) {
@@ -137,17 +184,18 @@ export const getPublicInterviewSnapshot = query({
         state: "ready" as const,
         accessState: "available" as const,
         accessMessage: undefined,
-        policy: buildInterviewPolicy(
-          new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
+        policy: defaultDemoPolicy(
+          new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
         ),
-      }
+      };
     }
 
-    const template = await ctx.db.get(invite.templateId)
+    const template = await ctx.db.get(invite.templateId);
     const session = await ctx.db
       .query("interviewSessions")
       .withIndex("by_invite", (q) => q.eq("inviteId", invite._id))
-      .first()
+      .first();
+    const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite);
 
     return {
       inviteToken,
@@ -155,10 +203,10 @@ export const getPublicInterviewSnapshot = query({
       candidateName: invite.candidateName ?? "Candidate",
       state: session?.state ?? ("ready" as const),
       ...deriveAccessState(invite, session),
-      policy: buildInterviewPolicy(invite.expiresAt),
-    }
+      policy,
+    };
   },
-})
+});
 
 export const getPublicSessionDetail = query({
   args: {
@@ -168,10 +216,10 @@ export const getPublicSessionDetail = query({
     const invite = await ctx.db
       .query("candidateInvites")
       .withIndex("by_invite_token", (q) => q.eq("inviteToken", inviteToken))
-      .first()
+      .first();
 
     if (!invite && inviteToken !== DEVELOPMENT_INVITE_TOKEN) {
-      return null
+      return null;
     }
 
     if (!invite) {
@@ -183,22 +231,23 @@ export const getPublicSessionDetail = query({
         state: "ready" as const,
         accessState: "available" as const,
         accessMessage: undefined,
-        policy: buildInterviewPolicy(
-          new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
+        policy: defaultDemoPolicy(
+          new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
         ),
         roomName: undefined,
         events: [],
         transcript: [],
         recordings: [],
-      }
+      };
     }
 
-    const template = await ctx.db.get(invite.templateId)
+    const template = await ctx.db.get(invite.templateId);
     const session = await ctx.db
       .query("interviewSessions")
       .withIndex("by_invite", (q) => q.eq("inviteId", invite._id))
-      .first()
-    const access = deriveAccessState(invite, session)
+      .first();
+    const access = deriveAccessState(invite, session);
+    const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite);
 
     if (!session) {
       return {
@@ -208,12 +257,12 @@ export const getPublicSessionDetail = query({
         templateName: template?.name ?? "AI Tutor Screener",
         state: "ready" as const,
         ...access,
-        policy: buildInterviewPolicy(invite.expiresAt),
+        policy,
         roomName: undefined,
         events: [],
         transcript: [],
         recordings: [],
-      }
+      };
     }
 
     if (access.accessState !== "available") {
@@ -224,12 +273,12 @@ export const getPublicSessionDetail = query({
         templateName: template?.name ?? "AI Tutor Screener",
         state: session.state,
         ...access,
-        policy: buildInterviewPolicy(invite.expiresAt),
+        policy,
         roomName: undefined,
         events: [],
         transcript: [],
         recordings: [],
-      }
+      };
     }
 
     const [events, transcript, recordings] = await Promise.all([
@@ -245,7 +294,7 @@ export const getPublicSessionDetail = query({
         .query("recordingArtifacts")
         .withIndex("by_session", (q) => q.eq("sessionId", session._id))
         .collect(),
-    ])
+    ]);
 
     return {
       inviteId: invite._id,
@@ -254,7 +303,7 @@ export const getPublicSessionDetail = query({
       templateName: template?.name ?? "AI Tutor Screener",
       state: session.state,
       ...access,
-      policy: buildInterviewPolicy(invite.expiresAt),
+      policy,
       roomName: session.roomName,
       events: events
         .toSorted((left, right) => left.createdAt.localeCompare(right.createdAt))
@@ -292,9 +341,9 @@ export const getPublicSessionDetail = query({
           sizeBytes: artifact.sizeBytes,
           error: artifact.error,
         })),
-    }
+    };
   },
-})
+});
 
 export const bootstrapPublicSession = mutation({
   args: {
@@ -302,20 +351,20 @@ export const bootstrapPublicSession = mutation({
     participantName: v.string(),
   },
   handler: async (ctx, { inviteToken, participantName }) => {
-    const invite = await ensureInvite(ctx, inviteToken)
+    const invite = await ensureInvite(ctx, inviteToken);
     const existingSession = await ctx.db
       .query("interviewSessions")
       .withIndex("by_invite", (q) => q.eq("inviteId", invite._id))
-      .first()
+      .first();
 
     if (invite.status === "expired" || isInviteExpired(invite.expiresAt)) {
       if (invite.status !== "expired") {
         await ctx.db.patch(invite._id, {
           status: "expired",
-        })
+        });
       }
 
-      throw new ConvexError("This interview link has expired.")
+      throw new ConvexError("This interview link has expired.");
     }
 
     if (
@@ -326,24 +375,24 @@ export const bootstrapPublicSession = mutation({
       if (invite.status !== "completed") {
         await ctx.db.patch(invite._id, {
           status: "completed",
-        })
+        });
       }
 
-      throw new ConvexError("This interview has already been submitted.")
+      throw new ConvexError("This interview has already been submitted.");
     }
 
     if (!invite.candidateName) {
       await ctx.db.patch(invite._id, {
         candidateName: participantName,
         status: "opened",
-      })
+      });
     } else if (invite.status === "created") {
       await ctx.db.patch(invite._id, {
         status: "opened",
-      })
+      });
     }
 
-    const template = await ctx.db.get(invite.templateId)
+    const template = await ctx.db.get(invite.templateId);
 
     if (existingSession && existingSession.roomName) {
       return {
@@ -351,11 +400,11 @@ export const bootstrapPublicSession = mutation({
         sessionId: existingSession._id,
         roomName: existingSession.roomName,
         templateName: template?.name ?? "AI Tutor Screener",
-      }
+      };
     }
 
-    const roomName = `interview-${inviteToken}-${Date.now()}`
-    const startedAt = new Date().toISOString()
+    const roomName = `interview-${inviteToken}-${Date.now()}`;
+    const startedAt = new Date().toISOString();
 
     const sessionId = await ctx.db.insert("interviewSessions", {
       inviteId: invite._id,
@@ -363,20 +412,20 @@ export const bootstrapPublicSession = mutation({
       provider: "livekit",
       roomName,
       startedAt,
-    })
+    });
 
     await ctx.db.patch(invite._id, {
       status: "in_progress",
-    })
+    });
 
     if (invite.eligibilityId) {
-      const eligibility = await ctx.db.get(invite.eligibilityId)
+      const eligibility = await ctx.db.get(invite.eligibilityId);
 
       if (eligibility) {
         await ctx.db.patch(invite.eligibilityId, {
           status: "in_progress",
           attemptCount: eligibility.attemptCount + 1,
-        })
+        });
       }
     }
 
@@ -385,16 +434,16 @@ export const bootstrapPublicSession = mutation({
       type: "room-token-requested",
       detail: `Bootstrap requested by ${participantName}`,
       createdAt: startedAt,
-    })
+    });
 
     return {
       inviteId: invite._id,
       sessionId,
       roomName,
       templateName: template?.name ?? "AI Tutor Screener",
-    }
+    };
   },
-})
+});
 
 export const appendSessionEvent = mutation({
   args: {
@@ -411,81 +460,81 @@ export const appendSessionEvent = mutation({
         v.literal("interrupted"),
         v.literal("processing"),
         v.literal("completed"),
-        v.literal("failed")
-      )
+        v.literal("failed"),
+      ),
     ),
   },
   handler: async (ctx, { sessionId, type, detail, state }) => {
-    const session = await ctx.db.get(sessionId)
+    const session = await ctx.db.get(sessionId);
 
     if (!session) {
-      throw new ConvexError("Interview session not found.")
+      throw new ConvexError("Interview session not found.");
     }
+
+    await assertSessionEventThrottle(ctx, sessionId);
 
     await ctx.db.insert("sessionEvents", {
       sessionId,
       type,
       detail,
       createdAt: new Date().toISOString(),
-    })
+    });
 
     if (state) {
       const nextState = transitionSessionSafely(
         session.state as InterviewSessionState,
-        state as InterviewSessionState
-      )
+        state as InterviewSessionState,
+      );
       const patch: Partial<Doc<"interviewSessions">> = {
         state: nextState,
-      }
+      };
 
       if (
         (nextState === "processing" || nextState === "completed") &&
         !session.endedAt
       ) {
-        patch.endedAt = new Date().toISOString()
+        patch.endedAt = new Date().toISOString();
       }
 
-      await ctx.db.patch(sessionId, patch)
+      await ctx.db.patch(sessionId, patch);
 
       if (nextState === "processing" || nextState === "completed") {
-        const invite = await ctx.db.get(session.inviteId)
+        const invite = await ctx.db.get(session.inviteId);
 
         await ctx.db.patch(session.inviteId, {
           status: "completed",
-        })
+        });
 
         if (invite?.eligibilityId) {
           await ctx.db.patch(invite.eligibilityId, {
             status: "submitted",
-          })
+          });
         }
       }
     }
   },
-})
+});
 
 export const upsertTranscriptSegment = mutation({
   args: {
     sessionId: v.id("interviewSessions"),
     segmentId: v.string(),
-    speaker: v.union(
-      v.literal("agent"),
-      v.literal("candidate"),
-      v.literal("system")
-    ),
+    speaker: v.union(v.literal("agent"), v.literal("candidate"), v.literal("system")),
     text: v.string(),
     status: v.union(v.literal("partial"), v.literal("final")),
     startedAt: v.string(),
     endedAt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const sourceSegmentId = resolveTranscriptLookupKey(args)
+    await assertTranscriptWriteThrottle(ctx, args.sessionId);
+
+    const sourceSegmentId = resolveTranscriptLookupKey(args);
     const indexedMatch = await ctx.db
       .query("transcriptSegments")
       .withIndex("by_session_and_source_segment_id", (q) =>
-        q.eq("sessionId", args.sessionId).eq("sourceSegmentId", sourceSegmentId)
+        q.eq("sessionId", args.sessionId).eq("sourceSegmentId", sourceSegmentId),
       )
-      .first()
+      .first();
     const match =
       indexedMatch ??
       (
@@ -498,8 +547,8 @@ export const upsertTranscriptSegment = mutation({
           segment.sourceSegmentId === sourceSegmentId ||
           (segment.startedAt === args.startedAt &&
             segment.speaker === args.speaker &&
-            segment.status === "partial")
-      )
+            segment.status === "partial"),
+      );
 
     if (match) {
       await ctx.db.patch(match._id, {
@@ -507,8 +556,8 @@ export const upsertTranscriptSegment = mutation({
         text: args.text,
         status: args.status,
         endedAt: args.endedAt,
-      })
-      return match._id
+      });
+      return match._id;
     }
 
     return await ctx.db.insert("transcriptSegments", {
@@ -519,6 +568,6 @@ export const upsertTranscriptSegment = mutation({
       status: args.status,
       startedAt: args.startedAt,
       endedAt: args.endedAt,
-    })
+    });
   },
-})
+});
