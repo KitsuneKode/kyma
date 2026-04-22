@@ -3,11 +3,15 @@ import { fetchQuery } from "convex/nextjs"
 
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
+import { getServerConvexAuthToken } from "@/lib/clerk/server-token"
 import { formatDateTime, formatStatusLabel } from "@/lib/recruiter/format"
 
 export default async function AdminScreeningsPage() {
+  const token = await getServerConvexAuthToken()
   const batches = process.env.NEXT_PUBLIC_CONVEX_URL
-    ? await fetchQuery(api.admin.listScreeningBatches, {}).catch(() => [])
+    ? await fetchQuery(api.admin.listScreeningBatches, {}, {
+        token: token ?? undefined,
+      }).catch(() => [])
     : []
 
   return (

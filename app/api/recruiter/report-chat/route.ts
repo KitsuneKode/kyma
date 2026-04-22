@@ -4,6 +4,7 @@ import { z } from "zod"
 
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
+import { getServerConvexAuthToken } from "@/lib/clerk/server-token"
 import { answerRecruiterQuestion } from "@/lib/recruiter/report-chat"
 
 export const dynamic = "force-dynamic"
@@ -17,12 +18,15 @@ const bodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const token = await getServerConvexAuthToken()
     const body = bodySchema.parse(await request.json())
     const sessionId = body.sessionId as Id<"interviewSessions">
     const reportId = body.reportId as Id<"assessmentReports"> | undefined
 
     const detail = await fetchQuery(api.recruiter.getCandidateReviewDetail, {
       sessionId,
+    }, {
+      token: token ?? undefined,
     })
 
     if (!detail) {
@@ -37,6 +41,8 @@ export async function POST(request: NextRequest) {
       reportId,
       role: "user",
       content: body.question,
+    }, {
+      token: token ?? undefined,
     })
 
     const answer = await answerRecruiterQuestion(body.question, detail)
@@ -46,6 +52,8 @@ export async function POST(request: NextRequest) {
       reportId,
       role: "assistant",
       content: answer,
+    }, {
+      token: token ?? undefined,
     })
 
     return NextResponse.json({ answer })

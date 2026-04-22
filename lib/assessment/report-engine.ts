@@ -33,6 +33,11 @@ export type CandidateReviewInput = {
   candidateName: string
   templateName: string
   transcript: TranscriptEntry[]
+  events?: Array<{
+    type: string
+    detail: string
+    createdAt: string
+  }>
 }
 
 export type DimensionScore = {
@@ -61,6 +66,12 @@ export type AssessmentComputation = {
   transcriptQualityNote?: string
   dimensionScores: DimensionScore[]
   evidence: DimensionEvidence[]
+}
+
+type AssessmentContext = {
+  teachingSimulationStarted: boolean
+  teachingSimulationCompleted: boolean
+  candidateSharedScreen: boolean
 }
 
 type CandidateSegment = TranscriptEntry & { speaker: "candidate" }
@@ -355,9 +366,26 @@ function pickTopDimensions(
     .map((item) => item.dimension.replaceAll("_", " "))
 }
 
+function deriveAssessmentContext(
+  events: CandidateReviewInput["events"] = []
+): AssessmentContext {
+  return {
+    teachingSimulationStarted: events.some(
+      (event) => event.type === "teaching-simulation-started"
+    ),
+    teachingSimulationCompleted: events.some(
+      (event) => event.type === "teaching-simulation-completed"
+    ),
+    candidateSharedScreen: events.some(
+      (event) => event.type === "candidate-screen-share-started"
+    ),
+  }
+}
+
 export function buildAssessmentReport(
   input: CandidateReviewInput
 ): AssessmentComputation {
+  const assessmentContext = deriveAssessmentContext(input.events)
   const candidateSegments = input.transcript.filter(
     (segment): segment is CandidateSegment =>
       segment.speaker === "candidate" && segment.status === "final"
@@ -425,12 +453,21 @@ export function buildAssessmentReport(
 
   const status: ReportStatus = confidence === "low" ? "manual_review" : "completed"
 
+  const simulationSummary = assessmentContext.teachingSimulationCompleted
+    ? assessmentContext.candidateSharedScreen
+      ? "The session included a completed child-persona teaching simulation with candidate screen sharing, which gives reviewers stronger evidence about live teaching behavior."
+      : "The session included a completed child-persona teaching simulation, which gives reviewers stronger evidence about live teaching behavior."
+    : assessmentContext.teachingSimulationStarted
+      ? "A child-persona teaching simulation started but did not fully complete, so teaching evidence should be interpreted conservatively."
+      : "The session did not include the teaching simulation segment, so this report leans more heavily on conversational evidence than live teaching evidence."
+
   const summary = [
     `${input.candidateName} completed the ${input.templateName} screening with a ${overallRecommendation.replaceAll("_", " ")} recommendation and ${confidence} confidence.`,
     hardGateTriggered
       ? "A hard gate was triggered, so this result should be treated as a likely reject unless a recruiter finds counter-evidence."
       : `The strongest visible dimensions were ${topStrengths.join(", ")}.`,
     `Primary follow-up areas are ${topConcerns.join(", ")}.`,
+    simulationSummary,
     transcriptQualityNote ?? "Transcript coverage was strong enough for a first-pass recommendation.",
   ].join(" ")
 

@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
     const token = await createParticipantToken({
       roomName: session.roomName,
       participantName,
+      participantIdentity: `candidate-${session.sessionId}`,
       metadata: JSON.stringify({
         inviteToken,
         sessionId: session.sessionId,

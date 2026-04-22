@@ -51,6 +51,17 @@ Rules:
 - prefer explicit uncertainty over hallucination
 - store chat history separately from the report itself
 
+### 5. Protect background assessment writes
+
+Assessment/report writes currently originate from server-side processing flows.
+
+Rules:
+
+- prefer recruiter auth for recruiter-initiated writes
+- protect background report writes with `KYMA_PROCESSING_WRITE_KEY` in deployed environments
+- do not expose the processing key to the browser
+- if the key is unset, treat that as a local/dev convenience only, not the intended production posture
+
 ### 4. BYOK must not leak tenant keys to our server runtime longer than necessary
 
 Target architecture for BYOK:
@@ -147,3 +158,4 @@ Only add model-based grading on top of that stable contract.
 3. Encrypt BYOK secrets at rest instead of storing them as ordinary records.
 4. Add rate limiting or abuse controls on public invite and recruiter chat routes.
 5. Add a central audit trail for recruiter actions and sensitive admin changes.
+6. Keep strengthening the teaching-simulation evidence model so recruiter claims map cleanly to transcript and session events.

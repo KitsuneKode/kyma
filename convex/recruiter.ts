@@ -1,7 +1,11 @@
-import { ConvexError, v } from "convex/values"
+import { v } from "convex/values"
 
 import type { Id } from "./_generated/dataModel"
-import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server"
+import { mutation, query, type QueryCtx } from "./_generated/server"
+import {
+  getRecruiterActorId,
+  requireRecruiterIdentity,
+} from "./helpers/auth"
 
 const recommendationValidator = v.union(
   v.literal("strong_yes"),
@@ -34,29 +38,6 @@ const reviewDecisionValidator = v.union(
   v.literal("manual_review"),
   v.literal("hold")
 )
-
-function shouldEnforceRecruiterAuth() {
-  return Boolean(
-    process.env.CLERK_SECRET_KEY?.trim() &&
-      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() &&
-      (process.env.CLERK_FRONTEND_API_URL?.trim() ||
-        process.env.CLERK_JWT_ISSUER_DOMAIN?.trim())
-  )
-}
-
-async function requireRecruiterIdentity(ctx: QueryCtx | MutationCtx) {
-  if (!shouldEnforceRecruiterAuth()) {
-    return null
-  }
-
-  const identity = await ctx.auth.getUserIdentity()
-
-  if (!identity) {
-    throw new ConvexError("You must be signed in to access recruiter data.")
-  }
-
-  return identity
-}
 
 function countWords(text: string) {
   return text
@@ -147,10 +128,16 @@ export const getSessionProcessingDetail = query({
 
     const invite = await ctx.db.get(session.inviteId)
     const template = invite ? await ctx.db.get(invite.templateId) : null
-    const transcript = await ctx.db
-      .query("transcriptSegments")
-      .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
-      .collect()
+    const [transcript, events] = await Promise.all([
+      ctx.db
+        .query("transcriptSegments")
+        .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+        .collect(),
+      ctx.db
+        .query("sessionEvents")
+        .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+        .collect(),
+    ])
 
     return {
       sessionId: session._id,
@@ -166,6 +153,11 @@ export const getSessionProcessingDetail = query({
         status: segment.status,
         startedAt: segment.startedAt,
         endedAt: segment.endedAt,
+      })),
+      events: sortByIsoAsc(events).map((event) => ({
+        type: event.type,
+        detail: event.detail,
+        createdAt: event.createdAt,
       })),
     }
   },
@@ -355,6 +347,7 @@ export const getCandidateReviewDetail = query({
 export const saveAssessmentReport = mutation({
   args: {
     sessionId: v.id("interviewSessions"),
+    processingKey: v.optional(v.string()),
     status: v.union(
       v.literal("pending"),
       v.literal("processing"),
@@ -392,6 +385,15 @@ export const saveAssessmentReport = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const configuredProcessingKey =
+      process.env.KYMA_PROCESSING_WRITE_KEY?.trim() || undefined
+
+    if (configuredProcessingKey) {
+      if (args.processingKey?.trim() !== configuredProcessingKey) {
+        await requireRecruiterIdentity(ctx)
+      }
+    }
+
     const now = new Date().toISOString()
     const existingReport = await ctx.db
       .query("assessmentReports")
@@ -455,9 +457,11 @@ export const submitReviewDecision = mutation({
   },
   handler: async (ctx, args) => {
     await requireRecruiterIdentity(ctx)
+    const reviewerId = await getRecruiterActorId(ctx)
 
     return await ctx.db.insert("reviewDecisions", {
       ...args,
+      reviewerId,
       createdAt: new Date().toISOString(),
     })
   },

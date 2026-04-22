@@ -4,6 +4,7 @@ import { fetchQuery } from "convex/nextjs"
 import type { Id } from "@/convex/_generated/dataModel"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
+import { getServerConvexAuthToken } from "@/lib/clerk/server-token"
 import { formatDateTime, formatStatusLabel } from "@/lib/recruiter/format"
 
 type ScreeningDetailPageProps = {
@@ -16,9 +17,12 @@ export default async function ScreeningDetailPage({
   params,
 }: ScreeningDetailPageProps) {
   const { batchId } = await params
+  const token = await getServerConvexAuthToken()
   const detail = process.env.NEXT_PUBLIC_CONVEX_URL
     ? await fetchQuery(api.admin.getScreeningBatchDetail, {
         batchId: batchId as Id<"screeningBatches">,
+      }, {
+        token: token ?? undefined,
       }).catch(() => null)
     : null
 

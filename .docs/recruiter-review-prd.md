@@ -4,7 +4,22 @@ Read this when working on recruiter workflows, candidate detail pages, report UX
 
 ## Status
 
-Proposed and ready to implement.
+Partially implemented.
+
+Already shipped:
+
+- recruiter queue
+- recruiter detail page
+- transcript and session timeline review
+- deterministic first-pass report with evidence
+- recruiter notes and grounded recruiter chat
+- child-persona teaching simulation visibility in recruiter review
+
+Still to deepen later:
+
+- richer evidence reel linking dimensions directly to replay anchors
+- native collaborative whiteboard instead of screen-share-first visual teaching
+- more advanced calibration and model-backed scoring layers
 
 ## Product Thesis
 
@@ -174,7 +189,9 @@ Version one should be standardized enough for comparison and flexible enough to 
 ### Stage 3: Guided Teaching Simulation
 
 - interviewer asks the candidate to teach a child-friendly concept
-- interviewer can play confusion or misunderstanding without requiring a separate live student agent
+- interviewer can play confusion or misunderstanding without requiring a separate human student
+- completion of this segment should be visible to recruiters as an explicit signal
+- optional screen share is the current visual-teaching path until a native whiteboard is added
 
 ### Stage 4: Closing
 

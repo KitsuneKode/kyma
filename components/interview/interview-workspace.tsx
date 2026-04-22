@@ -8,6 +8,7 @@ import {
   Room,
   RoomEvent,
   type Participant,
+  Track,
   type TrackPublication,
   type TranscriptionSegment,
 } from "livekit-client"
@@ -241,6 +242,52 @@ export function InterviewWorkspace({
       void persistEffectEvent("participant-left", detail)
     }
 
+    function handleLocalTrackPublished(publication: TrackPublication) {
+      if (publication.source !== Track.Source.ScreenShare) {
+        return
+      }
+
+      const detail = "Candidate started screen sharing for the teaching segment."
+      logger.info({
+        event: "room.screen-share.started",
+        detail,
+        sessionId: sessionIdRef.current ?? undefined,
+        roomName: roomNameRef.current ?? undefined,
+        participantIdentity: room.localParticipant.identity,
+      })
+      setSession((current) => ({
+        ...current,
+        events: [
+          ...current.events,
+          createLocalEvent("candidate-screen-share-started", detail),
+        ],
+      }))
+      void persistEffectEvent("candidate-screen-share-started", detail, "live")
+    }
+
+    function handleLocalTrackUnpublished(publication: TrackPublication) {
+      if (publication.source !== Track.Source.ScreenShare) {
+        return
+      }
+
+      const detail = "Candidate stopped screen sharing."
+      logger.info({
+        event: "room.screen-share.stopped",
+        detail,
+        sessionId: sessionIdRef.current ?? undefined,
+        roomName: roomNameRef.current ?? undefined,
+        participantIdentity: room.localParticipant.identity,
+      })
+      setSession((current) => ({
+        ...current,
+        events: [
+          ...current.events,
+          createLocalEvent("candidate-screen-share-stopped", detail),
+        ],
+      }))
+      void persistEffectEvent("candidate-screen-share-stopped", detail, "live")
+    }
+
     function handleReconnecting() {
       logger.warn({
         event: "room.reconnecting",
@@ -414,6 +461,8 @@ export function InterviewWorkspace({
 
     room.on(RoomEvent.ParticipantConnected, handleParticipantConnected)
     room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected)
+    room.on(RoomEvent.LocalTrackPublished, handleLocalTrackPublished)
+    room.on(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished)
     room.on(RoomEvent.Reconnecting, handleReconnecting)
     room.on(RoomEvent.Reconnected, handleReconnected)
     room.on(RoomEvent.Disconnected, handleDisconnected)
@@ -422,6 +471,8 @@ export function InterviewWorkspace({
     return () => {
       room.off(RoomEvent.ParticipantConnected, handleParticipantConnected)
       room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected)
+      room.off(RoomEvent.LocalTrackPublished, handleLocalTrackPublished)
+      room.off(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished)
       room.off(RoomEvent.Reconnecting, handleReconnecting)
       room.off(RoomEvent.Reconnected, handleReconnected)
       room.off(RoomEvent.Disconnected, handleDisconnected)

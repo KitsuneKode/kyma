@@ -15,6 +15,19 @@ Build a usable `AI Tutor Screener` from day one:
 
 This is not a prototype call demo. It should be the product we iterate on.
 
+## Current Shipped Standout Slice
+
+The strongest shipped v1 behavior is now:
+
+1. candidate joins a real invite-gated LiveKit room
+2. interviewer starts with a warm readiness check
+3. interviewer runs core screening questions
+4. interviewer hands off to a child persona for a teaching simulation
+5. candidate can optionally screen share to teach visually with tools like Excalidraw
+6. recruiter later sees transcript, evidence, timeline, teaching-simulation status, and screen-share signals in review
+
+This is the wedge to keep polishing before expanding into broader surfaces.
+
 ## Why LiveKit Is The Right Foundation
 
 `LiveKit` solves the part we should not be rebuilding:
@@ -63,7 +76,9 @@ We should follow the same flow while replacing the transport layer with `LiveKit
 3. Candidate enters `LiveKit PreJoin`.
 4. Candidate joins the real meeting.
 5. Interviewer agent joins and runs the screening.
-6. Candidate leaves and sees a `processing` / `submitted` state.
+6. Interviewer eventually triggers a guided child-persona teaching simulation.
+7. Candidate can optionally use screen share for visual teaching.
+8. Candidate leaves and sees a `processing` / `submitted` state.
 
 ### Recruiter / Admin Flow
 
@@ -208,9 +223,11 @@ We need strong dev-mode traceability now.
 - room connect start / success / failure
 - reconnect start / success / failure
 - participant join / leave
+- candidate screen-share start / stop
 - agent worker start
 - agent session start
 - first utterance sent
+- teaching simulation start / completion
 - processing start
 - report generation start / success / failure
 
