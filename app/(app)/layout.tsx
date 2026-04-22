@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
 
+import { ThemeToggle } from '@/components/theme-toggle'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -29,6 +30,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </Link>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             {clerkEnabled ? (
               <>
                 <Show when="signed-out">

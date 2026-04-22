@@ -1,10 +1,10 @@
 import type { AuthConfig } from 'convex/server'
+import { convexEnv } from '../lib/env/convex'
 const clerkIssuerDomain =
-  process.env.CLERK_FRONTEND_API_URL?.trim() ||
-  process.env.CLERK_JWT_ISSUER_DOMAIN?.trim()
-const clerkPublishableKey =
-  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim()
-const clerkSecretKey = process.env.CLERK_SECRET_KEY?.trim()
+  convexEnv.CLERK_FRONTEND_API_URL?.trim() ||
+  convexEnv.CLERK_JWT_ISSUER_DOMAIN?.trim()
+const clerkPublishableKey = convexEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim()
+const clerkSecretKey = convexEnv.CLERK_SECRET_KEY?.trim()
 
 const authConfig = {
   providers:
