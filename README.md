@@ -45,7 +45,7 @@ You send a candidate a link, they join a short guided interview in-browser, and 
 
 ### Product walkthrough media
 
-- Demo video: *coming soon*
+- Demo video: _coming soon_
 - Screenshots: available in `public/readme-hero.png`, `public/readme-candidate.png`, and `public/readme-recruiter.png`
 
 ### Icon and brand assets

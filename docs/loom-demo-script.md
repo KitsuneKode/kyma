@@ -22,27 +22,28 @@
 
 ## 0:50 – 2:10 — Candidate flow (the core demo)
 
-1. Open **`/interviews/demo-invite`** (or a real invite if you have one).  
+1. Open **`/interviews/demo-invite`** (or a real invite if you have one).
    > “Candidates don’t need an account — they get a **link**.”
-2. Enter name (if required) → **PreJoin** (mic/camera).  
+2. Enter name (if required) → **PreJoin** (mic/camera).
    > “We use a real **WebRTC** stack for the room, not a fake chat box.”
-3. **Join** the room.  
+3. **Join** the room.
    > “In production I’d have the **agent worker** running; here you can see the **session** and **transcript** updating when audio flows.”
-4. **End / submit** the interview (or show the “processing” state if that’s the stable path in your env).  
+4. **End / submit** the interview (or show the “processing” state if that’s the stable path in your env).
    > “Afterward the pipeline moves to **processing** and produces a **structured report** in the backend.”
 
-*If the agent is not live:*  
+_If the agent is not live:_
+
 > “The platform is built for the **AI interviewer** to join the same **LiveKit** room; for this recording I’m focusing on the **room + data path** you can see without my full key setup.”
 
 ---
 
 ## 2:10 – 3:20 — Recruiter / reviewer flow
 
-1. Open **`/admin/candidates`** (Clerk or your hosted auth as configured).  
+1. Open **`/admin/candidates`** (Clerk or your hosted auth as configured).
    > “Recruiters get a **queue** of sessions.”
-2. Open **one session**.  
+2. Open **one session**.
    > “We store **transcript segments**, **session events**, and a **report** with **dimension scores** and **evidence quotes** — not a single vibe score.”
-3. Show **notes** or **recruiter chat** (one question).  
+3. Show **notes** or **recruiter chat** (one question).
    > “Chat is **grounded** in what we already stored — the model can’t just invent a hire decision without context.”
 
 ---
@@ -51,7 +52,8 @@
 
 > “A tradeoff I made: **evidence-first scoring** with a **deterministic** first pass, so the output stays **reviewable** under hiring pressure. I can layer richer models later, but the **contract** is structured dimensions + snippets.”
 
-Optional one-liner:  
+Optional one-liner:
+
 > “**Convex** is the app source of truth; **LiveKit** owns the meeting layer.”
 
 ---

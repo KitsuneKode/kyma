@@ -11,7 +11,7 @@
 
 ## Log
 
-| Date (UTC) | Topic             | Primary source  | Applies to | One-line takeaway                                                                  | Repo anchor            | Invalidate when    |
-| ---------- | ----------------- | --------------- | ---------- | ---------------------------------------------------------------------------------- | ---------------------- | ------------------ |
-| 2026-04-22 | Convex path alias | Convex bundling | convex dev | Convex bundler does not resolve Next `@/` paths; use `../lib/...` from `convex/*`. | `convex/interviews.ts` | N/A (architecture) |
-| 2026-04-22 | Convex file naming | Convex bundling | convex dev | Files under `convex/` must use `[a-zA-Z0-9_.]` only — no hyphens in module paths (e.g. use `interviewPolicy.ts`). | `convex/helpers/interviewPolicy.ts` | N/A |
+| Date (UTC) | Topic              | Primary source  | Applies to | One-line takeaway                                                                                                 | Repo anchor                         | Invalidate when    |
+| ---------- | ------------------ | --------------- | ---------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------ |
+| 2026-04-22 | Convex path alias  | Convex bundling | convex dev | Convex bundler does not resolve Next `@/` paths; use `../lib/...` from `convex/*`.                                | `convex/interviews.ts`              | N/A (architecture) |
+| 2026-04-22 | Convex file naming | Convex bundling | convex dev | Files under `convex/` must use `[a-zA-Z0-9_.]` only — no hyphens in module paths (e.g. use `interviewPolicy.ts`). | `convex/helpers/interviewPolicy.ts` | N/A                |

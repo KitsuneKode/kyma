@@ -11,8 +11,7 @@ type InterviewPageProps = {
 };
 
 const DEMO_INVITE_ENABLED =
-  process.env.NODE_ENV !== "production" ||
-  process.env.KYMA_ENABLE_DEMO_INVITE === "1";
+  process.env.NODE_ENV !== "production" || process.env.KYMA_ENABLE_DEMO_INVITE === "1";
 
 function isEnabledDemoInviteToken(inviteId: string) {
   return inviteId === "demo-invite" && DEMO_INVITE_ENABLED;

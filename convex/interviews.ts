@@ -13,8 +13,7 @@ import { ensureDefaultTemplate } from "./helpers/templates";
 
 const DEVELOPMENT_INVITE_TOKEN = "demo-invite";
 const DEMO_INVITE_ENABLED =
-  process.env.NODE_ENV !== "production" ||
-  process.env.KYMA_ENABLE_DEMO_INVITE === "1";
+  process.env.NODE_ENV !== "production" || process.env.KYMA_ENABLE_DEMO_INVITE === "1";
 
 function isEnabledDemoInviteToken(inviteToken: string) {
   return inviteToken === DEVELOPMENT_INVITE_TOKEN && DEMO_INVITE_ENABLED;

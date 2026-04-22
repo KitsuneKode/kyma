@@ -25,6 +25,6 @@
     "@ai-elements": "https://ai-sdk.dev/elements/api/registry/{name}.json",
     "@elevenlabs": "https://ui.elevenlabs.io/r/{name}.json",
     "@tailark": "https://tailark.com/r/{name}.json",
-    "@motion-primitives": "https://motion-primitives.com/c/{name}.json"
+    "@motion-primitives": "https://raw.githubusercontent.com/ibelick/motion-primitives/main/public/c/{name}.json"
   }
 }
