@@ -1,39 +1,39 @@
-type DiagnosticLevel = "debug" | "info" | "warn" | "error"
+type DiagnosticLevel = "debug" | "info" | "warn" | "error";
 
 type DiagnosticPayload = {
-  level?: DiagnosticLevel
-  event: string
-  detail?: string
-  requestId?: string
-  sessionId?: string
-  inviteToken?: string
-  roomName?: string
-  actor?: "candidate" | "agent" | "server" | "convex" | "system"
-  participantIdentity?: string
-  stateFrom?: string
-  stateTo?: string
-  attempt?: number
-  meta?: Record<string, unknown>
-  error?: unknown
-}
+  level?: DiagnosticLevel;
+  event: string;
+  detail?: string;
+  requestId?: string;
+  sessionId?: string;
+  inviteToken?: string;
+  roomName?: string;
+  actor?: "candidate" | "agent" | "server" | "convex" | "system";
+  participantIdentity?: string;
+  stateFrom?: string;
+  stateTo?: string;
+  attempt?: number;
+  meta?: Record<string, unknown>;
+  error?: unknown;
+};
 
 type DiagnosticLogger = {
-  debug: (payload: Omit<DiagnosticPayload, "level">) => void
-  info: (payload: Omit<DiagnosticPayload, "level">) => void
-  warn: (payload: Omit<DiagnosticPayload, "level">) => void
-  error: (payload: Omit<DiagnosticPayload, "level">) => void
-}
+  debug: (payload: Omit<DiagnosticPayload, "level">) => void;
+  info: (payload: Omit<DiagnosticPayload, "level">) => void;
+  warn: (payload: Omit<DiagnosticPayload, "level">) => void;
+  error: (payload: Omit<DiagnosticPayload, "level">) => void;
+};
 
 function shouldLogDiagnostics() {
   return (
     process.env.NODE_ENV !== "production" ||
     process.env.NEXT_PUBLIC_ENABLE_DEV_TRACE === "1"
-  )
+  );
 }
 
 function normalizeError(error: unknown) {
   if (!error) {
-    return undefined
+    return undefined;
   }
 
   if (error instanceof Error) {
@@ -41,17 +41,17 @@ function normalizeError(error: unknown) {
       name: error.name,
       message: error.message,
       stack: error.stack,
-    }
+    };
   }
 
   return {
     message: String(error),
-  }
+  };
 }
 
 function writeDiagnostic(scope: string, payload: DiagnosticPayload) {
   if (!shouldLogDiagnostics()) {
-    return
+    return;
   }
 
   const entry = {
@@ -71,7 +71,7 @@ function writeDiagnostic(scope: string, payload: DiagnosticPayload) {
     attempt: payload.attempt,
     meta: payload.meta,
     error: normalizeError(payload.error),
-  }
+  };
 
   const sink =
     entry.level === "error"
@@ -80,24 +80,21 @@ function writeDiagnostic(scope: string, payload: DiagnosticPayload) {
         ? console.warn
         : entry.level === "debug"
           ? console.debug
-          : console.info
+          : console.info;
 
-  sink(`[kyma:${scope}] ${entry.event}`, entry)
+  sink(`[kyma:${scope}] ${entry.event}`, entry);
 }
 
 export function createDiagnosticLogger(
   scope: string,
-  basePayload: Omit<DiagnosticPayload, "event" | "level"> = {}
+  basePayload: Omit<DiagnosticPayload, "event" | "level"> = {},
 ): DiagnosticLogger {
-  function log(
-    level: DiagnosticLevel,
-    payload: Omit<DiagnosticPayload, "level">
-  ) {
+  function log(level: DiagnosticLevel, payload: Omit<DiagnosticPayload, "level">) {
     writeDiagnostic(scope, {
       ...basePayload,
       ...payload,
       level,
-    })
+    });
   }
 
   return {
@@ -105,14 +102,14 @@ export function createDiagnosticLogger(
     info: (payload) => log("info", payload),
     warn: (payload) => log("warn", payload),
     error: (payload) => log("error", payload),
-  }
+  };
 }
 
 export function createRequestId(prefix = "req") {
   const id =
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID().slice(0, 8)
-      : Math.random().toString(36).slice(2, 10)
+      : Math.random().toString(36).slice(2, 10);
 
-  return `${prefix}_${id}`
+  return `${prefix}_${id}`;
 }

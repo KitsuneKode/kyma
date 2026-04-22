@@ -11,25 +11,23 @@ import {
   type TranscriptSegmentSpeaker,
   type TranscriptSegmentStatus,
   type RecordingArtifact,
-} from "@/lib/interview/types"
-import { DEFAULT_INTERVIEW_POLICY } from "@/lib/interview/policy"
-import { createDefaultPreflightSteps } from "@/lib/interview/preflight"
+} from "@/lib/interview/types";
+import { DEFAULT_INTERVIEW_POLICY } from "@/lib/interview/policy";
+import { createDefaultPreflightSteps } from "@/lib/interview/preflight";
 
 type RawSessionEvent = Partial<Omit<SessionEvent, "type">> & {
-  type?: string
-}
+  type?: string;
+};
 
-type RawTranscriptSegment = Partial<
-  Omit<TranscriptSegment, "speaker" | "status">
-> & {
-  speaker?: string
-  status?: string
-}
+type RawTranscriptSegment = Partial<Omit<TranscriptSegment, "speaker" | "status">> & {
+  speaker?: string;
+  status?: string;
+};
 
 type RawRecordingArtifact = Partial<RecordingArtifact> & {
-  artifactType?: string
-  status?: string
-}
+  artifactType?: string;
+  status?: string;
+};
 
 type PublicSessionDetail = Partial<
   Pick<
@@ -45,10 +43,10 @@ type PublicSessionDetail = Partial<
     | "recordings"
   >
 > & {
-  state?: string
-  events?: RawSessionEvent[]
-  transcript?: RawTranscriptSegment[]
-}
+  state?: string;
+  events?: RawSessionEvent[];
+  transcript?: RawTranscriptSegment[];
+};
 
 const SESSION_STATE_SET = new Set<InterviewSessionState>([
   "created",
@@ -60,7 +58,7 @@ const SESSION_STATE_SET = new Set<InterviewSessionState>([
   "processing",
   "completed",
   "failed",
-])
+]);
 
 const SESSION_EVENT_TYPE_SET = new Set<SessionEventType>([
   "invite-opened",
@@ -84,39 +82,36 @@ const SESSION_EVENT_TYPE_SET = new Set<SessionEventType>([
   "processing-started",
   "processing-completed",
   "session-failed",
-])
+]);
 
 const TRANSCRIPT_SPEAKER_SET = new Set<TranscriptSegmentSpeaker>([
   "agent",
   "candidate",
   "system",
-])
+]);
 
-const TRANSCRIPT_STATUS_SET = new Set<TranscriptSegmentStatus>([
-  "partial",
-  "final",
-])
+const TRANSCRIPT_STATUS_SET = new Set<TranscriptSegmentStatus>(["partial", "final"]);
 
 const RECORDING_ARTIFACT_TYPE_SET = new Set<RecordingArtifact["artifactType"]>([
   "audio",
   "video",
   "composite",
   "segments",
-])
+]);
 
 const RECORDING_STATUS_SET = new Set<RecordingArtifact["status"]>([
   "starting",
   "active",
   "complete",
   "failed",
-])
+]);
 
 function normalizeState(state: string | undefined): InterviewSessionState {
   if (state && SESSION_STATE_SET.has(state as InterviewSessionState)) {
-    return state as InterviewSessionState
+    return state as InterviewSessionState;
   }
 
-  return "ready"
+  return "ready";
 }
 
 function normalizeEvent(event: RawSessionEvent): SessionEvent {
@@ -126,18 +121,16 @@ function normalizeEvent(event: RawSessionEvent): SessionEvent {
       : "invite-opened",
     detail: event.detail ?? "Session event captured.",
     createdAt: event.createdAt ?? new Date().toISOString(),
-  }
+  };
 }
 
 function normalizeTranscriptSegment(
   segment: RawTranscriptSegment,
-  index: number
+  index: number,
 ): TranscriptSegment {
   return {
     id: segment.id ?? `segment-${index}`,
-    speaker: TRANSCRIPT_SPEAKER_SET.has(
-      segment.speaker as TranscriptSegmentSpeaker
-    )
+    speaker: TRANSCRIPT_SPEAKER_SET.has(segment.speaker as TranscriptSegmentSpeaker)
       ? (segment.speaker as TranscriptSegmentSpeaker)
       : "system",
     text: segment.text ?? "",
@@ -146,12 +139,12 @@ function normalizeTranscriptSegment(
       : "final",
     startedAt: segment.startedAt ?? new Date().toISOString(),
     endedAt: segment.endedAt,
-  }
+  };
 }
 
 function normalizeRecordingArtifact(
   artifact: RawRecordingArtifact,
-  index: number
+  index: number,
 ): RecordingArtifact {
   return {
     id: artifact.id ?? `recording-${index}`,
@@ -160,7 +153,7 @@ function normalizeRecordingArtifact(
     artifactKey: artifact.artifactKey ?? `artifact-${index}`,
     roomName: artifact.roomName ?? "",
     artifactType: RECORDING_ARTIFACT_TYPE_SET.has(
-      artifact.artifactType as RecordingArtifact["artifactType"]
+      artifact.artifactType as RecordingArtifact["artifactType"],
     )
       ? (artifact.artifactType as RecordingArtifact["artifactType"])
       : "composite",
@@ -175,17 +168,17 @@ function normalizeRecordingArtifact(
     durationMs: artifact.durationMs,
     sizeBytes: artifact.sizeBytes,
     error: artifact.error,
-  }
+  };
 }
 
 export function createInitialInterviewSnapshot(
   inviteId: string,
   publicSession?: PublicSessionDetail | null,
   fallback?: {
-    accessState?: InviteAccessState
-    accessMessage?: string
-    policy?: Partial<InterviewPolicy>
-  }
+    accessState?: InviteAccessState;
+    accessMessage?: string;
+    policy?: Partial<InterviewPolicy>;
+  },
 ): InterviewSessionSnapshot {
   const events: SessionEvent[] = publicSession?.events?.length
     ? publicSession.events.map(normalizeEvent)
@@ -195,7 +188,7 @@ export function createInitialInterviewSnapshot(
           detail: "Candidate opened the interview invite.",
           createdAt: new Date().toISOString(),
         },
-      ]
+      ];
 
   return {
     inviteId,
@@ -203,8 +196,7 @@ export function createInitialInterviewSnapshot(
     candidateName: publicSession?.candidateName,
     templateName: publicSession?.templateName ?? "AI Tutor Screener",
     state: normalizeState(publicSession?.state),
-    accessState:
-      publicSession?.accessState ?? fallback?.accessState ?? "available",
+    accessState: publicSession?.accessState ?? fallback?.accessState ?? "available",
     accessMessage: publicSession?.accessMessage ?? fallback?.accessMessage,
     policy: {
       ...DEFAULT_INTERVIEW_POLICY,
@@ -214,19 +206,17 @@ export function createInitialInterviewSnapshot(
     roomName: publicSession?.roomName,
     events,
     preflight: createDefaultPreflightSteps(),
-    transcript:
-      publicSession?.transcript?.map(normalizeTranscriptSegment) ?? [],
-    recordings:
-      publicSession?.recordings?.map(normalizeRecordingArtifact) ?? [],
-  }
+    transcript: publicSession?.transcript?.map(normalizeTranscriptSegment) ?? [],
+    recordings: publicSession?.recordings?.map(normalizeRecordingArtifact) ?? [],
+  };
 }
 
 export function mergeInterviewSnapshot(
   base: InterviewSessionSnapshot,
-  publicSession?: PublicSessionDetail | null
+  publicSession?: PublicSessionDetail | null,
 ): InterviewSessionSnapshot {
   if (!publicSession) {
-    return base
+    return base;
   }
 
   return {
@@ -253,13 +243,13 @@ export function mergeInterviewSnapshot(
     recordings: publicSession.recordings?.length
       ? publicSession.recordings.map(normalizeRecordingArtifact)
       : base.recordings,
-  }
+  };
 }
 
 function normalizePreflight(preflight: PreflightStep[]): PreflightStep[] {
   if (preflight.length === PRE_FLIGHT_STEPS.length) {
-    return preflight
+    return preflight;
   }
 
-  return createDefaultPreflightSteps()
+  return createDefaultPreflightSteps();
 }
