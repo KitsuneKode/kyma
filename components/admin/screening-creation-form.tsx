@@ -3,11 +3,22 @@
 import { startTransition, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery } from 'convex/react'
+import { motion } from 'motion/react'
 
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 function parseCandidateLines(rawValue: string) {
   return rawValue
@@ -25,6 +36,15 @@ function parseCandidateLines(rawValue: string) {
       }
     })
     .filter((candidate) => candidate.candidateName.length > 0)
+}
+
+const STAGGER_VARIANTS: any = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.23, 1, 0.32, 1] },
+  },
 }
 
 export function ScreeningCreationForm() {
@@ -101,134 +121,194 @@ export function ScreeningCreationForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Field
-          label="Assessment template"
-          className="md:col-span-2 lg:col-span-3"
-        >
-          <select
-            value={templateId}
-            onChange={(event) =>
-              setTemplateId(event.target.value as Id<'assessmentTemplates'>)
+    <motion.form
+      onSubmit={handleSubmit}
+      className="grid gap-8"
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: { transition: { staggerChildren: 0.05 } },
+      }}
+    >
+      <motion.div
+        variants={STAGGER_VARIANTS}
+        className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+      >
+        <div className="flex flex-col gap-3 md:col-span-2 lg:col-span-3">
+          <Label
+            htmlFor="template"
+            className="font-semibold text-foreground/80"
+          >
+            Assessment template
+          </Label>
+          <Select
+            value={templateId || undefined}
+            onValueChange={(val) =>
+              setTemplateId(val as Id<'assessmentTemplates'>)
             }
-            className={inputClasses}
             disabled={!templates?.length}
           >
-            {templates?.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name} · rubric {template.rubricVersion}
-                {template.targetDurationMinutes
-                  ? ` · ${template.targetDurationMinutes} min default`
-                  : ''}
-              </option>
-            ))}
-          </select>
-          <p className="mt-2 text-xs text-muted-foreground">
+            <SelectTrigger
+              id="template"
+              className="h-12 rounded-xl border-border/60 bg-muted/20 px-4 transition-all hover:bg-muted/40 focus:ring-primary/20"
+            >
+              <SelectValue placeholder="Select a template" />
+            </SelectTrigger>
+            <SelectContent>
+              {templates?.map((template) => (
+                <SelectItem
+                  key={template.id}
+                  value={template.id}
+                  className="rounded-lg"
+                >
+                  {template.name}{' '}
+                  <span className="ml-2 text-xs opacity-50">
+                    · rubric {template.rubricVersion}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground/80">
             Batch-level duration and resume below override template defaults
             when set.
           </p>
-        </Field>
+        </div>
 
-        <Field label="Target duration override (minutes)">
-          <input
+        <div className="flex flex-col gap-3">
+          <Label
+            htmlFor="duration"
+            className="font-semibold text-foreground/80"
+          >
+            Duration override (min)
+          </Label>
+          <Input
+            id="duration"
             value={targetDurationMinutes}
             onChange={(event) => setTargetDurationMinutes(event.target.value)}
             inputMode="numeric"
-            className={inputClasses}
-            placeholder="Leave blank to use template default"
+            className="h-12 rounded-xl border-border/60 bg-muted/20 px-4 transition-all hover:bg-muted/40 focus-visible:ring-primary/20"
+            placeholder="Template default"
           />
-        </Field>
+        </div>
 
-        <div className="block">
-          <span className="text-sm font-medium">Resume policy</span>
-          <div className="mt-2">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allowsResume}
-                onChange={(event) => setAllowsResume(event.target.checked)}
-              />
-              Allow reconnect / resume when supported
-            </label>
+        <div className="flex flex-col gap-3">
+          <Label className="font-semibold text-foreground/80">
+            Resume policy
+          </Label>
+          <div
+            className="flex h-12 cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 transition-colors hover:bg-muted/40"
+            onClick={() => setAllowsResume(!allowsResume)}
+          >
+            <Checkbox
+              id="resume"
+              checked={allowsResume}
+              onCheckedChange={(checked) => setAllowsResume(checked as boolean)}
+            />
+            <Label
+              htmlFor="resume"
+              className="w-full cursor-pointer text-sm font-medium"
+            >
+              Allow reconnect / resume
+            </Label>
           </div>
         </div>
 
-        <Field label="Screening name">
-          <input
+        <div className="flex flex-col gap-3">
+          <Label htmlFor="batch" className="font-semibold text-foreground/80">
+            Screening name
+          </Label>
+          <Input
+            id="batch"
             value={batchName}
             onChange={(event) => setBatchName(event.target.value)}
-            className={inputClasses}
+            className="h-12 rounded-xl border-border/60 bg-muted/20 px-4 transition-all hover:bg-muted/40 focus-visible:ring-primary/20"
             placeholder="Primary tutor screening"
           />
-        </Field>
+        </div>
 
-        <Field label="Expiry in days">
-          <input
+        <div className="flex flex-col gap-3">
+          <Label htmlFor="expiry" className="font-semibold text-foreground/80">
+            Expiry in days
+          </Label>
+          <Input
+            id="expiry"
             value={expiryDays}
             onChange={(event) => setExpiryDays(event.target.value)}
             inputMode="numeric"
-            className={inputClasses}
+            className="h-12 rounded-xl border-border/60 bg-muted/20 px-4 transition-all hover:bg-muted/40 focus-visible:ring-primary/20"
           />
-        </Field>
+        </div>
 
-        <Field label="Allowed attempts">
-          <input
+        <div className="flex flex-col gap-3">
+          <Label
+            htmlFor="attempts"
+            className="font-semibold text-foreground/80"
+          >
+            Allowed attempts
+          </Label>
+          <Input
+            id="attempts"
             value={allowedAttempts}
             onChange={(event) => setAllowedAttempts(event.target.value)}
             inputMode="numeric"
-            className={inputClasses}
+            className="h-12 rounded-xl border-border/60 bg-muted/20 px-4 transition-all hover:bg-muted/40 focus-visible:ring-primary/20"
           />
-        </Field>
-      </div>
+        </div>
+      </motion.div>
 
-      <Field label="Eligible candidates">
-        <textarea
+      <motion.div variants={STAGGER_VARIANTS} className="flex flex-col gap-3">
+        <Label
+          htmlFor="candidates"
+          className="font-semibold text-foreground/80"
+        >
+          Eligible candidates
+        </Label>
+        <Textarea
+          id="candidates"
           value={candidateLines}
           onChange={(event) => setCandidateLines(event.target.value)}
-          className={cn(inputClasses, 'min-h-56')}
+          className="min-h-48 rounded-2xl border-border/60 bg-muted/20 p-5 leading-relaxed transition-all hover:bg-muted/40 focus-visible:ring-primary/20"
           placeholder="Candidate Name, candidate@email.com"
         />
-        <p className="mt-2 text-xs text-muted-foreground">
-          One candidate per line. Use `Name, email` format. Email is optional.
+        <p className="text-xs text-muted-foreground/80">
+          One candidate per line. Use{' '}
+          <code className="rounded bg-muted/50 px-1 py-0.5 text-foreground">
+            Name, email
+          </code>{' '}
+          format. Email is optional.
         </p>
-      </Field>
+      </motion.div>
 
-      <div className="rounded-xl border bg-muted/30 p-4">
-        <p className="text-sm font-medium">Preview</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {parsedCandidates.length} eligible candidates will receive invite
-          links tied to this screening batch.
+      <motion.div
+        variants={STAGGER_VARIANTS}
+        className="rounded-2xl border border-primary/20 bg-primary/5 p-6 shadow-sm"
+      >
+        <p className="text-sm font-semibold tracking-wide text-primary">
+          Preview & Confirmation
         </p>
-      </div>
+        <p className="mt-2 text-sm leading-relaxed text-pretty text-muted-foreground">
+          <strong className="text-foreground">{parsedCandidates.length}</strong>{' '}
+          eligible candidates will receive invite links tied to this screening
+          batch.
+        </p>
+      </motion.div>
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error && (
+        <motion.div variants={STAGGER_VARIANTS}>
+          <p className="text-sm font-medium text-destructive">{error}</p>
+        </motion.div>
+      )}
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Creating...' : 'Create screening'}
+      <motion.div variants={STAGGER_VARIANTS} className="flex justify-end pt-4">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="rounded-full px-8 py-6 text-sm font-semibold shadow-xl transition-all active:scale-[0.96]"
+        >
+          {isSubmitting ? 'Creating screening...' : 'Create screening'}
         </Button>
-      </div>
-    </form>
+      </motion.div>
+    </motion.form>
   )
 }
-
-function Field({
-  label,
-  children,
-  className,
-}: {
-  label: string
-  children: React.ReactNode
-  className?: string
-}) {
-  return (
-    <label className={cn('block', className)}>
-      <span className="text-sm font-medium">{label}</span>
-      <div className="mt-2">{children}</div>
-    </label>
-  )
-}
-
-const inputClasses =
-  'w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
