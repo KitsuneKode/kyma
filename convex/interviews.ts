@@ -12,6 +12,13 @@ import {
 import { ensureDefaultTemplate } from "./helpers/templates";
 
 const DEVELOPMENT_INVITE_TOKEN = "demo-invite";
+const DEMO_INVITE_ENABLED =
+  process.env.NODE_ENV !== "production" ||
+  process.env.KYMA_ENABLE_DEMO_INVITE === "1";
+
+function isEnabledDemoInviteToken(inviteToken: string) {
+  return inviteToken === DEVELOPMENT_INVITE_TOKEN && DEMO_INVITE_ENABLED;
+}
 
 const WRITE_WINDOW_MS = 60_000;
 const MAX_TRANSCRIPT_WRITES_PER_WINDOW = 120;
@@ -140,7 +147,7 @@ async function ensureInvite(
     return existingInvite;
   }
 
-  if (inviteToken !== DEVELOPMENT_INVITE_TOKEN) {
+  if (!isEnabledDemoInviteToken(inviteToken)) {
     throw new ConvexError("Invite not found.");
   }
 
@@ -172,7 +179,7 @@ export const getPublicInterviewSnapshot = query({
       .withIndex("by_invite_token", (q) => q.eq("inviteToken", inviteToken))
       .first();
 
-    if (!invite && inviteToken !== DEVELOPMENT_INVITE_TOKEN) {
+    if (!invite && !isEnabledDemoInviteToken(inviteToken)) {
       return null;
     }
 
@@ -218,7 +225,7 @@ export const getPublicSessionDetail = query({
       .withIndex("by_invite_token", (q) => q.eq("inviteToken", inviteToken))
       .first();
 
-    if (!invite && inviteToken !== DEVELOPMENT_INVITE_TOKEN) {
+    if (!invite && !isEnabledDemoInviteToken(inviteToken)) {
       return null;
     }
 
