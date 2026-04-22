@@ -1,14 +1,27 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "printWidth": 88,
+  "endOfLine": "lf",
+  "semi": false,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "printWidth": 80,
+  "sortTailwindcss": {
+    "stylesheet": "app/globals.css",
+    "functions": ["cn", "cva"]
+  },
+  "sortPackageJson": false,
   "ignorePatterns": [
-    ".next/**",
-    "node_modules/**",
-    "convex/_generated/**",
-    ".agents/**",
-    ".claude/**",
-    ".context/**",
-    "coverage/**",
-    "dist/**"
+    "dist/",
+    "node_modules/",
+    ".next/",
+    ".turbo/",
+    "coverage/",
+    "convex/_generated/",
+    ".agents/",
+    ".claude/",
+    ".context/",
+    "pnpm-lock.yaml",
+    ".pnpm-store/"
   ]
 }
