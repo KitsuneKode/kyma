@@ -70,6 +70,7 @@ This repo is building the Cuemath-style `AI Tutor Screener`:
 - v1 product and LiveKit implementation direction: `.docs/v1-product-livekit-plan.md`
 - redesign surface, current routes, and UI handoff: `.docs/redesign-handoff.md`
 - recruiter review and evaluation product requirements: `.docs/recruiter-review-prd.md`
+- next implementation handoff and priorities: `.docs/next-phase-prd.md`
 - LiveKit, Convex, schema, and backend boundaries: `.docs/livekit-convex-implementation-guide.md`
 - security, maintainability, and BYOK guardrails: `.docs/security-and-maintainability.md`
 - vendor and stack comparison: `.docs/stack-research.md`
