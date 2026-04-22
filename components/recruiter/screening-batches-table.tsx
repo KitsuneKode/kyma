@@ -12,7 +12,7 @@ type ScreeningBatchRow = {
   status: string
   completedCount: number
   candidateCount: number
-  expiresAt: string
+  expiresAt?: string
   templateName: string
   createdAt: string
 }
