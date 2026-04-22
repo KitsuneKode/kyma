@@ -74,6 +74,13 @@ Target architecture for BYOK:
 
 Until that exists, keep BYOK out of the critical path.
 
+### ADR: shipped hardening (Kyma next-phase)
+
+- **HTTP rate limits:** `lib/http/rate-limit.ts` (in-memory fixed window) guards `/api/interviews/bootstrap` and `/api/recruiter/report-chat`. Replace with Redis/Upstash when running multiple Next instances.
+- **Convex throttles:** `appendSessionEvent` and `upsertTranscriptSegment` reject excessive per-session write volume (rolling minute window).
+- **Audit trail:** `auditEvents` table written via `convex/helpers/audit.ts` for review decisions and recruiter notes.
+- **Server model boundary stub:** `lib/providers/resolve-model.ts` — keep all future provider resolution server-side.
+
 ## Current Maintainability Priorities
 
 ### 1. Split by domain, not by page whim

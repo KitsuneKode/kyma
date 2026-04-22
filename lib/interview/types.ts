@@ -8,25 +8,21 @@ export const SESSION_STATES = [
   "processing",
   "completed",
   "failed",
-] as const
+] as const;
 
-export type InterviewSessionState = (typeof SESSION_STATES)[number]
+export type InterviewSessionState = (typeof SESSION_STATES)[number];
 
-export type InviteAccessState =
-  | "available"
-  | "expired"
-  | "consumed"
-  | "unavailable"
+export type InviteAccessState = "available" | "expired" | "consumed" | "unavailable";
 
-export type InterviewDurationMode = "timed" | "flexible"
+export type InterviewDurationMode = "timed" | "flexible";
 
 export type InterviewPolicy = {
-  durationMode: InterviewDurationMode
-  targetDurationMinutes?: number
-  allowsResume: boolean
-  maxAttempts: number
-  expiresAt?: string
-}
+  durationMode: InterviewDurationMode;
+  targetDurationMinutes?: number;
+  allowsResume: boolean;
+  maxAttempts: number;
+  expiresAt?: string;
+};
 
 export const PRE_FLIGHT_STEPS = [
   "browser-check",
@@ -34,18 +30,18 @@ export const PRE_FLIGHT_STEPS = [
   "speaker-check",
   "network-check",
   "environment-check",
-] as const
+] as const;
 
-export type PreflightStepKey = (typeof PRE_FLIGHT_STEPS)[number]
+export type PreflightStepKey = (typeof PRE_FLIGHT_STEPS)[number];
 
-export type PreflightStepStatus = "pending" | "running" | "passed" | "failed"
+export type PreflightStepStatus = "pending" | "running" | "passed" | "failed";
 
 export type PreflightStep = {
-  key: PreflightStepKey
-  label: string
-  description: string
-  status: PreflightStepStatus
-}
+  key: PreflightStepKey;
+  label: string;
+  description: string;
+  status: PreflightStepStatus;
+};
 
 export type SessionEventType =
   | "invite-opened"
@@ -68,57 +64,57 @@ export type SessionEventType =
   | "teaching-simulation-completed"
   | "processing-started"
   | "processing-completed"
-  | "session-failed"
+  | "session-failed";
 
 export type SessionEvent = {
-  type: SessionEventType
-  createdAt: string
-  detail: string
-}
+  type: SessionEventType;
+  createdAt: string;
+  detail: string;
+};
 
-export type TranscriptSegmentStatus = "partial" | "final"
+export type TranscriptSegmentStatus = "partial" | "final";
 
-export type TranscriptSegmentSpeaker = "agent" | "candidate" | "system"
+export type TranscriptSegmentSpeaker = "agent" | "candidate" | "system";
 
 export type TranscriptSegment = {
-  id: string
-  speaker: TranscriptSegmentSpeaker
-  text: string
-  status: TranscriptSegmentStatus
-  startedAt: string
-  endedAt?: string
-}
+  id: string;
+  speaker: TranscriptSegmentSpeaker;
+  text: string;
+  status: TranscriptSegmentStatus;
+  startedAt: string;
+  endedAt?: string;
+};
 
 export type RecordingArtifact = {
-  id: string
-  provider: "livekit"
-  egressId: string
-  artifactKey: string
-  roomName: string
-  artifactType: "audio" | "video" | "composite" | "segments"
-  status: "starting" | "active" | "complete" | "failed"
-  filename?: string
-  location?: string
-  manifestLocation?: string
-  startedAt?: string
-  endedAt?: string
-  durationMs?: number
-  sizeBytes?: number
-  error?: string
-}
+  id: string;
+  provider: "livekit";
+  egressId: string;
+  artifactKey: string;
+  roomName: string;
+  artifactType: "audio" | "video" | "composite" | "segments";
+  status: "starting" | "active" | "complete" | "failed";
+  filename?: string;
+  location?: string;
+  manifestLocation?: string;
+  startedAt?: string;
+  endedAt?: string;
+  durationMs?: number;
+  sizeBytes?: number;
+  error?: string;
+};
 
 export type InterviewSessionSnapshot = {
-  inviteId: string
-  sessionId?: string
-  candidateName?: string
-  templateName: string
-  state: InterviewSessionState
-  accessState: InviteAccessState
-  accessMessage?: string
-  policy: InterviewPolicy
-  roomName?: string
-  events: SessionEvent[]
-  preflight: PreflightStep[]
-  transcript: TranscriptSegment[]
-  recordings: RecordingArtifact[]
-}
+  inviteId: string;
+  sessionId?: string;
+  candidateName?: string;
+  templateName: string;
+  state: InterviewSessionState;
+  accessState: InviteAccessState;
+  accessMessage?: string;
+  policy: InterviewPolicy;
+  roomName?: string;
+  events: SessionEvent[];
+  preflight: PreflightStep[];
+  transcript: TranscriptSegment[];
+  recordings: RecordingArtifact[];
+};

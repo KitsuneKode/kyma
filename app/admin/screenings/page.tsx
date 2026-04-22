@@ -1,18 +1,22 @@
-import Link from "next/link"
-import { fetchQuery } from "convex/nextjs"
+import Link from "next/link";
+import { fetchQuery } from "convex/nextjs";
 
-import { api } from "@/convex/_generated/api"
-import { Button } from "@/components/ui/button"
-import { getServerConvexAuthToken } from "@/lib/clerk/server-token"
-import { formatDateTime, formatStatusLabel } from "@/lib/recruiter/format"
+import { api } from "@/convex/_generated/api";
+import { Button } from "@/components/ui/button";
+import { getServerConvexAuthToken } from "@/lib/clerk/server-token";
+import { formatDateTime, formatStatusLabel } from "@/lib/recruiter/format";
 
 export default async function AdminScreeningsPage() {
-  const token = await getServerConvexAuthToken()
+  const token = await getServerConvexAuthToken();
   const batches = process.env.NEXT_PUBLIC_CONVEX_URL
-    ? await fetchQuery(api.admin.listScreeningBatches, {}, {
-        token: token ?? undefined,
-      }).catch(() => [])
-    : []
+    ? await fetchQuery(
+        api.admin.listScreeningBatches,
+        {},
+        {
+          token: token ?? undefined,
+        },
+      ).catch(() => [])
+    : [];
 
   return (
     <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-7xl flex-col gap-6 px-6 py-10">
@@ -31,7 +35,11 @@ export default async function AdminScreeningsPage() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button nativeButton={false} variant="outline" render={<Link href="/admin" />}>
+            <Button
+              nativeButton={false}
+              variant="outline"
+              render={<Link href="/admin" />}
+            >
               Back to admin
             </Button>
             <Button nativeButton={false} render={<Link href="/admin/screenings/new" />}>
@@ -53,8 +61,8 @@ export default async function AdminScreeningsPage() {
 
         {batches.length === 0 ? (
           <div className="px-6 py-12 text-sm text-muted-foreground">
-            No screening batches exist yet. Create one to generate invite links
-            for a controlled candidate group.
+            No screening batches exist yet. Create one to generate invite links for a
+            controlled candidate group.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -105,5 +113,5 @@ export default async function AdminScreeningsPage() {
         )}
       </section>
     </main>
-  )
+  );
 }

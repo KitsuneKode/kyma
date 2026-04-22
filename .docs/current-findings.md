@@ -49,6 +49,10 @@ This file is the fast restart point for future agents. Read this before re-resea
 - recruiter/admin Convex reads and writes are now auth-gated when Clerk is configured, and server-rendered admin pages pass Clerk-backed Convex tokens
 - assessment writes now support an internal processing key via `KYMA_PROCESSING_WRITE_KEY` for safer background/report mutations
 - `/admin` is Clerk-protected when Clerk env is configured
+- `bun run test` (Vitest) and `bun run test:e2e` (Playwright smoke) exercise core helpers and the home route
+- template-driven screening policy (duration, resume, attempts) is stored on templates and batches and resolved for the candidate lobby; completed reports store a `policySnapshot`
+- HTTP rate limits on interview bootstrap and recruiter chat; Convex-side throttles on hot candidate mutations; `auditEvents` for review decisions and recruiter notes
+- recruiter chat responses can include **citations** and persist **answerSource** / model metadata on `reportChatMessages`
 
 ## Important Routes
 
@@ -198,15 +202,19 @@ Use these first before re-researching the current implementation choices:
 - AgentKit overview: https://agentkit.inngest.com/
 - Convex schemas: https://docs.convex.dev/database/schemas
 - Convex indexes: https://docs.convex.dev/database/reading-data/indexes/
+- Vendor research log (dated notes, not requirements): `.docs/vendor-and-research-log.md`
 
 ## Next Best Work
 
 - validate the LiveKit Node agent against the chosen STT/LLM/TTS model strings in a live room
-- move screening creation from default-template mode to richer template-controlled policy mode
-- add recruiter note authorship and a richer audit trail
+- extend audit coverage (e.g. screening batch mutations) if compliance requires it
 - add model-backed recruiter chat once provider/BYOK boundaries are decided
-- add BYOK planning and env boundaries without coupling them into the first working path
+- replace in-memory HTTP rate limits with a shared store for multi-instance deploys
 - continue extracting shared domain constants and validators as the Convex surface grows
+
+## Validation log
+
+- _Append dated rows here after manual LiveKit / end-to-end runs (same PR as behavior changes when possible)._
 
 ## Local Developer Experience
 
@@ -217,5 +225,6 @@ Use these first before re-researching the current implementation choices:
 - `bun run dev:full` also starts the LiveKit worker
 - `bun run lint` uses `oxlint`
 - `bun run lint:eslint` keeps the old ESLint path available for deeper framework-specific checks
+- `bun run test` runs Vitest; `bun run test:e2e` runs Playwright (see `playwright.config.ts`)
 - `bun run format` uses `oxfmt`
 - public candidate-flow work can proceed without Clerk configured

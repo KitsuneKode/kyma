@@ -1,18 +1,18 @@
-import { defineSchema, defineTable } from "convex/server"
-import { v } from "convex/values"
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
 
 const recommendationValidator = v.union(
   v.literal("strong_yes"),
   v.literal("yes"),
   v.literal("mixed"),
-  v.literal("no")
-)
+  v.literal("no"),
+);
 
 const confidenceValidator = v.union(
   v.literal("high"),
   v.literal("medium"),
-  v.literal("low")
-)
+  v.literal("low"),
+);
 
 const rubricDimensionValidator = v.union(
   v.literal("clarity"),
@@ -23,20 +23,34 @@ const rubricDimensionValidator = v.union(
   v.literal("fluency"),
   v.literal("adaptability"),
   v.literal("engagement"),
-  v.literal("accuracy")
-)
+  v.literal("accuracy"),
+);
+
+const interviewStyleModeValidator = v.union(
+  v.literal("standard"),
+  v.literal("intensive"),
+);
+
+const interviewPolicySnapshotValidator = v.object({
+  targetDurationMinutes: v.number(),
+  allowsResume: v.boolean(),
+  maxAttempts: v.number(),
+  rubricVersion: v.string(),
+  templateId: v.string(),
+  templateName: v.optional(v.string()),
+  interviewStyleMode: v.optional(interviewStyleModeValidator),
+});
 
 export default defineSchema({
   assessmentTemplates: defineTable({
     name: v.string(),
     role: v.string(),
-    status: v.union(
-      v.literal("draft"),
-      v.literal("active"),
-      v.literal("archived")
-    ),
+    status: v.union(v.literal("draft"), v.literal("active"), v.literal("archived")),
     createdBy: v.string(),
     rubricVersion: v.string(),
+    targetDurationMinutes: v.optional(v.number()),
+    allowsResume: v.optional(v.boolean()),
+    interviewStyleMode: v.optional(interviewStyleModeValidator),
   }).index("by_status", ["status"]),
 
   screeningBatches: defineTable({
@@ -47,10 +61,12 @@ export default defineSchema({
       v.literal("draft"),
       v.literal("active"),
       v.literal("closed"),
-      v.literal("archived")
+      v.literal("archived"),
     ),
     expiresAt: v.optional(v.string()),
     allowedAttempts: v.number(),
+    targetDurationMinutes: v.optional(v.number()),
+    allowsResume: v.optional(v.boolean()),
     createdAt: v.string(),
   })
     .index("by_status", ["status"])
@@ -69,7 +85,7 @@ export default defineSchema({
       v.literal("in_progress"),
       v.literal("submitted"),
       v.literal("revoked"),
-      v.literal("expired")
+      v.literal("expired"),
     ),
     createdAt: v.string(),
   })
@@ -89,7 +105,7 @@ export default defineSchema({
       v.literal("opened"),
       v.literal("in_progress"),
       v.literal("completed"),
-      v.literal("expired")
+      v.literal("expired"),
     ),
     expiresAt: v.string(),
   })
@@ -107,7 +123,7 @@ export default defineSchema({
       v.literal("interrupted"),
       v.literal("processing"),
       v.literal("completed"),
-      v.literal("failed")
+      v.literal("failed"),
     ),
     provider: v.literal("livekit"),
     roomName: v.optional(v.string()),
@@ -128,11 +144,7 @@ export default defineSchema({
   transcriptSegments: defineTable({
     sessionId: v.id("interviewSessions"),
     sourceSegmentId: v.optional(v.string()),
-    speaker: v.union(
-      v.literal("agent"),
-      v.literal("candidate"),
-      v.literal("system")
-    ),
+    speaker: v.union(v.literal("agent"), v.literal("candidate"), v.literal("system")),
     text: v.string(),
     status: v.union(v.literal("partial"), v.literal("final")),
     startedAt: v.string(),
@@ -151,13 +163,13 @@ export default defineSchema({
       v.literal("audio"),
       v.literal("video"),
       v.literal("composite"),
-      v.literal("segments")
+      v.literal("segments"),
     ),
     status: v.union(
       v.literal("starting"),
       v.literal("active"),
       v.literal("complete"),
-      v.literal("failed")
+      v.literal("failed"),
     ),
     filename: v.optional(v.string()),
     location: v.optional(v.string()),
@@ -181,7 +193,7 @@ export default defineSchema({
       v.literal("processing"),
       v.literal("completed"),
       v.literal("failed"),
-      v.literal("manual_review")
+      v.literal("manual_review"),
     ),
     overallRecommendation: v.optional(recommendationValidator),
     confidence: v.optional(confidenceValidator),
@@ -197,10 +209,11 @@ export default defineSchema({
           dimension: rubricDimensionValidator,
           score: v.number(),
           rationale: v.string(),
-        })
-      )
+        }),
+      ),
     ),
     generatedAt: v.optional(v.string()),
+    policySnapshot: v.optional(interviewPolicySnapshotValidator),
   })
     .index("by_session", ["sessionId"])
     .index("by_status", ["status"]),
@@ -225,7 +238,7 @@ export default defineSchema({
       v.literal("advance"),
       v.literal("reject"),
       v.literal("manual_review"),
-      v.literal("hold")
+      v.literal("hold"),
     ),
     rationale: v.optional(v.string()),
     reviewerId: v.optional(v.string()),
@@ -250,7 +263,19 @@ export default defineSchema({
     role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
     content: v.string(),
     createdAt: v.string(),
+    answerSource: v.optional(v.union(v.literal("fallback"), v.literal("model"))),
+    modelId: v.optional(v.string()),
+    citationsJson: v.optional(v.string()),
+    groundingVersion: v.optional(v.string()),
   })
     .index("by_session_and_created_at", ["sessionId", "createdAt"])
     .index("by_report_and_created_at", ["reportId", "createdAt"]),
-})
+
+  auditEvents: defineTable({
+    actorId: v.optional(v.string()),
+    action: v.string(),
+    resource: v.string(),
+    metadataJson: v.optional(v.string()),
+    createdAt: v.string(),
+  }).index("by_created_at", ["createdAt"]),
+});

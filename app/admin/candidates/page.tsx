@@ -1,23 +1,27 @@
-import Link from "next/link"
-import { fetchQuery } from "convex/nextjs"
+import Link from "next/link";
+import { fetchQuery } from "convex/nextjs";
 
-import { api } from "@/convex/_generated/api"
-import { Button } from "@/components/ui/button"
-import { getServerConvexAuthToken } from "@/lib/clerk/server-token"
+import { api } from "@/convex/_generated/api";
+import { Button } from "@/components/ui/button";
+import { getServerConvexAuthToken } from "@/lib/clerk/server-token";
 import {
   formatConfidenceLabel,
   formatDateTime,
   formatRecommendationLabel,
   formatStatusLabel,
-} from "@/lib/recruiter/format"
+} from "@/lib/recruiter/format";
 
 export default async function AdminCandidatesPage() {
-  const token = await getServerConvexAuthToken()
+  const token = await getServerConvexAuthToken();
   const candidates = process.env.NEXT_PUBLIC_CONVEX_URL
-    ? await fetchQuery(api.recruiter.listReviewCandidates, {}, {
-        token: token ?? undefined,
-      }).catch(() => [])
-    : []
+    ? await fetchQuery(
+        api.recruiter.listReviewCandidates,
+        {},
+        {
+          token: token ?? undefined,
+        },
+      ).catch(() => [])
+    : [];
 
   return (
     <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-7xl flex-col gap-6 px-6 py-10">
@@ -31,13 +35,16 @@ export default async function AdminCandidatesPage() {
               Candidate review queue
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-              This is the first real recruiter-side surface: sessions,
-              recommendations, confidence, and review state in one place. The
-              design is intentionally minimal for now so we can stabilize the
-              product flow before polish.
+              This is the first real recruiter-side surface: sessions, recommendations,
+              confidence, and review state in one place. The design is intentionally
+              minimal for now so we can stabilize the product flow before polish.
             </p>
           </div>
-          <Button nativeButton={false} variant="outline" render={<Link href="/admin" />}>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link href="/admin" />}
+          >
             Back to Admin
           </Button>
         </div>
@@ -52,7 +59,8 @@ export default async function AdminCandidatesPage() {
         <MetricCard
           label="Reports Ready"
           value={String(
-            candidates.filter((candidate) => candidate.reportStatus === "completed").length
+            candidates.filter((candidate) => candidate.reportStatus === "completed")
+              .length,
           )}
           detail="Completed assessment reports."
         />
@@ -62,15 +70,16 @@ export default async function AdminCandidatesPage() {
             candidates.filter(
               (candidate) =>
                 candidate.reportStatus === "manual_review" ||
-                candidate.latestDecision === "manual_review"
-            ).length
+                candidate.latestDecision === "manual_review",
+            ).length,
           )}
           detail="Candidates needing a human call."
         />
         <MetricCard
           label="Strong Signals"
           value={String(
-            candidates.filter((candidate) => candidate.recommendation === "strong_yes").length
+            candidates.filter((candidate) => candidate.recommendation === "strong_yes")
+              .length,
           )}
           detail="Candidates currently standing out."
         />
@@ -81,16 +90,15 @@ export default async function AdminCandidatesPage() {
           <div>
             <h2 className="text-sm font-semibold">Review queue</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Use this table to triage who to review first and who still needs a
-              report.
+              Use this table to triage who to review first and who still needs a report.
             </p>
           </div>
         </div>
 
         {candidates.length === 0 ? (
           <div className="px-6 py-12 text-sm text-muted-foreground">
-            No completed sessions are available yet. Run a candidate interview
-            first, then come back here.
+            No completed sessions are available yet. Run a candidate interview first,
+            then come back here.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -187,7 +195,7 @@ export default async function AdminCandidatesPage() {
         )}
       </section>
     </main>
-  )
+  );
 }
 
 function MetricCard({
@@ -195,9 +203,9 @@ function MetricCard({
   value,
   detail,
 }: {
-  label: string
-  value: string
-  detail: string
+  label: string;
+  value: string;
+  detail: string;
 }) {
   return (
     <div className="rounded-xl border bg-card p-5 shadow-sm">
@@ -207,5 +215,5 @@ function MetricCard({
       <p className="mt-3 text-3xl font-semibold tracking-tight">{value}</p>
       <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
     </div>
-  )
+  );
 }
