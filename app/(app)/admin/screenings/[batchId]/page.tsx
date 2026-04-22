@@ -3,7 +3,9 @@ import { fetchQuery } from 'convex/nextjs'
 
 import type { Id } from '@/convex/_generated/dataModel'
 import { api } from '@/convex/_generated/api'
+import { PageHeader } from '@/components/admin/page-header'
 import { Button } from '@/components/ui/button'
+import { ScreeningCandidatesTable } from '@/components/recruiter/screening-candidates-table'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { formatDateTime, formatStatusLabel } from '@/lib/recruiter/format'
 import { MetricCard } from '@/components/admin/metric-card'
@@ -59,31 +61,20 @@ export default async function ScreeningDetailPage({
 
   return (
     <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-7xl flex-col gap-6 px-6 py-10">
-      <section className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Screening Ops
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-              {detail.batch.name}
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-              This batch controls who is allowed to access the interview and how
-              many attempts they get before the invite flow is closed.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href="/admin/screenings" />}
-            >
-              Back to screenings
-            </Button>
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Screening ops"
+        title={detail.batch.name}
+        description="Review candidate eligibility, invite status, and attempt usage for this batch."
+        actions={
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link href="/admin/screenings" />}
+          >
+            Back to screenings
+          </Button>
+        }
+      />
 
       <section className="grid gap-4 md:grid-cols-4">
         <MetricCard
@@ -107,60 +98,16 @@ export default async function ScreeningDetailPage({
         />
       </section>
 
-      <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <div>
-            <h2 className="text-sm font-semibold">Eligible candidates</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Share these invite links only with the allowed candidates.
+      <section className="space-y-4">
+        <ScreeningCandidatesTable data={detail.candidates} />
+        {detail.candidates.length === 0 ? (
+          <div className="rounded-xl bg-card p-5 shadow-sm">
+            <p className="text-sm text-muted-foreground">
+              No candidates are assigned to this batch yet. Add candidates to
+              generate invite links.
             </p>
           </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-muted/40 text-left text-xs tracking-wide text-muted-foreground uppercase">
-              <tr>
-                <th className="px-6 py-3 font-medium">Candidate</th>
-                <th className="px-6 py-3 font-medium">Eligibility</th>
-                <th className="px-6 py-3 font-medium">Attempts</th>
-                <th className="px-6 py-3 font-medium">Invite</th>
-              </tr>
-            </thead>
-            <tbody>
-              {detail.candidates.map((candidate) => (
-                <tr key={candidate.id} className="border-t">
-                  <td className="px-6 py-4">
-                    <div className="font-medium">{candidate.candidateName}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {candidate.candidateEmail ?? 'No email captured'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div>{formatStatusLabel(candidate.status)}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      Invite {formatStatusLabel(candidate.inviteStatus)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-muted-foreground">
-                    {candidate.attemptCount} / {candidate.allowedAttempts}
-                  </td>
-                  <td className="px-6 py-4">
-                    {candidate.inviteToken ? (
-                      <div className="flex flex-col gap-2">
-                        <code className="rounded bg-muted/40 px-2 py-1 text-xs">
-                          /interviews/{candidate.inviteToken}
-                        </code>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Pending</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        ) : null}
       </section>
     </main>
   )

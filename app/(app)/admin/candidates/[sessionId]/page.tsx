@@ -5,11 +5,12 @@ import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { RecruiterChat } from '@/components/recruiter/recruiter-chat'
 import { RecruiterNotes } from '@/components/recruiter/recruiter-notes'
-import { ReviewActions } from '@/components/recruiter/review-actions'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
+import { DecisionBar } from '@/components/recruiter/decision-bar'
 import { InfoCard } from '@/components/admin/info-card'
 import { InfoRow } from '@/components/admin/info-row'
 import { MetricCard } from '@/components/admin/metric-card'
+import { PageHeader } from '@/components/admin/page-header'
 import { SummaryList } from '@/components/admin/summary-list'
 import { publicEnv } from '@/lib/env/public'
 import {
@@ -75,32 +76,27 @@ export default async function CandidateReviewPage({
 
   return (
     <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-7xl flex-col gap-6 px-6 py-10">
-      <section className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Candidate Review
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-              {detail.candidate.name}
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-              Review the transcript, session behavior, evidence, and current
-              recommendation in one place. This is the operational screen the
-              product will grow around.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href="/admin/candidates" />}
-            >
-              Back to queue
-            </Button>
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Candidate review"
+        title={detail.candidate.name}
+        description="Review recommendation, evidence, and recruiter actions in one decision-first workflow."
+        actions={
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link href="/admin/candidates" />}
+          >
+            Back to queue
+          </Button>
+        }
+      />
+
+      <DecisionBar
+        recommendation={detail.report?.recommendation}
+        confidence={detail.report?.confidence}
+        reportId={detail.report?.id}
+        sessionId={detail.session.id}
+      />
 
       <section className="grid gap-4 xl:grid-cols-4">
         <MetricCard
@@ -309,16 +305,6 @@ export default async function CandidateReviewPage({
         </div>
 
         <aside className="flex flex-col gap-6">
-          <InfoCard
-            title="Review action"
-            description="Record the recruiter decision without leaving this page."
-          >
-            <ReviewActions
-              reportId={detail.report?.id}
-              sessionId={detail.session.id}
-            />
-          </InfoCard>
-
           <InfoCard
             title="Review timeline"
             description="Session lifecycle and recruiter decisions."

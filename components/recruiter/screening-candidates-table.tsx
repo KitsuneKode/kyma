@@ -1,0 +1,84 @@
+'use client'
+
+import { useMemo } from 'react'
+
+import { DataTable, type ColumnDef } from '@/components/ui/data-table'
+import { formatStatusLabel } from '@/lib/recruiter/format'
+
+type ScreeningCandidateRow = {
+  id: string
+  candidateName: string
+  candidateEmail?: string
+  status: string
+  inviteStatus: string
+  attemptCount: number
+  allowedAttempts: number
+  inviteToken?: string
+}
+
+export function ScreeningCandidatesTable({
+  data,
+}: {
+  data: ScreeningCandidateRow[]
+}) {
+  const columns = useMemo<ColumnDef<ScreeningCandidateRow>[]>(
+    () => [
+      {
+        accessorKey: 'candidateName',
+        header: 'Candidate',
+        cell: ({ row }) => (
+          <div>
+            <p className="font-medium">{row.original.candidateName}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {row.original.candidateEmail ?? 'No email available'}
+            </p>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Eligibility',
+        cell: ({ row }) => (
+          <div>
+            <p>{formatStatusLabel(row.original.status)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Invite {formatStatusLabel(row.original.inviteStatus)}
+            </p>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'attemptCount',
+        header: 'Attempts',
+        cell: ({ row }) => (
+          <p className="tabular-nums">
+            {row.original.attemptCount} / {row.original.allowedAttempts}
+          </p>
+        ),
+      },
+      {
+        accessorKey: 'inviteToken',
+        header: 'Invite path',
+        cell: ({ row }) =>
+          row.original.inviteToken ? (
+            <code className="rounded bg-muted/40 px-2 py-1 text-xs tabular-nums">
+              /interviews/{row.original.inviteToken}
+            </code>
+          ) : (
+            <span className="text-muted-foreground">Pending</span>
+          ),
+      },
+    ],
+    []
+  )
+
+  return (
+    <DataTable
+      columns={columns}
+      data={data}
+      searchKey="candidateName"
+      searchPlaceholder="Search candidates"
+      emptyMessage="No candidates are in this batch yet. Add candidates to issue invite links."
+    />
+  )
+}

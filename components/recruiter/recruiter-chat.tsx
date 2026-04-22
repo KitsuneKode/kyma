@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 import { Message, MessageContent } from '@/components/ai-elements/message'
+import { CitationList } from '@/components/recruiter/citation-list'
 import { Button } from '@/components/ui/button'
 import { formatDateTime } from '@/lib/recruiter/format'
 import { cn } from '@/lib/utils'
@@ -121,9 +122,7 @@ export function RecruiterChat({
                 </p>
                 <p className="mt-2 leading-6">{message.content}</p>
                 {message.citationsJson ? (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Citations: {message.citationsJson}
-                  </p>
+                  <CitationList citationsJson={message.citationsJson} />
                 ) : null}
               </MessageContent>
             </Message>
@@ -146,11 +145,15 @@ export function RecruiterChat({
         )}
       />
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-destructive">
+          {error} Try again or rephrase your question.
+        </p>
+      ) : null}
 
       <div className="flex justify-end">
         <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? 'Thinking...' : 'Ask recruiter copilot'}
+          {isSubmitting ? 'Thinking…' : 'Ask recruiter copilot'}
         </Button>
       </div>
     </div>

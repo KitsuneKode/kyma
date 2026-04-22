@@ -26,9 +26,14 @@ const DECISIONS: Array<{
 type ReviewActionsProps = {
   reportId?: string
   sessionId: string
+  compact?: boolean
 }
 
-export function ReviewActions({ reportId, sessionId }: ReviewActionsProps) {
+export function ReviewActions({
+  reportId,
+  sessionId,
+  compact = false,
+}: ReviewActionsProps) {
   const router = useRouter()
   const submitReviewDecision = useMutation(api.recruiter.submitReviewDecision)
   const [rationale, setRationale] = useState('')
@@ -72,13 +77,18 @@ export function ReviewActions({ reportId, sessionId }: ReviewActionsProps) {
   }
 
   return (
-    <div className="rounded-lg border px-4 py-4">
+    <div
+      className={
+        compact ? 'space-y-3' : 'space-y-4 rounded-lg bg-muted/20 px-4 py-4'
+      }
+    >
       <div>
-        <h3 className="text-sm font-semibold">Recruiter action</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Record the human decision against the current report. This becomes the
-          durable review outcome recruiters can audit later.
-        </p>
+        <h3 className="text-sm font-semibold">Review action</h3>
+        {!compact ? (
+          <p className="mt-1 text-sm text-muted-foreground">
+            Record a reviewer decision for this report.
+          </p>
+        ) : null}
       </div>
 
       <ButtonGroup className="mt-4 flex-wrap gap-2">
@@ -96,10 +106,7 @@ export function ReviewActions({ reportId, sessionId }: ReviewActionsProps) {
         ))}
       </ButtonGroup>
 
-      <label
-        className="mt-4 block text-sm font-medium"
-        htmlFor="review-rationale"
-      >
+      <label className="block text-sm font-medium" htmlFor="review-rationale">
         Reviewer note
       </label>
       <textarea
@@ -108,7 +115,7 @@ export function ReviewActions({ reportId, sessionId }: ReviewActionsProps) {
         onChange={(event) => setRationale(event.target.value)}
         placeholder="Add the reason behind this recruiter action."
         className={cn(
-          'mt-2 min-h-28 w-full rounded-lg border bg-background px-3 py-2 text-sm transition-colors outline-none',
+          'min-h-24 w-full rounded-lg border bg-background px-3 py-2 text-sm transition-[border-color,box-shadow] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] outline-none',
           'focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
         )}
       />
@@ -121,9 +128,9 @@ export function ReviewActions({ reportId, sessionId }: ReviewActionsProps) {
         </p>
       )}
 
-      <div className="mt-4 flex justify-end">
+      <div className="flex justify-end">
         <Button type="button" onClick={handleSubmit} disabled={isSaving}>
-          {isSaving ? 'Saving...' : 'Save recruiter action'}
+          {isSaving ? 'Saving…' : 'Save review action'}
         </Button>
       </div>
     </div>
