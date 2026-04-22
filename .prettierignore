@@ -3,5 +3,9 @@ node_modules/
 .next/
 .turbo/
 coverage/
+convex/_generated/
+.agents/
+.claude/
+.context/
 pnpm-lock.yaml
 .pnpm-store/
