@@ -85,11 +85,11 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `lib/assessment/report-engine.ts`: deterministic scoring and evidence extraction for v1
 - `lib/assessment/process-session.ts`: shared report-processing pipeline
 - `convex/helpers/auth.ts`: shared recruiter auth helpers for Convex functions
-- `app/admin/candidates/page.tsx`: recruiter queue
-- `app/admin/candidates/[sessionId]/page.tsx`: recruiter detail page
-- `app/admin/screenings/page.tsx`: screening batch list
-- `app/admin/screenings/new/page.tsx`: screening creation flow
-- `app/admin/screenings/[batchId]/page.tsx`: invite/eligibility detail
+- `app/(app)/admin/candidates/page.tsx`: recruiter queue
+- `app/(app)/admin/candidates/[sessionId]/page.tsx`: recruiter detail page
+- `app/(app)/admin/screenings/page.tsx`: screening batch list
+- `app/(app)/admin/screenings/new/page.tsx`: screening creation flow
+- `app/(app)/admin/screenings/[batchId]/page.tsx`: invite/eligibility detail
 - `components/recruiter/recruiter-notes.tsx`: recruiter note entry
 - `components/recruiter/recruiter-chat.tsx`: grounded recruiter chat UI
 - `lib/recruiter/report-chat.ts`: recruiter-chat prompt grounding and fallback
@@ -98,7 +98,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `agents/interviewer.ts`: first LiveKit interviewer agent
 - `agents/worker.ts`: LiveKit Node worker entrypoint
 - `components/convex-client-provider.tsx`: Clerk + Convex client provider bridge
-- `proxy.ts`: admin protection
+- `proxy.ts`: auth-route redirects and protected app-shell route gating
 
 ## Current Blockers
 

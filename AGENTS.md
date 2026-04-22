@@ -84,8 +84,6 @@ This repo is building the Cuemath-style `AI Tutor Screener`:
 - decision grilling and open questions: `.plans/grill-me.md`
 - canonical routes + Next vs Convex boundaries: `.docs/route-and-api-architecture.md`
 - dated vendor/SDK research notes (not requirements): `.docs/vendor-and-research-log.md`
-- canonical routes + Next vs Convex boundaries: `.docs/route-and-api-architecture.md`
-- dated vendor/SDK research notes (not requirements): `.docs/vendor-and-research-log.md`
 
 <!-- convex-ai-start -->
 
