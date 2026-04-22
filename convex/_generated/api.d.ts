@@ -9,6 +9,9 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as helpers_audit from "../helpers/audit.js";
+import type * as helpers_auth from "../helpers/auth.js";
+import type * as helpers_interviewPolicy from "../helpers/interviewPolicy.js";
 import type * as helpers_templates from "../helpers/templates.js";
 import type * as interviews from "../interviews.js";
 import type * as livekit from "../livekit.js";
@@ -22,6 +25,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  "helpers/audit": typeof helpers_audit;
+  "helpers/auth": typeof helpers_auth;
+  "helpers/interviewPolicy": typeof helpers_interviewPolicy;
   "helpers/templates": typeof helpers_templates;
   interviews: typeof interviews;
   livekit: typeof livekit;

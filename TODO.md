@@ -1,42 +1,27 @@
 # TODO
 
-## Right Now
+Execution priorities follow [.docs/next-phase-prd.md](.docs/next-phase-prd.md). Operational ground truth: [.docs/current-findings.md](.docs/current-findings.md).
 
-- [ ] set `CLERK_FRONTEND_API_URL` and rerun `npx convex dev --once`
-- [ ] create `LiveKit` server token creation path
-- [ ] create candidate invite creation flow
-- [ ] build bare candidate interview join page
-- [ ] connect live session events to persisted session lifecycle
-- [ ] persist transcript chunks and final transcript snapshots
+## Active engineering
 
-## Next
+- End-to-end LiveKit path validation (see current-findings Testing Path).
+- Template-driven screening policy (duration, resume, attempts) end-to-end.
+- Recruiter copilot citations + durable chat metadata.
+- HTTP + Convex throttles, audit trail, BYOK notes in security doc.
+- Production-ready BYOK: encrypted per-workspace provider keys and safe runtime hydration.
+- Flexible model selector UX: per-task model selection (agent STT/LLM/TTS and recruiter copilot) with guarded defaults.
 
-- [ ] implement post-call assessment generation with `Inngest`
-- [ ] add rubric report persistence
-- [ ] build admin review list and session detail pages
-- [ ] add transcript quality flags and manual-review states
+## Where to go from here
 
-## Future Scope
+- Define one polished public demo flow (invite -> interview -> report -> recruiter review) and lock it for landing-page usage.
+- Add a dedicated demo tenant and controlled demo credentials strategy (no hard-coded credentials in repo).
+- Add onboarding copy and conversion-focused homepage messaging for potential customers.
+- Add deployment runbook (env matrix, smoke tests, rollback steps) for `kyma.kitsunelabs.xyz`.
 
-- [ ] weak-student mode within the interviewer
-- [ ] separate student agent joining the room
-- [ ] recruiter live observer mode
-- [ ] telephony entry path
-- [ ] richer analytics and charting
-- [ ] replay tools and report regeneration
+## Product non-goals (this phase)
 
-## Hard Constraints
+- Weak-student multi-agent, avatar-first polish, facial scoring, provider sprawl without BYOK.
 
-- performance first
-- reliability first
-- correctness over convenience
-- no browser Web Speech as the primary production architecture
-- no UI polish detours before the realtime loop is stable
+## Commands
 
-## Safe Parallel Work
-
-- recruiter dashboard shell on mock data
-- report schema and rubric JSON contract
-- candidate invite creation UI
-- session timeline and transcript viewer components
-- Inngest job design and report pipeline docs
+- `bun install` / `bun run dev` / `bun run dev:stack` / `bun run test` / `bun run typecheck` / `bun run lint`

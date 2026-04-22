@@ -1,4 +1,4 @@
-import { type PreflightStep } from "@/lib/interview/types"
+import { type PreflightStep } from "@/lib/interview/types";
 
 export function createDefaultPreflightSteps(): PreflightStep[] {
   return [
@@ -32,17 +32,17 @@ export function createDefaultPreflightSteps(): PreflightStep[] {
       description: "Confirm a quiet setting and uninterrupted availability.",
       status: "pending",
     },
-  ]
+  ];
 }
 
 export function markPreflightStep(
   steps: PreflightStep[],
   key: PreflightStep["key"],
-  status: PreflightStep["status"]
+  status: PreflightStep["status"],
 ) {
-  return steps.map((step) => (step.key === key ? { ...step, status } : step))
+  return steps.map((step) => (step.key === key ? { ...step, status } : step));
 }
 
 export function isPreflightComplete(steps: PreflightStep[]) {
-  return steps.every((step) => step.status === "passed")
+  return steps.every((step) => step.status === "passed");
 }

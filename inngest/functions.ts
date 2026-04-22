@@ -1,3 +1,3 @@
-import { processInterviewAssessmentFunction } from "./functions/process-interview-assessment"
+import { processInterviewAssessmentFunction } from "./functions/process-interview-assessment";
 
-export const inngestFunctions = [processInterviewAssessmentFunction]
+export const inngestFunctions = [processInterviewAssessmentFunction];

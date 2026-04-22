@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 const livekitEnvSchema = z.object({
   NEXT_PUBLIC_LIVEKIT_URL: z.string().min(1).optional(),
@@ -14,7 +14,7 @@ const livekitEnvSchema = z.object({
   LIVEKIT_RECORDING_STORAGE_REGION: z.string().min(1).optional(),
   LIVEKIT_RECORDING_STORAGE_ACCESS_KEY: z.string().min(1).optional(),
   LIVEKIT_RECORDING_STORAGE_SECRET_KEY: z.string().min(1).optional(),
-})
+});
 
 export function getLivekitEnv() {
   return livekitEnvSchema.parse({
@@ -27,30 +27,28 @@ export function getLivekitEnv() {
     LIVEKIT_RECORDING_ENABLED: process.env.LIVEKIT_RECORDING_ENABLED,
     LIVEKIT_RECORDING_AUDIO_ONLY: process.env.LIVEKIT_RECORDING_AUDIO_ONLY,
     LIVEKIT_RECORDING_TEMPLATE_URL: process.env.LIVEKIT_RECORDING_TEMPLATE_URL,
-    LIVEKIT_RECORDING_STORAGE_BUCKET:
-      process.env.LIVEKIT_RECORDING_STORAGE_BUCKET,
-    LIVEKIT_RECORDING_STORAGE_REGION:
-      process.env.LIVEKIT_RECORDING_STORAGE_REGION,
+    LIVEKIT_RECORDING_STORAGE_BUCKET: process.env.LIVEKIT_RECORDING_STORAGE_BUCKET,
+    LIVEKIT_RECORDING_STORAGE_REGION: process.env.LIVEKIT_RECORDING_STORAGE_REGION,
     LIVEKIT_RECORDING_STORAGE_ACCESS_KEY:
       process.env.LIVEKIT_RECORDING_STORAGE_ACCESS_KEY,
     LIVEKIT_RECORDING_STORAGE_SECRET_KEY:
       process.env.LIVEKIT_RECORDING_STORAGE_SECRET_KEY,
-  })
+  });
 }
 
 export function hasLivekitServerCredentials() {
-  const env = getLivekitEnv()
+  const env = getLivekitEnv();
 
   return Boolean(
-    env.NEXT_PUBLIC_LIVEKIT_URL && env.LIVEKIT_API_KEY && env.LIVEKIT_API_SECRET
-  )
+    env.NEXT_PUBLIC_LIVEKIT_URL && env.LIVEKIT_API_KEY && env.LIVEKIT_API_SECRET,
+  );
 }
 
 export function getLivekitWebhookSigningCredentials() {
-  const env = getLivekitEnv()
+  const env = getLivekitEnv();
 
   return {
     apiKey: env.LIVEKIT_WEBHOOK_API_KEY ?? env.LIVEKIT_API_KEY,
     apiSecret: env.LIVEKIT_WEBHOOK_API_SECRET ?? env.LIVEKIT_API_SECRET,
-  }
+  };
 }
