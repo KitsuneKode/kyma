@@ -59,7 +59,7 @@ const presetVariants: Record<PresetType, Variants> = {
     visible: { filter: 'blur(0px)', y: 0 },
   },
   zoom: {
-    hidden: { scale: 0.5 },
+    hidden: { scale: 0.95, opacity: 0 },
     visible: {
       scale: 1,
       transition: { type: 'spring', stiffness: 300, damping: 20 },

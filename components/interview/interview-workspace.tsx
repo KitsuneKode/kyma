@@ -115,32 +115,6 @@ function summarizeTranscriptEvent(
   return `${speakerLabel}: ${excerpt}`
 }
 
-function emitDebugLog(
-  hypothesisId: string,
-  location: string,
-  message: string,
-  data: Record<string, unknown>
-) {
-  // #region agent log
-  fetch('http://127.0.0.1:7775/ingest/c816eaeb-acd1-4edb-bd45-1464db25af33', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': 'af8e6a',
-    },
-    body: JSON.stringify({
-      sessionId: 'af8e6a',
-      runId: 'baseline',
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion
-}
-
 export function InterviewWorkspace({
   initialSnapshot,
 }: InterviewWorkspaceProps) {
@@ -481,36 +455,8 @@ export function InterviewWorkspace({
         })
 
         if (status === 'final' && segment.text.trim()) {
-          const startedAtMs = segment.startTime || null
           const endedAtMs = segment.endTime || null
-          const words = segment.text.trim().split(/\s+/).filter(Boolean).length
-          const durationMs =
-            startedAtMs && endedAtMs && endedAtMs > startedAtMs
-              ? endedAtMs - startedAtMs
-              : null
-          const wordsPerSecond =
-            durationMs && durationMs > 0
-              ? Number((words / (durationMs / 1000)).toFixed(2))
-              : null
-          const priorFinal = lastFinalSegmentRef.current
-          const gapFromPreviousFinalMs =
-            priorFinal?.endedAtMs && startedAtMs
-              ? startedAtMs - priorFinal.endedAtMs
-              : null
 
-          emitDebugLog(
-            'H5',
-            'components/interview/interview-workspace.tsx:handleTranscriptionReceived',
-            'final segment pacing sampled',
-            {
-              speaker,
-              words,
-              durationMs,
-              wordsPerSecond,
-              priorSpeaker: priorFinal?.speaker ?? null,
-              gapFromPreviousFinalMs,
-            }
-          )
           lastFinalSegmentRef.current = { speaker, endedAtMs }
 
           const detail = summarizeTranscriptEvent(speaker, segment.text)
