@@ -1,7 +1,5 @@
 import Link from 'next/link'
 import { fetchQuery } from 'convex/nextjs'
-import type { ReactNode } from 'react'
-
 import type { Id } from '@/convex/_generated/dataModel'
 import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
@@ -9,7 +7,11 @@ import { RecruiterChat } from '@/components/recruiter/recruiter-chat'
 import { RecruiterNotes } from '@/components/recruiter/recruiter-notes'
 import { ReviewActions } from '@/components/recruiter/review-actions'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
-import { env } from '@/lib/env'
+import { InfoCard } from '@/components/admin/info-card'
+import { InfoRow } from '@/components/admin/info-row'
+import { MetricCard } from '@/components/admin/metric-card'
+import { SummaryList } from '@/components/admin/summary-list'
+import { publicEnv } from '@/lib/env/public'
 import {
   formatConfidenceLabel,
   formatDateTime,
@@ -29,7 +31,7 @@ export default async function CandidateReviewPage({
 }: CandidateReviewPageProps) {
   const { sessionId } = await params
   const token = await getServerConvexAuthToken()
-  const detail = env.NEXT_PUBLIC_CONVEX_URL
+  const detail = publicEnv.NEXT_PUBLIC_CONVEX_URL
     ? await fetchQuery(
         api.recruiter.getCandidateReviewDetail,
         {
@@ -473,80 +475,6 @@ export default async function CandidateReviewPage({
         </div>
       </section>
     </main>
-  )
-}
-
-function MetricCard({
-  label,
-  value,
-  detail,
-}: {
-  label: string
-  value: string
-  detail: string
-}) {
-  return (
-    <div className="rounded-xl border bg-card p-5 shadow-sm">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {label}
-      </p>
-      <p className="mt-3 text-3xl font-semibold tracking-tight">{value}</p>
-      <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
-    </div>
-  )
-}
-
-function InfoCard({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description: string
-  children: ReactNode
-}) {
-  return (
-    <section className="rounded-xl border bg-card p-6 shadow-sm">
-      <h2 className="text-sm font-semibold">{title}</h2>
-      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-      <div className="mt-6">{children}</div>
-    </section>
-  )
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border px-4 py-3">
-      <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {label}
-      </dt>
-      <dd className="mt-2 text-sm font-medium">{value}</dd>
-    </div>
-  )
-}
-
-function SummaryList({
-  label,
-  items,
-  emptyLabel,
-}: {
-  label: string
-  items: string[]
-  emptyLabel: string
-}) {
-  return (
-    <div className="rounded-lg border px-4 py-4">
-      <h3 className="text-sm font-semibold">{label}</h3>
-      {items.length ? (
-        <ul className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-          {items.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-3 text-sm text-muted-foreground">{emptyLabel}</p>
-      )}
-    </div>
   )
 }
 

@@ -6,7 +6,8 @@ import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { formatDateTime, formatStatusLabel } from '@/lib/recruiter/format'
-import { env } from '@/lib/env'
+import { MetricCard } from '@/components/admin/metric-card'
+import { publicEnv } from '@/lib/env/public'
 
 type ScreeningDetailPageProps = {
   params: Promise<{
@@ -19,7 +20,7 @@ export default async function ScreeningDetailPage({
 }: ScreeningDetailPageProps) {
   const { batchId } = await params
   const token = await getServerConvexAuthToken()
-  const detail = env.NEXT_PUBLIC_CONVEX_URL
+  const detail = publicEnv.NEXT_PUBLIC_CONVEX_URL
     ? await fetchQuery(
         api.admin.getScreeningBatchDetail,
         {
@@ -162,27 +163,5 @@ export default async function ScreeningDetailPage({
         </div>
       </section>
     </main>
-  )
-}
-
-function MetricCard({
-  label,
-  value,
-  detail,
-}: {
-  label: string
-  value: string
-  detail?: string
-}) {
-  return (
-    <div className="rounded-xl border bg-card p-5 shadow-sm">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {label}
-      </p>
-      <p className="mt-3 text-xl font-semibold tracking-tight">{value}</p>
-      {detail ? (
-        <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
-      ) : null}
-    </div>
   )
 }

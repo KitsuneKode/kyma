@@ -10,11 +10,12 @@ import {
   formatRecommendationLabel,
   formatStatusLabel,
 } from '@/lib/recruiter/format'
-import { env } from '@/lib/env'
+import { MetricCard } from '@/components/admin/metric-card'
+import { publicEnv } from '@/lib/env/public'
 
 export default async function AdminCandidatesPage() {
   const token = await getServerConvexAuthToken()
-  const candidates = env.NEXT_PUBLIC_CONVEX_URL
+  const candidates = publicEnv.NEXT_PUBLIC_CONVEX_URL
     ? await fetchQuery(
         api.recruiter.listReviewCandidates,
         {},
@@ -204,25 +205,5 @@ export default async function AdminCandidatesPage() {
         )}
       </section>
     </main>
-  )
-}
-
-function MetricCard({
-  label,
-  value,
-  detail,
-}: {
-  label: string
-  value: string
-  detail: string
-}) {
-  return (
-    <div className="rounded-xl border bg-card p-5 shadow-sm">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {label}
-      </p>
-      <p className="mt-3 text-3xl font-semibold tracking-tight">{value}</p>
-      <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
-    </div>
   )
 }
