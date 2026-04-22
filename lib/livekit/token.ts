@@ -15,6 +15,32 @@ type CreateParticipantTokenInput = {
   requestId?: string
 }
 
+function emitDebugLog(
+  hypothesisId: string,
+  location: string,
+  message: string,
+  data: Record<string, unknown>
+) {
+  // #region agent log
+  fetch('http://127.0.0.1:7775/ingest/c816eaeb-acd1-4edb-bd45-1464db25af33', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': 'af8e6a',
+    },
+    body: JSON.stringify({
+      sessionId: 'af8e6a',
+      runId: 'baseline',
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
+}
+
 export async function createParticipantToken({
   roomName,
   participantName,
@@ -33,6 +59,17 @@ export async function createParticipantToken({
     participantIdentity: identity,
   })
   const env = getLivekitEnv()
+  emitDebugLog(
+    'J1',
+    'lib/livekit/token.ts:createParticipantToken',
+    'token request received',
+    {
+      roomName,
+      participantName,
+      identity,
+      hasAgentName: Boolean(env.LIVEKIT_AGENT_NAME),
+    }
+  )
 
   if (
     !env.NEXT_PUBLIC_LIVEKIT_URL ||
@@ -88,6 +125,23 @@ export async function createParticipantToken({
         agentName: env.LIVEKIT_AGENT_NAME,
       },
     })
+    emitDebugLog(
+      'J2',
+      'lib/livekit/token.ts:createParticipantToken',
+      'agent dispatch attached to room config',
+      {
+        agentName: env.LIVEKIT_AGENT_NAME,
+      }
+    )
+  } else {
+    emitDebugLog(
+      'J2',
+      'lib/livekit/token.ts:createParticipantToken',
+      'agent dispatch missing because agent name not set',
+      {
+        agentName: null,
+      }
+    )
   }
 
   const token = await accessToken.toJwt()

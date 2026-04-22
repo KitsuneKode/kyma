@@ -18,12 +18,7 @@ import { api } from '@/convex/_generated/api'
 import { InviteLobby } from '@/components/interview/invite-lobby'
 import { InviteAccessScreen } from '@/components/interview/invite-access-screen'
 import { MeetingShell } from '@/components/interview/meeting-shell'
-import { SessionOverview } from '@/components/interview/session-overview'
-import { SessionTimeline } from '@/components/interview/session-timeline'
-import { TranscriptRail } from '@/components/interview/transcript-rail'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useMotionPreset } from '@/lib/motion/use-motion'
 import {
   bootstrapInterviewSession,
   type BootstrappedInterviewSession,
@@ -119,44 +114,35 @@ function summarizeTranscriptEvent(
   return `${speakerLabel}: ${excerpt}`
 }
 
-type ProcessingStageState = 'complete' | 'active' | 'pending'
-
-function ProcessingStageRow({
-  label,
-  state,
-}: {
-  label: string
-  state: ProcessingStageState
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-xl bg-background/70 px-4 py-3 shadow-sm">
-      <p
-        className={
-          state === 'pending'
-            ? 'text-sm text-muted-foreground'
-            : 'text-sm font-medium text-foreground'
-        }
-      >
-        {label}
-      </p>
-      {state === 'complete' ? (
-        <span
-          className="inline-flex size-5 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700"
-          aria-hidden
-        >
-          ✓
-        </span>
-      ) : state === 'active' ? (
-        <Skeleton className="h-4 w-20" />
-      ) : null}
-    </div>
-  )
+function emitDebugLog(
+  hypothesisId: string,
+  location: string,
+  message: string,
+  data: Record<string, unknown>
+) {
+  // #region agent log
+  fetch('http://127.0.0.1:7775/ingest/c816eaeb-acd1-4edb-bd45-1464db25af33', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': 'af8e6a',
+    },
+    body: JSON.stringify({
+      sessionId: 'af8e6a',
+      runId: 'baseline',
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
 }
 
 export function InterviewWorkspace({
   initialSnapshot,
 }: InterviewWorkspaceProps) {
-  const processingMotion = useMotionPreset('enter')
   const [requestId] = useState(() => createRequestId('client'))
   const [view, setView] = useState<InterviewView>(() =>
     initialSnapshot.state === 'processing' ||
@@ -246,6 +232,17 @@ export function InterviewWorkspace({
         ? Value
         : never
     ) {
+      emitDebugLog(
+        'J3',
+        'components/interview/interview-workspace.tsx:handleParticipantConnected',
+        'remote participant connected',
+        {
+          participantIdentity: participant.identity,
+          isAgentLike:
+            participant.identity.includes('agent') ||
+            participant.identity.includes('tutor-screener'),
+        }
+      )
       const detail = `${participant.identity} joined the room.`
       logger.info({
         event: 'room.participant.connected',
@@ -635,6 +632,14 @@ export function InterviewWorkspace({
   }
 
   async function handleRoomConnected() {
+    emitDebugLog(
+      'J4',
+      'components/interview/interview-workspace.tsx:handleRoomConnected',
+      'candidate connected to room and awaiting remote participants',
+      {
+        roomName: roomNameRef.current ?? bootstrappedSession?.roomName ?? null,
+      }
+    )
     logger.info({
       event: 'room.connect.succeeded',
       detail: 'Candidate connected to LiveKit room.',
@@ -761,71 +766,138 @@ export function InterviewWorkspace({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section>
-        {view === 'meeting' && bootstrappedSession && preJoinChoices ? (
-          <MeetingShell
-            connectionError={connectionError}
-            isSubmittingInterview={isSubmittingInterview}
-            onConnected={handleRoomConnected}
-            onDisconnected={handleRoomDisconnected}
-            onError={handleRoomError}
-            onSubmitInterview={handleSubmitInterview}
-            policy={hydratedSession.policy}
-            preJoinChoices={preJoinChoices}
-            room={room}
-            session={bootstrappedSession}
-          />
-        ) : view === 'processing' ? (
+    <div className="h-full w-full">
+      {view === 'meeting' && bootstrappedSession && preJoinChoices ? (
+        <MeetingShell
+          connectionError={connectionError}
+          isSubmittingInterview={isSubmittingInterview}
+          onConnected={handleRoomConnected}
+          onDisconnected={handleRoomDisconnected}
+          onError={handleRoomError}
+          onSubmitInterview={handleSubmitInterview}
+          policy={hydratedSession.policy}
+          preJoinChoices={preJoinChoices}
+          room={room}
+          session={bootstrappedSession}
+        />
+      ) : view === 'processing' ? (
+        <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background/50 p-4 backdrop-blur-sm">
           <motion.div
-            {...processingMotion}
-            className="rounded-2xl bg-card/90 p-8 shadow-sm"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              visible: { transition: { staggerChildren: 0.1 } },
+            }}
+            className="w-full max-w-lg overflow-hidden rounded-3xl bg-card p-10 text-center shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] ring-1 ring-border/50"
           >
-            <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
-              Processing
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-balance">
-              Interview submitted
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-pretty text-muted-foreground">
-              You can close this page safely. The recruiter review is prepared
-              from your saved transcript and session evidence.
-            </p>
-            <div className="mt-6 grid gap-3">
-              <ProcessingStageRow label="Transcript saved" state="complete" />
-              <ProcessingStageRow label="Assessment running" state="active" />
-              <ProcessingStageRow label="Report ready" state="pending" />
-            </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              The team will review the conversation and follow up with you.
-            </p>
+            <motion.div
+              variants={{
+                hidden: { scale: 0.8, opacity: 0 },
+                visible: {
+                  scale: 1,
+                  opacity: 1,
+                  transition: { type: 'spring', bounce: 0.4, duration: 0.6 },
+                },
+              }}
+              className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 shadow-inner ring-1 ring-emerald-500/20"
+            >
+              <svg
+                className="h-10 w-10"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <motion.path
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </motion.div>
+
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 10 },
+                visible: { opacity: 1, y: 0 },
+              }}
+            >
+              <p className="text-xs font-semibold tracking-[0.2em] text-emerald-600/80 uppercase">
+                Success
+              </p>
+              <h1 className="mt-4 text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+                Interview Submitted
+              </h1>
+            </motion.div>
+
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 10 },
+                visible: { opacity: 1, y: 0 },
+              }}
+            >
+              <p className="mx-auto mt-6 max-w-sm text-base leading-relaxed text-pretty text-muted-foreground">
+                Your recording has been securely saved. The team will review the
+                conversation and follow up with you shortly.
+              </p>
+            </motion.div>
+
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 10 },
+                visible: { opacity: 1, y: 0 },
+              }}
+              className="mt-10"
+            >
+              <Button
+                variant="outline"
+                className="rounded-full px-8 py-6 font-medium shadow-sm transition-all active:scale-[0.96]"
+                onClick={() => window.close()}
+              >
+                Close Window
+              </Button>
+            </motion.div>
+
             {connectionError ? (
-              <div className="mt-6 rounded-xl bg-destructive/10 p-4 shadow-sm">
+              <motion.div
+                variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+                className="mt-8 rounded-2xl bg-destructive/10 p-5 text-left shadow-sm ring-1 ring-destructive/20"
+              >
                 <p className="text-sm font-semibold text-destructive">
-                  Processing could not be completed
+                  Submission Warning
                 </p>
-                <p className="mt-1 text-sm text-destructive/90">
-                  We could not submit your interview for final processing.
+                <p className="mt-2 text-sm text-destructive/90">
+                  {connectionError}
                 </p>
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <Button onClick={handleSubmitInterview} size="sm">
+                <div className="mt-4 flex flex-wrap items-center gap-4">
+                  <Button
+                    onClick={handleSubmitInterview}
+                    size="sm"
+                    variant="destructive"
+                    className="h-9 rounded-full px-5 transition-transform active:scale-[0.96]"
+                  >
                     Retry submission
                   </Button>
-                  <p className="text-xs text-destructive/90">
+                  <p className="text-xs text-destructive/80">
                     If retry fails, contact the recruiter and share your invite
                     token.
                   </p>
                 </div>
-              </div>
+              </motion.div>
             ) : null}
           </motion.div>
-        ) : hydratedSession.accessState !== 'available' ? (
-          <InviteAccessScreen
-            accessMessage={hydratedSession.accessMessage}
-            accessState={hydratedSession.accessState}
-            inviteId={hydratedSession.inviteId}
-          />
-        ) : (
+        </div>
+      ) : hydratedSession.accessState !== 'available' ? (
+        <InviteAccessScreen
+          accessMessage={hydratedSession.accessMessage}
+          accessState={hydratedSession.accessState}
+          inviteId={hydratedSession.inviteId}
+        />
+      ) : (
+        <div className="mx-auto max-w-[1400px] px-6 md:px-12">
           <InviteLobby
             candidateName={participantName}
             connectionError={connectionError}
@@ -833,17 +905,8 @@ export function InterviewWorkspace({
             isBootstrapping={isBootstrapping}
             onSubmit={handlePreJoinSubmit}
           />
-        )}
-      </section>
-
-      <aside className="space-y-6">
-        <SessionOverview
-          connectionError={connectionError}
-          snapshot={hydratedSession}
-        />
-        <SessionTimeline events={hydratedSession.events} />
-        <TranscriptRail transcript={hydratedSession.transcript} />
-      </aside>
+        </div>
+      )}
     </div>
   )
 }

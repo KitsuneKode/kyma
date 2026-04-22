@@ -4,6 +4,14 @@ import { PreJoin, type LocalUserChoices } from '@livekit/components-react'
 
 import { formatDurationPolicy, formatExpiryLabel } from '@/lib/interview/policy'
 import { type InterviewSessionSnapshot } from '@/lib/interview/types'
+import { Logo } from '@/components/marketing/logo'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { IconInfoCircle } from '@tabler/icons-react'
 
 type InviteLobbyProps = {
   candidateName: string
@@ -21,94 +29,12 @@ export function InviteLobby({
   onSubmit,
 }: InviteLobbyProps) {
   const companyName = initialSnapshot.templateName?.trim()
-  const prejoinHeader = companyName
-    ? `${companyName} interview on Kyma`
-    : 'Kyma Interview'
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-      <section className="rounded-2xl bg-card/90 p-6 shadow-sm">
-        <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
-          {prejoinHeader}
-        </p>
-        <h1 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-balance">
-          Join your scheduled interview session.
-        </h1>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-pretty text-muted-foreground">
-          This session includes a short setup check, a live voice conversation,
-          and final submission for recruiter review. Most interviews finish
-          within {formatDurationPolicy(initialSnapshot.policy).toLowerCase()}.
-        </p>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl bg-background/70 p-4 shadow-sm">
-            <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-              Invite
-            </p>
-            <p className="mt-2 font-medium">{initialSnapshot.inviteId}</p>
-          </div>
-          <div className="rounded-xl border border-border/80 bg-background/70 p-4 shadow-sm">
-            <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-              Template
-            </p>
-            <p className="mt-2 font-medium">
-              {initialSnapshot.templateName || 'Interview Session'}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-6 rounded-2xl bg-background/70 p-5 shadow-sm">
-          <p className="text-sm font-semibold">What to expect</p>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-            <li>Confirm your camera and microphone, then join the room.</li>
-            <li>Complete the interview in one sitting if possible.</li>
-            <li>Submit your interview so the recruiter can review it.</li>
-          </ul>
-        </div>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl bg-background/70 p-4 shadow-sm">
-            <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-              Interview policy
-            </p>
-            <p className="mt-2 font-medium">
-              {formatDurationPolicy(initialSnapshot.policy)}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {initialSnapshot.policy.allowsResume
-                ? 'Resume is supported until the interview is submitted.'
-                : 'This interview is single-pass once it starts.'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border/80 bg-background/70 p-4 shadow-sm">
-            <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-              Link validity
-            </p>
-            <p className="mt-2 font-medium">
-              {formatExpiryLabel(initialSnapshot.policy.expiresAt)}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Single-use invite. Re-entry is allowed only for the same active
-              session.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="relative rounded-2xl bg-card/90 p-6 shadow-sm">
-        <div className="mb-5">
-          <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
-            Prejoin
-          </p>
-          <h2 className="mt-2 text-xl font-semibold tracking-tight">
-            Check your setup before joining
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Choose your devices, preview media, and join when you are ready.
-          </p>
-        </div>
-
-        <div className="rounded-2xl bg-background/80 p-4 shadow-sm">
+    <div className="grid min-h-[calc(100vh-8rem)] w-full items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+      {/* Left: Video Preview Area */}
+      <section className="relative flex h-full flex-col justify-center">
+        <div className="relative overflow-hidden rounded-3xl bg-card p-4 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] ring-1 ring-border/50">
           <PreJoin
             defaults={{
               username: candidateName,
@@ -125,6 +51,14 @@ export function InviteLobby({
               console.error('[kyma:prejoin] prejoin.error', error)
             }}
           />
+
+          {isBootstrapping ? (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-background/50 backdrop-blur-md transition-all duration-300">
+              <div className="rounded-2xl bg-card px-5 py-3 text-sm font-medium shadow-lg ring-1 ring-border">
+                Preparing interview…
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {connectionError ? (
@@ -132,14 +66,70 @@ export function InviteLobby({
             {connectionError}
           </div>
         ) : null}
+      </section>
 
-        {isBootstrapping ? (
-          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-background/70 backdrop-blur-sm">
-            <div className="rounded-2xl bg-card px-4 py-3 text-sm font-medium shadow-sm">
-              Preparing interview…
+      {/* Right: Sleek Typography and Details */}
+      <section className="flex h-full flex-col justify-center pb-8 lg:pb-0">
+        <div className="mb-12">
+          <Logo className="h-8 w-auto" />
+        </div>
+
+        <div className="space-y-8">
+          <div>
+            <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
+              {companyName ? `${companyName} Interview` : 'Kyma Interview'}
+            </p>
+            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+              Ready to join?
+            </h1>
+            <p className="mt-4 max-w-md text-base leading-relaxed text-pretty text-muted-foreground">
+              This session includes a short setup check and a live voice
+              conversation.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl bg-muted/40 p-5 ring-1 ring-border/50">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                  Duration
+                </p>
+                <TooltipProvider delay={100}>
+                  <Tooltip>
+                    <TooltipTrigger className="flex cursor-pointer items-center justify-center border-none bg-transparent p-0 text-muted-foreground transition-colors hover:text-foreground">
+                      <IconInfoCircle className="h-3.5 w-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-xs">
+                      {initialSnapshot.policy.allowsResume
+                        ? 'Resume is supported until the interview is submitted.'
+                        : 'This interview is single-pass once it starts.'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <p className="mt-2 text-lg font-medium tabular-nums">
+                {formatDurationPolicy(initialSnapshot.policy)}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-muted/40 p-5 ring-1 ring-border/50">
+              <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                Valid Until
+              </p>
+              <p className="mt-2 text-lg font-medium text-pretty tabular-nums">
+                {formatExpiryLabel(initialSnapshot.policy.expiresAt)}
+              </p>
             </div>
           </div>
-        ) : null}
+
+          <div className="flex items-center gap-3 rounded-2xl bg-primary/5 p-4 text-sm text-primary ring-1 ring-primary/10">
+            <IconInfoCircle className="h-4 w-4 shrink-0" />
+            <p>
+              Please confirm your camera and microphone are working in the
+              preview before joining.
+            </p>
+          </div>
+        </div>
       </section>
     </div>
   )
