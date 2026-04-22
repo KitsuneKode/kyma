@@ -10,10 +10,11 @@ import {
   formatRecommendationLabel,
   formatStatusLabel,
 } from "@/lib/recruiter/format";
+import { env } from "@/lib/env";
 
 export default async function AdminCandidatesPage() {
   const token = await getServerConvexAuthToken();
-  const candidates = process.env.NEXT_PUBLIC_CONVEX_URL
+  const candidates = env.NEXT_PUBLIC_CONVEX_URL
     ? await fetchQuery(
         api.recruiter.listReviewCandidates,
         {},

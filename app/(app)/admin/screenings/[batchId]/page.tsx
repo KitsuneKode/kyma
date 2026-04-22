@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { getServerConvexAuthToken } from "@/lib/clerk/server-token";
 import { formatDateTime, formatStatusLabel } from "@/lib/recruiter/format";
+import { env } from "@/lib/env";
 
 type ScreeningDetailPageProps = {
   params: Promise<{
@@ -18,7 +19,7 @@ export default async function ScreeningDetailPage({
 }: ScreeningDetailPageProps) {
   const { batchId } = await params;
   const token = await getServerConvexAuthToken();
-  const detail = process.env.NEXT_PUBLIC_CONVEX_URL
+  const detail = env.NEXT_PUBLIC_CONVEX_URL
     ? await fetchQuery(
         api.admin.getScreeningBatchDetail,
         {
