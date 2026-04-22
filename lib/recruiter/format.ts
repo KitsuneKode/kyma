@@ -8,14 +8,14 @@ const DIMENSION_LABELS: Record<string, string> = {
   adaptability: "Adaptability",
   engagement: "Engagement",
   accuracy: "Accuracy",
-}
+};
 
 const RECOMMENDATION_LABELS: Record<string, string> = {
   strong_yes: "Strong yes",
   yes: "Yes",
   mixed: "Mixed",
   no: "No",
-}
+};
 
 const STATUS_LABELS: Record<string, string> = {
   created: "Created",
@@ -39,51 +39,51 @@ const STATUS_LABELS: Record<string, string> = {
   advance: "Advance",
   reject: "Reject",
   hold: "Hold",
-}
+};
 
 export function formatDimensionLabel(dimension: string) {
-  return DIMENSION_LABELS[dimension] ?? humanizeToken(dimension)
+  return DIMENSION_LABELS[dimension] ?? humanizeToken(dimension);
 }
 
 export function formatRecommendationLabel(recommendation?: string | null) {
   if (!recommendation) {
-    return "Pending"
+    return "Pending";
   }
 
-  return RECOMMENDATION_LABELS[recommendation] ?? humanizeToken(recommendation)
+  return RECOMMENDATION_LABELS[recommendation] ?? humanizeToken(recommendation);
 }
 
 export function formatStatusLabel(status?: string | null) {
   if (!status) {
-    return "Unknown"
+    return "Unknown";
   }
 
-  return STATUS_LABELS[status] ?? humanizeToken(status)
+  return STATUS_LABELS[status] ?? humanizeToken(status);
 }
 
 export function formatConfidenceLabel(confidence?: string | null) {
   if (!confidence) {
-    return "Pending"
+    return "Pending";
   }
 
-  return humanizeToken(confidence)
+  return humanizeToken(confidence);
 }
 
 export function formatDateTime(value?: string | null) {
   if (!value) {
-    return "Not available"
+    return "Not available";
   }
 
-  const parsed = new Date(value)
+  const parsed = new Date(value);
 
   if (Number.isNaN(parsed.getTime())) {
-    return value
+    return value;
   }
 
   return new Intl.DateTimeFormat("en-IN", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(parsed)
+  }).format(parsed);
 }
 
 function humanizeToken(value: string) {
@@ -91,5 +91,5 @@ function humanizeToken(value: string) {
     .split(/[_-]/g)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ")
+    .join(" ");
 }
