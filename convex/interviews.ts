@@ -11,12 +11,12 @@ import {
 } from './helpers/interviewPolicy'
 import { ensureDefaultTemplate } from './helpers/templates'
 import { isDevelopmentMode } from '../lib/runtime-mode'
-import { convexEnv } from '../lib/env/convex'
+import { runtimeEnv } from '../lib/env/runtime'
 
 const DEVELOPMENT_INVITE_TOKEN = 'demo-invite'
 const DEMO_INVITE_ENABLED =
-  isDevelopmentMode(convexEnv.NODE_ENV) ||
-  convexEnv.KYMA_ENABLE_DEMO_INVITE === '1'
+  isDevelopmentMode(runtimeEnv.NODE_ENV) ||
+  runtimeEnv.KYMA_ENABLE_DEMO_INVITE === '1'
 
 function isEnabledDemoInviteToken(inviteToken: string) {
   return inviteToken === DEVELOPMENT_INVITE_TOKEN && DEMO_INVITE_ENABLED
@@ -410,6 +410,32 @@ export const bootstrapPublicSession = mutation({
     const template = await ctx.db.get(invite.templateId)
 
     if (existingSession && existingSession.roomName) {
+      if (existingSession.state === 'interrupted') {
+        const reopenedRoomName = `interview-${inviteToken}-${Date.now()}`
+        const reopenedAt = new Date().toISOString()
+
+        await ctx.db.patch(existingSession._id, {
+          state: 'connecting',
+          roomName: reopenedRoomName,
+          startedAt: reopenedAt,
+          endedAt: undefined,
+        })
+
+        await ctx.db.insert('sessionEvents', {
+          sessionId: existingSession._id,
+          type: 'room-token-requested',
+          detail: `Bootstrap retried by ${participantName} after interruption`,
+          createdAt: reopenedAt,
+        })
+
+        return {
+          inviteId: invite._id,
+          sessionId: existingSession._id,
+          roomName: reopenedRoomName,
+          templateName: template?.name ?? 'AI Tutor Screener',
+        }
+      }
+
       return {
         inviteId: invite._id,
         sessionId: existingSession._id,

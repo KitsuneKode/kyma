@@ -1,5 +1,5 @@
 import { resolveRuntimeMode } from '@/lib/runtime-mode'
-import { publicEnv } from '@/lib/env/public'
+import { clientEnv } from '@/lib/env/client'
 
 type DiagnosticLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -29,7 +29,7 @@ type DiagnosticLogger = {
 
 function shouldLogDiagnostics() {
   const runtimeMode = resolveRuntimeMode(process.env.NODE_ENV)
-  const devTraceEnabled = publicEnv.NEXT_PUBLIC_ENABLE_DEV_TRACE === '1'
+  const devTraceEnabled = clientEnv.NEXT_PUBLIC_ENABLE_DEV_TRACE === '1'
 
   return runtimeMode !== 'production' || devTraceEnabled
 }

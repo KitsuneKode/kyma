@@ -4,9 +4,9 @@ import { useAuth } from '@clerk/nextjs'
 import { ConvexProvider, ConvexReactClient } from 'convex/react'
 import { ConvexProviderWithClerk } from 'convex/react-clerk'
 import { ReactNode, useMemo } from 'react'
-import { publicEnv } from '@/lib/env/public'
+import { clientEnv } from '@/lib/env/client'
 
-const convexUrl = publicEnv.NEXT_PUBLIC_CONVEX_URL
+const convexUrl = clientEnv.NEXT_PUBLIC_CONVEX_URL
 
 let convexClient: ConvexReactClient | null = null
 

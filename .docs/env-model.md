@@ -1,23 +1,20 @@
 # Env Model
 
-## Canonical module
+## Canonical modules
 
-- Single source of truth: `lib/env/schema.ts`.
-- Compatibility re-export: `lib/env.ts`.
-- Runtime distribution wrappers:
-  - `lib/env/public.ts` for `NEXT_PUBLIC_*` keys only.
-  - `lib/env/server.ts` for app server keys (includes `server-only` guard).
-  - `lib/env/agent.ts` for standalone agent runtime.
-  - `lib/env/convex.ts` for Convex runtime.
-- Prefer importing boundary wrappers directly based on callsite runtime.
+- Shared schema definitions: `lib/env/shared.ts`
+- Next.js server env: `lib/env/server.ts`
+- Next.js client env: `lib/env/client.ts`
+- Standalone runtime env for Convex, agents, and scripts: `lib/env/runtime.ts`
+- Prefer importing the boundary-specific module directly from the runtime that owns the code.
 
 ## Boundary rules
 
-- `NEXT_PUBLIC_*` values are client-safe and may be referenced by client code.
-- Non-`NEXT_PUBLIC_*` values are server-only.
-- Keep agent config separate from app runtime config (`agent.ts` is agent-only).
-- Keep Convex runtime env handling separate via `lib/env/convex.ts`.
-- Avoid direct `process.env` reads outside `lib/env/schema.ts` unless explicitly documented.
+- `NEXT_PUBLIC_*` values are client-safe and may be referenced by client code via `lib/env/client.ts`.
+- Non-`NEXT_PUBLIC_*` values are server-only and should come from either `lib/env/server.ts` or `lib/env/runtime.ts`.
+- Use `lib/env/server.ts` only inside Next.js server code.
+- Use `lib/env/runtime.ts` only inside standalone runtimes such as Convex, agent workers, or scripts.
+- Avoid direct `process.env` reads outside the env modules unless explicitly documented.
 
 ## Required vs optional
 
@@ -30,6 +27,6 @@
 - Local: allow optional integrations (e.g. Clerk-disabled mode) without crashing.
 - CI/production: fail fast when required variables for enabled surfaces are missing.
 - Any new env key must be added to:
-  1. schema/runtime mapping in `lib/env/schema.ts`
-  2. distribution wrappers (`public.ts`, `server.ts`, `agent.ts`, `convex.ts`) based on runtime ownership
+  1. `lib/env/shared.ts`
+  2. `lib/env/client.ts` if it is `NEXT_PUBLIC_*`
   3. documentation in this file when behavior is non-obvious

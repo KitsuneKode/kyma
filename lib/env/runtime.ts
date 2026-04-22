@@ -1,18 +1,15 @@
 import { createEnv } from '@t3-oss/env-core'
-import {
-  clientEnvSchema,
-  runtimeEnv,
-  serverEnvSchema,
-} from '@/lib/env/definitions'
+
+import { clientSchema, serverSchema } from '@/lib/env/shared'
 
 /**
- * Runtime-safe env for non-Next processes (agent worker, Convex, scripts).
- * Avoids importing Next-specific env wrappers in standalone runtimes.
+ * Standalone runtime env for Convex, agent workers, and scripts.
+ * This stays framework-agnostic and validates against process.env directly.
  */
-export const runtimeEnvConfig = createEnv({
+export const runtimeEnv = createEnv({
   clientPrefix: 'NEXT_PUBLIC_',
-  server: serverEnvSchema,
-  client: clientEnvSchema,
-  runtimeEnv,
+  server: serverSchema,
+  client: clientSchema,
+  runtimeEnv: process.env,
   emptyStringAsUndefined: true,
 })

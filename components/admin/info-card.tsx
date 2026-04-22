@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { AdminSurface } from '@/components/admin/admin-surface'
+
 export function InfoCard({
   title,
   description,
@@ -10,14 +12,14 @@ export function InfoCard({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-xl bg-card p-6 shadow-sm">
+    <AdminSurface className="p-6">
       <h2 className="text-sm font-semibold">{title}</h2>
       {description ? (
-        <p className="mt-2 text-sm text-pretty text-muted-foreground">
+        <p className="mt-2 text-sm leading-6 text-pretty text-muted-foreground">
           {description}
         </p>
       ) : null}
       <div className="mt-6">{children}</div>
-    </section>
+    </AdminSurface>
   )
 }

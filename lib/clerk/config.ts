@@ -1,4 +1,4 @@
-import { publicEnv } from '@/lib/env/public'
+import { clientEnv } from '@/lib/env/client'
 import { serverEnv } from '@/lib/env/server'
 
 export function getClerkIssuerDomain() {
@@ -11,7 +11,7 @@ export function getClerkIssuerDomain() {
 
 export function hasClerkServerCredentials() {
   return Boolean(
-    publicEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+    clientEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
     serverEnv.CLERK_SECRET_KEY &&
     getClerkIssuerDomain()
   )

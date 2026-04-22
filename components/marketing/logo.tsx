@@ -10,23 +10,35 @@ export const Logo = ({
   return (
     <svg
       className={cn('h-6 w-auto text-foreground', className)}
-      viewBox="0 0 100 24"
+      viewBox="0 0 120 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M4 2V22M4 12C12 12 12 2 20 2M4 12C12 12 12 22 20 22"
-        stroke={uniColor ? 'currentColor' : 'url(#paint_logo)'}
-        strokeWidth="3.5"
+        d="M5 4V28"
+        stroke={uniColor ? 'currentColor' : 'url(#logo_paint1)'}
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M26 4L14 16L26 28"
+        stroke={uniColor ? 'currentColor' : 'url(#logo_paint2)'}
+        strokeWidth="6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      <circle
+        cx="23"
+        cy="16"
+        r="3"
+        fill={uniColor ? 'currentColor' : 'url(#logo_paint3)'}
+      />
       <text
-        x="32"
-        y="18"
+        x="38"
+        y="24"
         fill="currentColor"
         fontFamily="var(--font-sans), sans-serif"
-        fontSize="18"
+        fontSize="24"
         fontWeight="800"
         letterSpacing="-0.03em"
       >
@@ -34,15 +46,37 @@ export const Logo = ({
       </text>
       <defs>
         <linearGradient
-          id="paint_logo"
-          x1="4"
-          y1="2"
-          x2="20"
-          y2="22"
+          id="logo_paint1"
+          x1="5"
+          y1="4"
+          x2="5"
+          y2="28"
           gradientUnits="userSpaceOnUse"
         >
           <stop stopColor="#10B981" />
           <stop offset="1" stopColor="#047857" />
+        </linearGradient>
+        <linearGradient
+          id="logo_paint2"
+          x1="14"
+          y1="4"
+          x2="26"
+          y2="28"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#06B6D4" />
+          <stop offset="1" stopColor="#3B82F6" />
+        </linearGradient>
+        <linearGradient
+          id="logo_paint3"
+          x1="20"
+          y1="13"
+          x2="26"
+          y2="19"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#D946EF" />
+          <stop offset="1" stopColor="#8B5CF6" />
         </linearGradient>
       </defs>
     </svg>
@@ -59,28 +93,62 @@ export const LogoIcon = ({
   return (
     <svg
       className={cn('size-6', className)}
-      viewBox="0 0 24 24"
+      viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M4 2V22M4 12C12 12 12 2 20 2M4 12C12 12 12 22 20 22"
-        stroke={uniColor ? 'currentColor' : 'url(#paint_logo)'}
-        strokeWidth="3.5"
+        d="M5 4V28"
+        stroke={uniColor ? 'currentColor' : 'url(#logo_icon_paint1)'}
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M26 4L14 16L26 28"
+        stroke={uniColor ? 'currentColor' : 'url(#logo_icon_paint2)'}
+        strokeWidth="6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      <circle
+        cx="23"
+        cy="16"
+        r="3"
+        fill={uniColor ? 'currentColor' : 'url(#logo_icon_paint3)'}
+      />
       <defs>
         <linearGradient
-          id="paint_logo"
-          x1="4"
-          y1="2"
-          x2="20"
-          y2="22"
+          id="logo_icon_paint1"
+          x1="5"
+          y1="4"
+          x2="5"
+          y2="28"
           gradientUnits="userSpaceOnUse"
         >
           <stop stopColor="#10B981" />
           <stop offset="1" stopColor="#047857" />
+        </linearGradient>
+        <linearGradient
+          id="logo_icon_paint2"
+          x1="14"
+          y1="4"
+          x2="26"
+          y2="28"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#06B6D4" />
+          <stop offset="1" stopColor="#3B82F6" />
+        </linearGradient>
+        <linearGradient
+          id="logo_icon_paint3"
+          x1="20"
+          y1="13"
+          x2="26"
+          y2="19"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#D946EF" />
+          <stop offset="1" stopColor="#8B5CF6" />
         </linearGradient>
       </defs>
     </svg>

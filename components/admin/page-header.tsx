@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { AdminSurface } from '@/components/admin/admin-surface'
+
 export function PageHeader({
   eyebrow,
   title,
@@ -12,23 +14,23 @@ export function PageHeader({
   actions?: ReactNode
 }) {
   return (
-    <section className="rounded-xl bg-card p-6 shadow-sm">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+    <AdminSurface className="p-7">
+      <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
         {eyebrow}
       </p>
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-balance">
             {title}
           </h1>
           {description ? (
-            <p className="mt-2 max-w-3xl text-sm text-pretty text-muted-foreground">
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-pretty text-muted-foreground">
               {description}
             </p>
           ) : null}
         </div>
-        {actions ? <div className="flex gap-3">{actions}</div> : null}
+        {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
       </div>
-    </section>
+    </AdminSurface>
   )
 }

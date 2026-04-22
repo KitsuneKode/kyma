@@ -2,7 +2,7 @@ import { fetchQuery } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
 import { InterviewWorkspace } from '@/components/interview/interview-workspace'
-import { publicEnv } from '@/lib/env/public'
+import { clientEnv } from '@/lib/env/client'
 import { serverEnv } from '@/lib/env/server'
 import { createInitialInterviewSnapshot } from '@/lib/interview/snapshot'
 import { isDevelopmentMode } from '@/lib/runtime-mode'
@@ -23,7 +23,7 @@ function isEnabledDemoInviteToken(inviteId: string) {
 
 export default async function InterviewPage({ params }: InterviewPageProps) {
   const { inviteId } = await params
-  const publicSnapshot = publicEnv.NEXT_PUBLIC_CONVEX_URL
+  const publicSnapshot = clientEnv.NEXT_PUBLIC_CONVEX_URL
     ? await fetchQuery(api.interviews.getPublicSessionDetail, {
         inviteToken: inviteId,
       }).catch(() => null)

@@ -11,7 +11,7 @@ import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
 import { maybeStartRoomRecording } from '@/lib/livekit/recording'
-import { agentEnv } from '@/lib/env/agent'
+import { runtimeEnv } from '@/lib/env/runtime'
 
 const DEFAULT_TARGET_DURATION_MINUTES = 18
 
@@ -83,23 +83,23 @@ type SessionEventRecorder = {
 
 function getAgentConfig() {
   return {
-    stt: agentEnv.LIVEKIT_AGENT_STT_MODEL ?? 'deepgram/nova-3',
-    llm: agentEnv.LIVEKIT_AGENT_LLM_MODEL ?? 'openai/gpt-4.1-mini',
-    tts: agentEnv.LIVEKIT_AGENT_TTS_MODEL ?? 'cartesia/sonic',
+    stt: runtimeEnv.LIVEKIT_AGENT_STT_MODEL ?? 'deepgram/nova-3',
+    llm: runtimeEnv.LIVEKIT_AGENT_LLM_MODEL ?? 'openai/gpt-4.1-mini',
+    tts: runtimeEnv.LIVEKIT_AGENT_TTS_MODEL ?? 'cartesia/sonic',
     childTts:
-      agentEnv.LIVEKIT_AGENT_CHILD_TTS_MODEL ??
-      agentEnv.LIVEKIT_AGENT_TTS_MODEL ??
+      runtimeEnv.LIVEKIT_AGENT_CHILD_TTS_MODEL ??
+      runtimeEnv.LIVEKIT_AGENT_TTS_MODEL ??
       'cartesia/sonic',
     wrapUpTts:
-      agentEnv.LIVEKIT_AGENT_WRAP_TTS_MODEL ??
-      agentEnv.LIVEKIT_AGENT_TTS_MODEL ??
+      runtimeEnv.LIVEKIT_AGENT_WRAP_TTS_MODEL ??
+      runtimeEnv.LIVEKIT_AGENT_TTS_MODEL ??
       'cartesia/sonic',
     interviewerInstructions:
-      agentEnv.LIVEKIT_AGENT_INSTRUCTIONS ?? DEFAULT_INTERVIEWER_INSTRUCTIONS,
+      runtimeEnv.LIVEKIT_AGENT_INSTRUCTIONS ?? DEFAULT_INTERVIEWER_INSTRUCTIONS,
     childInstructions:
-      agentEnv.LIVEKIT_AGENT_CHILD_INSTRUCTIONS ?? DEFAULT_CHILD_INSTRUCTIONS,
+      runtimeEnv.LIVEKIT_AGENT_CHILD_INSTRUCTIONS ?? DEFAULT_CHILD_INSTRUCTIONS,
     wrapUpInstructions:
-      agentEnv.LIVEKIT_AGENT_WRAP_UP_INSTRUCTIONS ??
+      runtimeEnv.LIVEKIT_AGENT_WRAP_UP_INSTRUCTIONS ??
       DEFAULT_WRAP_UP_INSTRUCTIONS,
   }
 }

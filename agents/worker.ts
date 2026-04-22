@@ -2,7 +2,7 @@ import { cli, ServerOptions, WorkerPermissions } from '@livekit/agents'
 import { fileURLToPath } from 'node:url'
 
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
-import { agentEnv } from '@/lib/env/agent'
+import { runtimeEnv } from '@/lib/env/runtime'
 
 const workerFile = fileURLToPath(import.meta.url)
 const agentFile = fileURLToPath(new URL('./interviewer.ts', import.meta.url))
@@ -15,19 +15,19 @@ function createServerOptions() {
     event: 'worker.options.created',
     detail: 'Preparing LiveKit worker server options.',
     meta: {
-      agentName: agentEnv.LIVEKIT_AGENT_NAME ?? 'tutor-screener',
-      wsUrlConfigured: Boolean(agentEnv.NEXT_PUBLIC_LIVEKIT_URL),
-      apiKeyConfigured: Boolean(agentEnv.LIVEKIT_API_KEY),
-      apiSecretConfigured: Boolean(agentEnv.LIVEKIT_API_SECRET),
+      agentName: runtimeEnv.LIVEKIT_AGENT_NAME ?? 'tutor-screener',
+      wsUrlConfigured: Boolean(runtimeEnv.NEXT_PUBLIC_LIVEKIT_URL),
+      apiKeyConfigured: Boolean(runtimeEnv.LIVEKIT_API_KEY),
+      apiSecretConfigured: Boolean(runtimeEnv.LIVEKIT_API_SECRET),
     },
   })
   return new ServerOptions({
     agent: agentFile,
-    agentName: agentEnv.LIVEKIT_AGENT_NAME ?? 'tutor-screener',
-    wsURL: agentEnv.NEXT_PUBLIC_LIVEKIT_URL,
-    apiKey: agentEnv.LIVEKIT_API_KEY,
-    apiSecret: agentEnv.LIVEKIT_API_SECRET,
-    logLevel: agentEnv.LIVEKIT_AGENT_LOG_LEVEL ?? 'info',
+    agentName: runtimeEnv.LIVEKIT_AGENT_NAME ?? 'tutor-screener',
+    wsURL: runtimeEnv.NEXT_PUBLIC_LIVEKIT_URL,
+    apiKey: runtimeEnv.LIVEKIT_API_KEY,
+    apiSecret: runtimeEnv.LIVEKIT_API_SECRET,
+    logLevel: runtimeEnv.LIVEKIT_AGENT_LOG_LEVEL ?? 'info',
     permissions: new WorkerPermissions(true, true, true, true),
   })
 }
