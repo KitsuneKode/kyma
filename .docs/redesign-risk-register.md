@@ -21,7 +21,7 @@
 ## Env management
 
 - Split-brain env handling from mixed access patterns.
-  - Mitigation: centralize Next env reads via `lib/env.ts`.
+  - Mitigation: enforce boundary-based modules (`lib/env/server.ts`, `lib/env/public.ts`).
   - Validation: no new ad hoc env reads in app/lib without reason.
 - Server/client key boundary mistakes.
   - Mitigation: maintain strict server/client schema split.

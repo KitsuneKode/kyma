@@ -2,14 +2,22 @@
 
 ## Canonical module
 
-- Centralize Next.js runtime env reads in `lib/env.ts` using `@t3-oss/env-nextjs` + zod.
-- Prefer importing `env` from `lib/env.ts` in app/lib/components codepaths.
+- Single source of truth: `lib/env/schema.ts`.
+- Compatibility re-export: `lib/env.ts`.
+- Runtime distribution wrappers:
+  - `lib/env/public.ts` for `NEXT_PUBLIC_*` keys only.
+  - `lib/env/server.ts` for app server keys (includes `server-only` guard).
+  - `lib/env/agent.ts` for standalone agent runtime.
+  - `lib/env/convex.ts` for Convex runtime.
+- Prefer importing boundary wrappers directly based on callsite runtime.
 
 ## Boundary rules
 
 - `NEXT_PUBLIC_*` values are client-safe and may be referenced by client code.
 - Non-`NEXT_PUBLIC_*` values are server-only.
-- Keep Convex runtime env handling separate when necessary (`convex/*` may keep direct `process.env` reads due to runtime constraints).
+- Keep agent config separate from app runtime config (`agent.ts` is agent-only).
+- Keep Convex runtime env handling separate via `lib/env/convex.ts`.
+- Avoid direct `process.env` reads outside `lib/env/schema.ts` unless explicitly documented.
 
 ## Required vs optional
 
@@ -22,6 +30,6 @@
 - Local: allow optional integrations (e.g. Clerk-disabled mode) without crashing.
 - CI/production: fail fast when required variables for enabled surfaces are missing.
 - Any new env key must be added to:
-  1. `lib/env.ts` schema
-  2. runtime mapping in `lib/env.ts`
+  1. schema/runtime mapping in `lib/env/schema.ts`
+  2. distribution wrappers (`public.ts`, `server.ts`, `agent.ts`, `convex.ts`) based on runtime ownership
   3. documentation in this file when behavior is non-obvious

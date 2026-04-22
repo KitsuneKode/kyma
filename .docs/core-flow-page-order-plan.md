@@ -19,19 +19,30 @@ This sequence keeps the narrative aligned with user intent: understand product -
 ## Landing Page Composition (in order)
 
 1. **Hero (dual-track)**
-   - Left: value proposition + trust framing.
-   - Right: trial/mockup video panel (primary proof).
-   - CTA group: `Try Candidate Flow` and `Open Recruiter Workspace`.
+
+- Left: value proposition + trust framing.
+- Right: trial/mockup video panel (primary proof).
+- CTA group: `Try Candidate Flow` and `Open Recruiter Workspace`.
+
 2. **Proof strip**
-   - 3-4 concise trust metrics (durability, transcript reliability, review readiness).
+
+- 3-4 concise trust metrics (durability, transcript reliability, review readiness).
+
 3. **How it works**
-   - Three-step flow: Prejoin -> Live -> Review.
+
+- Three-step flow: Prejoin -> Live -> Review.
+
 4. **Role pathways**
-   - Candidate pathway card and Recruiter pathway card, each with clear outcome.
+
+- Candidate pathway card and Recruiter pathway card, each with clear outcome.
+
 5. **System credibility section**
-   - Reliability architecture summary (reconnect safety, persistence model, evidence trail).
+
+- Reliability architecture summary (reconnect safety, persistence model, evidence trail).
+
 6. **Final CTA block**
-   - Repeat dual-track CTA with tighter copy.
+
+- Repeat dual-track CTA with tighter copy.
 
 ## Candidate Flow Composition
 
