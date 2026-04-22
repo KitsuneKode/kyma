@@ -1,16 +1,15 @@
 'use client'
 import Link from 'next/link'
 import { Logo } from '@/components/marketing/logo'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { IconMenu2, IconX } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import React from 'react'
 import { cn } from '@/lib/utils'
 
 const menuItems = [
-  { name: 'Features', href: '#link' },
-  { name: 'Solution', href: '#link' },
-  { name: 'Pricing', href: '#link' },
-  { name: 'About', href: '#link' },
+  { name: 'How it works', href: '#how-it-works' },
+  { name: 'For recruiters', href: '#role-pathways' },
 ]
 
 export const HeroHeader = () => {
@@ -32,7 +31,7 @@ export const HeroHeader = () => {
       >
         <div
           className={cn(
-            'mx-auto mt-2 max-w-6xl px-6 transition-all duration-300 lg:px-12',
+            'mx-auto mt-2 max-w-6xl px-6 transition-[background-color,border-color,backdrop-filter,max-width,padding] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] lg:px-12',
             isScrolled &&
               'max-w-4xl rounded-2xl border bg-background/50 backdrop-blur-lg lg:px-5'
           )}
@@ -87,31 +86,24 @@ export const HeroHeader = () => {
                   ))}
                 </ul>
               </div>
-              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
+              <div className="flex w-full flex-col items-center space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
+                <ThemeToggle />
                 <Button
                   variant="outline"
                   size="sm"
                   className={cn(isScrolled && 'lg:hidden')}
-                  render={<Link href="#" />}
+                  render={<Link href="/admin" />}
                   nativeButton={false}
                 >
-                  <span>Login</span>
-                </Button>
-                <Button
-                  size="sm"
-                  className={cn(isScrolled && 'lg:hidden')}
-                  render={<Link href="#" />}
-                  nativeButton={false}
-                >
-                  <span>Sign Up</span>
+                  <span>Recruiter login</span>
                 </Button>
                 <Button
                   size="sm"
                   className={cn(isScrolled ? 'lg:inline-flex' : 'hidden')}
-                  render={<Link href="#" />}
+                  render={<Link href="/admin" />}
                   nativeButton={false}
                 >
-                  <span>Get Started</span>
+                  <span>Recruiter login</span>
                 </Button>
               </div>
             </div>

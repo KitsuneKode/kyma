@@ -1,33 +1,23 @@
 import {
-  IconBolt,
-  IconBrandFigma,
-  IconBrandVercel,
-  IconChartBar,
-  IconCpu,
-  IconDatabase,
-  IconMessage2,
-  IconRocket,
-  IconSettings,
   IconShieldCheck,
-  IconSparkles,
+  IconListDetails,
+  IconDatabase,
+  IconUserScan,
 } from '@tabler/icons-react'
 import { HeroHeader } from '@/components/marketing/header'
 import { MarketingPageComposer } from '@/components/marketing/page-composer'
 import { MarketingHeroMain } from '@/components/marketing/sections/hero-main'
 import { MarketingSocialProof } from '@/components/marketing/sections/social-proof'
+import { MarketingHowItWorks } from '@/components/marketing/sections/how-it-works'
+import { MarketingRolePathways } from '@/components/marketing/sections/role-pathways'
+import { MarketingSystemCredibility } from '@/components/marketing/sections/system-credibility'
+import { MarketingFinalCta } from '@/components/marketing/sections/final-cta'
 
 const trustIcons = [
-  IconBolt,
-  IconBrandVercel,
-  IconDatabase,
-  IconSparkles,
   IconShieldCheck,
-  IconSettings,
-  IconCpu,
-  IconChartBar,
-  IconMessage2,
-  IconRocket,
-  IconBrandFigma,
+  IconListDetails,
+  IconDatabase,
+  IconUserScan,
 ]
 
 export default function HeroSection() {
@@ -36,16 +26,16 @@ export default function HeroSection() {
       id: 'hero-main',
       node: (
         <MarketingHeroMain
-          eyebrow="Introducing Support for AI Models"
-          title="Modern Solutions for Customer Engagement"
-          subtitle="Highly customizable components for building modern websites and applications that look and feel the way you mean it."
+          eyebrow="AI-Powered Tutor Screening"
+          title="Screen tutors with evidence, not guesswork"
+          subtitle="Kyma runs structured voice interviews with AI, then delivers rubric-scored reports so your team can make confident hiring decisions in minutes."
           primaryCta={{
-            label: 'Start Building',
+            label: 'Try a demo interview',
             href: '/interviews/demo-invite',
           }}
-          secondaryCta={{ label: 'Request a demo', href: '/video-demo' }}
-          showcaseDarkSrc="/mail2.png"
-          showcaseLightSrc="/mail2-light.png"
+          secondaryCta={{ label: 'Recruiter login', href: '/admin' }}
+          showcaseDarkSrc="/mockups/hero.png"
+          showcaseLightSrc="/mockups/hero.png"
         />
       ),
     },
@@ -53,11 +43,27 @@ export default function HeroSection() {
       id: 'social-proof',
       node: (
         <MarketingSocialProof
-          title="Meet Our Customers"
-          href="/"
+          title="Built on proven infrastructure"
+          href="#how-it-works"
           icons={trustIcons}
         />
       ),
+    },
+    {
+      id: 'how-it-works',
+      node: <MarketingHowItWorks />,
+    },
+    {
+      id: 'role-pathways',
+      node: <MarketingRolePathways />,
+    },
+    {
+      id: 'system-credibility',
+      node: <MarketingSystemCredibility />,
+    },
+    {
+      id: 'final-cta',
+      node: <MarketingFinalCta />,
     },
   ]
 
@@ -65,14 +71,6 @@ export default function HeroSection() {
     <>
       <HeroHeader />
       <main className="overflow-hidden">
-        <div
-          aria-hidden
-          className="absolute inset-0 isolate hidden opacity-65 contain-strict lg:block"
-        >
-          <div className="absolute top-0 left-0 h-320 w-140 -translate-y-87.5 -rotate-45 rounded-full bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,hsla(0,0%,85%,.08)_0,hsla(0,0%,55%,.02)_50%,hsla(0,0%,45%,0)_80%)]" />
-          <div className="absolute top-0 left-0 h-320 w-60 [translate:5%_-50%] -rotate-45 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.06)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)]" />
-          <div className="absolute top-0 left-0 h-320 w-60 -translate-y-87.5 -rotate-45 bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.04)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)]" />
-        </div>
         <MarketingPageComposer sections={sections} />
       </main>
     </>
