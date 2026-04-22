@@ -1,23 +1,20 @@
-import { fetchMutation } from "convex/nextjs"
-import { NextRequest, NextResponse } from "next/server"
-import { WebhookReceiver } from "livekit-server-sdk"
+import { fetchMutation } from "convex/nextjs";
+import { NextRequest, NextResponse } from "next/server";
+import { WebhookReceiver } from "livekit-server-sdk";
 
-import { api } from "@/convex/_generated/api"
-import {
-  createDiagnosticLogger,
-  createRequestId,
-} from "@/lib/interview/diagnostics"
-import { getLivekitWebhookSigningCredentials } from "@/lib/livekit/config"
+import { api } from "@/convex/_generated/api";
+import { createDiagnosticLogger, createRequestId } from "@/lib/interview/diagnostics";
+import { getLivekitWebhookSigningCredentials } from "@/lib/livekit/config";
 
-export const dynamic = "force-dynamic"
-export const revalidate = 0
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function toNumber(value?: bigint) {
   if (value === undefined) {
-    return undefined
+    return undefined;
   }
 
-  return Number(value)
+  return Number(value);
 }
 
 function getWebhookAuthorizationHeader(request: NextRequest) {
@@ -26,38 +23,35 @@ function getWebhookAuthorizationHeader(request: NextRequest) {
     request.headers.get("Authorization") ??
     request.headers.get("Authorize") ??
     undefined
-  )
+  );
 }
 
 export async function POST(request: NextRequest) {
-  const requestId = createRequestId("lkwebhook")
+  const requestId = createRequestId("lkwebhook");
   const logger = createDiagnosticLogger("livekit-webhook", {
     actor: "server",
     requestId,
-  })
-  const body = await request.text()
-  const { apiKey, apiSecret } = getLivekitWebhookSigningCredentials()
+  });
+  const body = await request.text();
+  const { apiKey, apiSecret } = getLivekitWebhookSigningCredentials();
 
   if (!apiKey || !apiSecret) {
     logger.error({
       event: "webhook.config.missing",
       detail: "LiveKit webhook signing credentials are not configured.",
-    })
+    });
     return NextResponse.json(
       { error: "LiveKit webhook receiver is not configured." },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 
   try {
-    const receiver = new WebhookReceiver(apiKey, apiSecret)
-    const event = await receiver.receive(
-      body,
-      getWebhookAuthorizationHeader(request)
-    )
-    const roomName = event.room?.name || event.egressInfo?.roomName
-    const participantIdentity = event.participant?.identity
-    const participantName = event.participant?.name
+    const receiver = new WebhookReceiver(apiKey, apiSecret);
+    const event = await receiver.receive(body, getWebhookAuthorizationHeader(request));
+    const roomName = event.room?.name || event.egressInfo?.roomName;
+    const participantIdentity = event.participant?.identity;
+    const participantName = event.participant?.name;
 
     logger.info({
       event: "webhook.received",
@@ -68,14 +62,14 @@ export async function POST(request: NextRequest) {
         webhookEvent: event.event,
         egressId: event.egressInfo?.egressId,
       },
-    })
+    });
 
-    const egress = event.egressInfo
-    const mutations = []
+    const egress = event.egressInfo;
+    const mutations = [];
 
     if (egress && event.event.startsWith("egress_")) {
-      const fileResults = egress.fileResults ?? []
-      const segmentResults = egress.segmentResults ?? []
+      const fileResults = egress.fileResults ?? [];
+      const segmentResults = egress.segmentResults ?? [];
 
       if (fileResults.length === 0 && segmentResults.length === 0) {
         mutations.push(
@@ -90,8 +84,8 @@ export async function POST(request: NextRequest) {
             updatedAtMs: toNumber(egress.updatedAt),
             error: egress.error || undefined,
             details: egress.details || undefined,
-          })
-        )
+          }),
+        );
       }
 
       for (const file of fileResults) {
@@ -112,8 +106,8 @@ export async function POST(request: NextRequest) {
             sizeBytes: toNumber(file.size),
             error: egress.error || undefined,
             details: egress.details || undefined,
-          })
-        )
+          }),
+        );
       }
 
       for (const segment of segmentResults) {
@@ -134,8 +128,8 @@ export async function POST(request: NextRequest) {
             sizeBytes: toNumber(segment.size),
             error: egress.error || undefined,
             details: egress.details || undefined,
-          })
-        )
+          }),
+        );
       }
     } else {
       mutations.push(
@@ -148,23 +142,23 @@ export async function POST(request: NextRequest) {
             roomName && participantIdentity
               ? `${event.event} for ${participantIdentity} in ${roomName}`
               : undefined,
-        })
-      )
+        }),
+      );
     }
 
-    await Promise.all(mutations)
+    await Promise.all(mutations);
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true });
   } catch (error) {
     logger.error({
       event: "webhook.failed",
       detail: "Failed to process LiveKit webhook.",
       error,
-    })
+    });
 
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Invalid webhook." },
-      { status: 401 }
-    )
+      { status: 401 },
+    );
   }
 }
