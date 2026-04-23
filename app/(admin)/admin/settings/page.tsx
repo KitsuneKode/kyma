@@ -162,10 +162,7 @@ export default function SettingsPage() {
         </section>
 
         <div className="flex justify-end pt-4 pb-12">
-          <Button
-            className="rounded-full px-8 py-6 text-sm font-semibold shadow-xl transition-all active:scale-[0.96]"
-            nativeButton={false}
-          >
+          <Button className="rounded-full px-8 py-6 text-sm font-semibold shadow-xl transition-all active:scale-[0.96]">
             Save all settings
           </Button>
         </div>
