@@ -17,10 +17,10 @@ import { clientEnv } from '@/lib/env/client'
 import {
   formatConfidenceLabel,
   formatDateTime,
-  formatDimensionLabel,
   formatRecommendationLabel,
   formatStatusLabel,
 } from '@/lib/recruiter/format'
+import { ReviewConsole } from '@/components/recruiter/review-console'
 
 type CandidateReviewPageProps = {
   params: Promise<{
@@ -69,7 +69,7 @@ export default async function CandidateReviewPage({
   const teachingSimulation = summarizeTeachingSimulation(detail.events)
 
   return (
-    <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-7xl flex-col gap-6 px-6 py-10">
+    <div className="flex w-full flex-col gap-8">
       <PageHeader
         eyebrow="Candidate review"
         title={detail.candidate.name}
@@ -211,36 +211,6 @@ export default async function CandidateReviewPage({
                     </p>
                   ) : null}
                 </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold">Dimension scores</h3>
-                  {detail.report.dimensionScores.length ? (
-                    <div className="mt-4 flex flex-col gap-3">
-                      {detail.report.dimensionScores.map((score) => (
-                        <div
-                          key={score.dimension}
-                          className="rounded-2xl bg-muted/35 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] ring-1 ring-border/50"
-                        >
-                          <div className="flex items-center justify-between gap-4">
-                            <p className="font-medium">
-                              {formatDimensionLabel(score.dimension)}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {score.score.toFixed(1)} / 5
-                            </p>
-                          </div>
-                          <p className="mt-2 text-sm text-muted-foreground">
-                            {score.rationale}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Dimension scoring has not been generated yet.
-                    </p>
-                  )}
-                </div>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -251,40 +221,26 @@ export default async function CandidateReviewPage({
             )}
           </InfoCard>
 
-          <InfoCard
-            title="Evidence"
-            description="Transcript-backed reasons behind the recommendation."
-          >
-            {detail.evidence.length ? (
-              <div className="flex flex-col gap-3">
-                {detail.evidence.map((item) => (
-                  <div key={item.id} className="rounded-lg border px-4 py-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="font-medium">
-                        {formatDimensionLabel(item.dimension)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.startedAt
-                          ? formatDateTime(item.startedAt)
-                          : 'No timestamp'}
-                      </p>
-                    </div>
-                    <blockquote className="mt-3 rounded-lg bg-muted/40 px-4 py-3 text-sm leading-6">
-                      {item.snippet}
-                    </blockquote>
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      {item.rationale}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No evidence has been generated yet. This will be populated by
-                the transcript-to-report pipeline.
-              </p>
-            )}
-          </InfoCard>
+          <ReviewConsole
+            candidateName={detail.candidate.name}
+            transcript={detail.transcript}
+            evidence={detail.evidence}
+            dimensionScores={detail.report?.dimensionScores ?? []}
+            audioUrl={
+              detail.recordings.find(
+                (r) =>
+                  r.location &&
+                  (r.artifactType === 'audio' || r.artifactType === 'composite')
+              )?.location
+            }
+            recordingStartTime={
+              detail.recordings.find(
+                (r) =>
+                  r.location &&
+                  (r.artifactType === 'audio' || r.artifactType === 'composite')
+              )?.startedAt
+            }
+          />
 
           <InfoCard
             title="Recruiter notes"
@@ -420,44 +376,7 @@ export default async function CandidateReviewPage({
           </InfoCard>
         </aside>
       </section>
-
-      <InfoCard
-        title="Transcript"
-        description="This is the durable transcript artifact that later report generation and recruiter AI chat will build on."
-      >
-        <div className="flex flex-col gap-3">
-          {detail.transcript.length ? (
-            detail.transcript.map((segment) => (
-              <div
-                key={segment.id}
-                className="rounded-2xl bg-muted/35 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] ring-1 ring-border/50"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="font-medium">
-                    {segment.speaker === 'candidate'
-                      ? detail.candidate.name
-                      : segment.speaker === 'agent'
-                        ? 'Interviewer'
-                        : 'System'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {segment.status === 'final' ? 'Final' : 'Partial'} ·{' '}
-                    {formatDateTime(segment.startedAt)}
-                  </p>
-                </div>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  {segment.text}
-                </p>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No transcript has been captured yet.
-            </p>
-          )}
-        </div>
-      </InfoCard>
-    </main>
+    </div>
   )
 }
 
