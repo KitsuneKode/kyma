@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { fetchQuery } from 'convex/nextjs'
-import { IconLayoutDashboard, IconUsers, IconFolder } from '@tabler/icons-react'
+import { IconUsers, IconFolder } from '@tabler/icons-react'
 
 import { api } from '@/convex/_generated/api'
 import { MetricCard } from '@/components/admin/metric-card'
@@ -55,21 +55,21 @@ export default async function AdminPage() {
           value={String(sessionsToday)}
           detail="Candidate interviews started today."
           delay={0.1}
-          icon={<IconLayoutDashboard className="h-5 w-5" />}
+          icon="dashboard"
         />
         <MetricCard
           label="Reports pending"
           value={String(reportsPending)}
           detail="Sessions waiting for completed assessment reports."
           delay={0.2}
-          icon={<IconUsers className="h-5 w-5" />}
+          icon="users"
         />
         <MetricCard
           label="Active batches"
           value={String(activeBatches)}
           detail="Screening batches currently accepting attempts."
           delay={0.3}
-          icon={<IconFolder className="h-5 w-5" />}
+          icon="folder"
         />
       </section>
 

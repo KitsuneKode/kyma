@@ -1,7 +1,14 @@
 'use client'
 
 import { motion } from 'motion/react'
-import type React from 'react'
+
+import { IconLayoutDashboard, IconUsers, IconFolder } from '@tabler/icons-react'
+
+const ICON_MAP = {
+  dashboard: IconLayoutDashboard,
+  users: IconUsers,
+  folder: IconFolder,
+}
 
 export function MetricCard({
   label,
@@ -14,8 +21,10 @@ export function MetricCard({
   value: string
   detail?: string
   delay?: number
-  icon?: React.ReactNode
+  icon?: keyof typeof ICON_MAP
 }) {
+  const Icon = icon ? ICON_MAP[icon] : null
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -27,9 +36,9 @@ export function MetricCard({
         <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
           {label}
         </p>
-        {icon && (
+        {Icon && (
           <div className="rounded-xl bg-primary/5 p-2 text-primary/70 transition-colors group-hover:text-primary">
-            {icon}
+            <Icon className="h-5 w-5" />
           </div>
         )}
       </div>
