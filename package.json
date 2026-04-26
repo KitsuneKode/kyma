@@ -21,6 +21,8 @@
     "commitlint": "commitlint --edit",
     "convex:dev": "CONVEX_AGENT_MODE=anonymous bunx convex dev",
     "convex:once": "CONVEX_AGENT_MODE=anonymous bunx convex dev --once",
+    "db:reset:dev": "bunx convex run devSeed:resetDevData '{\"confirm\":\"RESET_DEV_ONLY\"}'",
+    "db:seed:dev": "bunx convex run devSeed:seedDevData '{\"confirm\":\"SEED_DEV_ONLY\"}'",
     "agent:dev": "bun run agents/worker.ts dev",
     "agent:start": "bun run agents/worker.ts start",
     "prepare": "husky"
@@ -66,6 +68,7 @@
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
+    "@faker-js/faker": "^10.4.0",
     "@kitsunekode/sweep": "^0.1.0",
     "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.2.1",

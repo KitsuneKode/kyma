@@ -9,6 +9,8 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as devSeed from "../devSeed.js";
+import type * as devSeedMutations from "../devSeedMutations.js";
 import type * as helpers_audit from "../helpers/audit.js";
 import type * as helpers_auth from "../helpers/auth.js";
 import type * as helpers_encryption from "../helpers/encryption.js";
@@ -28,6 +30,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  devSeed: typeof devSeed;
+  devSeedMutations: typeof devSeedMutations;
   "helpers/audit": typeof helpers_audit;
   "helpers/auth": typeof helpers_auth;
   "helpers/encryption": typeof helpers_encryption;

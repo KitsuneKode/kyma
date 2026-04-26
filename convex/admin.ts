@@ -525,10 +525,21 @@ export const testProviderConnection = action({
     const normalizedProvider = normalizeProvider(args.provider)
     const settings = await ctx.runQuery(api.admin.getWorkspaceSettingsRaw, {})
     const candidate = selectLatestProviderKey(
-      settings?.providerKeys?.map((item) => ({
-        ...item,
-        provider: normalizeProvider(item.provider),
-      })),
+      settings?.providerKeys?.map(
+        (item: {
+          keyId: string
+          provider: string
+          encryptedKey: string
+          iv: string
+          label?: string
+          addedAt: number
+          addedBy: string
+          maskedKeyTail?: string
+        }) => ({
+          ...item,
+          provider: normalizeProvider(item.provider),
+        })
+      ),
       normalizedProvider
     )
     if (!candidate) {
