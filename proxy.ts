@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
+import { roleFromSessionClaims } from '@/lib/auth/clerk-role'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 const isAdminRoute = createRouteMatcher(['/admin(.*)'])
@@ -23,8 +24,9 @@ const hasClerk = hasClerkServerCredentials()
 export default hasClerk
   ? clerkMiddleware(async (auth, req) => {
       const { userId, sessionClaims } = await auth()
-      const role = ((sessionClaims?.metadata as { role?: string } | undefined)
-        ?.role ?? null) as 'admin' | 'recruiter' | 'candidate' | null
+      const role = roleFromSessionClaims(
+        sessionClaims as Record<string, unknown> | null | undefined
+      )
       const isProtectedRoute =
         !isPublicRoute(req) ||
         isAdminRoute(req) ||
@@ -49,13 +51,16 @@ export default hasClerk
         return NextResponse.redirect(new URL('/dashboard', req.url))
       }
 
-      if (
-        isDashboardRoute(req) &&
-        role !== 'candidate' &&
-        role !== 'admin' &&
-        role !== 'recruiter'
-      ) {
-        return NextResponse.redirect(new URL('/admin', req.url))
+      if (isDashboardRoute(req) && userId) {
+        if (role == null) {
+          return NextResponse.redirect(new URL('/onboarding', req.url))
+        }
+        if (role === 'recruiter') {
+          return NextResponse.redirect(new URL('/admin', req.url))
+        }
+        if (role !== 'candidate' && role !== 'admin') {
+          return NextResponse.redirect(new URL('/onboarding', req.url))
+        }
       }
     })
   : function proxy() {

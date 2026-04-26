@@ -4,14 +4,15 @@ import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
 import { auth } from '@clerk/nextjs/server'
 
 import { ThemeToggle } from '@/components/theme-toggle'
+import { roleFromSessionClaims } from '@/lib/auth/clerk-role'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const clerkEnabled = hasClerkServerCredentials()
   const authState = clerkEnabled ? await auth() : null
-  const role = (
-    authState?.sessionClaims?.metadata as { role?: string } | undefined
-  )?.role
+  const role = roleFromSessionClaims(
+    authState?.sessionClaims as Record<string, unknown> | null | undefined
+  )
 
   return (
     <>

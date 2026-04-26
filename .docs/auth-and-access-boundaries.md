@@ -25,6 +25,7 @@
 
 ## Role-ready seam
 
-- Use `lib/auth/access.ts` as the extension point for role logic.
-- Current role model is intentionally minimal (`signed-in` vs `anonymous`).
-- Future role enforcement (admin/recruiter/etc.) must be added in access utilities and middleware policy, not page-local conditionals.
+- **Clerk is the source of truth for `role`:** set `user.publicMetadata.role` (`admin` | `recruiter` | `candidate`) via Clerk Dashboard, Backend API, or webhooks — not from untrusted client code.
+- **JWT template** must include that metadata so the Next.js `auth().sessionClaims` and Convex `ctx.auth.getUserIdentity()` see the same claim; app code reads the role via `lib/auth/clerk-role.ts` (`roleFromSessionClaims`) and middleware (`proxy.ts`).
+- Optional: sync `users.role` in Convex with a **Clerk webhook** for analytics or queries that cannot read JWT; authorization must still use JWT/Convex identity checks in public functions.
+- `lib/auth/access.ts` remains a generic signed-in/ anonymous helper unless extended to use `roleFromSessionClaims` for RSCs.
