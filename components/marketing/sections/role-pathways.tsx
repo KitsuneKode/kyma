@@ -31,7 +31,7 @@ const pathways = [
       'AI copilot for report questions',
       'Batch screening management',
     ],
-    cta: { label: 'Open recruiter workspace', href: '/admin' },
+    cta: { label: 'Open recruiter workspace', href: '/sign-in' },
   },
 ]
 

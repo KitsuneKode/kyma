@@ -42,7 +42,7 @@ export function PremiumFooter() {
               </li>
               <li>
                 <Link
-                  href="/admin"
+                  href="/sign-in"
                   className="transition-colors hover:text-foreground"
                 >
                   Recruiter Hub

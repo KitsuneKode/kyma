@@ -31,10 +31,10 @@ export function MarketingFinalCta() {
             size="lg"
             variant="outline"
             className="h-12 rounded-xl px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30"
-            render={<Link href="/admin" />}
+            render={<Link href="/sign-in" />}
             nativeButton={false}
           >
-            Sign In / Dashboard
+            Sign In
           </Button>
         </div>
       </div>

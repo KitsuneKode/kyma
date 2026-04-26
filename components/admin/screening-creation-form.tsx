@@ -114,7 +114,7 @@ export function ScreeningCreationForm() {
       })
 
       startTransition(() => {
-        router.push(`/admin/screenings/${batchId}`)
+        router.push(`/recruiter/screenings/${batchId}`)
         router.refresh()
       })
     } catch (submitError) {
@@ -350,7 +350,7 @@ export function ScreeningCreationForm() {
           disabled={isSubmitting}
           className="rounded-full px-8 py-6 text-sm font-semibold shadow-xl transition-all"
         >
-          {isSubmitting ? 'Creating screening...' : 'Create screening'}
+          {isSubmitting ? 'Creating screening batch...' : 'Create Screening'}
         </Button>
       </motion.div>
     </motion.form>

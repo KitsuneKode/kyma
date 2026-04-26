@@ -9,13 +9,13 @@ export const commandActionRegistry: CommandAction[] = [
   {
     id: 'jump-candidate',
     label: 'Jump to candidate',
-    href: '/admin/candidates',
+    href: '/recruiter/candidates',
   },
   {
     id: 'create-screening',
     label: 'Create screening',
-    href: '/admin/screenings/new',
+    href: '/recruiter/screenings/new',
   },
-  { id: 'open-settings', label: 'Open settings', href: '/admin/settings' },
+  { id: 'open-settings', label: 'Open settings', href: '/recruiter/settings' },
   { id: 'toggle-theme', label: 'Toggle theme', action: 'toggle-theme' },
 ]

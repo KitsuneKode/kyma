@@ -168,7 +168,7 @@ export default async function AdminPage() {
           <div className="relative z-10 mt-6">
             <Button
               className="rounded-xl px-5"
-              render={<Link href="/admin/candidates" />}
+              render={<Link href="/recruiter/candidates" />}
               nativeButton={false}
             >
               Open candidate queue
@@ -193,14 +193,14 @@ export default async function AdminPage() {
             <Button
               variant="outline"
               className="rounded-xl px-5"
-              render={<Link href="/admin/screenings" />}
+              render={<Link href="/recruiter/screenings" />}
               nativeButton={false}
             >
               Manage screenings
             </Button>
             <Button
               className="rounded-xl px-5"
-              render={<Link href="/admin/screenings/new" />}
+              render={<Link href="/recruiter/screenings/new" />}
               nativeButton={false}
             >
               Create batch

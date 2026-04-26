@@ -155,7 +155,7 @@ export function CandidatesTable({ data }: { data: CandidateRow[] }) {
             className="rounded-full opacity-0 group-hover/row:opacity-100"
             onClick={(e) => {
               e.stopPropagation()
-              router.push(`/admin/candidates/${row.original.sessionId}`)
+              router.push(`/recruiter/candidates/${row.original.sessionId}`)
             }}
           >
             <IconEye className="size-3.5" />
@@ -191,7 +191,7 @@ export function CandidatesTable({ data }: { data: CandidateRow[] }) {
         searchPlaceholder="Search candidate names"
         emptyMessage="No candidates match the current filters."
         onRowClick={(row) => {
-          router.push(`/admin/candidates/${row.sessionId}`)
+          router.push(`/recruiter/candidates/${row.sessionId}`)
         }}
       />
     </div>

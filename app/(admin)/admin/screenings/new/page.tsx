@@ -10,13 +10,13 @@ export default function NewScreeningPage() {
     <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-5xl flex-col gap-6 px-6 py-10">
       <PageHeader
         eyebrow="Screening ops"
-        title="Create screening batch"
+        title="Create Screening"
         description="Create invite-controlled candidate cohorts with explicit access limits, expiration, and policy overrides."
         actions={
           <Button
             nativeButton={false}
             variant="outline"
-            render={<Link href="/admin/screenings" />}
+            render={<Link href="/recruiter/screenings" />}
           >
             Back to screenings
           </Button>

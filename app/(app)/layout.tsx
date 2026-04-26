@@ -24,12 +24,20 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <Link className="font-semibold" href="/">
               Kyma
             </Link>
-            {role === 'admin' || role === 'recruiter' ? (
+            {role === 'recruiter' ? (
               <Link
                 className="text-muted-foreground transition-colors hover:text-foreground"
-                href="/admin"
+                href="/recruiter"
               >
-                Admin
+                Recruiter
+              </Link>
+            ) : null}
+            {role === 'candidate' || role === 'admin' ? (
+              <Link
+                className="text-muted-foreground transition-colors hover:text-foreground"
+                href="/candidate"
+              >
+                Candidate
               </Link>
             ) : null}
             <Link

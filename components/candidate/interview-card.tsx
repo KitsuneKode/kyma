@@ -39,7 +39,7 @@ export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
         <Button
           nativeButton={false}
           size="sm"
-          render={<Link href={`/dashboard/interviews/${props.sessionId}`} />}
+          render={<Link href={`/candidate/interviews/${props.sessionId}`} />}
         >
           View result
         </Button>

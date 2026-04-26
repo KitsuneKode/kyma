@@ -32,9 +32,9 @@ export default async function AdminCandidatesPage() {
           <Button
             nativeButton={false}
             variant="outline"
-            render={<Link href="/admin" />}
+            render={<Link href="/recruiter" />}
           >
-            Back to admin
+            Back to recruiter
           </Button>
         }
       />
@@ -85,9 +85,9 @@ export default async function AdminCandidatesPage() {
             action={
               <Button
                 nativeButton={false}
-                render={<Link href="/admin/screenings/new" />}
+                render={<Link href="/recruiter/screenings/new" />}
               >
-                Create screening batch
+                Create Screening
               </Button>
             }
           />

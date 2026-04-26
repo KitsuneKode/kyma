@@ -25,22 +25,22 @@ export default async function AdminScreeningsPage() {
     <div className="flex w-full flex-col gap-8">
       <PageHeader
         eyebrow="Screening ops"
-        title="Screening batches"
+        title="Screening Batches"
         description="Manage invite-gated candidate batches and monitor completion progress."
         actions={
           <>
             <Button
               nativeButton={false}
               variant="outline"
-              render={<Link href="/admin" />}
+              render={<Link href="/recruiter" />}
             >
-              Back to admin
+              Back to recruiter
             </Button>
             <Button
               nativeButton={false}
-              render={<Link href="/admin/screenings/new" />}
+              render={<Link href="/recruiter/screenings/new" />}
             >
-              Create screening
+              Create Screening
             </Button>
           </>
         }
@@ -55,9 +55,9 @@ export default async function AdminScreeningsPage() {
             action={
               <Button
                 nativeButton={false}
-                render={<Link href="/admin/screenings/new" />}
+                render={<Link href="/recruiter/screenings/new" />}
               >
-                Create screening batch
+                Create Screening
               </Button>
             }
           />

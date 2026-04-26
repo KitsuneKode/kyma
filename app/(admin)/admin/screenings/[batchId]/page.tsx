@@ -46,7 +46,7 @@ export default async function ScreeningDetailPage({
             <Button
               nativeButton={false}
               variant="outline"
-              render={<Link href="/admin/screenings" />}
+              render={<Link href="/recruiter/screenings" />}
             >
               Back to screenings
             </Button>
@@ -83,7 +83,7 @@ export default async function ScreeningDetailPage({
           <Button
             nativeButton={false}
             variant="outline"
-            render={<Link href="/admin/screenings" />}
+            render={<Link href="/recruiter/screenings" />}
           >
             Back to screenings
           </Button>
@@ -144,7 +144,7 @@ export default async function ScreeningDetailPage({
             action={
               <Button
                 nativeButton={false}
-                render={<Link href="/admin/screenings" />}
+                render={<Link href="/recruiter/screenings" />}
               >
                 Create or edit screening
               </Button>

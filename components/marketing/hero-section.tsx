@@ -33,7 +33,7 @@ export default function HeroSection() {
             label: 'Try a demo interview',
             href: '/interviews/demo-invite',
           }}
-          secondaryCta={{ label: 'Recruiter login', href: '/admin' }}
+          secondaryCta={{ label: 'Recruiter login', href: '/sign-in' }}
           showcaseDarkSrc="/mockups/hero.png"
           showcaseLightSrc="/mockups/hero.png"
         />

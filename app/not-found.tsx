@@ -44,10 +44,10 @@ export default async function NotFound() {
             variant="outline"
             size="lg"
             className="rounded-full px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30"
-            render={<Link href="/admin" />}
+            render={<Link href="/recruiter" />}
             nativeButton={false}
           >
-            Go to Dashboard
+            Go to Recruiter Hub
           </Button>
         </div>
       </main>

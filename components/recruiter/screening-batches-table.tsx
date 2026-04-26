@@ -73,7 +73,7 @@ export function ScreeningBatchesTable({ data }: { data: ScreeningBatchRow[] }) {
       searchPlaceholder="Search batch names"
       emptyMessage="No screening batches yet. Create a screening batch to get started."
       onRowClick={(row) => {
-        router.push(`/admin/screenings/${row.id}`)
+        router.push(`/recruiter/screenings/${row.id}`)
       }}
     />
   )

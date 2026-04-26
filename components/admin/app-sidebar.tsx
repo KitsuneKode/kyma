@@ -29,25 +29,31 @@ import {
 const NAV_ITEMS = [
   {
     title: 'Overview',
-    url: '/admin',
+    url: '/recruiter',
     icon: IconLayoutDashboard,
     exact: true,
   },
   {
     title: 'Candidates',
-    url: '/admin/candidates',
+    url: '/recruiter/candidates',
     icon: IconUsers,
     exact: false,
   },
   {
-    title: 'Screenings',
-    url: '/admin/screenings',
+    title: 'Screening Batches',
+    url: '/recruiter/screenings',
+    icon: IconFolder,
+    exact: false,
+  },
+  {
+    title: 'Screening Templates',
+    url: '/recruiter/templates',
     icon: IconFolder,
     exact: false,
   },
   {
     title: 'Settings',
-    url: '/admin/settings',
+    url: '/recruiter/settings',
     icon: IconSettings,
     exact: false,
   },

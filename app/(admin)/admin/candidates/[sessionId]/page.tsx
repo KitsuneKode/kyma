@@ -51,7 +51,7 @@ export default async function CandidateReviewPage({
             <Button
               nativeButton={false}
               variant="outline"
-              render={<Link href="/admin/candidates" />}
+              render={<Link href="/recruiter/candidates" />}
             >
               Back to candidates
             </Button>
@@ -85,7 +85,7 @@ export default async function CandidateReviewPage({
             value: formatStatusLabel(detail.report?.status ?? 'pending'),
           },
         ]}
-        backHref="/admin/candidates"
+        backHref="/recruiter/candidates"
       />
 
       <RenderErrorBoundary title="Review console">
