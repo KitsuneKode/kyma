@@ -14,7 +14,7 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined
     : {
-        command: 'bun run dev',
+        command: 'bun run dev:web',
         url: baseURL,
         timeout: 120_000,
         reuseExistingServer: !process.env.CI,

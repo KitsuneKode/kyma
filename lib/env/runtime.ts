@@ -1,6 +1,6 @@
 import { createEnv } from '@t3-oss/env-core'
 
-import { clientSchema, serverSchema } from '@/lib/env/shared'
+import { clientSchema, serverSchema } from './shared'
 
 /**
  * Standalone runtime env for Convex, agent workers, and scripts.
