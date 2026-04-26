@@ -16,6 +16,32 @@ function stateWeight(status: string) {
   return 2
 }
 
+function isActiveStatus(status: string) {
+  return [
+    'ready',
+    'connecting',
+    'live',
+    'reconnecting',
+    'interrupted',
+  ].includes(status)
+}
+
+function isPendingRelease(item: {
+  status: string
+  reportStatus?: string
+  released: boolean
+}) {
+  if (item.released) {
+    return false
+  }
+
+  return (
+    item.status === 'processing' ||
+    item.reportStatus === 'processing' ||
+    item.reportStatus === 'manual_review'
+  )
+}
+
 export default async function CandidateHomePage() {
   const token = await getServerConvexAuthToken()
   if (clientEnv.NEXT_PUBLIC_CONVEX_URL && token) {
@@ -43,30 +69,98 @@ export default async function CandidateHomePage() {
       (a.startedAt ? new Date(a.startedAt).getTime() : 0)
     )
   })
+  const active = prioritizedInterviews.filter((item) =>
+    isActiveStatus(item.status)
+  )
+  const pendingRelease = prioritizedInterviews.filter((item) =>
+    isPendingRelease(item)
+  )
+  const released = prioritizedInterviews.filter((item) => item.released)
 
   return (
-    <section className="space-y-5">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Candidate dashboard
-      </h1>
-      <p className="text-sm text-muted-foreground">
-        Upcoming interviews are prioritized first so you can act quickly.
-      </p>
+    <section className="space-y-8">
+      <header className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Candidate dashboard
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Track active interviews first, then review pending and released
+          outcomes.
+        </p>
+      </header>
+
       {prioritizedInterviews.length === 0 ? (
         <div className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-          No interviews linked to your account yet.
+          No interviews are linked to your account yet.
         </div>
       ) : (
-        prioritizedInterviews.map((item) => (
-          <CandidateInterviewCard
-            key={`${item.sessionId}`}
-            sessionId={`${item.sessionId}`}
-            title={item.candidateName ?? 'Interview'}
-            status={item.status}
-            startedAt={item.startedAt}
-            inviteToken={item.inviteToken}
-          />
-        ))
+        <>
+          <section className="space-y-3">
+            <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
+              Active
+            </h2>
+            {active.length === 0 ? (
+              <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+                No active interviews right now.
+              </p>
+            ) : (
+              active.map((item) => (
+                <CandidateInterviewCard
+                  key={`${item.sessionId}`}
+                  sessionId={`${item.sessionId}`}
+                  title={item.candidateName ?? 'Interview'}
+                  status={item.status}
+                  startedAt={item.startedAt}
+                  inviteToken={item.inviteToken}
+                />
+              ))
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
+              Pending release
+            </h2>
+            {pendingRelease.length === 0 ? (
+              <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+                No pending results.
+              </p>
+            ) : (
+              pendingRelease.map((item) => (
+                <CandidateInterviewCard
+                  key={`${item.sessionId}`}
+                  sessionId={`${item.sessionId}`}
+                  title={item.candidateName ?? 'Interview'}
+                  status={item.reportStatus ?? item.status}
+                  startedAt={item.startedAt}
+                  inviteToken={item.inviteToken}
+                />
+              ))
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
+              Released
+            </h2>
+            {released.length === 0 ? (
+              <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+                No released outcomes yet.
+              </p>
+            ) : (
+              released.map((item) => (
+                <CandidateInterviewCard
+                  key={`${item.sessionId}`}
+                  sessionId={`${item.sessionId}`}
+                  title={item.candidateName ?? 'Interview'}
+                  status={item.reportStatus ?? item.status}
+                  startedAt={item.startedAt}
+                  inviteToken={item.inviteToken}
+                />
+              ))
+            )}
+          </section>
+        </>
       )}
     </section>
   )

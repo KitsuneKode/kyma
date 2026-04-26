@@ -1061,9 +1061,20 @@ export const getCandidateInterviewResult = query({
       .query('transcriptSegments')
       .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
       .collect()
+    const resultState = report?.released
+      ? ('released' as const)
+      : report?.status === 'manual_review'
+        ? ('under_review' as const)
+        : report?.status === 'processing' || session.state === 'processing'
+          ? ('processing' as const)
+          : ('unavailable' as const)
+
     return {
       sessionId: session._id,
       state: session.state,
+      resultState,
+      reportStatus: report?.status ?? null,
+      reportReleased: report?.released ?? false,
       transcript: transcript
         .toSorted((a, b) => a.startedAt.localeCompare(b.startedAt))
         .map((segment) => ({
