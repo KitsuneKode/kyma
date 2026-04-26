@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       if (fileResults.length === 0 && segmentResults.length === 0) {
         mutations.push(
           fetchMutation(api.livekit.ingestWebhookEvent, {
+            processingKey: process.env.KYMA_PROCESSING_WRITE_KEY,
             event: event.event,
             roomName,
             participantIdentity,
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
       for (const file of fileResults) {
         mutations.push(
           fetchMutation(api.livekit.ingestWebhookEvent, {
+            processingKey: process.env.KYMA_PROCESSING_WRITE_KEY,
             event: event.event,
             roomName,
             participantIdentity,
@@ -116,6 +118,7 @@ export async function POST(request: NextRequest) {
       for (const segment of segmentResults) {
         mutations.push(
           fetchMutation(api.livekit.ingestWebhookEvent, {
+            processingKey: process.env.KYMA_PROCESSING_WRITE_KEY,
             event: event.event,
             roomName,
             participantIdentity,
@@ -137,6 +140,7 @@ export async function POST(request: NextRequest) {
     } else {
       mutations.push(
         fetchMutation(api.livekit.ingestWebhookEvent, {
+          processingKey: process.env.KYMA_PROCESSING_WRITE_KEY,
           event: event.event,
           roomName,
           participantIdentity,

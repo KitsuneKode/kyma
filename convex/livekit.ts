@@ -3,6 +3,8 @@ import { v } from 'convex/values'
 import { mutation } from './_generated/server'
 import { transitionSessionSafely } from '../lib/interview/session-machine'
 import type { InterviewSessionState } from '../lib/interview/types'
+import { isDevelopmentMode } from '../lib/runtime-mode'
+import { runtimeEnv } from '../lib/env/runtime'
 
 function mapArtifactStatus(event: string, hasError: boolean) {
   if (hasError) {
@@ -60,6 +62,7 @@ function toIsoFromEpochMs(value?: number) {
 
 export const ingestWebhookEvent = mutation({
   args: {
+    processingKey: v.optional(v.string()),
     event: v.string(),
     roomName: v.optional(v.string()),
     participantIdentity: v.optional(v.string()),
@@ -78,6 +81,16 @@ export const ingestWebhookEvent = mutation({
     details: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const configuredProcessingKey = runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+    const hasValidProcessingKey =
+      Boolean(configuredProcessingKey) &&
+      args.processingKey === configuredProcessingKey
+    const allowDevelopmentBypass =
+      !configuredProcessingKey && isDevelopmentMode(runtimeEnv.NODE_ENV)
+    if (!hasValidProcessingKey && !allowDevelopmentBypass) {
+      return null
+    }
+
     if (!args.roomName) {
       return null
     }
@@ -98,13 +111,34 @@ export const ingestWebhookEvent = mutation({
         ? `${args.event} for ${args.participantIdentity}`
         : `${args.event} for ${args.roomName}`)
 
-    await ctx.db.insert('sessionEvents', {
-      orgId: session.orgId,
-      sessionId: session._id,
-      type: args.event,
-      detail,
-      createdAt: now,
-    })
+    const dedupeKey =
+      args.artifactKey ??
+      `${args.event}:${args.egressId ?? 'na'}:${args.participantIdentity ?? 'na'}`
+    const existingEvent = await ctx.db
+      .query('sessionEvents')
+      .withIndex('by_session_and_dedupe_key', (q) =>
+        q.eq('sessionId', session._id).eq('dedupeKey', dedupeKey)
+      )
+      .first()
+
+    if (!existingEvent) {
+      await ctx.db.insert('sessionEvents', {
+        orgId: session.orgId,
+        sessionId: session._id,
+        type: args.event,
+        detail,
+        source: 'livekit-webhook',
+        dedupeKey,
+        createdAt: now,
+      })
+    }
+
+    if (existingEvent) {
+      return {
+        sessionId: session._id,
+        roomName: session.roomName,
+      }
+    }
 
     if (
       args.event === 'participant_joined' &&

@@ -43,9 +43,12 @@ export async function markAssessmentFailed(
   })
 
   await fetchMutation(api.interviews.appendSessionEvent, {
+    processingKey: PROCESSING_WRITE_KEY,
     sessionId,
     type: 'processing-failed',
     detail: reason,
+    source: 'assessment-pipeline',
+    dedupeKey: `processing-failed:${sessionId}`,
     state: 'failed',
   })
 }
@@ -107,12 +110,15 @@ export async function processInterviewAssessment(
   })
 
   await fetchMutation(api.interviews.appendSessionEvent, {
+    processingKey: PROCESSING_WRITE_KEY,
     sessionId,
     type: 'processing-completed',
     detail:
       report.status === 'manual_review'
         ? 'Assessment report generated and routed to manual review.'
         : 'Assessment report generated successfully.',
+    source: 'assessment-pipeline',
+    dedupeKey: `processing-completed:${sessionId}`,
     state: 'completed',
   })
 

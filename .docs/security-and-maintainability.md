@@ -78,6 +78,8 @@ Until that exists, keep BYOK out of the critical path.
 
 - **HTTP rate limits:** `lib/http/rate-limit.ts` (in-memory fixed window) guards `/api/interviews/bootstrap` and `/api/recruiter/report-chat`. Replace with Redis/Upstash when running multiple Next instances.
 - **Convex throttles:** `appendSessionEvent` and `upsertTranscriptSegment` reject excessive per-session write volume (rolling minute window).
+- **Capability-bound public writes:** candidate browser writes must include a matching `inviteToken` + `sessionId`; server paths use internal mutations.
+- **Webhook idempotency:** webhook event writes are deduped per session via `dedupeKey` to avoid duplicate timeline mutations from retries.
 - **Audit trail:** `auditEvents` table written via `convex/helpers/audit.ts` for review decisions and recruiter notes.
 - **Server model boundary stub:** `lib/providers/resolve-model.ts` — keep all future provider resolution server-side.
 

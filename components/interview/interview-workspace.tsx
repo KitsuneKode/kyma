@@ -220,9 +220,11 @@ export function InterviewWorkspace({
       }
 
       await appendSessionEvent({
+        inviteToken: initialSnapshot.inviteId,
         sessionId: sessionIdRef.current as never,
         type,
         detail,
+        dedupeKey: `${type}:${sessionIdRef.current}:${detail.slice(0, 64)}`,
         state,
       }).catch(() => null)
     }
@@ -467,6 +469,7 @@ export function InterviewWorkspace({
         }))
 
         void upsertTranscriptSegment({
+          inviteToken: initialSnapshot.inviteId,
           sessionId: sessionIdRef.current as never,
           segmentId: segment.id,
           speaker,
@@ -546,9 +549,11 @@ export function InterviewWorkspace({
     }
 
     await appendSessionEvent({
+      inviteToken: initialSnapshot.inviteId,
       sessionId: sessionIdRef.current as never,
       type,
       detail,
+      dedupeKey: `${type}:${sessionIdRef.current}:${detail.slice(0, 64)}`,
       state,
     }).catch(() => null)
   }
@@ -728,6 +733,7 @@ export function InterviewWorkspace({
           },
           body: JSON.stringify({
             sessionId: sessionIdRef.current,
+            inviteToken: initialSnapshot.inviteId,
           }),
         })
 

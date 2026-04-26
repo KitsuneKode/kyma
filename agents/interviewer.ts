@@ -138,9 +138,12 @@ function createSessionEventRecorder(
       }
 
       await fetchMutation(api.interviews.appendSessionEvent, {
+        processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
         sessionId: sessionId as Id<'interviewSessions'>,
         type,
         detail,
+        source: 'livekit-agent',
+        dedupeKey: `${type}:${sessionId}:${detail.slice(0, 64)}`,
       }).catch((error) => {
         logger.warn({
           event: 'agent.session-event.persist.failed',

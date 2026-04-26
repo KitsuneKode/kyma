@@ -258,10 +258,13 @@ export default defineSchema({
     sessionId: v.id('interviewSessions'),
     type: v.string(),
     detail: v.string(),
+    source: v.optional(v.string()),
+    dedupeKey: v.optional(v.string()),
     createdAt: v.string(),
   })
     .index('by_org_id', ['orgId'])
-    .index('by_session', ['sessionId']),
+    .index('by_session', ['sessionId'])
+    .index('by_session_and_dedupe_key', ['sessionId', 'dedupeKey']),
 
   transcriptSegments: defineTable({
     sessionId: v.id('interviewSessions'),

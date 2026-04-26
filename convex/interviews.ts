@@ -1,7 +1,12 @@
 import { ConvexError, v } from 'convex/values'
 
 import type { Doc, Id } from './_generated/dataModel'
-import { mutation, query, type MutationCtx } from './_generated/server'
+import {
+  internalMutation,
+  mutation,
+  query,
+  type MutationCtx,
+} from './_generated/server'
 import { transitionSessionSafely } from '../lib/interview/session-machine'
 import type { InterviewSessionState } from '../lib/interview/types'
 import {
@@ -98,6 +103,36 @@ function resolveTranscriptLookupKey(args: {
   }
 
   return `${args.speaker}:${args.startedAt}`
+}
+
+async function requireInviteSessionWriteAccess(
+  ctx: MutationCtx,
+  sessionId: Id<'interviewSessions'>,
+  inviteToken: string
+) {
+  const invite = await ctx.db
+    .query('candidateInvites')
+    .withIndex('by_invite_token', (q) => q.eq('inviteToken', inviteToken))
+    .first()
+
+  if (!invite) {
+    throw new ConvexError('Invalid candidate invite token.')
+  }
+
+  const session = await ctx.db.get(sessionId)
+  if (!session || `${session.inviteId}` !== `${invite._id}`) {
+    throw new ConvexError('Session write denied for this invite.')
+  }
+
+  if (
+    invite.status === 'expired' ||
+    isInviteExpired(invite.expiresAt) ||
+    ['completed', 'failed'].includes(session.state)
+  ) {
+    throw new ConvexError('Session is no longer writable.')
+  }
+
+  return { invite, session }
 }
 
 function deriveAccessState(
@@ -333,12 +368,7 @@ export const getPublicSessionDetail = query({
       ...access,
       policy,
       roomName: session.roomName,
-      activeDurationMs:
-        (session.activeDurationMs ?? 0) +
-        (session.lastLiveStartedAt &&
-        ['live', 'reconnecting'].includes(session.state)
-          ? durationBetween(session.lastLiveStartedAt, new Date().toISOString())
-          : 0),
+      activeDurationMs: session.activeDurationMs ?? 0,
       events: events
         .toSorted((left, right) =>
           left.createdAt.localeCompare(right.createdAt)
@@ -525,11 +555,38 @@ export const bootstrapPublicSession = mutation({
   },
 })
 
+export const verifyPublicSessionProcessingAccess = query({
+  args: {
+    inviteToken: v.string(),
+    sessionId: v.id('interviewSessions'),
+  },
+  handler: async (ctx, { inviteToken, sessionId }) => {
+    const invite = await ctx.db
+      .query('candidateInvites')
+      .withIndex('by_invite_token', (q) => q.eq('inviteToken', inviteToken))
+      .first()
+    if (!invite) {
+      return false
+    }
+    const session = await ctx.db.get(sessionId)
+    if (!session || `${session.inviteId}` !== `${invite._id}`) {
+      return false
+    }
+    return ['live', 'reconnecting', 'interrupted', 'processing'].includes(
+      session.state
+    )
+  },
+})
+
 export const appendSessionEvent = mutation({
   args: {
+    inviteToken: v.optional(v.string()),
+    processingKey: v.optional(v.string()),
     sessionId: v.id('interviewSessions'),
     type: v.string(),
     detail: v.string(),
+    source: v.optional(v.string()),
+    dedupeKey: v.optional(v.string()),
     state: v.optional(
       v.union(
         v.literal('created'),
@@ -544,8 +601,36 @@ export const appendSessionEvent = mutation({
       )
     ),
   },
-  handler: async (ctx, { sessionId, type, detail, state }) => {
-    const session = await ctx.db.get(sessionId)
+  handler: async (
+    ctx,
+    {
+      inviteToken,
+      processingKey,
+      sessionId,
+      type,
+      detail,
+      source,
+      dedupeKey,
+      state,
+    }
+  ) => {
+    const configuredProcessingKey = runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+    const hasTrustedKey =
+      Boolean(configuredProcessingKey) &&
+      processingKey === configuredProcessingKey
+    const allowDevelopmentBypass =
+      !configuredProcessingKey && isDevelopmentMode(runtimeEnv.NODE_ENV)
+
+    const session =
+      hasTrustedKey || allowDevelopmentBypass
+        ? await ctx.db.get(sessionId)
+        : (
+            await requireInviteSessionWriteAccess(
+              ctx,
+              sessionId,
+              inviteToken ?? ''
+            )
+          ).session
 
     if (!session) {
       throw new ConvexError('Interview session not found.')
@@ -553,11 +638,25 @@ export const appendSessionEvent = mutation({
 
     await assertSessionEventThrottle(ctx, sessionId)
 
-    await ctx.db.insert('sessionEvents', {
+    if (dedupeKey) {
+      const existingEvent = await ctx.db
+        .query('sessionEvents')
+        .withIndex('by_session_and_dedupe_key', (q) =>
+          q.eq('sessionId', sessionId).eq('dedupeKey', dedupeKey)
+        )
+        .first()
+      if (existingEvent) {
+        return existingEvent._id
+      }
+    }
+
+    const eventId = await ctx.db.insert('sessionEvents', {
       orgId: session.orgId,
       sessionId,
       type,
       detail,
+      source: source ?? 'candidate-client',
+      dedupeKey,
       createdAt: new Date().toISOString(),
     })
 
@@ -614,10 +713,183 @@ export const appendSessionEvent = mutation({
         }
       }
     }
+
+    return eventId
+  },
+})
+
+export const appendSessionEventInternal = internalMutation({
+  args: {
+    sessionId: v.id('interviewSessions'),
+    type: v.string(),
+    detail: v.string(),
+    source: v.string(),
+    dedupeKey: v.optional(v.string()),
+    state: v.optional(
+      v.union(
+        v.literal('created'),
+        v.literal('ready'),
+        v.literal('connecting'),
+        v.literal('live'),
+        v.literal('reconnecting'),
+        v.literal('interrupted'),
+        v.literal('processing'),
+        v.literal('completed'),
+        v.literal('failed')
+      )
+    ),
+  },
+  handler: async (
+    ctx,
+    { sessionId, type, detail, source, dedupeKey, state }
+  ) => {
+    const session = await ctx.db.get(sessionId)
+    if (!session) {
+      throw new ConvexError('Interview session not found.')
+    }
+    if (dedupeKey) {
+      const existingEvent = await ctx.db
+        .query('sessionEvents')
+        .withIndex('by_session_and_dedupe_key', (q) =>
+          q.eq('sessionId', sessionId).eq('dedupeKey', dedupeKey)
+        )
+        .first()
+      if (existingEvent) {
+        return existingEvent._id
+      }
+    }
+    const eventId = await ctx.db.insert('sessionEvents', {
+      orgId: session.orgId,
+      sessionId,
+      type,
+      detail,
+      source,
+      dedupeKey,
+      createdAt: new Date().toISOString(),
+    })
+
+    if (state) {
+      const nextState = transitionSessionSafely(
+        session.state as InterviewSessionState,
+        state as InterviewSessionState
+      )
+      const patch: Partial<Doc<'interviewSessions'>> = {
+        state: nextState,
+      }
+      const nowIso = new Date().toISOString()
+
+      if (nextState === 'live' && session.state !== 'live') {
+        patch.lastLiveStartedAt = nowIso
+      }
+
+      if (
+        [
+          'reconnecting',
+          'interrupted',
+          'processing',
+          'completed',
+          'failed',
+        ].includes(nextState) &&
+        session.lastLiveStartedAt
+      ) {
+        patch.activeDurationMs =
+          (session.activeDurationMs ?? 0) +
+          durationBetween(session.lastLiveStartedAt, nowIso)
+        patch.lastLiveStartedAt = undefined
+      }
+
+      if (
+        (nextState === 'processing' || nextState === 'completed') &&
+        !session.endedAt
+      ) {
+        patch.endedAt = nowIso
+      }
+
+      await ctx.db.patch(sessionId, patch)
+
+      if (nextState === 'processing' || nextState === 'completed') {
+        const invite = await ctx.db.get(session.inviteId)
+
+        await ctx.db.patch(session.inviteId, {
+          status: 'completed',
+        })
+
+        if (invite?.eligibilityId) {
+          await ctx.db.patch(invite.eligibilityId, {
+            status: 'submitted',
+          })
+        }
+      }
+    }
+
+    return eventId
   },
 })
 
 export const upsertTranscriptSegment = mutation({
+  args: {
+    inviteToken: v.string(),
+    sessionId: v.id('interviewSessions'),
+    segmentId: v.string(),
+    speaker: v.union(
+      v.literal('agent'),
+      v.literal('candidate'),
+      v.literal('system')
+    ),
+    text: v.string(),
+    status: v.union(v.literal('partial'), v.literal('final')),
+    startedAt: v.string(),
+    endedAt: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireInviteSessionWriteAccess(ctx, args.sessionId, args.inviteToken)
+    await assertTranscriptWriteThrottle(ctx, args.sessionId)
+
+    const sourceSegmentId = resolveTranscriptLookupKey(args)
+    const indexedMatch = await ctx.db
+      .query('transcriptSegments')
+      .withIndex('by_session_and_source_segment_id', (q) =>
+        q.eq('sessionId', args.sessionId).eq('sourceSegmentId', sourceSegmentId)
+      )
+      .first()
+    const match =
+      indexedMatch ??
+      (
+        await ctx.db
+          .query('transcriptSegments')
+          .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
+          .collect()
+      ).find(
+        (segment) =>
+          segment.sourceSegmentId === sourceSegmentId ||
+          (segment.startedAt === args.startedAt &&
+            segment.speaker === args.speaker &&
+            segment.status === 'partial')
+      )
+
+    if (match) {
+      await ctx.db.patch(match._id, {
+        sourceSegmentId,
+        text: args.text,
+        status: args.status,
+        endedAt: args.endedAt,
+      })
+      return match._id
+    }
+
+    return await ctx.db.insert('transcriptSegments', {
+      sessionId: args.sessionId,
+      sourceSegmentId,
+      speaker: args.speaker,
+      text: args.text,
+      status: args.status,
+      startedAt: args.startedAt,
+      endedAt: args.endedAt,
+    })
+  },
+})
+
+export const upsertTranscriptSegmentInternal = internalMutation({
   args: {
     sessionId: v.id('interviewSessions'),
     segmentId: v.string(),

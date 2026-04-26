@@ -50,7 +50,8 @@ Do not add `/recruiter/*` aliases in v1 without updating this ADR.
 
 - **Product state** lives in Convex (sessions, invites, transcript, reports).
 - **Convex bundling:** do not import shared TS via the Next.js `@/` alias from `convex/*`. Use relative imports such as `../lib/...` for pure shared modules.
-- **Public candidate mutations** (`appendSessionEvent`, `upsertTranscriptSegment`) are callable from the browser; HTTP rate limits alone are insufficient. **Convex-side throttles** apply per session (see `convex/interviews.ts`).
+- **Candidate browser writes** (`appendSessionEvent`, `upsertTranscriptSegment`) require both `sessionId` and `inviteToken` capability checks. Throttles still apply per session in Convex.
+- **Server-origin writes** use internal mutations (`appendSessionEventInternal`, `ingestWebhookEvent`) for webhook/agent/processing paths to avoid permissive public write surfaces.
 
 ## Access policy
 

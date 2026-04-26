@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { fetchQuery } from 'convex/nextjs'
 
+import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import {
   markAssessmentFailed,
@@ -15,6 +17,7 @@ import { inngest } from '@/inngest/client'
 
 const bodySchema = z.object({
   sessionId: z.string(),
+  inviteToken: z.string().min(1),
 })
 
 export async function POST(request: NextRequest) {
@@ -26,8 +29,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const json = await request.json()
-    const { sessionId } = bodySchema.parse(json)
+    const { sessionId, inviteToken } = bodySchema.parse(json)
     const typedSessionId = sessionId as Id<'interviewSessions'>
+    const allowed = await fetchQuery(
+      api.interviews.verifyPublicSessionProcessingAccess,
+      {
+        inviteToken,
+        sessionId: typedSessionId,
+      }
+    )
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Session processing access denied for this invite.' },
+        { status: 403 }
+      )
+    }
 
     await markAssessmentProcessing(typedSessionId)
 
