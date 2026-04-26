@@ -45,6 +45,7 @@ Only required when testing recruiter/admin auth surfaces:
 
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
+- `CLERK_WEBHOOK_SIGNING_SECRET` (required when using `/api/webhooks/clerk`)
 - one of:
   - `CLERK_FRONTEND_API_URL`
   - `CLERK_JWT_ISSUER_DOMAIN`

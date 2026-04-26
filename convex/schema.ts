@@ -90,9 +90,42 @@ export default defineSchema({
         stt: v.optional(v.string()),
         llm: v.optional(v.string()),
         tts: v.optional(v.string()),
+        reviewChat: v.optional(v.string()),
       })
     ),
   }).index('by_status', ['status']),
+
+  assessmentTemplateVersions: defineTable({
+    templateId: v.id('assessmentTemplates'),
+    rubricVersion: v.string(),
+    savedAt: v.number(),
+    savedBy: v.string(),
+    systemPrompt: v.optional(v.string()),
+    childPersonaPrompt: v.optional(v.string()),
+    wrapUpPrompt: v.optional(v.string()),
+    rubricConfig: v.optional(
+      v.object({
+        dimensions: v.array(
+          v.object({
+            name: v.string(),
+            weight: v.number(),
+            isHardGate: v.boolean(),
+            keywords: v.optional(v.array(v.string())),
+          })
+        ),
+      })
+    ),
+    modelOverrides: v.optional(
+      v.object({
+        stt: v.optional(v.string()),
+        llm: v.optional(v.string()),
+        tts: v.optional(v.string()),
+        reviewChat: v.optional(v.string()),
+      })
+    ),
+  })
+    .index('by_template', ['templateId'])
+    .index('by_template_and_saved_at', ['templateId', 'savedAt']),
 
   screeningBatches: defineTable({
     name: v.string(),

@@ -650,11 +650,13 @@ export const updateAssessmentTemplate = mutation({
         stt: v.optional(v.string()),
         llm: v.optional(v.string()),
         tts: v.optional(v.string()),
+        reviewChat: v.optional(v.string()),
       })
     ),
   },
   handler: async (ctx, args) => {
     await requireAdminIdentity(ctx)
+    const actor = (await getRecruiterActorId(ctx)) ?? 'admin'
     const template = await ctx.db.get(args.templateId)
     if (!template) {
       throw new ConvexError('Template not found.')
@@ -663,15 +665,52 @@ export const updateAssessmentTemplate = mutation({
       template.rubricVersion.replace(/[^\d]/g, ''),
       10
     )
+    const nextRubricVersion = `v${Number.isFinite(nextVersion) ? nextVersion + 1 : 2}`
+
     await ctx.db.patch(template._id, {
       systemPrompt: args.systemPrompt,
       childPersonaPrompt: args.childPersonaPrompt,
       wrapUpPrompt: args.wrapUpPrompt,
       rubricConfig: args.rubricConfig,
       modelOverrides: args.modelOverrides,
-      rubricVersion: `v${Number.isFinite(nextVersion) ? nextVersion + 1 : 2}`,
+      rubricVersion: nextRubricVersion,
+    })
+
+    await ctx.db.insert('assessmentTemplateVersions', {
+      templateId: template._id,
+      rubricVersion: nextRubricVersion,
+      savedAt: Date.now(),
+      savedBy: actor,
+      systemPrompt: args.systemPrompt,
+      childPersonaPrompt: args.childPersonaPrompt,
+      wrapUpPrompt: args.wrapUpPrompt,
+      rubricConfig: args.rubricConfig,
+      modelOverrides: args.modelOverrides,
     })
     return template._id
+  },
+})
+
+export const listTemplateVersions = query({
+  args: {
+    templateId: v.id('assessmentTemplates'),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminIdentity(ctx)
+    const versions = await ctx.db
+      .query('assessmentTemplateVersions')
+      .withIndex('by_template_and_saved_at', (q) =>
+        q.eq('templateId', args.templateId)
+      )
+      .order('desc')
+      .take(50)
+
+    return versions.map((version) => ({
+      id: version._id,
+      rubricVersion: version.rubricVersion,
+      savedAt: version.savedAt,
+      savedBy: version.savedBy,
+    }))
   },
 })
 

@@ -5,6 +5,7 @@ export const serverSchema = {
     .enum(['development', 'test', 'production'])
     .default('development'),
   CLERK_SECRET_KEY: z.string().min(1).optional(),
+  CLERK_WEBHOOK_SIGNING_SECRET: z.string().min(1).optional(),
   CLERK_FRONTEND_API_URL: z.string().url().optional(),
   CLERK_JWT_ISSUER_DOMAIN: z.string().url().optional(),
   LIVEKIT_API_KEY: z.string().min(1).optional(),
