@@ -4,8 +4,8 @@ import { NextResponse } from 'next/server'
 import { roleFromSessionClaims } from '@/lib/auth/clerk-role'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
-const isAdminRoute = createRouteMatcher(['/admin(.*)'])
-const isDashboardRoute = createRouteMatcher(['/dashboard(.*)'])
+const isRecruiterRoute = createRouteMatcher(['/recruiter(.*)'])
+const isCandidateRoute = createRouteMatcher(['/candidate(.*)'])
 const isAppShellRoute = createRouteMatcher([
   '/video-demo(.*)',
   '/write-up(.*)',
@@ -29,8 +29,8 @@ export default hasClerk
       )
       const isProtectedRoute =
         !isPublicRoute(req) ||
-        isAdminRoute(req) ||
-        isDashboardRoute(req) ||
+        isRecruiterRoute(req) ||
+        isCandidateRoute(req) ||
         isAppShellRoute(req)
 
       if (isProtectedRoute) {
@@ -38,25 +38,25 @@ export default hasClerk
       }
 
       if (userId && isAuthRoute(req)) {
-        if (role === 'admin' || role === 'recruiter') {
-          return NextResponse.redirect(new URL('/admin', req.url))
+        if (role === 'recruiter' || role === 'admin') {
+          return NextResponse.redirect(new URL('/recruiter', req.url))
         }
         if (role === 'candidate') {
-          return NextResponse.redirect(new URL('/dashboard', req.url))
+          return NextResponse.redirect(new URL('/candidate', req.url))
         }
         return NextResponse.redirect(new URL('/onboarding', req.url))
       }
 
-      if (isAdminRoute(req) && role !== 'admin' && role !== 'recruiter') {
-        return NextResponse.redirect(new URL('/dashboard', req.url))
+      if (isRecruiterRoute(req) && role !== 'recruiter') {
+        return NextResponse.redirect(new URL('/candidate', req.url))
       }
 
-      if (isDashboardRoute(req) && userId) {
+      if (isCandidateRoute(req) && userId) {
         if (role == null) {
           return NextResponse.redirect(new URL('/onboarding', req.url))
         }
         if (role === 'recruiter') {
-          return NextResponse.redirect(new URL('/admin', req.url))
+          return NextResponse.redirect(new URL('/recruiter', req.url))
         }
         if (role !== 'candidate' && role !== 'admin') {
           return NextResponse.redirect(new URL('/onboarding', req.url))

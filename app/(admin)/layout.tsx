@@ -10,7 +10,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
-import { requireAdminOrRecruiterPageAccess } from '@/lib/auth/access'
+import { requireRecruiterPageAccess } from '@/lib/auth/access'
 
 export default async function AdminLayout({
   children,
@@ -18,7 +18,7 @@ export default async function AdminLayout({
   children: ReactNode
 }) {
   await connection()
-  await requireAdminOrRecruiterPageAccess()
+  await requireRecruiterPageAccess()
   const clerkEnabled = hasClerkServerCredentials()
 
   return (
@@ -30,7 +30,7 @@ export default async function AdminLayout({
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
             <span className="text-sm font-medium text-muted-foreground">
-              Admin Workspace
+              Recruiter Workspace
             </span>
           </div>
         </header>

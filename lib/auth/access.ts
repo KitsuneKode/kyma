@@ -34,7 +34,7 @@ export async function requireAdminOrRecruiterPageAccess() {
     redirect('/onboarding')
   }
   if (access.role !== 'admin' && access.role !== 'recruiter') {
-    redirect('/dashboard')
+    redirect('/candidate')
   }
   return access
 }
@@ -48,7 +48,7 @@ export async function requireDashboardPageAccess() {
     redirect('/onboarding')
   }
   if (access.role === 'recruiter') {
-    redirect('/admin')
+    redirect('/recruiter')
   }
   if (access.role !== 'candidate' && access.role !== 'admin') {
     redirect('/onboarding')

@@ -1,7 +1,7 @@
 import { SignUp } from '@clerk/nextjs'
 import { redirect } from 'next/navigation'
 
-import { getUserAppAccess } from '@/lib/auth/access'
+import { getPostSignInPath, getUserAppAccess } from '@/lib/auth/access'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 export default async function SignUpPage() {
@@ -11,7 +11,7 @@ export default async function SignUpPage() {
 
   const access = await getUserAppAccess()
   if (access.isSignedIn) {
-    redirect('/admin')
+    redirect(getPostSignInPath(access))
   }
 
   return <SignUp />
