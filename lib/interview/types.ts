@@ -117,6 +117,7 @@ export type InterviewSessionSnapshot = {
   accessMessage?: string
   policy: InterviewPolicy
   roomName?: string
+  activeDurationMs?: number
   events: SessionEvent[]
   preflight: PreflightStep[]
   transcript: TranscriptSegment[]

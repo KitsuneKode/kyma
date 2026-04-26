@@ -1,7 +1,14 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+import { requireDashboardPageAccess } from '@/lib/auth/access'
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
+  await requireDashboardPageAccess()
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-8">
       <nav className="mb-6 flex gap-4 text-sm">

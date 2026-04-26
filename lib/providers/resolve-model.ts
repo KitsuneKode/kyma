@@ -1,4 +1,5 @@
 import { serverEnv } from '@/lib/env/server'
+import { createDecipheriv } from 'node:crypto'
 
 export type ModelKind = 'stt' | 'llm' | 'tts' | 'reviewChat'
 
@@ -46,4 +47,40 @@ export function decodeWorkspaceKey(encryptedKey: string) {
     )
   }
   return encryptedKey
+}
+
+function parseHexKeyBytes(hex: string) {
+  if (!/^[a-f0-9]{64}$/i.test(hex)) {
+    throw new Error(
+      'KYMA_ENCRYPTION_KEY must be a 64-char hex string (openssl rand -hex 32).'
+    )
+  }
+  return Buffer.from(hex, 'hex')
+}
+
+export function decryptWorkspaceKey(args: {
+  encryptedKey: string
+  iv: string
+}) {
+  const key = serverEnv.KYMA_ENCRYPTION_KEY?.trim()
+  if (!key) {
+    throw new Error(
+      'KYMA_ENCRYPTION_KEY is required for provider key resolution.'
+    )
+  }
+  const keyBytes = parseHexKeyBytes(key)
+  const ivBytes = Buffer.from(args.iv, 'base64')
+  const encryptedBytes = Buffer.from(args.encryptedKey, 'base64')
+  if (encryptedBytes.length < 16) {
+    throw new Error('Encrypted provider key payload is invalid.')
+  }
+  const authTag = encryptedBytes.subarray(encryptedBytes.length - 16)
+  const ciphertext = encryptedBytes.subarray(0, encryptedBytes.length - 16)
+  const decipher = createDecipheriv('aes-256-gcm', keyBytes, ivBytes)
+  decipher.setAuthTag(authTag)
+  const decrypted = Buffer.concat([
+    decipher.update(ciphertext),
+    decipher.final(),
+  ])
+  return decrypted.toString('utf8')
 }

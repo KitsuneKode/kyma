@@ -1,5 +1,6 @@
 import { ConvexError, v } from 'convex/values'
 
+import { api } from './_generated/api'
 import { action, mutation, query } from './_generated/server'
 import {
   getRecruiterActorId,
@@ -8,6 +9,7 @@ import {
 } from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
 import { ensureDefaultTemplate } from './helpers/templates'
+import { decryptProviderKey, encryptProviderKey } from './helpers/encryption'
 import { runtimeEnv } from '../lib/env/runtime'
 
 function slugify(value: string) {
@@ -403,12 +405,12 @@ export const addProviderKey = mutation({
         : `${now}`
     const maskedKeyTail = args.key.slice(-4)
     const settings = await ctx.db.query('workspaceSettings').first()
-    const encryptedKey = args.key
+    const encrypted = await encryptProviderKey(args.key)
     const entry = {
       keyId,
       provider: args.provider,
-      encryptedKey,
-      iv: 'local-dev',
+      encryptedKey: encrypted.encryptedKey,
+      iv: encrypted.iv,
       label: args.label,
       addedAt: now,
       addedBy: actor,
@@ -486,13 +488,34 @@ export const testProviderConnection = action({
   args: {
     provider: v.string(),
   },
-  handler: async (_ctx, _args) => {
+  handler: async (ctx, args) => {
     if (!runtimeEnv.KYMA_ENCRYPTION_KEY?.trim()) {
       throw new ConvexError(
         'KYMA_ENCRYPTION_KEY is required to test provider keys.'
       )
     }
+    const settings = await ctx.runQuery(api.admin.getWorkspaceSettingsRaw, {})
+    const candidate = settings?.providerKeys?.find(
+      (item) => item.provider === args.provider
+    )
+    if (!candidate) {
+      throw new ConvexError(
+        `No key configured for provider "${args.provider}".`
+      )
+    }
+    await decryptProviderKey({
+      encryptedKey: candidate.encryptedKey,
+      iv: candidate.iv,
+    })
     return { ok: true }
+  },
+})
+
+export const getWorkspaceSettingsRaw = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdminIdentity(ctx)
+    return await ctx.db.query('workspaceSettings').first()
   },
 })
 

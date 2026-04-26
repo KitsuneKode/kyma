@@ -136,6 +136,20 @@ function deriveAccessState(
   }
 }
 
+function durationBetween(start?: string, end?: string) {
+  if (!start || !end) return 0
+  const startMs = Date.parse(start)
+  const endMs = Date.parse(end)
+  if (
+    !Number.isFinite(startMs) ||
+    !Number.isFinite(endMs) ||
+    endMs <= startMs
+  ) {
+    return 0
+  }
+  return endMs - startMs
+}
+
 async function ensureInvite(
   ctx: MutationCtx,
   inviteToken: string
@@ -244,6 +258,7 @@ export const getPublicSessionDetail = query({
           new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
         ),
         roomName: undefined,
+        activeDurationMs: 0,
         events: [],
         transcript: [],
         recordings: [],
@@ -268,6 +283,7 @@ export const getPublicSessionDetail = query({
         ...access,
         policy,
         roomName: undefined,
+        activeDurationMs: 0,
         events: [],
         transcript: [],
         recordings: [],
@@ -284,6 +300,7 @@ export const getPublicSessionDetail = query({
         ...access,
         policy,
         roomName: undefined,
+        activeDurationMs: session.activeDurationMs ?? 0,
         events: [],
         transcript: [],
         recordings: [],
@@ -314,6 +331,12 @@ export const getPublicSessionDetail = query({
       ...access,
       policy,
       roomName: session.roomName,
+      activeDurationMs:
+        (session.activeDurationMs ?? 0) +
+        (session.lastLiveStartedAt &&
+        ['live', 'reconnecting'].includes(session.state)
+          ? durationBetween(session.lastLiveStartedAt, new Date().toISOString())
+          : 0),
       events: events
         .toSorted((left, right) =>
           left.createdAt.localeCompare(right.createdAt)
@@ -410,6 +433,14 @@ export const bootstrapPublicSession = mutation({
     const template = await ctx.db.get(invite.templateId)
 
     if (existingSession && existingSession.roomName) {
+      if (
+        existingSession.participantName &&
+        existingSession.participantName !== participantName
+      ) {
+        throw new ConvexError(
+          'This invite is already attached to another candidate participant.'
+        )
+      }
       if (existingSession.state === 'interrupted') {
         const reopenedRoomName = `interview-${inviteToken}-${Date.now()}`
         const reopenedAt = new Date().toISOString()
@@ -417,7 +448,7 @@ export const bootstrapPublicSession = mutation({
         await ctx.db.patch(existingSession._id, {
           state: 'connecting',
           roomName: reopenedRoomName,
-          startedAt: reopenedAt,
+          reconnectCount: (existingSession.reconnectCount ?? 0) + 1,
           endedAt: undefined,
         })
 
@@ -452,7 +483,10 @@ export const bootstrapPublicSession = mutation({
       state: 'connecting',
       provider: 'livekit',
       roomName,
+      participantName,
       startedAt,
+      reconnectCount: 0,
+      activeDurationMs: 0,
     })
 
     await ctx.db.patch(invite._id, {
@@ -529,12 +563,33 @@ export const appendSessionEvent = mutation({
       const patch: Partial<Doc<'interviewSessions'>> = {
         state: nextState,
       }
+      const nowIso = new Date().toISOString()
+
+      if (nextState === 'live' && session.state !== 'live') {
+        patch.lastLiveStartedAt = nowIso
+      }
+
+      if (
+        [
+          'reconnecting',
+          'interrupted',
+          'processing',
+          'completed',
+          'failed',
+        ].includes(nextState) &&
+        session.lastLiveStartedAt
+      ) {
+        patch.activeDurationMs =
+          (session.activeDurationMs ?? 0) +
+          durationBetween(session.lastLiveStartedAt, nowIso)
+        patch.lastLiveStartedAt = undefined
+      }
 
       if (
         (nextState === 'processing' || nextState === 'completed') &&
         !session.endedAt
       ) {
-        patch.endedAt = new Date().toISOString()
+        patch.endedAt = nowIso
       }
 
       await ctx.db.patch(sessionId, patch)

@@ -69,6 +69,16 @@ export async function POST(request: NextRequest) {
       { status: 403 }
     )
   }
+  if (
+    snapshot.candidateName &&
+    snapshot.candidateName !== 'Candidate' &&
+    snapshot.candidateName !== participantName
+  ) {
+    return NextResponse.json(
+      { error: 'Invite participant identity does not match this session.' },
+      { status: 403 }
+    )
+  }
 
   let roomName = snapshot.roomName
   let sessionId = snapshot.sessionId ? `${snapshot.sessionId}` : undefined

@@ -8,8 +8,14 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
+import { requireAdminOrRecruiterPageAccess } from '@/lib/auth/access'
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
+  await requireAdminOrRecruiterPageAccess()
   const clerkEnabled = hasClerkServerCredentials()
 
   return (

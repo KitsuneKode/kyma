@@ -5,6 +5,27 @@
 
 ---
 
+## Delivery Tracker (Agent A scope)
+
+Legend: `Implemented` = code merged, `Verified` = acceptance validated, `Remaining` = work left.
+
+| Item                                        | Status                         | Notes                                                                                           |
+| ------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| 0.1 RBAC in Convex functions                | Implemented / Partial Verified | Guards are in place; still run runtime role-denial checks in staging.                           |
+| 0.2 LiveKit token endpoint auth             | Implemented / Partial Verified | Invite validation + room scoping added; rejoin/identity flows still need manual validation.     |
+| 0.3 Processing key enforcement              | Implemented / Verified         | Production write-key guard and env docs added.                                                  |
+| 0.4 Convex rate limiter migration           | Implemented / Verified         | In-memory limiter removed, Convex limiter wired in routes/functions.                            |
+| 2.1 Role model & Clerk sync                 | Implemented / Partial Verified | Clerk-claim helper + page guards added; finalize webhook sync and role provisioning runbook.    |
+| 2.2 Middleware role-based routing           | Implemented / Partial Verified | Proxy + page-level guards are aligned; complete browser-role matrix test.                       |
+| 2.3 Candidate dashboard data routes         | Implemented / Partial Verified | Routes and Convex queries exist; needs end-to-end seeded data check.                            |
+| 2.7 Error boundaries                        | Implemented / Verified         | Added route-level and component boundaries for admin/interview/recruiter modules.               |
+| 3.1 Workspace settings + model resolution   | Implemented / Partial Verified | AES-256-GCM encryption/decryption is wired; still requires live provider validation in staging. |
+| 3.2 Admin settings wiring                   | Implemented / Partial Verified | Add/remove key + defaults are wired; provider test flow requires real integrations.             |
+| 3.3 Prompt/rubric template system           | Partial                        | Schema and basic routes exist; full editor workflow + saves need completion.                    |
+| Session continuity hardening (rejoin/timer) | Implemented / Partial Verified | Active duration accumulation + participant binding added; needs reconnect scenario QA.          |
+
+---
+
 ## Phase 0: Security & Correctness (P0 — Do First)
 
 These are exploitable today. No feature work until these are closed.
