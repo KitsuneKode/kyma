@@ -14,9 +14,6 @@ import {
 } from '@/lib/recruiter/report-chat'
 import { reportChatBodySchema } from '@/lib/validation/interview-api'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
 export async function POST(request: NextRequest) {
   try {
     const token = await getServerConvexAuthToken()

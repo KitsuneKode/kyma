@@ -9,9 +9,6 @@ import {
 } from '@/lib/interview/diagnostics'
 import { getLivekitWebhookSigningCredentials } from '@/lib/livekit/config'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
 function toNumber(value?: bigint) {
   if (value === undefined) {
     return undefined

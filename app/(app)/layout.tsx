@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { connection } from 'next/server'
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
 import { auth } from '@clerk/nextjs/server'
 
@@ -8,6 +9,7 @@ import { roleFromSessionClaims } from '@/lib/auth/clerk-role'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
+  await connection()
   const clerkEnabled = hasClerkServerCredentials()
   const authState = clerkEnabled ? await auth() : null
   const role = roleFromSessionClaims(

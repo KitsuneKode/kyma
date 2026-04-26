@@ -55,3 +55,48 @@ export async function requireDashboardPageAccess() {
   }
   return access
 }
+
+export function getPostSignInPath(access: UserAppAccess): string {
+  if (
+    !access.isSignedIn ||
+    access.role === 'anonymous' ||
+    access.role === 'unassigned'
+  ) {
+    return '/onboarding'
+  }
+  if (access.role === 'recruiter') {
+    return '/recruiter'
+  }
+  return '/candidate'
+}
+
+export async function requireRecruiterPageAccess() {
+  const access = await getUserAppAccess()
+  if (!access.isSignedIn) {
+    redirect('/sign-in')
+  }
+  if (access.role === 'unassigned') {
+    redirect('/onboarding')
+  }
+  if (access.role !== 'recruiter') {
+    redirect('/candidate')
+  }
+  return access
+}
+
+export async function requireCandidatePageAccess() {
+  const access = await getUserAppAccess()
+  if (!access.isSignedIn) {
+    redirect('/sign-in')
+  }
+  if (access.role === 'unassigned') {
+    redirect('/onboarding')
+  }
+  if (access.role === 'recruiter') {
+    redirect('/recruiter')
+  }
+  if (access.role !== 'candidate' && access.role !== 'admin') {
+    redirect('/onboarding')
+  }
+  return access
+}

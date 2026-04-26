@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { connection } from 'next/server'
 
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { AppSidebar } from '@/components/admin/app-sidebar'
@@ -16,6 +17,7 @@ export default async function AdminLayout({
 }: {
   children: ReactNode
 }) {
+  await connection()
   await requireAdminOrRecruiterPageAccess()
   const clerkEnabled = hasClerkServerCredentials()
 

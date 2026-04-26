@@ -13,9 +13,6 @@ import {
 } from '@/lib/interview/diagnostics'
 import { inngest } from '@/inngest/client'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
 const bodySchema = z.object({
   sessionId: z.string(),
 })

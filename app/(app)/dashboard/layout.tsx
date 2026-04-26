@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { connection } from 'next/server'
 
 import { requireDashboardPageAccess } from '@/lib/auth/access'
 
@@ -8,6 +9,7 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode
 }) {
+  await connection()
   await requireDashboardPageAccess()
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-8">

@@ -9,9 +9,6 @@ import {
 import { createParticipantToken } from '@/lib/livekit/token'
 import { bootstrapBodySchema } from '@/lib/validation/interview-api'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
 export async function POST(request: NextRequest) {
   const requestId = createRequestId('bootstrap')
   const logger = createDiagnosticLogger('bootstrap-route', {

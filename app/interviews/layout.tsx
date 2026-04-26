@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { connection } from 'next/server'
 
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { CandidateSidebar } from '@/components/candidate/app-sidebar'
@@ -9,7 +10,12 @@ import {
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 
-export default function CandidateLayout({ children }: { children: ReactNode }) {
+export default async function CandidateLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
+  await connection()
   const clerkEnabled = hasClerkServerCredentials()
 
   return (

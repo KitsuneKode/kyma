@@ -1,9 +1,13 @@
 import Link from 'next/link'
+import { cacheLife } from 'next/cache'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/marketing/logo'
 import { IconSearch } from '@tabler/icons-react'
 
-export default function NotFound() {
+export default async function NotFound() {
+  'use cache'
+  cacheLife('hours')
+
   return (
     <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#0a0a0a]">
       <div className="pointer-events-none absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl" />

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Outfit, Lora, IBM_Plex_Mono } from 'next/font/google'
+import { Suspense } from 'react'
 import { Toaster } from 'sonner'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { Providers } from './providers'
@@ -77,20 +78,22 @@ export default function RootLayout({
       <body
         className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} font-sans antialiased`}
       >
-        <Providers clerkEnabled={clerkEnabled}>
-          {children}
-          <Toaster
-            richColors
-            position="top-right"
-            toastOptions={{
-              style: {
-                background: '#121212',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'hsl(var(--foreground))',
-              },
-            }}
-          />
-        </Providers>
+        <Suspense fallback={null}>
+          <Providers clerkEnabled={clerkEnabled}>
+            {children}
+            <Toaster
+              richColors
+              position="top-right"
+              toastOptions={{
+                style: {
+                  background: '#121212',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'hsl(var(--foreground))',
+                },
+              }}
+            />
+          </Providers>
+        </Suspense>
       </body>
     </html>
   )

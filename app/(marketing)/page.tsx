@@ -6,9 +6,13 @@ import { MarketingFinalCta } from '@/components/marketing/sections/final-cta'
 import { PremiumFooter } from '@/components/marketing/footer-premium'
 import { HeroHeader } from '@/components/marketing/header'
 import { MobileCtaDock } from '@/components/marketing/mobile-cta-dock'
-export const revalidate = 3600
+import { cacheLife, cacheTag } from 'next/cache'
 
-export default function Page() {
+export default async function Page() {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('marketing')
+
   return (
     <>
       <HeroHeader />

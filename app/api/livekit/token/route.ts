@@ -9,9 +9,6 @@ import {
 } from '@/lib/interview/diagnostics'
 import { createParticipantToken } from '@/lib/livekit/token'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
 const tokenRequestSchema = z.object({
   inviteToken: z.string().min(1),
   participantName: z.string().min(1),
