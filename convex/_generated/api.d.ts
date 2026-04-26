@@ -20,6 +20,7 @@ import type * as interviews from "../interviews.js";
 import type * as livekit from "../livekit.js";
 import type * as orgs from "../orgs.js";
 import type * as rateLimiter from "../rateLimiter.js";
+import type * as readiness from "../readiness.js";
 import type * as recruiter from "../recruiter.js";
 import type * as users from "../users.js";
 
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   livekit: typeof livekit;
   orgs: typeof orgs;
   rateLimiter: typeof rateLimiter;
+  readiness: typeof readiness;
   recruiter: typeof recruiter;
   users: typeof users;
 }>;

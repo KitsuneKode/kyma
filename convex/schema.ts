@@ -285,6 +285,22 @@ export default defineSchema({
       'sourceSegmentId',
     ]),
 
+  candidateReadinessRuns: defineTable({
+    candidateUserId: v.id('users'),
+    ranAt: v.string(),
+    checks: v.object({
+      browserSupported: v.boolean(),
+      audioInputAvailable: v.boolean(),
+      videoInputAvailable: v.boolean(),
+      networkOnline: v.boolean(),
+      secureContext: v.boolean(),
+      mediaPermissionsGranted: v.boolean(),
+    }),
+    notes: v.optional(v.string()),
+  })
+    .index('by_candidate_user', ['candidateUserId'])
+    .index('by_candidate_user_and_ran_at', ['candidateUserId', 'ranAt']),
+
   recordingArtifacts: defineTable({
     orgId: v.string(),
     sessionId: v.id('interviewSessions'),
