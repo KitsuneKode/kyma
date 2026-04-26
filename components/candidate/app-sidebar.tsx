@@ -28,26 +28,26 @@ import {
 
 const NAV_ITEMS = [
   {
-    title: 'Dashboard',
-    url: '/interviews',
+    title: 'Overview',
+    url: '/candidate',
     icon: IconLayoutDashboard,
     exact: true,
   },
   {
-    title: 'Upcoming',
-    url: '#upcoming',
+    title: 'Interviews',
+    url: '/candidate/interviews',
     icon: IconVideo,
     exact: false,
   },
   {
-    title: 'History',
-    url: '#history',
+    title: 'Readiness',
+    url: '/candidate/readiness',
     icon: IconHistory,
     exact: false,
   },
   {
-    title: 'Preferences',
-    url: '#preferences',
+    title: 'Profile',
+    url: '/candidate/profile',
     icon: IconSettings,
     exact: false,
   },
@@ -80,7 +80,7 @@ export function CandidateSidebar({
               {NAV_ITEMS.map((item) => {
                 const isActive = item.exact
                   ? pathname === item.url
-                  : pathname?.startsWith(item.url) && item.url !== '#'
+                  : pathname?.startsWith(item.url)
 
                 return (
                   <SidebarMenuItem key={item.title}>

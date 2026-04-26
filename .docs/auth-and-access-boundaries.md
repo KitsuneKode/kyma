@@ -12,16 +12,23 @@
   - `/sign-up/[[...sign-up]]`
 - `(app)` group owns authenticated operator experiences:
   - `/admin*`
+  - `/candidate*`
   - `/video-demo`
   - `/write-up`
 - Public candidate flow:
+  - `/interviews` legacy surface is hard-cut (404)
   - `/interviews/[inviteId]`
 
 ## Middleware policy
 
-- Protect `/admin*`, `/video-demo`, and `/write-up` when Clerk credentials are present.
-- Redirect signed-in users away from auth pages to `/admin`.
+- Protect `/admin*`, `/candidate*`, `/video-demo`, and `/write-up` when Clerk credentials are present.
+- Redirect signed-in users away from auth pages via persona routing.
 - Never require Clerk login for `/interviews/[inviteId]`.
+
+## Candidate portal boundary
+
+- `/candidate/*` is candidate-only by default.
+- Recruiters and admins must use explicit impersonation tooling for candidate-view workflows, not direct navigation to candidate routes.
 
 ## Role-ready seam
 
