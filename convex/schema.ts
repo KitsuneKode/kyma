@@ -301,6 +301,15 @@ export default defineSchema({
     .index('by_candidate_user', ['candidateUserId'])
     .index('by_candidate_user_and_ran_at', ['candidateUserId', 'ranAt']),
 
+  candidatePreferences: defineTable({
+    candidateUserId: v.id('users'),
+    preferredInterviewLanguage: v.string(),
+    preferredInterviewLengthMinutes: v.number(),
+    timezone: v.string(),
+    accessibilityNotes: v.optional(v.string()),
+    updatedAt: v.string(),
+  }).index('by_candidate_user', ['candidateUserId']),
+
   recordingArtifacts: defineTable({
     orgId: v.string(),
     sessionId: v.id('interviewSessions'),

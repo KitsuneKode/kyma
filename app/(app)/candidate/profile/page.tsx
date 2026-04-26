@@ -1,10 +1,19 @@
-export default function CandidateProfilePage() {
+import { auth } from '@clerk/nextjs/server'
+
+import { CandidateProfilePanel } from '@/components/candidate/profile-panel'
+
+export default async function CandidateProfilePage() {
+  const { sessionClaims } = await auth()
+  const claims = sessionClaims as
+    | { email?: string | null; name?: string | null }
+    | undefined
+
   return (
-    <section className="space-y-3">
-      <h1 className="text-2xl font-semibold">Profile settings</h1>
-      <p className="text-sm text-muted-foreground">
-        Profile editing will be available in a follow-up pass.
-      </p>
-    </section>
+    <CandidateProfilePanel
+      identity={{
+        name: claims?.name ?? 'Candidate',
+        email: claims?.email ?? 'No email available',
+      }}
+    />
   )
 }

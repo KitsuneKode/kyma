@@ -19,6 +19,7 @@ import type * as helpers_templates from "../helpers/templates.js";
 import type * as interviews from "../interviews.js";
 import type * as livekit from "../livekit.js";
 import type * as orgs from "../orgs.js";
+import type * as profile from "../profile.js";
 import type * as rateLimiter from "../rateLimiter.js";
 import type * as readiness from "../readiness.js";
 import type * as recruiter from "../recruiter.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   interviews: typeof interviews;
   livekit: typeof livekit;
   orgs: typeof orgs;
+  profile: typeof profile;
   rateLimiter: typeof rateLimiter;
   readiness: typeof readiness;
   recruiter: typeof recruiter;
