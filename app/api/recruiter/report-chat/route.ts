@@ -12,6 +12,7 @@ import {
   answerRecruiterQuestion,
   GROUNDING_VERSION,
 } from '@/lib/recruiter/report-chat'
+import { requireOrgEntitlement } from '@/lib/auth/entitlements'
 import { reportChatBodySchema } from '@/lib/validation/interview-api'
 
 export async function POST(request: NextRequest) {
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
     const body = reportChatBodySchema.parse(await request.json())
     const sessionId = body.sessionId as Id<'interviewSessions'>
     const reportId = body.reportId as Id<'assessmentReports'> | undefined
+    await requireOrgEntitlement('recruiter:ai-report-chat')
 
     await fetchAction(api.rateLimiter.checkLimit, {
       name: 'recruiterChat',

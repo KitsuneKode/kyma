@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { connection } from 'next/server'
+import { OrganizationSwitcher } from '@clerk/nextjs'
 
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { AppSidebar } from '@/components/admin/app-sidebar'
@@ -32,6 +33,12 @@ export default async function AdminLayout({
             <span className="text-sm font-medium text-muted-foreground">
               Recruiter Workspace
             </span>
+          </div>
+          <div className="ml-auto">
+            <OrganizationSwitcher
+              hidePersonal
+              afterSelectOrganizationUrl="/recruiter"
+            />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto bg-muted/10">

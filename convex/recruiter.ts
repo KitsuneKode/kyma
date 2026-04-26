@@ -2,7 +2,11 @@ import { v } from 'convex/values'
 
 import type { Id } from './_generated/dataModel'
 import { mutation, query, type QueryCtx } from './_generated/server'
-import { getRecruiterActorId, requireAdminIdentity } from './helpers/auth'
+import {
+  getRecruiterActorId,
+  requireAdminIdentity,
+  requireOrgId,
+} from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
 import { resolveInterviewPolicyFromInvite } from './helpers/interviewPolicy'
 import { runtimeEnv } from '../lib/env/runtime'
@@ -84,8 +88,12 @@ export const listReviewCandidates = query({
   args: {},
   handler: async (ctx) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
 
-    const sessions = await ctx.db.query('interviewSessions').collect()
+    const sessions = await ctx.db
+      .query('interviewSessions')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .collect()
     const sortedSessions = [...sessions].toSorted((left, right) =>
       (right.startedAt ?? '').localeCompare(left.startedAt ?? '')
     )
@@ -134,9 +142,10 @@ export const getSessionProcessingDetail = query({
   },
   handler: async (ctx, { sessionId }) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
     const session = await ctx.db.get(sessionId)
 
-    if (!session) {
+    if (!session || session.orgId !== orgId) {
       return null
     }
 
@@ -204,10 +213,11 @@ export const getCandidateReviewDetail = query({
   },
   handler: async (ctx, { sessionId }) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
 
     const session = await ctx.db.get(sessionId)
 
-    if (!session) {
+    if (!session || session.orgId !== orgId) {
       return null
     }
 
@@ -446,6 +456,7 @@ export const saveAssessmentReport = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
     await rateLimiter.limit(ctx, 'reportGeneration', {
       key: `${args.sessionId}`,
       throws: true,
@@ -470,6 +481,7 @@ export const saveAssessmentReport = mutation({
       .first()
 
     const reportFields = {
+      orgId,
       sessionId: args.sessionId,
       status: args.status,
       overallRecommendation: args.overallRecommendation,
@@ -501,6 +513,7 @@ export const saveAssessmentReport = mutation({
       await Promise.all(
         args.evidence.map((item) =>
           ctx.db.insert('dimensionEvidence', {
+            orgId,
             reportId,
             sessionId: args.sessionId,
             dimension: item.dimension,
@@ -528,15 +541,18 @@ export const submitReviewDecision = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
     const reviewerId = await getRecruiterActorId(ctx)
 
     const decisionId = await ctx.db.insert('reviewDecisions', {
+      orgId,
       ...args,
       reviewerId,
       createdAt: new Date().toISOString(),
     })
 
     await logAuditEvent(ctx, {
+      orgId,
       actorId: reviewerId ?? undefined,
       action: 'review_decision.submitted',
       resource: `session:${args.sessionId}`,

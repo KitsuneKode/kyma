@@ -25,6 +25,7 @@ function isEnabledDemoInviteToken(inviteToken: string) {
 const WRITE_WINDOW_MS = 60_000
 const MAX_TRANSCRIPT_WRITES_PER_WINDOW = 120
 const MAX_SESSION_EVENTS_PER_WINDOW = 90
+const DEMO_ORG_ID = 'org_demo'
 
 function defaultDemoPolicy(expiresAt: string): InterviewPolicy {
   return {
@@ -167,8 +168,9 @@ async function ensureInvite(
     throw new ConvexError('Invite not found.')
   }
 
-  const template = await ensureDefaultTemplate(ctx)
+  const template = await ensureDefaultTemplate(ctx, DEMO_ORG_ID)
   const inviteId = await ctx.db.insert('candidateInvites', {
+    orgId: DEMO_ORG_ID,
     inviteToken,
     candidateName: 'Demo Candidate',
     templateId: template._id,
@@ -453,6 +455,7 @@ export const bootstrapPublicSession = mutation({
         })
 
         await ctx.db.insert('sessionEvents', {
+          orgId: existingSession.orgId,
           sessionId: existingSession._id,
           type: 'room-token-requested',
           detail: `Bootstrap retried by ${participantName} after interruption`,
@@ -479,6 +482,7 @@ export const bootstrapPublicSession = mutation({
     const startedAt = new Date().toISOString()
 
     const sessionId = await ctx.db.insert('interviewSessions', {
+      orgId: invite.orgId,
       inviteId: invite._id,
       state: 'connecting',
       provider: 'livekit',
@@ -505,6 +509,7 @@ export const bootstrapPublicSession = mutation({
     }
 
     await ctx.db.insert('sessionEvents', {
+      orgId: invite.orgId,
       sessionId,
       type: 'room-token-requested',
       detail: `Bootstrap requested by ${participantName}`,
@@ -549,6 +554,7 @@ export const appendSessionEvent = mutation({
     await assertSessionEventThrottle(ctx, sessionId)
 
     await ctx.db.insert('sessionEvents', {
+      orgId: session.orgId,
       sessionId,
       type,
       detail,

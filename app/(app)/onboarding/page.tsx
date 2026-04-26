@@ -1,13 +1,17 @@
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 
-import { roleFromSessionClaims } from '@/lib/auth/clerk-role'
+import { personaFromSessionClaims } from '@/lib/auth/clerk-role'
 
-async function chooseRole(formData: FormData) {
+async function choosePersona(formData: FormData) {
   'use server'
 
-  const selectedRole = formData.get('role')
-  if (selectedRole !== 'candidate' && selectedRole !== 'recruiter') {
+  const selectedPersona = formData.get('persona')
+  if (
+    selectedPersona !== 'candidate' &&
+    selectedPersona !== 'recruiter' &&
+    selectedPersona !== 'both'
+  ) {
     return
   }
 
@@ -16,21 +20,23 @@ async function chooseRole(formData: FormData) {
     redirect('/sign-in')
   }
 
-  const currentRole = roleFromSessionClaims(
+  const currentPersona = personaFromSessionClaims(
     sessionClaims as Record<string, unknown> | null | undefined
   )
 
-  // Do not let onboarding downgrade privileged accounts.
-  if (currentRole === 'admin') {
-    redirect('/recruiter')
-  }
-
   const client = await clerkClient()
   await client.users.updateUserMetadata(userId, {
-    publicMetadata: { role: selectedRole },
+    publicMetadata: { persona: selectedPersona },
   })
 
-  redirect(selectedRole === 'recruiter' ? '/recruiter' : '/candidate')
+  if (selectedPersona === 'recruiter' || selectedPersona === 'both') {
+    redirect('/onboarding/recruiter')
+  }
+
+  if (currentPersona === 'recruiter') {
+    redirect('/recruiter')
+  }
+  redirect('/candidate')
 }
 
 export default async function OnboardingPage() {
@@ -39,14 +45,25 @@ export default async function OnboardingPage() {
     redirect('/sign-in')
   }
 
-  const role = roleFromSessionClaims(
+  const persona = personaFromSessionClaims(
     sessionClaims as Record<string, unknown> | null | undefined
   )
-  if (role === 'admin' || role === 'recruiter') {
-    redirect('/recruiter')
+  if (persona === 'recruiter') {
+    const { orgId } = await auth()
+    if (orgId) {
+      redirect('/recruiter')
+    }
+    redirect('/onboarding/recruiter')
   }
-  if (role === 'candidate') {
+  if (persona === 'candidate') {
     redirect('/candidate')
+  }
+  if (persona === 'both') {
+    const { orgId } = await auth()
+    if (orgId) {
+      redirect('/recruiter')
+    }
+    redirect('/onboarding/recruiter')
   }
 
   return (
@@ -61,13 +78,13 @@ export default async function OnboardingPage() {
         </p>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <form action={chooseRole} className="rounded-2xl border p-5">
+          <form action={choosePersona} className="rounded-2xl border p-5">
             <h2 className="font-medium">Candidate flow</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Join interviews, track outcomes, and continue your personal
               screening journey.
             </p>
-            <input name="role" type="hidden" value="candidate" />
+            <input name="persona" type="hidden" value="candidate" />
             <button
               className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
               type="submit"
@@ -76,18 +93,35 @@ export default async function OnboardingPage() {
             </button>
           </form>
 
-          <form action={chooseRole} className="rounded-2xl border p-5">
+          <form action={choosePersona} className="rounded-2xl border p-5">
             <h2 className="font-medium">Recruiter flow</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Manage screenings, review candidates, and run recruiting
               operations.
             </p>
-            <input name="role" type="hidden" value="recruiter" />
+            <input name="persona" type="hidden" value="recruiter" />
             <button
               className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
               type="submit"
             >
               Continue as recruiter
+            </button>
+          </form>
+
+          <form
+            action={choosePersona}
+            className="rounded-2xl border p-5 md:col-span-2"
+          >
+            <h2 className="font-medium">Both contexts</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Keep one login for both candidate and recruiter workflows.
+            </p>
+            <input name="persona" type="hidden" value="both" />
+            <button
+              className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
+              type="submit"
+            >
+              Continue with both
             </button>
           </form>
         </div>

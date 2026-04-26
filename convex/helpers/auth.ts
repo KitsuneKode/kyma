@@ -13,13 +13,89 @@ function hasRecruiterAuthConfig() {
 }
 
 export async function requireRecruiterIdentity(ctx: QueryCtx | MutationCtx) {
-  return await requireAdminIdentity(ctx)
+  const { identity } = await requireOrgPermission(
+    ctx,
+    'org:recruiter:access',
+    'You are not authorized to access recruiter data.'
+  )
+  return identity
 }
 
 export async function getRecruiterActorId(ctx: QueryCtx | MutationCtx) {
   const identity = await requireRecruiterIdentity(ctx)
 
   return identity?.tokenIdentifier ?? identity?.subject ?? undefined
+}
+
+export async function requireOrgId(ctx: QueryCtx | MutationCtx) {
+  const { orgId } = await requireOrgPermission(
+    ctx,
+    'org:recruiter:access',
+    'You must select an organization to access recruiter data.'
+  )
+  if (!orgId) {
+    throw new ConvexError(
+      'You must select an organization to access recruiter data.'
+    )
+  }
+  return orgId
+}
+
+function getOrgContext(
+  identity: NonNullable<
+    Awaited<ReturnType<QueryCtx['auth']['getUserIdentity']>>
+  >
+) {
+  const orgIdCandidate = (identity as Record<string, unknown>)['org_id']
+  const orgRoleCandidate = (identity as Record<string, unknown>)['org_role']
+  const orgPermissionsCandidate = (identity as Record<string, unknown>)[
+    'org_permissions'
+  ]
+  const orgId =
+    typeof orgIdCandidate === 'string' && orgIdCandidate.trim()
+      ? orgIdCandidate
+      : null
+  const orgRole =
+    typeof orgRoleCandidate === 'string' && orgRoleCandidate.trim()
+      ? orgRoleCandidate
+      : null
+  const orgPermissions = Array.isArray(orgPermissionsCandidate)
+    ? orgPermissionsCandidate.filter(
+        (permission): permission is string => typeof permission === 'string'
+      )
+    : []
+  return { orgId, orgRole, orgPermissions }
+}
+
+function hasOrgAccess(
+  orgRole: string | null,
+  orgPermissions: string[],
+  permission: string
+) {
+  return (
+    orgRole === 'org:admin' ||
+    orgPermissions.includes(permission) ||
+    orgPermissions.includes('org:recruiter:access')
+  )
+}
+
+async function requireOrgPermission(
+  ctx: QueryCtx | MutationCtx,
+  permission: string,
+  deniedMessage = 'You are not authorized to access this resource.'
+) {
+  const identity = await requireIdentity(ctx)
+  if (!identity) {
+    throw new ConvexError(deniedMessage)
+  }
+  const { orgId, orgRole, orgPermissions } = getOrgContext(identity)
+  if (!orgId) {
+    throw new ConvexError('An active organization is required for this action.')
+  }
+  if (!hasOrgAccess(orgRole, orgPermissions, permission)) {
+    throw new ConvexError(deniedMessage)
+  }
+  return { identity, orgId, orgRole, orgPermissions }
 }
 
 async function requireIdentity(ctx: QueryCtx | MutationCtx) {
@@ -33,41 +109,17 @@ async function requireIdentity(ctx: QueryCtx | MutationCtx) {
   return identity
 }
 
-function getRoleFromClaims(
-  identity: NonNullable<
-    Awaited<ReturnType<QueryCtx['auth']['getUserIdentity']>>
-  >
-) {
-  const roleCandidate = (identity as Record<string, unknown>)['metadata']
-  const metadataRole =
-    roleCandidate && typeof roleCandidate === 'object'
-      ? (roleCandidate as Record<string, unknown>)['role']
-      : undefined
-  if (
-    metadataRole === 'admin' ||
-    metadataRole === 'recruiter' ||
-    metadataRole === 'candidate'
-  ) {
-    return metadataRole
-  }
-  return undefined
-}
-
 export async function getRole(ctx: QueryCtx | MutationCtx) {
   const identity = await requireIdentity(ctx)
   if (!identity) {
     return 'candidate' as const
   }
-  const claimRole = getRoleFromClaims(identity)
-  if (claimRole) {
-    return claimRole
-  }
-  const user = await ctx.db
-    .query('users')
-    .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
-    .unique()
-  if (user?.role) {
-    return user.role
+  const { orgId, orgRole, orgPermissions } = getOrgContext(identity)
+  if (orgId && hasOrgAccess(orgRole, orgPermissions, 'org:recruiter:access')) {
+    if (orgRole === 'org:admin') {
+      return 'admin' as const
+    }
+    return 'recruiter' as const
   }
   return 'candidate' as const
 }
@@ -85,22 +137,29 @@ export async function requireRole(
 }
 
 export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
-  return await requireRole(ctx, 'admin')
+  const result = await requireOrgPermission(
+    ctx,
+    'org:recruiter:access',
+    'You are not authorized to access admin resources.'
+  )
+  if (result.orgRole !== 'org:admin') {
+    throw new ConvexError('You are not authorized to access admin resources.')
+  }
+  return { identity: result.identity, role: 'admin' as const }
 }
 
 export async function isAdmin(ctx: QueryCtx | MutationCtx) {
-  const role = await getRole(ctx)
-  return role === 'admin' || role === 'recruiter'
+  const identity = await requireIdentity(ctx)
+  if (!identity) return false
+  const { orgRole } = getOrgContext(identity)
+  return orgRole === 'org:admin'
 }
 
 export async function requireAdminIdentity(ctx: QueryCtx | MutationCtx) {
-  const identity = await requireIdentity(ctx)
-  if (!identity) {
-    return null
-  }
-  const role = await getRole(ctx)
-  if (role !== 'admin' && role !== 'recruiter') {
-    throw new ConvexError('You are not authorized to access this resource.')
-  }
+  const { identity } = await requireOrgPermission(
+    ctx,
+    'org:recruiter:access',
+    'You are not authorized to access this resource.'
+  )
   return identity
 }

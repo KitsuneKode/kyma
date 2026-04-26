@@ -6,6 +6,7 @@ import {
   getRecruiterActorId,
   requireAdmin,
   requireAdminIdentity,
+  requireOrgId,
 } from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
 import { ensureDefaultTemplate } from './helpers/templates'
@@ -62,10 +63,13 @@ export const listActiveTemplates = query({
   args: {},
   handler: async (ctx) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
 
     const templates = await ctx.db
       .query('assessmentTemplates')
-      .withIndex('by_status', (q) => q.eq('status', 'active'))
+      .withIndex('by_org_id_and_status', (q) =>
+        q.eq('orgId', orgId).eq('status', 'active')
+      )
       .collect()
 
     return templates
@@ -86,8 +90,12 @@ export const listScreeningBatches = query({
   args: {},
   handler: async (ctx) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
 
-    const batches = await ctx.db.query('screeningBatches').collect()
+    const batches = await ctx.db
+      .query('screeningBatches')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .collect()
 
     return await Promise.all(
       [...batches]
@@ -129,10 +137,11 @@ export const getScreeningBatchDetail = query({
   },
   handler: async (ctx, { batchId }) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
 
     const batch = await ctx.db.get(batchId)
 
-    if (!batch) {
+    if (!batch || batch.orgId !== orgId) {
       return null
     }
 
@@ -198,10 +207,11 @@ export const createScreeningBatch = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
     const createdBy = await getRecruiterActorId(ctx)
     const template = args.templateId
       ? await ctx.db.get(args.templateId)
-      : await ensureDefaultTemplate(ctx)
+      : await ensureDefaultTemplate(ctx, orgId)
 
     if (!template) {
       throw new ConvexError('Assessment template not found.')
@@ -209,6 +219,7 @@ export const createScreeningBatch = mutation({
 
     const now = new Date().toISOString()
     const batchId = await ctx.db.insert('screeningBatches', {
+      orgId,
       name: args.name,
       templateId: template._id,
       createdBy: createdBy ?? args.createdBy ?? 'admin',
@@ -222,6 +233,7 @@ export const createScreeningBatch = mutation({
 
     for (const candidate of args.candidates) {
       const inviteId = await ctx.db.insert('candidateInvites', {
+        orgId,
         inviteToken: buildInviteToken(candidate.candidateName),
         candidateName: candidate.candidateName,
         candidateEmail: candidate.candidateEmail,
@@ -234,6 +246,7 @@ export const createScreeningBatch = mutation({
       })
 
       const eligibilityId = await ctx.db.insert('candidateEligibility', {
+        orgId,
         batchId,
         inviteId,
         candidateName: candidate.candidateName,
@@ -262,15 +275,18 @@ export const addRecruiterNote = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
     const authorId = await getRecruiterActorId(ctx)
 
     const noteId = await ctx.db.insert('recruiterNotes', {
+      orgId,
       ...args,
       authorId: authorId ?? args.authorId,
       createdAt: new Date().toISOString(),
     })
 
     await logAuditEvent(ctx, {
+      orgId,
       actorId: authorId ?? args.authorId ?? undefined,
       action: 'recruiter_note.created',
       resource: `session:${args.sessionId}`,
@@ -300,8 +316,10 @@ export const addReportChatMessage = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
 
     return await ctx.db.insert('reportChatMessages', {
+      orgId,
       ...args,
       createdAt: new Date().toISOString(),
     })
@@ -312,11 +330,24 @@ export const getDashboardSummary = query({
   args: {},
   handler: async (ctx) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
     const [sessions, invites, reports, events] = await Promise.all([
-      ctx.db.query('interviewSessions').collect(),
-      ctx.db.query('candidateInvites').collect(),
-      ctx.db.query('assessmentReports').collect(),
-      ctx.db.query('sessionEvents').collect(),
+      ctx.db
+        .query('interviewSessions')
+        .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+        .collect(),
+      ctx.db
+        .query('candidateInvites')
+        .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+        .collect(),
+      ctx.db
+        .query('assessmentReports')
+        .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+        .collect(),
+      ctx.db
+        .query('sessionEvents')
+        .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+        .collect(),
     ])
 
     const now = Date.now()
@@ -397,7 +428,11 @@ export const getWorkspaceSettings = query({
   args: {},
   handler: async (ctx) => {
     await requireAdminIdentity(ctx)
-    const settings = await ctx.db.query('workspaceSettings').first()
+    const orgId = await requireOrgId(ctx)
+    const settings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
     if (!settings) return null
     return {
       id: settings._id,
@@ -425,6 +460,7 @@ export const addProviderKey = mutation({
   },
   handler: async (ctx, args) => {
     const { identity } = await requireAdmin(ctx)
+    const orgId = await requireOrgId(ctx)
     const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
     const now = Date.now()
     const keyId =
@@ -432,7 +468,10 @@ export const addProviderKey = mutation({
         ? crypto.randomUUID()
         : `${now}`
     const maskedKeyTail = args.key.slice(-4)
-    const settings = await ctx.db.query('workspaceSettings').first()
+    const settings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
     const encrypted = await encryptProviderKey(args.key)
     const entry = {
       keyId,
@@ -446,6 +485,7 @@ export const addProviderKey = mutation({
     }
     if (!settings) {
       return await ctx.db.insert('workspaceSettings', {
+        orgId,
         providerKeys: [entry],
         updatedAt: now,
         updatedBy: actor,
@@ -467,8 +507,12 @@ export const removeProviderKey = mutation({
   },
   handler: async (ctx, args) => {
     const { identity } = await requireAdmin(ctx)
+    const orgId = await requireOrgId(ctx)
     const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
-    const settings = await ctx.db.query('workspaceSettings').first()
+    const settings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
     if (!settings) return null
     await ctx.db.patch(settings._id, {
       providerKeys: (settings.providerKeys ?? []).filter(
@@ -493,11 +537,16 @@ export const updateDefaultModels = mutation({
   },
   handler: async (ctx, args) => {
     const { identity } = await requireAdmin(ctx)
+    const orgId = await requireOrgId(ctx)
     const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
     const now = Date.now()
-    const settings = await ctx.db.query('workspaceSettings').first()
+    const settings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
     if (!settings) {
       return await ctx.db.insert('workspaceSettings', {
+        orgId,
         defaultModels: args.models,
         updatedAt: now,
         updatedBy: actor,
@@ -624,7 +673,11 @@ export const getWorkspaceSettingsRaw = query({
   args: {},
   handler: async (ctx) => {
     await requireAdminIdentity(ctx)
-    return await ctx.db.query('workspaceSettings').first()
+    const orgId = await requireOrgId(ctx)
+    return await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
   },
 })
 
@@ -634,7 +687,12 @@ export const getTemplateById = query({
   },
   handler: async (ctx, args) => {
     await requireAdminIdentity(ctx)
-    return await ctx.db.get(args.templateId)
+    const orgId = await requireOrgId(ctx)
+    const template = await ctx.db.get(args.templateId)
+    if (!template || template.orgId !== orgId) {
+      return null
+    }
+    return template
   },
 })
 
@@ -667,9 +725,10 @@ export const updateAssessmentTemplate = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
     const actor = (await getRecruiterActorId(ctx)) ?? 'admin'
     const template = await ctx.db.get(args.templateId)
-    if (!template) {
+    if (!template || template.orgId !== orgId) {
       throw new ConvexError('Template not found.')
     }
     const nextVersion = Number.parseInt(
@@ -688,6 +747,7 @@ export const updateAssessmentTemplate = mutation({
     })
 
     await ctx.db.insert('assessmentTemplateVersions', {
+      orgId,
       templateId: template._id,
       rubricVersion: nextRubricVersion,
       savedAt: Date.now(),

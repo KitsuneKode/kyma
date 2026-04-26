@@ -6,11 +6,14 @@ import type { MutationCtx } from '../_generated/server'
 import { DEFAULT_INTERVIEW_DURATION_MINUTES } from './interviewPolicy'
 
 export async function ensureDefaultTemplate(
-  ctx: MutationCtx
+  ctx: MutationCtx,
+  orgId = 'org_demo'
 ): Promise<Doc<'assessmentTemplates'>> {
   const existingTemplate = await ctx.db
     .query('assessmentTemplates')
-    .withIndex('by_status', (q) => q.eq('status', 'active'))
+    .withIndex('by_org_id_and_status', (q) =>
+      q.eq('orgId', orgId).eq('status', 'active')
+    )
     .first()
 
   if (existingTemplate) {
@@ -18,6 +21,7 @@ export async function ensureDefaultTemplate(
   }
 
   const templateId = await ctx.db.insert('assessmentTemplates', {
+    orgId,
     name: 'AI Tutor Screener',
     role: 'teacher',
     status: 'active',

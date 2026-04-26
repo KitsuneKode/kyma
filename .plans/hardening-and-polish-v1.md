@@ -9,20 +9,21 @@
 
 Legend: `Implemented` = code merged, `Verified` = acceptance validated, `Remaining` = work left.
 
-| Item                                        | Status                         | Notes                                                                                      |
-| ------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------ |
-| 0.1 RBAC in Convex functions                | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md` |
-| 0.2 LiveKit token endpoint auth             | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md` |
-| 0.3 Processing key enforcement              | Implemented / Verified         | Production write-key guard and env docs added.                                             |
-| 0.4 Convex rate limiter migration           | Implemented / Verified         | In-memory limiter removed, Convex limiter wired in routes/functions.                       |
-| 2.1 Role model & Clerk sync                 | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md` |
-| 2.2 Middleware role-based routing           | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md` |
-| 2.3 Candidate dashboard data routes         | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md` |
-| 2.7 Error boundaries                        | Implemented / Verified         | Added route-level and component boundaries for admin/interview/recruiter modules.          |
-| 3.1 Workspace settings + model resolution   | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md` |
-| 3.2 Admin settings wiring                   | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md` |
-| 3.3 Prompt/rubric template system           | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md` |
-| Session continuity hardening (rejoin/timer) | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md` |
+| Item                                        | Status                         | Notes                                                                                           |
+| ------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Org-first Clerk RBAC rewrite                | Implemented / Pending QA       | Source of truth moved to Clerk org context + permissions; run org matrix in verification queue. |
+| 0.1 RBAC in Convex functions                | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md`      |
+| 0.2 LiveKit token endpoint auth             | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md`      |
+| 0.3 Processing key enforcement              | Implemented / Verified         | Production write-key guard and env docs added.                                                  |
+| 0.4 Convex rate limiter migration           | Implemented / Verified         | In-memory limiter removed, Convex limiter wired in routes/functions.                            |
+| 2.1 Role model & Clerk sync                 | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md`      |
+| 2.2 Middleware role-based routing           | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md`      |
+| 2.3 Candidate dashboard data routes         | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md`      |
+| 2.7 Error boundaries                        | Implemented / Verified         | Added route-level and component boundaries for admin/interview/recruiter modules.               |
+| 3.1 Workspace settings + model resolution   | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md`      |
+| 3.2 Admin settings wiring                   | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md`      |
+| 3.3 Prompt/rubric template system           | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md`      |
+| Session continuity hardening (rejoin/timer) | Implemented / Partial Verified | Queue: `.docs/verification-pending.md`; Procedure: `.docs/backend-verification-runbook.md`      |
 
 ---
 

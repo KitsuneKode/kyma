@@ -5,14 +5,14 @@ import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
 import { auth } from '@clerk/nextjs/server'
 
 import { ThemeToggle } from '@/components/theme-toggle'
-import { roleFromSessionClaims } from '@/lib/auth/clerk-role'
+import { personaFromSessionClaims } from '@/lib/auth/clerk-role'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   await connection()
   const clerkEnabled = hasClerkServerCredentials()
   const authState = clerkEnabled ? await auth() : null
-  const role = roleFromSessionClaims(
+  const persona = personaFromSessionClaims(
     authState?.sessionClaims as Record<string, unknown> | null | undefined
   )
 
@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <Link className="font-semibold" href="/">
               Kyma
             </Link>
-            {role === 'recruiter' ? (
+            {persona === 'recruiter' || persona === 'both' ? (
               <Link
                 className="text-muted-foreground transition-colors hover:text-foreground"
                 href="/recruiter"
@@ -32,7 +32,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 Recruiter
               </Link>
             ) : null}
-            {role === 'candidate' || role === 'admin' ? (
+            {persona === 'candidate' || persona === 'both' ? (
               <Link
                 className="text-muted-foreground transition-colors hover:text-foreground"
                 href="/candidate"

@@ -3,6 +3,7 @@ import type { MutationCtx } from '../_generated/server'
 export async function logAuditEvent(
   ctx: MutationCtx,
   args: {
+    orgId?: string
     actorId?: string
     action: string
     resource: string
@@ -10,6 +11,7 @@ export async function logAuditEvent(
   }
 ) {
   await ctx.db.insert('auditEvents', {
+    orgId: args.orgId,
     actorId: args.actorId,
     action: args.action,
     resource: args.resource,

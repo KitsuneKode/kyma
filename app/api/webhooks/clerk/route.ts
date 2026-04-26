@@ -16,7 +16,22 @@ type ClerkWebhookUser = {
   last_name?: string | null
   email_addresses?: ClerkEmailAddress[]
   primary_email_address_id?: string
-  public_metadata?: { role?: unknown }
+  public_metadata?: { persona?: unknown }
+}
+
+type ClerkWebhookOrganization = {
+  id: string
+  name?: string
+  slug?: string
+  image_url?: string
+}
+
+type ClerkWebhookMembership = {
+  id: string
+  role?: string
+  permissions?: string[]
+  organization?: { id?: string }
+  public_user_data?: { user_id?: string }
 }
 
 function pickPrimaryEmail(user: ClerkWebhookUser) {
@@ -50,29 +65,69 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const unsafeApi = api as Record<string, any>
     const event = await verifyWebhook(request)
     if (
       event.type !== 'user.created' &&
       event.type !== 'user.updated' &&
-      event.type !== 'user.deleted'
+      event.type !== 'user.deleted' &&
+      event.type !== 'organization.created' &&
+      event.type !== 'organization.updated' &&
+      event.type !== 'organization.deleted' &&
+      event.type !== 'organizationMembership.created' &&
+      event.type !== 'organizationMembership.updated' &&
+      event.type !== 'organizationMembership.deleted'
     ) {
       return NextResponse.json({ ok: true, ignored: event.type })
     }
 
-    const user = event.data as ClerkWebhookUser
-    await fetchMutation(api.users.syncFromClerkWebhook, {
-      writeKey,
-      eventType: event.type,
-      clerkId: user.id,
-      email: pickPrimaryEmail(user),
-      name: fullName(user),
-      role:
-        user.public_metadata?.role === 'admin' ||
-        user.public_metadata?.role === 'recruiter' ||
-        user.public_metadata?.role === 'candidate'
-          ? user.public_metadata.role
-          : undefined,
-    })
+    if (
+      event.type === 'user.created' ||
+      event.type === 'user.updated' ||
+      event.type === 'user.deleted'
+    ) {
+      const user = event.data as ClerkWebhookUser
+      await fetchMutation(api.users.syncFromClerkWebhook, {
+        writeKey,
+        eventType: event.type,
+        clerkId: user.id,
+        email: pickPrimaryEmail(user),
+        name: fullName(user),
+      })
+    }
+
+    if (
+      event.type === 'organization.created' ||
+      event.type === 'organization.updated' ||
+      event.type === 'organization.deleted'
+    ) {
+      const organization = event.data as ClerkWebhookOrganization
+      await fetchMutation(unsafeApi.orgs.syncOrgFromClerkWebhook, {
+        writeKey,
+        eventType: event.type,
+        clerkOrgId: organization.id,
+        name: organization.name,
+        slug: organization.slug,
+        imageUrl: organization.image_url,
+      })
+    }
+
+    if (
+      event.type === 'organizationMembership.created' ||
+      event.type === 'organizationMembership.updated' ||
+      event.type === 'organizationMembership.deleted'
+    ) {
+      const membership = event.data as ClerkWebhookMembership
+      await fetchMutation(unsafeApi.orgs.syncMembershipFromClerkWebhook, {
+        writeKey,
+        eventType: event.type,
+        clerkMembershipId: membership.id,
+        clerkOrgId: membership.organization?.id ?? '',
+        clerkUserId: membership.public_user_data?.user_id ?? '',
+        role: membership.role ?? 'org:member',
+        permissions: membership.permissions ?? [],
+      })
+    }
 
     return NextResponse.json({ ok: true })
   } catch (error) {

@@ -44,6 +44,8 @@ function nowIso() {
   return new Date().toISOString()
 }
 
+const SEED_ORG_ID = 'org_seed'
+
 export const clearTableChunk = mutation({
   args: {
     table: v.string(),
@@ -110,6 +112,7 @@ export const seedData = mutation({
     }
 
     const templateId = await ctx.db.insert('assessmentTemplates', {
+      orgId: SEED_ORG_ID,
       name: 'AI Tutor Screener Default',
       role: 'tutor',
       status: 'active',
@@ -153,6 +156,7 @@ export const seedData = mutation({
     })
 
     await ctx.db.insert('assessmentTemplateVersions', {
+      orgId: SEED_ORG_ID,
       templateId,
       rubricVersion: 'v3',
       savedAt: now,
@@ -192,6 +196,7 @@ export const seedData = mutation({
     })
 
     const batchId = await ctx.db.insert('screeningBatches', {
+      orgId: SEED_ORG_ID,
       name: `Seed Batch ${faker.date.recent({ days: 2 }).toISOString().slice(0, 10)}`,
       templateId,
       createdBy: `user:${recruiterIds[0]}`,
@@ -219,6 +224,7 @@ export const seedData = mutation({
       const candidate = await ctx.db.get(candidateUserId)
       const inviteToken = `seed-${faker.string.alphanumeric(18).toLowerCase()}`
       const inviteId = await ctx.db.insert('candidateInvites', {
+        orgId: SEED_ORG_ID,
         inviteToken,
         candidateName: candidate?.name,
         candidateEmail: candidate?.email,
@@ -235,6 +241,7 @@ export const seedData = mutation({
       })
 
       const eligibilityId = await ctx.db.insert('candidateEligibility', {
+        orgId: SEED_ORG_ID,
         batchId,
         inviteId,
         candidateName: candidate?.name ?? faker.person.fullName(),
@@ -265,6 +272,7 @@ export const seedData = mutation({
         'live',
       ] as const)
       const sessionId = await ctx.db.insert('interviewSessions', {
+        orgId: SEED_ORG_ID,
         inviteId,
         state,
         provider: 'livekit',
@@ -287,6 +295,7 @@ export const seedData = mutation({
       })
 
       await ctx.db.insert('sessionEvents', {
+        orgId: SEED_ORG_ID,
         sessionId,
         type: 'session.bootstrap',
         detail: `Seeded session for ${candidate?.name ?? 'candidate'}`,
@@ -312,6 +321,7 @@ export const seedData = mutation({
       const recommendation = randomRecommendation()
       const confidence = randomConfidence()
       const reportId = await ctx.db.insert('assessmentReports', {
+        orgId: SEED_ORG_ID,
         sessionId,
         status: faker.helpers.arrayElement([
           'completed',
@@ -350,6 +360,7 @@ export const seedData = mutation({
 
       for (let index = 0; index < 3; index += 1) {
         await ctx.db.insert('dimensionEvidence', {
+          orgId: SEED_ORG_ID,
           reportId,
           sessionId,
           dimension: faker.helpers.arrayElement(dimensions),
@@ -367,6 +378,7 @@ export const seedData = mutation({
 
       if (faker.datatype.boolean()) {
         await ctx.db.insert('reviewDecisions', {
+          orgId: SEED_ORG_ID,
           reportId,
           sessionId,
           decision: faker.helpers.arrayElement([
@@ -382,6 +394,7 @@ export const seedData = mutation({
       }
 
       await ctx.db.insert('recruiterNotes', {
+        orgId: SEED_ORG_ID,
         sessionId,
         reportId,
         authorId: `user:${faker.helpers.arrayElement(recruiterIds)}`,
@@ -390,6 +403,7 @@ export const seedData = mutation({
       })
 
       await ctx.db.insert('reportChatMessages', {
+        orgId: SEED_ORG_ID,
         sessionId,
         reportId,
         role: 'user',
@@ -398,6 +412,7 @@ export const seedData = mutation({
       })
 
       await ctx.db.insert('reportChatMessages', {
+        orgId: SEED_ORG_ID,
         sessionId,
         reportId,
         role: 'assistant',
@@ -413,6 +428,7 @@ export const seedData = mutation({
     }
 
     await ctx.db.insert('workspaceSettings', {
+      orgId: SEED_ORG_ID,
       defaultModels: {
         stt: 'deepgram/nova-3',
         llm: 'openai/gpt-4.1-mini',
@@ -424,6 +440,7 @@ export const seedData = mutation({
     })
 
     await ctx.db.insert('auditEvents', {
+      orgId: SEED_ORG_ID,
       actorId: `user:${adminId}`,
       action: 'seed.dev.completed',
       resource: 'workspace:dev',

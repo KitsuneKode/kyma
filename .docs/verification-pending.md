@@ -9,13 +9,26 @@ Update rule: update this queue first; update the runbook only when procedure cha
 
 ### 1) Clerk webhook sync smoke
 
-- Blocker cleared: role drift between Clerk metadata and Convex user records.
+- Blocker cleared: org/member projection drift between Clerk and Convex mirrors.
 - Procedure: `.docs/backend-verification-runbook.md#item-1-clerk-sync-21`
 
 ### 2) RBAC denial matrix
 
-- Blocker cleared: accidental cross-role data access in production.
+- Blocker cleared: recruiter access without active org context or permission.
 - Procedure: `.docs/backend-verification-runbook.md#item-2-rbac--routing-matrix-01--22`
+
+### 2.1) Org context enforcement matrix
+
+- Validate recruiter route denial when `orgId` is missing.
+- Validate recruiter route denial when `org:recruiter:access` permission is absent.
+- Validate candidate routes continue without org context.
+
+### 2.2) Cross-org isolation smoke
+
+- Create two orgs with recruiter memberships and confirm no cross-org read/write for:
+  - candidates and reports
+  - screening batches
+  - workspace settings
 
 ## Priority 2: Interview Session Safety
 

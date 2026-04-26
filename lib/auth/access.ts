@@ -1,42 +1,51 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 
-import { roleFromSessionClaims, type AppRole } from '@/lib/auth/clerk-role'
+import {
+  personaFromSessionClaims,
+  RECRUITER_PERMISSION_MAP,
+  type PersonaHint,
+  type RecruiterCapability,
+} from '@/lib/auth/clerk-role'
 
 export type UserAppAccess = {
   isSignedIn: boolean
-  role: AppRole | 'anonymous' | 'unassigned'
+  persona: PersonaHint | 'anonymous' | 'unassigned'
+  orgId: string | null
+  canAccessRecruiter: boolean
 }
 
 export async function getUserAppAccess(): Promise<UserAppAccess> {
-  const { userId, sessionClaims } = await auth()
+  const { userId, sessionClaims, has, orgId } = await auth()
 
   if (!userId) {
-    return { isSignedIn: false, role: 'anonymous' }
+    return {
+      isSignedIn: false,
+      persona: 'anonymous',
+      orgId: null,
+      canAccessRecruiter: false,
+    }
   }
 
-  const role = roleFromSessionClaims(
+  const persona = personaFromSessionClaims(
     sessionClaims as Record<string, unknown> | null | undefined
+  )
+  const canAccessRecruiter = Boolean(
+    orgId &&
+    (has?.({ role: 'org:admin' }) ||
+      has?.({ permission: RECRUITER_PERMISSION_MAP['recruiter:access'] }))
   )
 
   return {
     isSignedIn: true,
-    role: role ?? 'unassigned',
+    persona: persona ?? 'unassigned',
+    orgId: orgId ?? null,
+    canAccessRecruiter,
   }
 }
 
 export async function requireAdminOrRecruiterPageAccess() {
-  const access = await getUserAppAccess()
-  if (!access.isSignedIn) {
-    redirect('/sign-in')
-  }
-  if (access.role === 'unassigned') {
-    redirect('/onboarding')
-  }
-  if (access.role !== 'admin' && access.role !== 'recruiter') {
-    redirect('/candidate')
-  }
-  return access
+  return await requireRecruiterPageAccess()
 }
 
 export async function requireDashboardPageAccess() {
@@ -44,14 +53,11 @@ export async function requireDashboardPageAccess() {
   if (!access.isSignedIn) {
     redirect('/sign-in')
   }
-  if (access.role === 'unassigned') {
+  if (access.persona === 'unassigned') {
     redirect('/onboarding')
   }
-  if (access.role === 'recruiter') {
+  if (access.persona === 'recruiter') {
     redirect('/recruiter')
-  }
-  if (access.role !== 'candidate' && access.role !== 'admin') {
-    redirect('/onboarding')
   }
   return access
 }
@@ -59,29 +65,49 @@ export async function requireDashboardPageAccess() {
 export function getPostSignInPath(access: UserAppAccess): string {
   if (
     !access.isSignedIn ||
-    access.role === 'anonymous' ||
-    access.role === 'unassigned'
+    access.persona === 'anonymous' ||
+    access.persona === 'unassigned'
   ) {
     return '/onboarding'
   }
-  if (access.role === 'recruiter') {
+  if (access.persona === 'recruiter') {
+    if (access.canAccessRecruiter) {
+      return '/recruiter'
+    }
+    return '/onboarding/recruiter'
+  }
+  if (access.persona === 'both' && access.canAccessRecruiter) {
     return '/recruiter'
   }
   return '/candidate'
 }
 
-export async function requireRecruiterPageAccess() {
+export async function requireOrgPermission(
+  capability: RecruiterCapability
+): Promise<UserAppAccess> {
   const access = await getUserAppAccess()
   if (!access.isSignedIn) {
     redirect('/sign-in')
   }
-  if (access.role === 'unassigned') {
+  if (access.persona === 'unassigned') {
     redirect('/onboarding')
   }
-  if (access.role !== 'recruiter') {
+  if (!access.orgId) {
+    redirect('/onboarding/recruiter')
+  }
+  const { has } = await auth()
+  const allowed = Boolean(
+    has?.({ role: 'org:admin' }) ||
+    has?.({ permission: RECRUITER_PERMISSION_MAP[capability] })
+  )
+  if (!allowed) {
     redirect('/candidate')
   }
   return access
+}
+
+export async function requireRecruiterPageAccess() {
+  return await requireOrgPermission('recruiter:access')
 }
 
 export async function requireCandidatePageAccess() {
@@ -89,14 +115,11 @@ export async function requireCandidatePageAccess() {
   if (!access.isSignedIn) {
     redirect('/sign-in')
   }
-  if (access.role === 'unassigned') {
+  if (access.persona === 'unassigned') {
     redirect('/onboarding')
   }
-  if (access.role === 'recruiter') {
+  if (access.persona === 'recruiter' && access.canAccessRecruiter) {
     redirect('/recruiter')
-  }
-  if (access.role !== 'candidate' && access.role !== 'admin') {
-    redirect('/onboarding')
   }
   return access
 }

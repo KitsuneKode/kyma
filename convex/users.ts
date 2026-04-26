@@ -3,7 +3,6 @@ import { ConvexError, v } from 'convex/values'
 import { mutation } from './_generated/server'
 import { requireAdmin } from './helpers/auth'
 import { runtimeEnv } from '../lib/env/runtime'
-import type { AppRole } from '../lib/auth/clerk-role'
 
 function isBootstrapAdminEmail(email?: string) {
   if (!email) return false
@@ -12,13 +11,6 @@ function isBootstrapAdminEmail(email?: string) {
       .map((item) => item.trim().toLowerCase())
       .filter(Boolean) ?? []
   return allowlist.includes(email.toLowerCase())
-}
-
-function roleFromMetadata(value: unknown): AppRole {
-  if (value === 'admin' || value === 'recruiter' || value === 'candidate') {
-    return value
-  }
-  return 'candidate'
 }
 
 export const upsert = mutation({
@@ -88,13 +80,6 @@ export const syncFromClerkWebhook = mutation({
     clerkId: v.string(),
     email: v.optional(v.string()),
     name: v.optional(v.string()),
-    role: v.optional(
-      v.union(
-        v.literal('admin'),
-        v.literal('recruiter'),
-        v.literal('candidate')
-      )
-    ),
   },
   handler: async (ctx, args) => {
     const expectedKey = runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
@@ -119,13 +104,10 @@ export const syncFromClerkWebhook = mutation({
       return existing._id
     }
 
-    const role = args.role ? roleFromMetadata(args.role) : 'candidate'
-
     if (existing) {
       await ctx.db.patch(existing._id, {
         email: args.email,
         name: args.name,
-        role,
         updatedAt: now,
       })
       return existing._id
@@ -135,7 +117,7 @@ export const syncFromClerkWebhook = mutation({
       clerkId: args.clerkId,
       email: args.email,
       name: args.name,
-      role,
+      role: isBootstrapAdminEmail(args.email) ? 'admin' : 'candidate',
       createdAt: now,
       updatedAt: now,
     })

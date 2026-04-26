@@ -1,10 +1,13 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
-import { roleFromSessionClaims } from '@/lib/auth/clerk-role'
+import {
+  personaFromSessionClaims,
+  RECRUITER_PERMISSION_MAP,
+} from '@/lib/auth/clerk-role'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
-const isRecruiterRoute = createRouteMatcher(['/recruiter(.*)'])
+const isRecruiterRoute = createRouteMatcher(['/recruiter(.*)', '/admin(.*)'])
 const isCandidateRoute = createRouteMatcher(['/candidate(.*)'])
 const isAppShellRoute = createRouteMatcher([
   '/video-demo(.*)',
@@ -23,9 +26,14 @@ const hasClerk = hasClerkServerCredentials()
 
 export default hasClerk
   ? clerkMiddleware(async (auth, req) => {
-      const { userId, sessionClaims } = await auth()
-      const role = roleFromSessionClaims(
+      const { userId, sessionClaims, has, orgId } = await auth()
+      const persona = personaFromSessionClaims(
         sessionClaims as Record<string, unknown> | null | undefined
+      )
+      const canAccessRecruiter = Boolean(
+        orgId &&
+        (has?.({ role: 'org:admin' }) ||
+          has?.({ permission: RECRUITER_PERMISSION_MAP['recruiter:access'] }))
       )
       const isProtectedRoute =
         !isPublicRoute(req) ||
@@ -38,27 +46,37 @@ export default hasClerk
       }
 
       if (userId && isAuthRoute(req)) {
-        if (role === 'recruiter' || role === 'admin') {
+        if (persona === 'recruiter' && canAccessRecruiter) {
           return NextResponse.redirect(new URL('/recruiter', req.url))
         }
-        if (role === 'candidate') {
+        if (persona === 'both' && canAccessRecruiter) {
+          return NextResponse.redirect(new URL('/recruiter', req.url))
+        }
+        if (persona === 'candidate' || persona === 'both') {
           return NextResponse.redirect(new URL('/candidate', req.url))
         }
         return NextResponse.redirect(new URL('/onboarding', req.url))
       }
 
-      if (isRecruiterRoute(req) && role !== 'recruiter') {
-        return NextResponse.redirect(new URL('/candidate', req.url))
+      if (isRecruiterRoute(req)) {
+        if (!orgId) {
+          return NextResponse.redirect(
+            new URL('/onboarding/recruiter', req.url)
+          )
+        }
+        if (!canAccessRecruiter) {
+          return NextResponse.redirect(new URL('/candidate', req.url))
+        }
       }
 
       if (isCandidateRoute(req) && userId) {
-        if (role == null) {
+        if (persona == null) {
           return NextResponse.redirect(new URL('/onboarding', req.url))
         }
-        if (role === 'recruiter') {
+        if (persona === 'recruiter' && canAccessRecruiter) {
           return NextResponse.redirect(new URL('/recruiter', req.url))
         }
-        if (role !== 'candidate' && role !== 'admin') {
+        if (persona !== 'candidate' && persona !== 'both') {
           return NextResponse.redirect(new URL('/onboarding', req.url))
         }
       }

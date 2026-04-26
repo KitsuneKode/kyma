@@ -57,7 +57,30 @@ export default defineSchema({
     .index('by_clerk_id', ['clerkId'])
     .index('by_email', ['email']),
 
+  organizations: defineTable({
+    clerkOrgId: v.string(),
+    name: v.string(),
+    slug: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_clerk_org_id', ['clerkOrgId']),
+
+  orgMemberships: defineTable({
+    clerkMembershipId: v.string(),
+    clerkOrgId: v.string(),
+    clerkUserId: v.string(),
+    role: v.string(),
+    permissions: v.array(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_clerk_membership_id', ['clerkMembershipId'])
+    .index('by_clerk_org_id', ['clerkOrgId'])
+    .index('by_clerk_user_id', ['clerkUserId']),
+
   assessmentTemplates: defineTable({
+    orgId: v.string(),
     name: v.string(),
     role: v.string(),
     status: v.union(
@@ -93,9 +116,12 @@ export default defineSchema({
         reviewChat: v.optional(v.string()),
       })
     ),
-  }).index('by_status', ['status']),
+  })
+    .index('by_org_id', ['orgId'])
+    .index('by_org_id_and_status', ['orgId', 'status']),
 
   assessmentTemplateVersions: defineTable({
+    orgId: v.string(),
     templateId: v.id('assessmentTemplates'),
     rubricVersion: v.string(),
     savedAt: v.number(),
@@ -124,10 +150,12 @@ export default defineSchema({
       })
     ),
   })
+    .index('by_org_id', ['orgId'])
     .index('by_template', ['templateId'])
     .index('by_template_and_saved_at', ['templateId', 'savedAt']),
 
   screeningBatches: defineTable({
+    orgId: v.string(),
     name: v.string(),
     templateId: v.id('assessmentTemplates'),
     createdBy: v.string(),
@@ -143,10 +171,12 @@ export default defineSchema({
     allowsResume: v.optional(v.boolean()),
     createdAt: v.string(),
   })
-    .index('by_status', ['status'])
+    .index('by_org_id', ['orgId'])
+    .index('by_org_id_and_status', ['orgId', 'status'])
     .index('by_template', ['templateId']),
 
   candidateEligibility: defineTable({
+    orgId: v.string(),
     batchId: v.id('screeningBatches'),
     inviteId: v.id('candidateInvites'),
     candidateName: v.string(),
@@ -163,11 +193,13 @@ export default defineSchema({
     ),
     createdAt: v.string(),
   })
+    .index('by_org_id', ['orgId'])
     .index('by_batch', ['batchId'])
     .index('by_invite', ['inviteId'])
     .index('by_status', ['status']),
 
   candidateInvites: defineTable({
+    orgId: v.string(),
     inviteToken: v.string(),
     candidateName: v.optional(v.string()),
     candidateEmail: v.optional(v.string()),
@@ -184,12 +216,14 @@ export default defineSchema({
     ),
     expiresAt: v.string(),
   })
+    .index('by_org_id', ['orgId'])
     .index('by_invite_token', ['inviteToken'])
     .index('by_status', ['status'])
     .index('by_candidate_email', ['candidateEmail'])
     .index('by_user', ['userId']),
 
   interviewSessions: defineTable({
+    orgId: v.string(),
     inviteId: v.id('candidateInvites'),
     state: v.union(
       v.literal('created'),
@@ -214,16 +248,20 @@ export default defineSchema({
     failureReason: v.optional(v.string()),
     candidateUserId: v.optional(v.id('users')),
   })
+    .index('by_org_id', ['orgId'])
     .index('by_invite', ['inviteId'])
     .index('by_room_name', ['roomName'])
     .index('by_candidate_user', ['candidateUserId']),
 
   sessionEvents: defineTable({
+    orgId: v.string(),
     sessionId: v.id('interviewSessions'),
     type: v.string(),
     detail: v.string(),
     createdAt: v.string(),
-  }).index('by_session', ['sessionId']),
+  })
+    .index('by_org_id', ['orgId'])
+    .index('by_session', ['sessionId']),
 
   transcriptSegments: defineTable({
     sessionId: v.id('interviewSessions'),
@@ -245,6 +283,7 @@ export default defineSchema({
     ]),
 
   recordingArtifacts: defineTable({
+    orgId: v.string(),
     sessionId: v.id('interviewSessions'),
     provider: v.literal('livekit'),
     egressId: v.string(),
@@ -273,11 +312,13 @@ export default defineSchema({
     createdAt: v.string(),
     updatedAt: v.string(),
   })
+    .index('by_org_id', ['orgId'])
     .index('by_session', ['sessionId'])
     .index('by_egress_id', ['egressId'])
     .index('by_artifact_key', ['artifactKey']),
 
   assessmentReports: defineTable({
+    orgId: v.string(),
     sessionId: v.id('interviewSessions'),
     status: v.union(
       v.literal('pending'),
@@ -307,10 +348,12 @@ export default defineSchema({
     policySnapshot: v.optional(interviewPolicySnapshotValidator),
     released: v.optional(v.boolean()),
   })
+    .index('by_org_id', ['orgId'])
     .index('by_session', ['sessionId'])
     .index('by_status', ['status']),
 
   dimensionEvidence: defineTable({
+    orgId: v.string(),
     reportId: v.id('assessmentReports'),
     sessionId: v.id('interviewSessions'),
     dimension: rubricDimensionValidator,
@@ -320,10 +363,12 @@ export default defineSchema({
     endedAt: v.optional(v.string()),
     createdAt: v.string(),
   })
+    .index('by_org_id', ['orgId'])
     .index('by_report', ['reportId'])
     .index('by_session', ['sessionId']),
 
   reviewDecisions: defineTable({
+    orgId: v.string(),
     reportId: v.id('assessmentReports'),
     sessionId: v.id('interviewSessions'),
     decision: v.union(
@@ -336,20 +381,24 @@ export default defineSchema({
     reviewerId: v.optional(v.string()),
     createdAt: v.string(),
   })
+    .index('by_org_id', ['orgId'])
     .index('by_report_and_created_at', ['reportId', 'createdAt'])
     .index('by_session_and_created_at', ['sessionId', 'createdAt']),
 
   recruiterNotes: defineTable({
+    orgId: v.string(),
     sessionId: v.id('interviewSessions'),
     reportId: v.optional(v.id('assessmentReports')),
     authorId: v.optional(v.string()),
     body: v.string(),
     createdAt: v.string(),
   })
+    .index('by_org_id', ['orgId'])
     .index('by_session_and_created_at', ['sessionId', 'createdAt'])
     .index('by_report_and_created_at', ['reportId', 'createdAt']),
 
   reportChatMessages: defineTable({
+    orgId: v.string(),
     sessionId: v.id('interviewSessions'),
     reportId: v.optional(v.id('assessmentReports')),
     role: v.union(
@@ -366,18 +415,23 @@ export default defineSchema({
     citationsJson: v.optional(v.string()),
     groundingVersion: v.optional(v.string()),
   })
+    .index('by_org_id', ['orgId'])
     .index('by_session_and_created_at', ['sessionId', 'createdAt'])
     .index('by_report_and_created_at', ['reportId', 'createdAt']),
 
   auditEvents: defineTable({
+    orgId: v.optional(v.string()),
     actorId: v.optional(v.string()),
     action: v.string(),
     resource: v.string(),
     metadataJson: v.optional(v.string()),
     createdAt: v.string(),
-  }).index('by_created_at', ['createdAt']),
+  })
+    .index('by_org_id', ['orgId'])
+    .index('by_created_at', ['createdAt']),
 
   workspaceSettings: defineTable({
+    orgId: v.string(),
     providerKeys: v.optional(
       v.array(
         v.object({
@@ -402,5 +456,5 @@ export default defineSchema({
     ),
     updatedAt: v.number(),
     updatedBy: v.string(),
-  }),
+  }).index('by_org_id', ['orgId']),
 })

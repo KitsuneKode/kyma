@@ -18,6 +18,7 @@ import type * as helpers_interviewPolicy from "../helpers/interviewPolicy.js";
 import type * as helpers_templates from "../helpers/templates.js";
 import type * as interviews from "../interviews.js";
 import type * as livekit from "../livekit.js";
+import type * as orgs from "../orgs.js";
 import type * as rateLimiter from "../rateLimiter.js";
 import type * as recruiter from "../recruiter.js";
 import type * as users from "../users.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   "helpers/templates": typeof helpers_templates;
   interviews: typeof interviews;
   livekit: typeof livekit;
+  orgs: typeof orgs;
   rateLimiter: typeof rateLimiter;
   recruiter: typeof recruiter;
   users: typeof users;

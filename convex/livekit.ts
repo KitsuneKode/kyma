@@ -99,6 +99,7 @@ export const ingestWebhookEvent = mutation({
         : `${args.event} for ${args.roomName}`)
 
     await ctx.db.insert('sessionEvents', {
+      orgId: session.orgId,
       sessionId: session._id,
       type: args.event,
       detail,
@@ -152,6 +153,7 @@ export const ingestWebhookEvent = mutation({
         .withIndex('by_artifact_key', (q) => q.eq('artifactKey', artifactKey))
         .first()
       const artifactFields = {
+        orgId: session.orgId,
         sessionId: session._id,
         provider: 'livekit' as const,
         egressId: args.egressId,
