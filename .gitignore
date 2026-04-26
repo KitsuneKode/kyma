@@ -23,6 +23,8 @@ document.pdf
 /coverage
 
 .codex
+.cursor/
+test-results/
 # next.js
 /.next/
 /out/

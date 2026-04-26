@@ -158,9 +158,13 @@ function fallbackAnswer(
 
 export async function answerRecruiterQuestion(
   question: string,
-  detail: DetailShape
+  detail: DetailShape,
+  options?: {
+    modelId?: string | undefined
+    providerOptions?: Parameters<typeof generateText>[0]['providerOptions']
+  }
 ): Promise<RecruiterAnswer> {
-  const configuredModel = serverEnv.KYMA_REVIEW_CHAT_MODEL
+  const configuredModel = options?.modelId ?? serverEnv.KYMA_REVIEW_CHAT_MODEL
 
   if (!configuredModel) {
     return fallbackAnswer(question, detail)
@@ -169,6 +173,7 @@ export async function answerRecruiterQuestion(
   try {
     const { text } = await generateText({
       model: configuredModel,
+      providerOptions: options?.providerOptions,
       system:
         'You are a grounded recruiter copilot. Answer only from the provided interview report, evidence, and transcript. If the evidence is thin, say so plainly. Do not invent details. After your answer, add a line CITATIONS: followed by comma-separated refs like evidence:0:clarity or transcript:ISO timestamp for each claim you rely on most.',
       prompt: `Answer the recruiter question using only the context below.\n\n${buildContext(

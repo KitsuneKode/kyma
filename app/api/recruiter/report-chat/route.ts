@@ -5,6 +5,10 @@ import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import {
+  buildGatewayByokOptions,
+  resolveReviewChatModelId,
+} from '@/lib/providers/resolve-model'
+import {
   answerRecruiterQuestion,
   GROUNDING_VERSION,
 } from '@/lib/recruiter/report-chat'
@@ -39,6 +43,13 @@ export async function POST(request: NextRequest) {
         token: token ?? undefined,
       }
     )
+    const workspaceSettings = await fetchQuery(
+      api.admin.getWorkspaceSettingsRaw,
+      {},
+      {
+        token: token ?? undefined,
+      }
+    ).catch(() => null)
 
     if (!detail) {
       return NextResponse.json(
@@ -60,7 +71,18 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    const answer = await answerRecruiterQuestion(body.question, detail)
+    const reviewChatModelId = resolveReviewChatModelId(
+      workspaceSettings?.defaultModels
+    )
+    const providerOptions = buildGatewayByokOptions({
+      modelId: reviewChatModelId,
+      providerKeys: workspaceSettings?.providerKeys,
+    })
+
+    const answer = await answerRecruiterQuestion(body.question, detail, {
+      modelId: reviewChatModelId,
+      providerOptions,
+    })
 
     await fetchMutation(
       api.admin.addReportChatMessage,

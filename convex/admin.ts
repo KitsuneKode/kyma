@@ -30,6 +30,34 @@ function buildInviteToken(candidateName: string) {
   return `${prefix}-${suffix}`
 }
 
+function selectLatestProviderKey(
+  providerKeys:
+    | Array<{
+        keyId: string
+        provider: string
+        encryptedKey: string
+        iv: string
+        label?: string
+        addedAt: number
+        addedBy: string
+        maskedKeyTail?: string
+      }>
+    | undefined,
+  provider: string
+) {
+  const candidates = (providerKeys ?? []).filter(
+    (item) => item.provider === provider
+  )
+  if (!candidates.length) return null
+  return candidates.toSorted((a, b) => b.addedAt - a.addedAt)[0]
+}
+
+function normalizeProvider(provider: string) {
+  const value = provider.trim().toLowerCase()
+  if (value === 'gemini') return 'google'
+  return value
+}
+
 export const listActiveTemplates = query({
   args: {},
   handler: async (ctx) => {
@@ -494,20 +522,90 @@ export const testProviderConnection = action({
         'KYMA_ENCRYPTION_KEY is required to test provider keys.'
       )
     }
+    const normalizedProvider = normalizeProvider(args.provider)
     const settings = await ctx.runQuery(api.admin.getWorkspaceSettingsRaw, {})
-    const candidate = settings?.providerKeys?.find(
-      (item) => item.provider === args.provider
+    const candidate = selectLatestProviderKey(
+      settings?.providerKeys?.map((item) => ({
+        ...item,
+        provider: normalizeProvider(item.provider),
+      })),
+      normalizedProvider
     )
     if (!candidate) {
       throw new ConvexError(
         `No key configured for provider "${args.provider}".`
       )
     }
-    await decryptProviderKey({
+    const apiKey = await decryptProviderKey({
       encryptedKey: candidate.encryptedKey,
       iv: candidate.iv,
     })
-    return { ok: true }
+    if (!apiKey?.trim()) {
+      throw new ConvexError(
+        `Configured key for provider "${args.provider}" is empty after decrypt.`
+      )
+    }
+
+    if (normalizedProvider === 'openai') {
+      const response = await fetch('https://api.openai.com/v1/models', {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      })
+      if (!response.ok) {
+        throw new ConvexError(
+          `OpenAI connection failed (${response.status}): ${await response.text()}`
+        )
+      }
+      return { ok: true, provider: 'openai' as const }
+    }
+
+    if (normalizedProvider === 'anthropic') {
+      const response = await fetch('https://api.anthropic.com/v1/models', {
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+      })
+      if (!response.ok) {
+        throw new ConvexError(
+          `Anthropic connection failed (${response.status}): ${await response.text()}`
+        )
+      }
+      return { ok: true, provider: 'anthropic' as const }
+    }
+
+    if (normalizedProvider === 'google') {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`
+      )
+      if (!response.ok) {
+        throw new ConvexError(
+          `Google connection failed (${response.status}): ${await response.text()}`
+        )
+      }
+      return {
+        ok: true,
+        provider:
+          args.provider.toLowerCase() === 'gemini'
+            ? ('gemini' as const)
+            : ('google' as const),
+      }
+    }
+
+    if (normalizedProvider === 'deepgram') {
+      const response = await fetch('https://api.deepgram.com/v1/projects', {
+        headers: { Authorization: `Token ${apiKey}` },
+      })
+      if (!response.ok) {
+        throw new ConvexError(
+          `Deepgram connection failed (${response.status}): ${await response.text()}`
+        )
+      }
+      return { ok: true, provider: 'deepgram' as const }
+    }
+
+    throw new ConvexError(
+      `Provider "${args.provider}" is not supported in testProviderConnection yet.`
+    )
   },
 })
 

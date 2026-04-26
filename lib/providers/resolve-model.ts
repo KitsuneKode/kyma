@@ -12,6 +12,23 @@ const DEFAULT_MODELS: Record<ModelKind, string> = {
 
 type WorkspaceModelOverrides = Partial<Record<ModelKind, string | undefined>>
 
+export type WorkspaceProviderKey = {
+  keyId: string
+  provider: string
+  encryptedKey: string
+  iv: string
+  label?: string
+  addedAt: number
+  addedBy: string
+  maskedKeyTail?: string
+}
+
+function normalizeProvider(provider: string) {
+  const value = provider.trim().toLowerCase()
+  if (value === 'gemini') return 'google'
+  return value
+}
+
 export function resolveModelId(
   kind: ModelKind,
   workspaceDefaults?: WorkspaceModelOverrides,
@@ -83,4 +100,69 @@ export function decryptWorkspaceKey(args: {
     decipher.final(),
   ])
   return decrypted.toString('utf8')
+}
+
+export function providerFromModelId(modelId?: string) {
+  if (!modelId) return null
+  const [provider] = modelId.split('/')
+  const normalized = normalizeProvider(provider ?? '')
+  if (
+    normalized === 'openai' ||
+    normalized === 'anthropic' ||
+    normalized === 'google'
+  ) {
+    return normalized
+  }
+  return null
+}
+
+function latestProviderKey(
+  keys: WorkspaceProviderKey[] | undefined,
+  provider: string
+) {
+  const normalized = normalizeProvider(provider)
+  const candidates = (keys ?? []).filter(
+    (item) => normalizeProvider(item.provider) === normalized
+  )
+  if (!candidates.length) return null
+  return candidates.toSorted((a, b) => b.addedAt - a.addedAt)[0]
+}
+
+export function buildGatewayByokOptions(args: {
+  modelId?: string
+  providerKeys?: WorkspaceProviderKey[]
+}) {
+  const provider = providerFromModelId(args.modelId)
+  if (!provider) return undefined
+  const keyRecord = latestProviderKey(args.providerKeys, provider)
+  if (!keyRecord) return undefined
+  const apiKey = decryptWorkspaceKey({
+    encryptedKey: keyRecord.encryptedKey,
+    iv: keyRecord.iv,
+  }).trim()
+  if (!apiKey) return undefined
+
+  if (provider === 'openai') {
+    return {
+      gateway: {
+        byok: {
+          openai: [{ apiKey }],
+        },
+      },
+    }
+  }
+
+  if (provider === 'anthropic') {
+    return {
+      gateway: {
+        byok: {
+          anthropic: [{ apiKey }],
+        },
+      },
+    }
+  }
+
+  // Gemini model IDs use `google/*`. Keep support for model routing,
+  // while request-scoped BYOK remains provider-specific (e.g. Vertex creds).
+  return undefined
 }
