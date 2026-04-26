@@ -1,13 +1,9 @@
 export type RuntimeMode = 'development' | 'production'
 
-export function resolveRuntimeMode(
-  nodeEnv: string | undefined = process.env.NODE_ENV
-): RuntimeMode {
+export function resolveRuntimeMode(nodeEnv: string | undefined): RuntimeMode {
   return nodeEnv === 'production' ? 'production' : 'development'
 }
 
-export function isDevelopmentMode(
-  nodeEnv: string | undefined = process.env.NODE_ENV
-) {
+export function isDevelopmentMode(nodeEnv: string | undefined) {
   return resolveRuntimeMode(nodeEnv) === 'development'
 }

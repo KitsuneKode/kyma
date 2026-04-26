@@ -1,6 +1,9 @@
 # Backend Verification Runbook (Agent A)
 
-This runbook closes the remaining "Partial Verified" backend items with explicit checks.
+This runbook is procedure-only. For unresolved priority and blocker status, use
+`.docs/verification-pending.md`.
+
+Update rule: update pending queue first; update this runbook only when procedure changes.
 
 ## Prerequisites
 
@@ -9,7 +12,7 @@ This runbook closes the remaining "Partial Verified" backend items with explicit
 - `CLERK_WEBHOOK_SIGNING_SECRET` is set for the Clerk webhook endpoint.
 - At least one admin user exists (via `KYMA_ADMIN_EMAILS` bootstrap or manual role assignment).
 
-## Clerk Sync (2.1)
+## Item 1: Clerk Sync (2.1)
 
 Route: `POST /api/webhooks/clerk`
 
@@ -19,16 +22,16 @@ Expected behavior:
 - `user.updated` updates local email/name/role.
 - `user.deleted` removes local `users` row.
 
-Checklist:
+Procedure:
 
 - Configure Clerk webhook endpoint to `https://<host>/api/webhooks/clerk`.
 - Subscribe to `user.created`, `user.updated`, `user.deleted`.
 - Trigger each event from Clerk dashboard test UI.
 - Confirm corresponding changes in Convex `users` table.
 
-## RBAC + Routing Matrix (0.1 + 2.2)
+## Item 2: RBAC + Routing Matrix (0.1 + 2.2)
 
-Validate all pages and function access for these roles:
+Roles to validate:
 
 - `admin`
 - `recruiter`
@@ -36,25 +39,16 @@ Validate all pages and function access for these roles:
 - signed-in with missing role
 - signed-out
 
-Required outcomes:
+Procedure outcomes:
 
 - Non-admin/recruiter cannot read recruiter/admin Convex APIs.
 - `/admin/*` blocks candidate + missing-role users.
 - `/dashboard/*` blocks unauthorized roles per guard policy.
 - Missing role routes to onboarding flow.
 
-## Candidate Dashboard Data (2.3)
+## Item 3: LiveKit + Session Continuity (0.2 + continuity)
 
-Checklist:
-
-- Create candidate account linked by email to invite.
-- Confirm `listCandidateInterviews` returns expected sessions.
-- Confirm `getCandidateInterviewResult` hides unreleased reports.
-- Mark report as released and confirm candidate can read result.
-
-## LiveKit + Session Continuity (0.2 + continuity)
-
-Checklist:
+Procedure:
 
 - Start interview session and join with valid invite.
 - Verify participant identity mismatch is rejected.
@@ -64,9 +58,18 @@ Checklist:
   - transcript/event continuity is preserved
 - Confirm invalid invite token returns `403` on token route.
 
-## BYOK + Provider Validation (3.1 + 3.2)
+## Item 4: Candidate Dashboard Data (2.3)
 
-Checklist:
+Procedure:
+
+- Create candidate account linked by email to invite.
+- Confirm `listCandidateInterviews` returns expected sessions.
+- Confirm `getCandidateInterviewResult` hides unreleased reports.
+- Mark report as released and confirm candidate can read result.
+
+## Item 5: BYOK + Provider Validation (3.1 + 3.2)
+
+Procedure:
 
 - Add provider keys through admin settings for OpenAI, Anthropic, Google/Gemini, Deepgram.
 - Run `testProviderConnection` for each provider.
@@ -75,15 +78,15 @@ Checklist:
   - request-scoped AI SDK BYOK for supported providers
 - Verify no decrypted key appears in logs or API responses.
 
-## Template Workflow Completion (3.3)
+## Item 6: Template Workflow Completion (3.3)
 
-Backend behaviors now expected:
+Expected backend behavior:
 
 - `updateAssessmentTemplate` increments `rubricVersion`.
-- save writes an immutable snapshot into `assessmentTemplateVersions`.
+- Save writes an immutable snapshot into `assessmentTemplateVersions`.
 - `listTemplateVersions` returns the latest 50 versions for audit display.
 
-Checklist:
+Procedure:
 
 - Save template multiple times with different prompt/rubric/model overrides.
 - Confirm version increments monotonically (`v2`, `v3`, ...).
