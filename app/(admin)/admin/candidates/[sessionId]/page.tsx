@@ -8,18 +8,12 @@ import { RecruiterNotes } from '@/components/recruiter/recruiter-notes'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { DecisionBar } from '@/components/recruiter/decision-bar'
 import { AdminStatePanel } from '@/components/admin/admin-state-panel'
+import { CollapsibleInfoSection } from '@/components/admin/collapsible-info-section'
 import { InfoCard } from '@/components/admin/info-card'
 import { InfoRow } from '@/components/admin/info-row'
-import { MetricCard } from '@/components/admin/metric-card'
-import { PageHeader } from '@/components/admin/page-header'
 import { SummaryList } from '@/components/admin/summary-list'
 import { clientEnv } from '@/lib/env/client'
-import {
-  formatConfidenceLabel,
-  formatDateTime,
-  formatRecommendationLabel,
-  formatStatusLabel,
-} from '@/lib/recruiter/format'
+import { formatDateTime, formatStatusLabel } from '@/lib/recruiter/format'
 import { ReviewConsole } from '@/components/recruiter/review-console'
 import { RenderErrorBoundary } from '@/components/errors/render-error-boundary'
 
@@ -70,319 +64,280 @@ export default async function CandidateReviewPage({
   const teachingSimulation = summarizeTeachingSimulation(detail.events)
 
   return (
-    <div className="flex w-full flex-col gap-8">
-      <PageHeader
-        eyebrow="Candidate review"
-        title={detail.candidate.name}
-        description="Review recommendation, evidence, and recruiter actions in one decision-first workflow."
-        actions={
-          <Button
-            nativeButton={false}
-            variant="outline"
-            render={<Link href="/admin/candidates" />}
-          >
-            Back to queue
-          </Button>
-        }
-      />
-
+    <div className="flex w-full flex-col gap-6">
       <DecisionBar
+        candidateName={detail.candidate.name}
         recommendation={detail.report?.recommendation}
         confidence={detail.report?.confidence}
         reportId={detail.report?.id}
         sessionId={detail.session.id}
+        metrics={[
+          {
+            label: 'Candidate turns',
+            value: String(detail.transcriptMetrics.candidateTurns),
+          },
+          {
+            label: 'Agent turns',
+            value: String(detail.transcriptMetrics.agentTurns),
+          },
+          {
+            label: 'Report',
+            value: formatStatusLabel(detail.report?.status ?? 'pending'),
+          },
+        ]}
+        backHref="/admin/candidates"
       />
 
-      <section className="grid gap-4 xl:grid-cols-4">
-        <MetricCard
-          label="Recommendation"
-          value={formatRecommendationLabel(detail.report?.recommendation)}
-          detail={`Confidence: ${formatConfidenceLabel(detail.report?.confidence)}`}
-        />
-        <MetricCard
-          label="Report status"
-          value={formatStatusLabel(detail.report?.status ?? 'pending')}
-          detail={
-            detail.report?.generatedAt
-              ? `Updated ${formatDateTime(detail.report.generatedAt)}`
-              : 'Waiting on assessment pipeline'
+      <RenderErrorBoundary title="Review console">
+        <ReviewConsole
+          candidateName={detail.candidate.name}
+          transcript={detail.transcript}
+          evidence={detail.evidence}
+          dimensionScores={detail.report?.dimensionScores ?? []}
+          audioUrl={
+            detail.recordings.find(
+              (r) =>
+                r.location &&
+                (r.artifactType === 'audio' || r.artifactType === 'composite')
+            )?.location
+          }
+          recordingStartTime={
+            detail.recordings.find(
+              (r) =>
+                r.location &&
+                (r.artifactType === 'audio' || r.artifactType === 'composite')
+            )?.startedAt
           }
         />
-        <MetricCard
-          label="Candidate turns"
-          value={String(detail.transcriptMetrics.candidateTurns)}
-          detail={`${detail.transcriptMetrics.candidateWords} candidate words`}
+      </RenderErrorBoundary>
+
+      <InfoCard
+        title="Recruiter notes"
+        description="Capture human observations alongside the structured report."
+      >
+        <RecruiterNotes
+          sessionId={detail.session.id}
+          reportId={detail.report?.id}
+          notes={detail.notes}
         />
-        <MetricCard
-          label="Agent turns"
-          value={String(detail.transcriptMetrics.agentTurns)}
-          detail={`${detail.transcriptMetrics.agentWords} interviewer words`}
-        />
-      </section>
+      </InfoCard>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex flex-col gap-6">
-          <InfoCard
-            title="Session summary"
-            description="High-signal operational facts for this screening."
-          >
-            <dl className="grid gap-4 sm:grid-cols-2">
-              <InfoRow label="Template" value={detail.template.name} />
-              <InfoRow label="Role" value={detail.template.role} />
-              <InfoRow
-                label="Session state"
-                value={formatStatusLabel(detail.session.state)}
-              />
-              <InfoRow
-                label="Invite state"
-                value={formatStatusLabel(detail.candidate.inviteStatus)}
-              />
-              <InfoRow
-                label="Started"
-                value={formatDateTime(detail.session.startedAt)}
-              />
-              <InfoRow
-                label="Ended"
-                value={formatDateTime(detail.session.endedAt)}
-              />
-            </dl>
-          </InfoCard>
+      <div className="flex flex-col gap-3">
+        <CollapsibleInfoSection
+          title="Session summary"
+          description="High-signal operational facts for this screening."
+        >
+          <dl className="grid gap-4 sm:grid-cols-2">
+            <InfoRow label="Template" value={detail.template.name} />
+            <InfoRow label="Role" value={detail.template.role} />
+            <InfoRow
+              label="Session state"
+              value={formatStatusLabel(detail.session.state)}
+            />
+            <InfoRow
+              label="Invite state"
+              value={formatStatusLabel(detail.candidate.inviteStatus)}
+            />
+            <InfoRow
+              label="Started"
+              value={formatDateTime(detail.session.startedAt)}
+            />
+            <InfoRow
+              label="Ended"
+              value={formatDateTime(detail.session.endedAt)}
+            />
+          </dl>
+        </CollapsibleInfoSection>
 
-          <InfoCard
-            title="Teaching simulation"
-            description="Signals from the child-persona segment and visual teaching artifacts."
-          >
-            <dl className="grid gap-4 md:grid-cols-3">
-              <InfoRow
-                label="Status"
-                value={
-                  teachingSimulation.completed
-                    ? 'Completed'
-                    : teachingSimulation.started
-                      ? 'Started'
-                      : 'Not reached'
-                }
-              />
-              <InfoRow
-                label="Screen share"
-                value={teachingSimulation.screenShared ? 'Used' : 'Not used'}
-              />
-              <InfoRow
-                label="Started at"
-                value={formatOptionalDateTime(teachingSimulation.startedAt)}
-              />
-            </dl>
-            <p className="mt-4 text-sm text-muted-foreground">
-              {teachingSimulation.completed
-                ? 'The candidate reached the live teaching segment, which is the strongest signal for simplification, patience, and adaptability.'
-                : teachingSimulation.started
-                  ? 'The teaching simulation began but did not fully complete, so reviewers should inspect the transcript and timeline before trusting the report too strongly.'
-                  : 'This session never reached the live teaching segment, so the current report is based mainly on conversational evidence.'}
-            </p>
-          </InfoCard>
+        <CollapsibleInfoSection
+          title="Teaching simulation"
+          description="Signals from the child-persona segment and visual teaching artifacts."
+        >
+          <dl className="grid gap-4 md:grid-cols-3">
+            <InfoRow
+              label="Status"
+              value={
+                teachingSimulation.completed
+                  ? 'Completed'
+                  : teachingSimulation.started
+                    ? 'Started'
+                    : 'Not reached'
+              }
+            />
+            <InfoRow
+              label="Screen share"
+              value={teachingSimulation.screenShared ? 'Used' : 'Not used'}
+            />
+            <InfoRow
+              label="Started at"
+              value={formatOptionalDateTime(teachingSimulation.startedAt)}
+            />
+          </dl>
+          <p className="mt-4 text-sm text-muted-foreground">
+            {teachingSimulation.completed
+              ? 'The candidate reached the live teaching segment, which is the strongest signal for simplification, patience, and adaptability.'
+              : teachingSimulation.started
+                ? 'The teaching simulation began but did not fully complete, so reviewers should inspect the transcript and timeline before trusting the report too strongly.'
+                : 'This session never reached the live teaching segment, so the current report is based mainly on conversational evidence.'}
+          </p>
+        </CollapsibleInfoSection>
 
-          <InfoCard
-            title="Assessment summary"
-            description="Structured report output that future pipelines will enrich further."
-          >
-            {detail.report ? (
-              <div className="flex flex-col gap-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <SummaryList
-                    label="Top strengths"
-                    items={detail.report.topStrengths}
-                    emptyLabel="No strengths captured yet."
-                  />
-                  <SummaryList
-                    label="Top concerns"
-                    items={detail.report.topConcerns}
-                    emptyLabel="No concerns captured yet."
-                  />
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold">Executive summary</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {detail.report.summary ?? 'No summary generated yet.'}
+        <CollapsibleInfoSection
+          title="Assessment summary"
+          description="Structured report output that future pipelines will enrich further."
+        >
+          {detail.report ? (
+            <div className="flex flex-col gap-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <SummaryList
+                  label="Top strengths"
+                  items={detail.report.topStrengths}
+                  emptyLabel="No strengths captured yet."
+                />
+                <SummaryList
+                  label="Top concerns"
+                  items={detail.report.topConcerns}
+                  emptyLabel="No concerns captured yet."
+                />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold">Executive summary</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {detail.report.summary ?? 'No summary generated yet.'}
+                </p>
+                {detail.report.transcriptQualityNote ? (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Transcript quality note:{' '}
+                    {detail.report.transcriptQualityNote}
                   </p>
-                  {detail.report.transcriptQualityNote ? (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      Transcript quality note:{' '}
-                      {detail.report.transcriptQualityNote}
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No assessment report exists yet. The session and transcript are
+              available, but the evidence/report pipeline still needs to write
+              into the recruiter review layer.
+            </p>
+          )}
+        </CollapsibleInfoSection>
+
+        <CollapsibleInfoSection
+          title="Recordings"
+          description="LiveKit-owned replay artifacts."
+        >
+          <div className="flex flex-col gap-3">
+            {detail.recordings.length ? (
+              detail.recordings.map((artifact) => (
+                <div key={artifact.id} className="rounded-lg border px-4 py-3">
+                  <p className="font-medium">
+                    {formatStatusLabel(artifact.artifactType)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatStatusLabel(artifact.status)}
+                  </p>
+                  {artifact.location ? (
+                    <a
+                      href={artifact.location}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 block text-sm text-primary underline-offset-4 hover:underline"
+                    >
+                      Open artifact
+                    </a>
+                  ) : artifact.manifestLocation ? (
+                    <a
+                      href={artifact.manifestLocation}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 block text-sm text-primary underline-offset-4 hover:underline"
+                    >
+                      Open manifest
+                    </a>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Waiting for storage location.
+                    </p>
+                  )}
+                  {artifact.error ? (
+                    <p className="mt-2 text-sm text-destructive">
+                      {artifact.error}
                     </p>
                   ) : null}
                 </div>
-              </div>
+              ))
             ) : (
               <p className="text-sm text-muted-foreground">
-                No assessment report exists yet. The session and transcript are
-                available, but the evidence/report pipeline still needs to write
-                into the recruiter review layer.
+                No recording artifacts have been captured yet.
               </p>
             )}
-          </InfoCard>
+          </div>
+        </CollapsibleInfoSection>
 
-          <RenderErrorBoundary title="Review console">
-            <ReviewConsole
-              candidateName={detail.candidate.name}
-              transcript={detail.transcript}
-              evidence={detail.evidence}
-              dimensionScores={detail.report?.dimensionScores ?? []}
-              audioUrl={
-                detail.recordings.find(
-                  (r) =>
-                    r.location &&
-                    (r.artifactType === 'audio' ||
-                      r.artifactType === 'composite')
-                )?.location
-              }
-              recordingStartTime={
-                detail.recordings.find(
-                  (r) =>
-                    r.location &&
-                    (r.artifactType === 'audio' ||
-                      r.artifactType === 'composite')
-                )?.startedAt
-              }
-            />
-          </RenderErrorBoundary>
+        <CollapsibleInfoSection
+          title="Session events"
+          description="Operational timeline from the room lifecycle."
+        >
+          <div className="flex max-h-[420px] flex-col gap-3 overflow-y-auto pr-1">
+            {detail.events.map((event) => (
+              <div
+                key={event.id}
+                className="rounded-2xl bg-muted/35 px-4 py-3 ring-1 ring-border/50"
+              >
+                <p className="font-medium">{formatStatusLabel(event.type)}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {event.detail}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {formatDateTime(event.createdAt)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </CollapsibleInfoSection>
 
-          <InfoCard
-            title="Recruiter notes"
-            description="Capture human observations alongside the structured report."
-          >
-            <RecruiterNotes
+        <CollapsibleInfoSection
+          title="Review timeline"
+          description="Recruiter decisions for this session."
+        >
+          <div className="flex flex-col gap-3">
+            {detail.decisions.length ? (
+              detail.decisions.map((decision) => (
+                <div key={decision.id} className="rounded-lg border px-4 py-3">
+                  <p className="font-medium">
+                    {formatStatusLabel(decision.decision)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatDateTime(decision.createdAt)}
+                  </p>
+                  {decision.rationale ? (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {decision.rationale}
+                    </p>
+                  ) : null}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No recruiter decision has been recorded yet.
+              </p>
+            )}
+          </div>
+        </CollapsibleInfoSection>
+
+        <CollapsibleInfoSection
+          title="Recruiter copilot"
+          description="Ask grounded questions about the transcript, evidence, and recommendation."
+        >
+          <RenderErrorBoundary title="Recruiter chat">
+            <RecruiterChat
               sessionId={detail.session.id}
               reportId={detail.report?.id}
-              notes={detail.notes}
+              initialMessages={detail.chatMessages}
             />
-          </InfoCard>
-        </div>
-
-        <aside className="flex flex-col gap-6">
-          <InfoCard
-            title="Review timeline"
-            description="Session lifecycle and recruiter decisions."
-          >
-            <div className="flex flex-col gap-3">
-              {detail.decisions.length ? (
-                detail.decisions.map((decision) => (
-                  <div
-                    key={decision.id}
-                    className="rounded-lg border px-4 py-3"
-                  >
-                    <p className="font-medium">
-                      {formatStatusLabel(decision.decision)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDateTime(decision.createdAt)}
-                    </p>
-                    {decision.rationale ? (
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        {decision.rationale}
-                      </p>
-                    ) : null}
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No recruiter decision has been recorded yet.
-                </p>
-              )}
-            </div>
-          </InfoCard>
-
-          <InfoCard
-            title="Recordings"
-            description="LiveKit-owned replay artifacts that later feed recruiter playback."
-          >
-            <div className="flex flex-col gap-3">
-              {detail.recordings.length ? (
-                detail.recordings.map((artifact) => (
-                  <div
-                    key={artifact.id}
-                    className="rounded-lg border px-4 py-3"
-                  >
-                    <p className="font-medium">
-                      {formatStatusLabel(artifact.artifactType)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatStatusLabel(artifact.status)}
-                    </p>
-                    {artifact.location ? (
-                      <a
-                        href={artifact.location}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 block text-sm text-primary underline-offset-4 hover:underline"
-                      >
-                        Open artifact
-                      </a>
-                    ) : artifact.manifestLocation ? (
-                      <a
-                        href={artifact.manifestLocation}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 block text-sm text-primary underline-offset-4 hover:underline"
-                      >
-                        Open manifest
-                      </a>
-                    ) : (
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Waiting for storage location.
-                      </p>
-                    )}
-                    {artifact.error ? (
-                      <p className="mt-2 text-sm text-destructive">
-                        {artifact.error}
-                      </p>
-                    ) : null}
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No recording artifacts have been captured yet.
-                </p>
-              )}
-            </div>
-          </InfoCard>
-
-          <InfoCard
-            title="Recruiter copilot"
-            description="Ask grounded questions about the transcript, evidence, and recommendation."
-          >
-            <RenderErrorBoundary title="Recruiter chat">
-              <RecruiterChat
-                sessionId={detail.session.id}
-                reportId={detail.report?.id}
-                initialMessages={detail.chatMessages}
-              />
-            </RenderErrorBoundary>
-          </InfoCard>
-
-          <InfoCard
-            title="Session events"
-            description="Operational timeline from the room lifecycle."
-          >
-            <div className="flex max-h-[420px] flex-col gap-3 overflow-y-auto pr-1">
-              {detail.events.map((event) => (
-                <div
-                  key={event.id}
-                  className="rounded-2xl bg-muted/35 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] ring-1 ring-border/50"
-                >
-                  <p className="font-medium">{formatStatusLabel(event.type)}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {event.detail}
-                  </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {formatDateTime(event.createdAt)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </InfoCard>
-        </aside>
-      </section>
+          </RenderErrorBoundary>
+        </CollapsibleInfoSection>
+      </div>
     </div>
   )
 }

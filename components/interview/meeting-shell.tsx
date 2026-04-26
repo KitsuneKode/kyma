@@ -142,7 +142,7 @@ function InterviewConference({
                   onClick={onSubmit}
                   disabled={isSubmitting}
                   variant="destructive"
-                  className="rounded-full px-6 font-medium shadow-lg shadow-red-900/20 transition-all hover:bg-destructive/90 active:scale-[0.96]"
+                  className="rounded-full px-6 font-medium shadow-lg shadow-red-900/20 transition-all hover:bg-destructive/90"
                 >
                   {isSubmitting ? 'Submitting…' : 'Submit & Leave'}
                 </Button>

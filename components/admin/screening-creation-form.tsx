@@ -274,7 +274,7 @@ export function ScreeningCreationForm() {
             variant="outline"
             size="sm"
             onClick={addCandidate}
-            className="h-8 gap-1.5 rounded-lg transition-transform active:scale-[0.96]"
+            className="h-8 gap-1.5 rounded-lg transition-transform"
           >
             <IconPlus className="size-4" />
             Add Candidate
@@ -348,7 +348,7 @@ export function ScreeningCreationForm() {
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-full px-8 py-6 text-sm font-semibold shadow-xl transition-all active:scale-[0.96]"
+          className="rounded-full px-8 py-6 text-sm font-semibold shadow-xl transition-all"
         >
           {isSubmitting ? 'Creating screening...' : 'Create screening'}
         </Button>

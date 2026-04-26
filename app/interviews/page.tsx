@@ -94,7 +94,7 @@ export default function CandidateDashboard() {
             <div className="mt-8 flex justify-end border-t border-border/40 pt-6">
               <Button
                 variant="outline"
-                className="rounded-full px-6 transition-transform active:scale-[0.96]"
+                className="rounded-full px-6 transition-transform"
               >
                 Download Full Report
               </Button>
@@ -121,7 +121,7 @@ export default function CandidateDashboard() {
               <p className="mt-1 text-xs text-muted-foreground">
                 Expires in 3 days
               </p>
-              <Button className="mt-4 w-full rounded-xl shadow-sm transition-transform active:scale-[0.96]">
+              <Button className="mt-4 w-full rounded-xl shadow-sm transition-transform">
                 <IconPlayerPlay className="mr-2 size-4" />
                 Start Interview
               </Button>
@@ -144,7 +144,7 @@ export default function CandidateDashboard() {
             </p>
             <Button
               variant="outline"
-              className="mt-4 w-full rounded-xl transition-transform active:scale-[0.96]"
+              className="mt-4 w-full rounded-xl transition-transform"
             >
               Run Diagnostics
             </Button>

@@ -16,7 +16,7 @@ export function MarketingFinalCta() {
           <div className="rounded-[calc(var(--radius-xl)+0.125rem)] border border-border/60 bg-muted/20 p-[3px] shadow-sm backdrop-blur-sm">
             <Button
               size="lg"
-              className="rounded-xl px-8 text-base shadow-inner transition-transform active:scale-[0.96]"
+              className="rounded-xl px-8 text-base shadow-inner transition-transform"
               render={<Link href="/interviews/demo-invite" />}
               nativeButton={false}
             >
@@ -26,7 +26,7 @@ export function MarketingFinalCta() {
           <Button
             size="lg"
             variant="ghost"
-            className="h-12 rounded-xl px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30 active:scale-[0.96]"
+            className="h-12 rounded-xl px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30"
             render={<Link href="/admin" />}
             nativeButton={false}
           >

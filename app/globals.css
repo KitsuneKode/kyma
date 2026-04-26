@@ -37,10 +37,16 @@
   --sidebar-accent-foreground: #2e2e2e;
   --sidebar-border: #d2cbbb;
   --sidebar-ring: #2e2e2e;
-  --font-sans: Nunito, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: Outfit, ui-sans-serif, sans-serif, system-ui;
   --font-serif: Lora, ui-serif, serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-mono: 'IBM Plex Mono', monospace;
   --radius: 0.625rem;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
   --shadow-x: 0px;
   --shadow-y: 18px;
   --shadow-blur: 35px;
@@ -74,68 +80,68 @@
 }
 
 .dark {
-  --background: #141414;
+  --background: #0a0a0a;
   --foreground: #e8e3da;
-  --card: #1c1c1c;
+  --card: #141414;
   --card-foreground: #e8e3da;
-  --popover: #1c1c1c;
+  --popover: #141414;
   --popover-foreground: #e8e3da;
-  --primary: #d1cfc0;
-  --primary-foreground: #363636;
-  --secondary: #222222;
-  --secondary-foreground: #d1cfc0;
-  --muted: #2a2a2a;
+  --primary: #e8ff47;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1c1c1c;
+  --secondary-foreground: #e8e3da;
+  --muted: #1e1e1e;
   --muted-foreground: #8e8a83;
-  --accent: #363636;
-  --accent-foreground: #d1cfc0;
+  --accent: #252525;
+  --accent-foreground: #e8e3da;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #2c2c2c;
-  --input: #2c2c2c;
-  --ring: #d1cfc0;
+  --border: #2a2a2a;
+  --input: #2a2a2a;
+  --ring: #e8ff47;
   --chart-1: #f26a4b;
   --chart-2: #d9cfc2;
   --chart-3: #8e8a83;
   --chart-4: #5c5a56;
   --chart-5: #3b3b3b;
-  --sidebar: #101010;
+  --sidebar: #0a0a0a;
   --sidebar-foreground: #e8e3da;
-  --sidebar-primary: #d1cfc0;
-  --sidebar-primary-foreground: #363636;
-  --sidebar-accent: #363636;
-  --sidebar-accent-foreground: #d1cfc0;
-  --sidebar-border: #2c2c2c;
-  --sidebar-ring: #d1cfc0;
-  --font-sans: Nunito, ui-sans-serif, sans-serif, system-ui;
+  --sidebar-primary: #e8ff47;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #1c1c1c;
+  --sidebar-accent-foreground: #e8e3da;
+  --sidebar-border: #1e1e1e;
+  --sidebar-ring: #e8ff47;
+  --font-sans: Outfit, ui-sans-serif, sans-serif, system-ui;
   --font-serif: Lora, ui-serif, serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  --radius: 0.5rem;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --radius: 0.625rem;
   --shadow-x: 0px;
   --shadow-y: 20px;
   --shadow-blur: 40px;
   --shadow-spread: -12px;
-  --shadow-opacity: 0.5;
-  --shadow-color: #0a0a0a;
-  --shadow-2xs: 0px 12px 24px -14px rgb(10 10 10 / 0.28);
-  --shadow-xs: 0px 16px 28px -14px rgb(10 10 10 / 0.32);
+  --shadow-opacity: 0.6;
+  --shadow-color: #000000;
+  --shadow-2xs: 0px 12px 24px -14px rgb(0 0 0 / 0.38);
+  --shadow-xs: 0px 16px 28px -14px rgb(0 0 0 / 0.42);
   --shadow-sm:
-    0px 20px 40px -12px rgb(10 10 10 / 0.5),
-    0px 2px 8px -6px rgb(10 10 10 / 0.35);
+    0px 20px 40px -12px rgb(0 0 0 / 0.6), 0px 2px 8px -6px rgb(0 0 0 / 0.45);
   --shadow:
-    0px 20px 40px -12px rgb(10 10 10 / 0.5),
-    0px 4px 12px -10px rgb(10 10 10 / 0.38);
+    0px 20px 40px -12px rgb(0 0 0 / 0.6), 0px 4px 12px -10px rgb(0 0 0 / 0.48);
   --shadow-md:
-    0px 24px 44px -14px rgb(10 10 10 / 0.54),
-    0px 8px 18px -12px rgb(10 10 10 / 0.42);
+    0px 24px 44px -14px rgb(0 0 0 / 0.64), 0px 8px 18px -12px rgb(0 0 0 / 0.52);
   --shadow-lg:
-    0px 28px 52px -16px rgb(10 10 10 / 0.58),
-    0px 12px 26px -16px rgb(10 10 10 / 0.45);
+    0px 28px 52px -16px rgb(0 0 0 / 0.68), 0px 12px 26px -16px rgb(0 0 0 / 0.55);
   --shadow-xl:
-    0px 34px 60px -18px rgb(10 10 10 / 0.62),
-    0px 16px 32px -20px rgb(10 10 10 / 0.5);
+    0px 34px 60px -18px rgb(0 0 0 / 0.72), 0px 16px 32px -20px rgb(0 0 0 / 0.6);
   --shadow-2xl:
-    0px 40px 72px -20px rgb(10 10 10 / 0.7),
-    0px 20px 38px -24px rgb(10 10 10 / 0.56);
+    0px 40px 72px -20px rgb(0 0 0 / 0.8), 0px 20px 38px -24px rgb(0 0 0 / 0.66);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
 }
 
 @theme inline {
@@ -206,5 +212,17 @@
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
     letter-spacing: var(--tracking-normal);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-property:
+      opacity, color, background-color, border-color !important;
   }
 }

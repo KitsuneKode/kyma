@@ -102,7 +102,7 @@ export function MarketingRolePathways() {
               <div className="mt-10 mt-auto border-t border-border/40 pt-8">
                 <Button
                   variant="outline"
-                  className="rounded-full px-6 ring-1 ring-border/40 transition-transform hover:bg-muted/30 active:scale-[0.96]"
+                  className="rounded-full px-6 ring-1 ring-border/40 transition-transform hover:bg-muted/30"
                   render={<Link href={pathway.cta.href} />}
                   nativeButton={false}
                 >

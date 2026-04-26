@@ -108,7 +108,7 @@ export function PremiumHero() {
             >
               <Button
                 size="lg"
-                className="rounded-xl px-8 text-base shadow-inner transition-transform active:scale-[0.96]"
+                className="rounded-xl px-8 text-base shadow-inner transition-transform"
                 render={<Link href="#demo" />}
                 nativeButton={false}
               >
@@ -119,7 +119,7 @@ export function PremiumHero() {
               key={2}
               size="lg"
               variant="ghost"
-              className="h-12 rounded-xl px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30 active:scale-[0.96]"
+              className="h-12 rounded-xl px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30"
               render={<Link href="/interviews/demo-invite" />}
               nativeButton={false}
             >

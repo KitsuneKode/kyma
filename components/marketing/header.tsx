@@ -93,7 +93,7 @@ export const HeroHeader = () => {
                   size="sm"
                   variant={isScrolled ? 'default' : 'outline'}
                   className={cn(
-                    'rounded-full px-5 text-sm font-medium transition-transform active:scale-[0.96]',
+                    'rounded-full px-5 text-sm font-medium transition-transform',
                     !isScrolled && 'ring-1 ring-border/40 hover:bg-muted/30'
                   )}
                   render={<Link href="/admin" />}

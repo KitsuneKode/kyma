@@ -854,7 +854,7 @@ export function InterviewWorkspace({
             >
               <Button
                 variant="outline"
-                className="rounded-full px-8 py-6 font-medium shadow-sm transition-all active:scale-[0.96]"
+                className="rounded-full px-8 py-6 font-medium shadow-sm transition-all"
                 onClick={() => window.close()}
               >
                 Close Window
@@ -877,7 +877,7 @@ export function InterviewWorkspace({
                     onClick={handleSubmitInterview}
                     size="sm"
                     variant="destructive"
-                    className="h-9 rounded-full px-5 transition-transform active:scale-[0.96]"
+                    className="h-9 rounded-full px-5 transition-transform"
                   >
                     Retry submission
                   </Button>

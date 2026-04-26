@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { AppSidebar } from '@/components/admin/app-sidebar'
+import { CommandPalette } from '@/components/admin/command-palette'
 import {
   SidebarProvider,
   SidebarInset,
@@ -34,6 +35,7 @@ export default async function AdminLayout({
         <main className="flex-1 overflow-y-auto bg-muted/10">
           <div className="mx-auto w-full max-w-7xl p-8">{children}</div>
         </main>
+        <CommandPalette />
       </SidebarInset>
     </SidebarProvider>
   )

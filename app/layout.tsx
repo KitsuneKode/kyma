@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
-import { Nunito, Lora, JetBrains_Mono } from 'next/font/google'
+import { Outfit, Lora, IBM_Plex_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { Providers } from './providers'
 import '@livekit/components-styles'
 import './globals.css'
 
-const fontSans = Nunito({
+const fontSans = Outfit({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-sans',
@@ -20,9 +20,10 @@ const fontSerif = Lora({
   variable: '--font-serif',
 })
 
-const fontMono = JetBrains_Mono({
+const fontMono = IBM_Plex_Mono({
   subsets: ['latin'],
   display: 'swap',
+  weight: ['400', '500', '600'],
   variable: '--font-mono',
 })
 

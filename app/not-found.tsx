@@ -29,7 +29,7 @@ export default function NotFound() {
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
           <Button
             size="lg"
-            className="rounded-full px-8 text-base shadow-sm transition-transform active:scale-[0.96]"
+            className="rounded-full px-8 text-base shadow-sm transition-transform"
             render={<Link href="/" />}
             nativeButton={false}
           >
@@ -38,7 +38,7 @@ export default function NotFound() {
           <Button
             variant="outline"
             size="lg"
-            className="rounded-full px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30 active:scale-[0.96]"
+            className="rounded-full px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30"
             render={<Link href="/admin" />}
             nativeButton={false}
           >
