@@ -77,7 +77,7 @@ export function MarketingRolePathways() {
             <motion.div
               key={pathway.title}
               variants={STAGGER_VARIANTS}
-              className="group relative flex flex-col overflow-hidden rounded-3xl bg-card p-10 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] ring-1 ring-border/50 transition-all hover:-translate-y-1 hover:shadow-[0_16px_40px_-12px_rgba(0,0,0,0.15)]"
+              className="group relative flex flex-col overflow-hidden rounded-3xl bg-card p-10 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)] transition-all hover:-translate-y-1 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.35)]"
             >
               <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 transition-colors group-hover:bg-primary/20">
                 <pathway.icon className="size-7 text-primary" stroke={1.5} />
@@ -101,8 +101,7 @@ export function MarketingRolePathways() {
               </ul>
               <div className="mt-10 mt-auto border-t border-border/40 pt-8">
                 <Button
-                  variant="outline"
-                  className="rounded-full px-6 ring-1 ring-border/40 transition-transform hover:bg-muted/30"
+                  className="rounded-full bg-primary px-6 text-primary-foreground shadow-[0_0_0_1px_rgba(232,255,71,0.45),0_10px_30px_rgba(0,0,0,0.35)] transition-colors hover:bg-primary/90"
                   render={<Link href={pathway.cta.href} />}
                   nativeButton={false}
                 >

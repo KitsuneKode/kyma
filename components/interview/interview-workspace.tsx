@@ -781,25 +781,23 @@ export function InterviewWorkspace({
           session={bootstrappedSession}
         />
       ) : view === 'processing' ? (
-        <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background/50 p-4 backdrop-blur-sm">
+        <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden bg-[#0a0a0a] p-4">
+          <div className="pointer-events-none absolute -top-32 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl" />
           <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={{
-              visible: { transition: { staggerChildren: 0.1 } },
-            }}
-            className="w-full max-w-lg overflow-hidden rounded-3xl bg-card p-10 text-center shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] ring-1 ring-border/50"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-card/95 p-10 text-center shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_20px_60px_rgba(0,0,0,0.45)]"
           >
             <motion.div
-              variants={{
-                hidden: { scale: 0.8, opacity: 0 },
-                visible: {
-                  scale: 1,
-                  opacity: 1,
-                  transition: { type: 'spring', bounce: 0.4, duration: 0.6 },
-                },
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{
+                duration: 0.3,
+                delay: 0.05,
+                ease: [0.23, 1, 0.32, 1],
               }}
-              className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 shadow-inner ring-1 ring-emerald-500/20"
+              className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 shadow-[0_0_0_1px_rgba(52,211,153,0.24),inset_0_1px_0_rgba(255,255,255,0.06)]"
             >
               <svg
                 className="h-10 w-10"
@@ -810,7 +808,11 @@ export function InterviewWorkspace({
                 <motion.path
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
+                  transition={{
+                    duration: 0.4,
+                    delay: 0.12,
+                    ease: [0.23, 1, 0.32, 1],
+                  }}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2.5}
@@ -820,12 +822,15 @@ export function InterviewWorkspace({
             </motion.div>
 
             <motion.div
-              variants={{
-                hidden: { opacity: 0, y: 10 },
-                visible: { opacity: 1, y: 0 },
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.28,
+                delay: 0.1,
+                ease: [0.23, 1, 0.32, 1],
               }}
             >
-              <p className="text-xs font-semibold tracking-[0.2em] text-emerald-600/80 uppercase">
+              <p className="text-xs font-semibold tracking-[0.2em] text-emerald-400/80 uppercase">
                 Success
               </p>
               <h1 className="mt-4 text-3xl font-bold tracking-tight text-balance sm:text-4xl">
@@ -834,37 +839,43 @@ export function InterviewWorkspace({
             </motion.div>
 
             <motion.div
-              variants={{
-                hidden: { opacity: 0, y: 10 },
-                visible: { opacity: 1, y: 0 },
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.28,
+                delay: 0.15,
+                ease: [0.23, 1, 0.32, 1],
               }}
             >
               <p className="mx-auto mt-6 max-w-sm text-base leading-relaxed text-pretty text-muted-foreground">
                 Your recording has been securely saved. The team will review the
-                conversation and follow up with you shortly.
+                conversation and follow up with you shortly. You can close this
+                window now.
               </p>
             </motion.div>
 
             <motion.div
-              variants={{
-                hidden: { opacity: 0, y: 10 },
-                visible: { opacity: 1, y: 0 },
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.28,
+                delay: 0.2,
+                ease: [0.23, 1, 0.32, 1],
               }}
               className="mt-10"
             >
               <Button
-                variant="outline"
-                className="rounded-full px-8 py-6 font-medium shadow-sm transition-all"
+                className="rounded-full bg-primary px-8 py-6 font-medium text-primary-foreground shadow-[0_0_0_1px_rgba(232,255,71,0.45),0_10px_30px_rgba(0,0,0,0.35)] transition-colors hover:bg-primary/90"
                 onClick={() => window.close()}
               >
-                Close Window
+                Return Home
               </Button>
             </motion.div>
 
             {connectionError ? (
               <motion.div
                 variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-                className="mt-8 rounded-2xl bg-destructive/10 p-5 text-left shadow-sm ring-1 ring-destructive/20"
+                className="mt-8 rounded-2xl bg-destructive/10 p-5 text-left shadow-[0_0_0_1px_rgba(239,68,68,0.28),0_8px_24px_rgba(0,0,0,0.3)]"
               >
                 <p className="text-sm font-semibold text-destructive">
                   Submission Warning
@@ -897,7 +908,7 @@ export function InterviewWorkspace({
           inviteId={hydratedSession.inviteId}
         />
       ) : (
-        <div className="mx-auto max-w-[1400px] px-6 md:px-12">
+        <div className="mx-auto w-full max-w-[1400px]">
           <InviteLobby
             candidateName={participantName}
             connectionError={connectionError}

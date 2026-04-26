@@ -6,6 +6,7 @@ import { IconMenu2, IconX } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import React from 'react'
 import { cn } from '@/lib/utils'
+import { motion, useScroll, useSpring } from 'motion/react'
 
 const menuItems = [
   { name: 'How it works', href: '#how-it-works' },
@@ -15,6 +16,13 @@ const menuItems = [
 export const HeroHeader = () => {
   const [menuState, setMenuState] = React.useState(false)
   const [isScrolled, setIsScrolled] = React.useState(false)
+  const [activeHash, setActiveHash] = React.useState<string>('')
+  const { scrollYProgress } = useScroll()
+  const progressScaleX = useSpring(scrollYProgress, {
+    stiffness: 120,
+    damping: 24,
+    mass: 0.25,
+  })
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -22,6 +30,13 @@ export const HeroHeader = () => {
     }
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  React.useEffect(() => {
+    const updateHash = () => setActiveHash(window.location.hash)
+    updateHash()
+    window.addEventListener('hashchange', updateHash)
+    return () => window.removeEventListener('hashchange', updateHash)
   }, [])
 
   return (
@@ -63,9 +78,18 @@ export const HeroHeader = () => {
                   <li key={index}>
                     <Link
                       href={item.href}
-                      className="block text-muted-foreground duration-150 hover:text-foreground"
+                      className={cn(
+                        'group relative block text-muted-foreground duration-150 hover:text-foreground',
+                        activeHash === item.href && 'text-foreground'
+                      )}
                     >
                       <span>{item.name}</span>
+                      <span
+                        className={cn(
+                          'absolute -bottom-1 left-0 h-0.5 w-full scale-x-0 bg-primary transition-transform duration-200',
+                          activeHash === item.href && 'scale-x-100'
+                        )}
+                      />
                     </Link>
                   </li>
                 ))}
@@ -105,6 +129,11 @@ export const HeroHeader = () => {
             </div>
           </div>
         </div>
+        <motion.div
+          aria-hidden
+          className="mx-auto h-0.5 w-full max-w-7xl origin-left bg-primary/80"
+          style={{ scaleX: progressScaleX }}
+        />
       </nav>
     </header>
   )

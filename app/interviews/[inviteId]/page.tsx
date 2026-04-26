@@ -43,7 +43,7 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
   )
 
   return (
-    <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-6xl flex-col px-6 py-10">
+    <main className="flex min-h-[100dvh] w-full flex-col bg-[#0a0a0a] text-foreground">
       <RenderErrorBoundary title="Interview workspace">
         <InterviewWorkspace initialSnapshot={snapshot} />
       </RenderErrorBoundary>

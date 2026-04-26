@@ -11,14 +11,27 @@ type CandidateInterviewCardProps = {
 }
 
 export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
+  const normalizedStatus = props.status.toLowerCase()
+  const statusToneClass =
+    normalizedStatus.includes('fail') || normalizedStatus.includes('expired')
+      ? 'bg-red-500/15 text-red-400'
+      : normalizedStatus.includes('pending') ||
+          normalizedStatus.includes('processing')
+        ? 'bg-amber-500/15 text-amber-400'
+        : 'bg-emerald-500/15 text-emerald-400'
+
   return (
-    <article className="rounded-2xl border bg-card p-5">
+    <article className="rounded-2xl bg-card p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
       <h3 className="text-base font-semibold">{props.title}</h3>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Status: {props.status}
-      </p>
+      <div className="mt-3">
+        <span
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${statusToneClass}`}
+        >
+          {props.status}
+        </span>
+      </div>
       {props.startedAt ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="mt-3 text-sm text-muted-foreground tabular-nums">
           Started: {new Date(props.startedAt).toLocaleString()}
         </p>
       ) : null}

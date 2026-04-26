@@ -56,6 +56,7 @@ function InterviewConference({
   )
 
   const [isIdle, setIsIdle] = useState(false)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
@@ -79,8 +80,20 @@ function InterviewConference({
     }
   }, [])
 
+  useEffect(() => {
+    const startedAt = Date.now()
+    const intervalId = window.setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000))
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [])
+
+  const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')
+  const seconds = String(elapsedSeconds % 60).padStart(2, '0')
+
   return (
-    <div className="lk-video-conference relative h-[100dvh] w-full overflow-hidden bg-black">
+    <div className="lk-video-conference relative h-[100dvh] w-full overflow-hidden bg-[#0a0a0a]">
       <LayoutContextProvider value={layoutContext}>
         <div className="lk-video-conference-inner relative flex h-full w-full flex-col">
           {/* Top Bar for branding and room info */}
@@ -94,7 +107,7 @@ function InterviewConference({
                 className="absolute top-0 right-0 left-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/90 via-black/40 to-transparent px-6 pt-6 pb-12"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-white/10 shadow-lg ring-1 ring-white/20 backdrop-blur-md">
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.18),0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
                     <IconBuildingSkyscraper className="h-5 w-5 text-white" />
                   </div>
                   <div className="flex flex-col">
@@ -104,11 +117,14 @@ function InterviewConference({
                     <RoomName className="text-xs font-medium text-white/70 drop-shadow-sm" />
                   </div>
                 </div>
+                <div className="rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold tracking-[0.14em] text-white/80 tabular-nums shadow-[0_0_0_1px_rgba(255,255,255,0.14)]">
+                  {minutes}:{seconds}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="lk-grid-layout-wrapper h-full w-full bg-black [&_.lk-grid-layout]:gap-0 [&_.lk-grid-layout]:p-0 [&_.lk-participant-tile]:rounded-none [&_.lk-participant-tile]:border-none [&_video]:object-cover">
+          <div className="lk-grid-layout-wrapper h-full w-full bg-[#0a0a0a] [&_.lk-grid-layout]:gap-0 [&_.lk-grid-layout]:p-0 [&_.lk-participant-tile]:rounded-none [&_.lk-participant-tile]:border-none [&_video]:object-cover">
             <GridLayout tracks={tracks} className="h-full w-full">
               <ParticipantTile />
             </GridLayout>
@@ -122,7 +138,7 @@ function InterviewConference({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/60 p-2 shadow-2xl backdrop-blur-2xl"
+                className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/70 p-2 shadow-[0_0_0_1px_rgba(255,255,255,0.14),0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
               >
                 <div className="lk-control-bar flex items-center gap-1 !border-none !bg-transparent !p-0 !shadow-none">
                   <TrackToggle
@@ -141,8 +157,7 @@ function InterviewConference({
                 <Button
                   onClick={onSubmit}
                   disabled={isSubmitting}
-                  variant="destructive"
-                  className="rounded-full px-6 font-medium shadow-lg shadow-red-900/20 transition-all hover:bg-destructive/90"
+                  className="rounded-full bg-primary px-6 font-medium text-primary-foreground shadow-[0_0_0_1px_rgba(232,255,71,0.45),0_10px_30px_rgba(0,0,0,0.35)] transition-colors hover:bg-primary/90"
                 >
                   {isSubmitting ? 'Submitting…' : 'Submit & Leave'}
                 </Button>

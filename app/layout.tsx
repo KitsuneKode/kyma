@@ -79,7 +79,17 @@ export default function RootLayout({
       >
         <Providers clerkEnabled={clerkEnabled}>
           {children}
-          <Toaster richColors position="top-right" />
+          <Toaster
+            richColors
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#121212',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'hsl(var(--foreground))',
+              },
+            }}
+          />
         </Providers>
       </body>
     </html>

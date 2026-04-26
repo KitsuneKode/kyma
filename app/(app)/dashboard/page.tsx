@@ -23,12 +23,14 @@ export default async function DashboardPage() {
         ).catch(() => [])
       : []
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">Candidate dashboard</h1>
+    <section className="space-y-5">
+      <h1 className="text-2xl font-semibold tracking-tight">
+        Candidate dashboard
+      </h1>
       {interviews.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <div className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
           No interviews linked to your account yet.
-        </p>
+        </div>
       ) : (
         interviews.map((item) => (
           <CandidateInterviewCard

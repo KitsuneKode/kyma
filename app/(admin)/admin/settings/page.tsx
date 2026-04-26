@@ -32,7 +32,7 @@ export default function SettingsPage() {
         description="Manage BYOK provider keys and default models."
       />
 
-      <section className="rounded-2xl border bg-card p-6">
+      <section className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
         <h2 className="text-lg font-semibold">Provider keys</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <Input
@@ -50,6 +50,7 @@ export default function SettingsPage() {
             type="password"
             onChange={(event) => setKey(event.target.value)}
             placeholder="api key"
+            className="font-mono"
           />
         </div>
         <div className="mt-3 flex gap-3">
@@ -75,9 +76,9 @@ export default function SettingsPage() {
           {settings?.providerKeys?.map((item) => (
             <div
               key={item.keyId}
-              className="flex items-center justify-between rounded-lg border p-3"
+              className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/20 p-3"
             >
-              <p className="text-sm">
+              <p className="font-mono text-sm">
                 {item.provider} {item.label ? `(${item.label})` : ''} - ****
                 {item.maskedKeyTail ?? '****'}
               </p>
@@ -98,7 +99,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border bg-card p-6">
+      <section className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
         <h2 className="text-lg font-semibold">Default models</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <Input

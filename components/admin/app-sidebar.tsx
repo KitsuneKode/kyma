@@ -60,7 +60,7 @@ export function AppSidebar({
   const pathname = usePathname()
 
   return (
-    <Sidebar {...props}>
+    <Sidebar {...props} className="bg-[#0a0a0a]">
       <SidebarHeader className="h-16 justify-center px-6">
         <Link
           href="/"
@@ -88,6 +88,7 @@ export function AppSidebar({
                       render={<Link href={item.url} />}
                       isActive={isActive}
                       tooltip={item.title}
+                      className="transition-colors hover:bg-muted/20 data-[active=true]:bg-primary/15 data-[active=true]:text-primary"
                     >
                       <item.icon />
                       <span>{item.title}</span>
@@ -100,6 +101,12 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4">
+        <div className="mb-3 flex items-center justify-between rounded-xl bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          <span>Quick actions</span>
+          <kbd className="rounded-md bg-background px-2 py-0.5 font-mono text-[11px] text-foreground">
+            Cmd+K
+          </kbd>
+        </div>
         <div className="flex items-center justify-between gap-4 rounded-xl bg-card p-2 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] ring-1 ring-border/50">
           {clerkEnabled ? (
             <>

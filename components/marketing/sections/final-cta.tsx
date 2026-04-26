@@ -3,7 +3,11 @@ import { Button } from '@/components/ui/button'
 
 export function MarketingFinalCta() {
   return (
-    <section className="py-24 md:py-32">
+    <section className="relative py-24 md:py-32">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(232,255,71,0.06),transparent_45%)]"
+      />
       <div className="mx-auto max-w-4xl px-6 text-center">
         <h2 className="font-serif text-4xl font-medium tracking-tight text-balance sm:text-5xl md:text-6xl">
           Ready to screen with evidence?
@@ -25,7 +29,7 @@ export function MarketingFinalCta() {
           </div>
           <Button
             size="lg"
-            variant="ghost"
+            variant="outline"
             className="h-12 rounded-xl px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30"
             render={<Link href="/admin" />}
             nativeButton={false}
