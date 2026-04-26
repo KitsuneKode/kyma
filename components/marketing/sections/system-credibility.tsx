@@ -13,27 +13,27 @@ import { staggerContainer, staggerItem } from '@/lib/motion/presets'
 const features = [
   {
     icon: IconShieldCheck,
-    title: 'Secure by design',
+    title: 'Invite-gated access',
     description:
-      'Sessions run over encrypted channels. Credentials never leave the server boundary. Audit trails for every action.',
+      'Single-use invite flows and explicit access states reduce accidental exposure and keep interview entry controlled.',
   },
   {
     icon: IconListDetails,
-    title: 'Structured rubric scoring',
+    title: 'Reviewable scoring',
     description:
-      '9-dimension weighted assessment with hard gates. Every score links back to transcript evidence.',
+      'Structured rubric outcomes are tied back to transcript context so teams can audit how each recommendation was formed.',
   },
   {
     icon: IconDatabase,
-    title: 'Durable session records',
+    title: 'Durable realtime records',
     description:
-      'Transcripts, events, and recordings persist across reconnects. No data lost to dropped connections.',
+      'Session events and transcript artifacts persist across reconnects, so recruiter review is never blocked by transient call issues.',
   },
   {
     icon: IconUserScan,
-    title: 'Recruiter in the loop',
+    title: 'Human decision authority',
     description:
-      'AI generates recommendations, humans make decisions. Override, annotate, and review with full context.',
+      'AI assists triage speed, but recruiter decisions stay in the loop with notes, overrides, and full context.',
   },
 ]
 
@@ -43,10 +43,10 @@ export function MarketingSystemCredibility() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center">
           <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            Built for reliability
+            Built for hiring reliability
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-pretty text-muted-foreground">
-            The architecture behind confident hiring decisions.
+            Premium candidate experience, with operator-grade review controls.
           </p>
         </div>
 

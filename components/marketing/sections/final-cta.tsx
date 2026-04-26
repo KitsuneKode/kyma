@@ -13,9 +13,27 @@ export function MarketingFinalCta() {
           Ready to screen with evidence?
         </h2>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-pretty text-muted-foreground">
-          See the full candidate experience in a two-minute demo interview, or
-          log in to review real assessment reports.
+          See the full candidate interview experience first, then operate real
+          screening batches from the recruiter workspace.
         </p>
+        <div className="mx-auto mt-8 grid max-w-3xl gap-3 text-left sm:grid-cols-2">
+          <div className="rounded-2xl border border-border/40 bg-card/70 p-4">
+            <p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">
+              Candidate flow
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Try the live interview path exactly as candidates see it.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/40 bg-card/70 p-4">
+            <p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">
+              Recruiter workflow
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Review queue, screening batches, and evidence-backed decisions.
+            </p>
+          </div>
+        </div>
         <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <div className="rounded-[calc(var(--radius-xl)+0.125rem)] border border-border/60 bg-muted/20 p-[3px] shadow-sm backdrop-blur-sm">
             <Button
@@ -34,7 +52,7 @@ export function MarketingFinalCta() {
             render={<Link href="/sign-in" />}
             nativeButton={false}
           >
-            Sign In
+            Open recruiter workspace
           </Button>
         </div>
       </div>

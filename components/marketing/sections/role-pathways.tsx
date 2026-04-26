@@ -11,12 +11,12 @@ const pathways = [
     icon: IconUser,
     title: 'For candidates',
     description:
-      'A focused, respectful screening experience. Join from any device, have a real conversation with an AI interviewer, and know your session is being evaluated fairly with a structured rubric.',
+      'A focused and respectful screening experience. Candidates join from any device, complete a guided live interview, and get a consistent process every time.',
     points: [
-      'Browser-based, no downloads required',
-      'Real-time voice interview with AI',
-      'Transparent session timing and policies',
-      'Durable session records for fairness',
+      'Invite-link entry with clear access state',
+      'Device check before joining the interview',
+      'Structured interview flow with transparent expectations',
+      'Reliable transcript capture throughout the session',
     ],
     cta: { label: 'Try a demo interview', href: '/interviews/demo-invite' },
   },
@@ -24,14 +24,14 @@ const pathways = [
     icon: IconBriefcase,
     title: 'For recruiters',
     description:
-      'Review candidates with evidence, not impressions. Every session produces a scored report with transcript citations, so your team can make confident decisions at scale.',
+      'Review candidates with evidence instead of impressions. Recruiter workflows prioritize queue clarity, screening controls, and faster decisions.',
     points: [
-      'Rubric-scored assessment reports',
-      'Transcript with evidence citations',
-      'AI copilot for report questions',
-      'Batch screening management',
+      'Screening Batches with explicit invite policy',
+      'Screening Templates for consistent assessment structure',
+      'Needs-attention-first recruiter home',
+      'Evidence-linked recommendations and reviewer notes',
     ],
-    cta: { label: 'Open recruiter workspace', href: '/sign-in' },
+    cta: { label: 'Open recruiter workspace', href: '/recruiter' },
   },
 ]
 

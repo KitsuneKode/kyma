@@ -10,24 +10,24 @@ import {
 
 const faqs = [
   {
-    question: 'How long does an interview session take?',
+    question: 'What does a typical screening session look like?',
     answer:
-      'A typical AI screening interview runs for about 15 to 20 minutes. It simulates a natural conversation, dynamically adapting to the candidate’s responses and keeping the interaction concise yet highly informative.',
+      'Most sessions run around 15 to 20 minutes. Candidates complete a prejoin device check, join the live interviewer, and are evaluated against a structured rubric aligned to tutoring outcomes.',
   },
   {
-    question: 'Can candidates retry the interview if they drop off?',
+    question: 'How do invite links and retries work?',
     answer:
-      'Yes, the platform handles disconnects gracefully. If allowed by your screening batch policy, candidates can resume their active session from where they left off before final submission.',
+      'Recruiters control this through screening batch policy. You can set expiry windows and attempt limits, and optionally allow resume behavior for disconnects before final submission.',
   },
   {
-    question: 'How is the final score calculated?',
+    question: 'How do recruiters trust the recommendation?',
     answer:
-      'The AI evaluates the candidate against a predefined rubric across multiple dimensions (e.g., communication, subject knowledge, empathy). The transcript is analyzed post-call, and a weighted score with cited evidence is provided.',
+      'Recommendations are grounded in transcript evidence and rubric dimensions. Reviewers can inspect session details, notes, and citations before taking the final decision.',
   },
   {
-    question: 'Can we customize the interview rubric?',
+    question: 'Can we standardize different role types or cohorts?',
     answer:
-      'Absolutely. Assessment templates are fully customizable. You can define specific technical requirements, behavioral markers, and role-playing scenarios tailored exactly to your hiring needs.',
+      'Yes. Screening Templates define repeatable interview structures, while Screening Batches let you apply policy and candidate lists per hiring cohort.',
   },
 ]
 
@@ -40,7 +40,8 @@ export function PremiumFaq() {
             Frequently Asked Questions
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Everything you need to know about scaling your screening process.
+            Practical answers for teams moving from manual calls to structured
+            screening.
           </p>
         </div>
 

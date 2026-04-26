@@ -78,7 +78,7 @@ export function PremiumHero() {
             as="h1"
             className="mx-auto mt-8 max-w-5xl text-5xl font-semibold tracking-tight text-balance antialiased md:text-7xl lg:mt-12 xl:text-[5rem]"
           >
-            Hire better tutors faster, with interview evidence you can trust
+            Screen tutors with live interview evidence, not resume guesswork
           </TextEffect>
           <TextEffect
             per="line"
@@ -88,9 +88,9 @@ export function PremiumHero() {
             as="p"
             className="mx-auto mt-8 max-w-3xl text-lg leading-relaxed text-balance text-muted-foreground"
           >
-            Kyma runs structured voice interviews, captures transcript evidence,
-            and delivers recruiter-ready scoring summaries so decisions happen
-            in one pass, not five review loops.
+            Run invite-only screening batches, capture transcript-backed
+            signals, and move candidates from interview to decision with a
+            recruiter-first workflow your team can trust.
           </TextEffect>
 
           <AnimatedGroup
@@ -114,10 +114,10 @@ export function PremiumHero() {
               <Button
                 size="lg"
                 className="rounded-xl px-8 text-base shadow-inner transition-transform"
-                render={<Link href="#demo" />}
+                render={<Link href="/sign-in" />}
                 nativeButton={false}
               >
-                <span className="text-nowrap">Book a recruiter demo</span>
+                <span className="text-nowrap">Open recruiter workspace</span>
               </Button>
             </div>
             <Button
@@ -128,7 +128,7 @@ export function PremiumHero() {
               render={<Link href="/interviews/demo-invite" />}
               nativeButton={false}
             >
-              <span className="text-nowrap">Try the live interview flow</span>
+              <span className="text-nowrap">Try candidate interview</span>
             </Button>
           </AnimatedGroup>
 
@@ -144,39 +144,41 @@ export function PremiumHero() {
               },
               ...transitionVariants,
             }}
-            className="mt-8 grid grid-cols-1 gap-3 text-left sm:grid-cols-3"
+            className="mt-8 grid grid-cols-1 gap-3 text-left sm:grid-cols-3 sm:items-stretch"
           >
-            <div className="rounded-2xl bg-card/90 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2)]">
+            <div className="h-full min-h-[116px] rounded-2xl bg-card/90 px-4 py-[18px] shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2)]">
               <div className="flex items-center gap-2 text-primary">
                 <IconSparkles className="h-4 w-4" />
                 <p className="text-xs font-semibold tracking-[0.14em] uppercase">
-                  Faster decisions
+                  Screening batches
                 </p>
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Structured assessments in ~20 minutes.
+              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
+                Launch invite-only cohorts with explicit expiry and attempt
+                rules.
               </p>
             </div>
-            <div className="rounded-2xl bg-card/90 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2)]">
+            <div className="h-full min-h-[116px] rounded-2xl bg-card/90 px-4 py-[18px] shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2)]">
               <div className="flex items-center gap-2 text-primary">
                 <IconChartBar className="h-4 w-4" />
                 <p className="text-xs font-semibold tracking-[0.14em] uppercase">
-                  Evidence scoring
+                  Evidence-backed review
                 </p>
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Rubric grades mapped to transcript citations.
+              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
+                Recommendations stay grounded in transcript citations and
+                session events.
               </p>
             </div>
-            <div className="rounded-2xl bg-card/90 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2)]">
+            <div className="h-full min-h-[116px] rounded-2xl bg-card/90 px-4 py-[18px] shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2)]">
               <div className="flex items-center gap-2 text-primary">
                 <IconChecks className="h-4 w-4" />
                 <p className="text-xs font-semibold tracking-[0.14em] uppercase">
-                  Recruiter control
+                  Human final call
                 </p>
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                AI assists; your team owns the final call.
+              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
+                AI accelerates triage, recruiters keep decision ownership.
               </p>
             </div>
           </AnimatedGroup>

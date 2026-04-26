@@ -9,10 +9,12 @@ export default async function AuthLayout({
   await connection()
 
   return (
-    <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-5xl items-center justify-center px-6 py-10">
-      <section className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-sm md:p-8">
-        {children}
-      </section>
+    <main className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#0a0a0a] p-6">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(232,255,71,0.08),transparent_40%)]"
+      />
+      <section className="relative z-10 w-full max-w-md">{children}</section>
     </main>
   )
 }

@@ -11,23 +11,23 @@ const steps = [
   {
     icon: IconUserCheck,
     number: '01',
-    title: 'Candidate joins via invite',
+    title: 'Create a screening batch',
     description:
-      'Share a unique link. The candidate checks their mic and camera, then joins a structured voice session with an AI interviewer.',
+      'Recruiters launch an invite-only screening batch with template, expiry, and attempt policy set up front.',
   },
   {
     icon: IconMicrophone,
     number: '02',
-    title: 'AI conducts the interview',
+    title: 'Candidate completes live interview',
     description:
-      'A real-time voice conversation covers subject knowledge, teaching approach, and adaptability. Every word is transcribed and timestamped.',
+      'Candidates join from their invite link and complete a structured real-time voice interview with full transcript capture.',
   },
   {
     icon: IconReportAnalytics,
     number: '03',
-    title: 'Evidence-backed report',
+    title: 'Review evidence, decide fast',
     description:
-      'A rubric-scored assessment with transcript citations lands in the recruiter workspace. Decide with data, not gut feeling.',
+      'Recruiters triage sessions in the queue using rubric scores, transcript citations, and recommendation context.',
   },
 ]
 
@@ -52,50 +52,62 @@ export function MarketingHowItWorks() {
             How it works
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-pretty text-muted-foreground">
-            Three simple steps from invite link to a confident hiring decision.
+            A recruiter-ready flow from screening setup to evidence-backed
+            decisions.
           </p>
         </div>
 
-        <div className="mt-16 grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-          <aside className="lg:sticky lg:top-28 lg:h-fit">
-            <div className="rounded-3xl bg-card p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-100px' }}
+          variants={{
+            visible: { transition: { staggerChildren: 0.08 } },
+          }}
+          className="mt-16 grid gap-5 lg:auto-rows-[minmax(180px,auto)] lg:grid-cols-12"
+        >
+          <motion.aside
+            variants={STAGGER_VARIANTS}
+            className="lg:col-span-5 lg:row-span-2"
+          >
+            <div className="h-full rounded-3xl bg-card p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
               <p className="text-xs font-semibold tracking-[0.16em] text-primary uppercase">
                 Why teams choose Kyma
               </p>
               <h3 className="mt-3 text-2xl font-semibold tracking-tight text-balance">
-                One flow. Fewer bottlenecks. Better hiring signal.
+                One pipeline, from invite policy to final decision.
               </h3>
               <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
-                  Candidate readiness checks reduce failed calls.
+                  Screening policy prevents unbounded retries and stale links.
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
-                  Live transcript and rubric build trust in outcomes.
+                  Real-time transcript capture keeps scoring auditable.
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
-                  Recruiters review faster with citation-linked evidence.
+                  Queue-first review helps teams prioritize what needs attention
+                  now.
                 </li>
               </ul>
             </div>
-          </aside>
+          </motion.aside>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={{
-              visible: { transition: { staggerChildren: 0.1 } },
-            }}
-            className="grid gap-5"
-          >
-            {steps.map((step) => (
+          {steps.map((step, index) => {
+            const bentoSpanClass =
+              index === 0
+                ? 'lg:col-span-7'
+                : index === 1
+                  ? 'lg:col-span-4'
+                  : 'lg:col-span-3'
+
+            return (
               <motion.div
                 key={step.number}
                 variants={STAGGER_VARIANTS}
-                className="group relative overflow-hidden rounded-3xl bg-card p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)] transition-all hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.35)]"
+                className={`group relative overflow-hidden rounded-3xl bg-card p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)] transition-all hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.35)] ${bentoSpanClass}`}
               >
                 <div className="flex items-center gap-4">
                   <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 transition-colors group-hover:bg-primary/20">
@@ -112,9 +124,9 @@ export function MarketingHowItWorks() {
                   {step.description}
                 </p>
               </motion.div>
-            ))}
-          </motion.div>
-        </div>
+            )
+          })}
+        </motion.div>
       </div>
     </section>
   )

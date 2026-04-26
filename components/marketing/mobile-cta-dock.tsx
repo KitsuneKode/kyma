@@ -11,10 +11,10 @@ export function MobileCtaDock() {
         <div className="grid grid-cols-2 gap-2">
           <Button
             className="h-11 rounded-xl bg-primary text-primary-foreground"
-            render={<Link href="#demo" />}
+            render={<Link href="/sign-in" />}
             nativeButton={false}
           >
-            Book demo
+            Recruiter sign in
           </Button>
           <Button
             variant="outline"
@@ -22,7 +22,7 @@ export function MobileCtaDock() {
             render={<Link href="/interviews/demo-invite" />}
             nativeButton={false}
           >
-            Try flow
+            Try interview
           </Button>
         </div>
       </div>
