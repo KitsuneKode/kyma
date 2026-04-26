@@ -1,172 +1,154 @@
+'use client'
+
+import { useState } from 'react'
+import { useAction, useMutation, useQuery } from 'convex/react'
+
+import { api } from '@/convex/_generated/api'
 import { PageHeader } from '@/components/admin/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  IconBuildingSkyscraper,
-  IconUpload,
-  IconKey,
-  IconRobotFace,
-} from '@tabler/icons-react'
 
 export default function SettingsPage() {
+  const settings = useQuery(api.admin.getWorkspaceSettings, {})
+  const addProviderKey = useMutation(api.admin.addProviderKey)
+  const removeProviderKey = useMutation(api.admin.removeProviderKey)
+  const updateDefaultModels = useMutation(api.admin.updateDefaultModels)
+  const testProviderConnection = useAction(api.admin.testProviderConnection)
+  const [provider, setProvider] = useState('openai')
+  const [key, setKey] = useState('')
+  const [label, setLabel] = useState('')
+  const [models, setModels] = useState({
+    stt: settings?.defaultModels?.stt ?? '',
+    llm: settings?.defaultModels?.llm ?? '',
+    tts: settings?.defaultModels?.tts ?? '',
+    reviewChat: settings?.defaultModels?.reviewChat ?? '',
+  })
+
   return (
-    <div className="flex w-full flex-col gap-10">
+    <div className="flex w-full flex-col gap-8">
       <PageHeader
         eyebrow="Configuration"
         title="Workspace Settings"
-        description="Manage your organization profile, AI personas, and external API integrations."
+        description="Manage BYOK provider keys and default models."
       />
 
-      <div className="grid max-w-4xl gap-8">
-        {/* Organization Profile */}
-        <section className="rounded-3xl bg-card p-8 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] ring-1 ring-border/50">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <IconBuildingSkyscraper className="size-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight">
-                Organization Profile
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                This info appears on candidate invites.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="grid gap-2">
-              <Label
-                htmlFor="companyName"
-                className="font-semibold text-foreground/80"
-              >
-                Company Name
-              </Label>
-              <Input
-                id="companyName"
-                defaultValue="Acme Corp"
-                className="h-12 rounded-xl bg-muted/20"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label className="font-semibold text-foreground/80">
-                Company Logo
-              </Label>
-              <div className="flex items-center gap-6 rounded-2xl border border-dashed border-border/60 bg-muted/10 p-6 transition-colors hover:bg-muted/20">
-                <div className="flex size-16 items-center justify-center rounded-xl bg-muted/30 ring-1 ring-border">
-                  <IconBuildingSkyscraper className="size-8 text-muted-foreground/50" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm text-muted-foreground">
-                    Square image, PNG or JPG up to 2MB.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-fit gap-2 rounded-lg"
-                    nativeButton={false}
-                  >
-                    <IconUpload className="size-4" />
-                    Upload new logo
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* AI Persona */}
-        <section className="rounded-3xl bg-card p-8 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] ring-1 ring-border/50">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <IconRobotFace className="size-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight">
-                Interviewer Persona
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Customize how the AI introduces itself.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="grid gap-2">
-              <Label
-                htmlFor="personaName"
-                className="font-semibold text-foreground/80"
-              >
-                Interviewer Name
-              </Label>
-              <Input
-                id="personaName"
-                defaultValue="Kyma"
-                className="h-12 rounded-xl bg-muted/20"
-              />
-              <p className="text-xs text-muted-foreground">
-                The name used during voice introductions.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* BYOK (Keys) */}
-        <section className="rounded-3xl bg-card p-8 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] ring-1 ring-border/50">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <IconKey className="size-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight">
-                API Keys (BYOK)
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Bring your own keys for language models and STT.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="grid gap-2">
-              <Label
-                htmlFor="openaiKey"
-                className="font-semibold text-foreground/80"
-              >
-                OpenAI API Key
-              </Label>
-              <Input
-                id="openaiKey"
-                type="password"
-                placeholder="sk-..."
-                className="h-12 rounded-xl bg-muted/20"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label
-                htmlFor="livekitKey"
-                className="font-semibold text-foreground/80"
-              >
-                LiveKit Secret
-              </Label>
-              <Input
-                id="livekitKey"
-                type="password"
-                placeholder="devkey_..."
-                className="h-12 rounded-xl bg-muted/20"
-              />
-            </div>
-          </div>
-        </section>
-
-        <div className="flex justify-end pt-4 pb-12">
-          <Button className="rounded-full px-8 py-6 text-sm font-semibold shadow-xl transition-all active:scale-[0.96]">
-            Save all settings
+      <section className="rounded-2xl border bg-card p-6">
+        <h2 className="text-lg font-semibold">Provider keys</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <Input
+            value={provider}
+            onChange={(event) => setProvider(event.target.value)}
+            placeholder="provider"
+          />
+          <Input
+            value={label}
+            onChange={(event) => setLabel(event.target.value)}
+            placeholder="label"
+          />
+          <Input
+            value={key}
+            type="password"
+            onChange={(event) => setKey(event.target.value)}
+            placeholder="api key"
+          />
+        </div>
+        <div className="mt-3 flex gap-3">
+          <Button
+            onClick={() => {
+              void addProviderKey({
+                provider,
+                key,
+                label: label || undefined,
+              }).then(() => setKey(''))
+            }}
+          >
+            Add key
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => void testProviderConnection({ provider })}
+          >
+            Test provider
           </Button>
         </div>
-      </div>
+        <div className="mt-4 space-y-2">
+          {settings?.providerKeys?.map((item) => (
+            <div
+              key={item.keyId}
+              className="flex items-center justify-between rounded-lg border p-3"
+            >
+              <p className="text-sm">
+                {item.provider} {item.label ? `(${item.label})` : ''} - ****
+                {item.maskedKeyTail ?? '****'}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  void removeProviderKey({
+                    provider: item.provider,
+                    keyId: item.keyId,
+                  })
+                }
+              >
+                Remove
+              </Button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border bg-card p-6">
+        <h2 className="text-lg font-semibold">Default models</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <Input
+            value={models.stt}
+            onChange={(event) =>
+              setModels((current) => ({ ...current, stt: event.target.value }))
+            }
+            placeholder="STT model"
+          />
+          <Input
+            value={models.llm}
+            onChange={(event) =>
+              setModels((current) => ({ ...current, llm: event.target.value }))
+            }
+            placeholder="LLM model"
+          />
+          <Input
+            value={models.tts}
+            onChange={(event) =>
+              setModels((current) => ({ ...current, tts: event.target.value }))
+            }
+            placeholder="TTS model"
+          />
+          <Input
+            value={models.reviewChat}
+            onChange={(event) =>
+              setModels((current) => ({
+                ...current,
+                reviewChat: event.target.value,
+              }))
+            }
+            placeholder="Review chat model"
+          />
+        </div>
+        <Button
+          className="mt-4"
+          onClick={() =>
+            void updateDefaultModels({
+              models: {
+                stt: models.stt || undefined,
+                llm: models.llm || undefined,
+                tts: models.tts || undefined,
+                reviewChat: models.reviewChat || undefined,
+              },
+            })
+          }
+        >
+          Save model defaults
+        </Button>
+      </section>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { fetchMutation } from 'convex/nextjs'
+import { fetchAction, fetchMutation } from 'convex/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { api } from '@/convex/_generated/api'
@@ -6,7 +6,6 @@ import {
   createDiagnosticLogger,
   createRequestId,
 } from '@/lib/interview/diagnostics'
-import { rateLimitAllow } from '@/lib/http/rate-limit'
 import { createParticipantToken } from '@/lib/livekit/token'
 import { bootstrapBodySchema } from '@/lib/validation/interview-api'
 
@@ -24,12 +23,12 @@ export async function POST(request: NextRequest) {
     request.headers.get('x-real-ip') ??
     'unknown'
 
-  if (!rateLimitAllow(['bootstrap', clientIp], 40, 60_000)) {
-    return NextResponse.json(
-      { error: 'Too many bootstrap attempts. Please try again shortly.' },
-      { status: 429 }
-    )
-  }
+  await fetchAction(api.rateLimiter.checkLimit, {
+    name: 'publicSnapshot',
+    key: `bootstrap:${clientIp}`,
+  }).catch(() => {
+    throw new Error('RATE_LIMITED')
+  })
 
   const body = await request.json().catch(() => null)
   const parsed = bootstrapBodySchema.safeParse(body)
@@ -103,11 +102,13 @@ export async function POST(request: NextRequest) {
     const message =
       error instanceof Error ? error.message : 'Failed to bootstrap interview.'
     const status =
-      message === 'This interview link has expired.'
-        ? 410
-        : message === 'This interview has already been submitted.'
-          ? 409
-          : 500
+      message === 'RATE_LIMITED'
+        ? 429
+        : message === 'This interview link has expired.'
+          ? 410
+          : message === 'This interview has already been submitted.'
+            ? 409
+            : 500
     logger.error({
       event: 'bootstrap.failed',
       detail: message,

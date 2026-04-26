@@ -1,6 +1,7 @@
 import { fetchQuery } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
+import { RenderErrorBoundary } from '@/components/errors/render-error-boundary'
 import { InterviewWorkspace } from '@/components/interview/interview-workspace'
 import { clientEnv } from '@/lib/env/client'
 import { serverEnv } from '@/lib/env/server'
@@ -43,7 +44,9 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
 
   return (
     <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-6xl flex-col px-6 py-10">
-      <InterviewWorkspace initialSnapshot={snapshot} />
+      <RenderErrorBoundary title="Interview workspace">
+        <InterviewWorkspace initialSnapshot={snapshot} />
+      </RenderErrorBoundary>
     </main>
   )
 }

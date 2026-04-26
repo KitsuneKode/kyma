@@ -15,7 +15,9 @@ import type * as helpers_interviewPolicy from "../helpers/interviewPolicy.js";
 import type * as helpers_templates from "../helpers/templates.js";
 import type * as interviews from "../interviews.js";
 import type * as livekit from "../livekit.js";
+import type * as rateLimiter from "../rateLimiter.js";
 import type * as recruiter from "../recruiter.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -31,7 +33,9 @@ declare const fullApi: ApiFromModules<{
   "helpers/templates": typeof helpers_templates;
   interviews: typeof interviews;
   livekit: typeof livekit;
+  rateLimiter: typeof rateLimiter;
   recruiter: typeof recruiter;
+  users: typeof users;
 }>;
 
 /**
@@ -60,4 +64,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+};

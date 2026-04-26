@@ -616,3 +616,140 @@ export const upsertTranscriptSegment = mutation({
     })
   },
 })
+
+export const linkCandidateInviteByEmail = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity?.email) {
+      return null
+    }
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
+      .unique()
+    if (!user) {
+      return null
+    }
+    const invites = await ctx.db
+      .query('candidateInvites')
+      .withIndex('by_candidate_email', (q) =>
+        q.eq('candidateEmail', identity.email)
+      )
+      .collect()
+    await Promise.all(
+      invites.map((invite) =>
+        ctx.db.patch(invite._id, {
+          userId: user._id,
+        })
+      )
+    )
+    const sessions = await ctx.db.query('interviewSessions').collect()
+    await Promise.all(
+      sessions.map(async (session) => {
+        const invite = invites.find(
+          (candidateInvite) => candidateInvite._id === session.inviteId
+        )
+        if (!invite) return
+        await ctx.db.patch(session._id, { candidateUserId: user._id })
+      })
+    )
+    return { linkedInvites: invites.length }
+  },
+})
+
+export const listCandidateInterviews = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new ConvexError('You must be signed in to access interviews.')
+    }
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
+      .unique()
+    if (!user) {
+      return []
+    }
+    const sessions = await ctx.db
+      .query('interviewSessions')
+      .withIndex('by_candidate_user', (q) => q.eq('candidateUserId', user._id))
+      .collect()
+    return await Promise.all(
+      sessions.map(async (session) => {
+        const invite = await ctx.db.get(session.inviteId)
+        const report = await ctx.db
+          .query('assessmentReports')
+          .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+          .first()
+        return {
+          sessionId: session._id,
+          inviteToken: invite?.inviteToken,
+          candidateName: invite?.candidateName,
+          status: session.state,
+          inviteStatus: invite?.status,
+          startedAt: session.startedAt,
+          endedAt: session.endedAt,
+          reportStatus: report?.status,
+          recommendation: report?.overallRecommendation,
+          released: report?.released ?? false,
+        }
+      })
+    )
+  },
+})
+
+export const getCandidateInterviewResult = query({
+  args: {
+    sessionId: v.id('interviewSessions'),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new ConvexError(
+        'You must be signed in to access interview results.'
+      )
+    }
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
+      .unique()
+    if (!user) return null
+    const session = await ctx.db.get(args.sessionId)
+    if (!session || `${session.candidateUserId}` !== `${user._id}`) {
+      throw new ConvexError('You are not authorized to access this interview.')
+    }
+    const report = await ctx.db
+      .query('assessmentReports')
+      .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
+      .first()
+    const transcript = await ctx.db
+      .query('transcriptSegments')
+      .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
+      .collect()
+    return {
+      sessionId: session._id,
+      state: session.state,
+      transcript: transcript
+        .toSorted((a, b) => a.startedAt.localeCompare(b.startedAt))
+        .map((segment) => ({
+          id: segment._id,
+          speaker: segment.speaker,
+          text: segment.text,
+          startedAt: segment.startedAt,
+          endedAt: segment.endedAt,
+        })),
+      report: report?.released
+        ? {
+            status: report.status,
+            recommendation: report.overallRecommendation,
+            confidence: report.confidence,
+            summary: report.summary,
+            weightedScore: report.weightedScore,
+            generatedAt: report.generatedAt,
+          }
+        : null,
+    }
+  },
+})

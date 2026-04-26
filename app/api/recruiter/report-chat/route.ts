@@ -1,10 +1,9 @@
-import { fetchMutation, fetchQuery } from 'convex/nextjs'
+import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
-import { rateLimitAllow } from '@/lib/http/rate-limit'
 import {
   answerRecruiterQuestion,
   GROUNDING_VERSION,
@@ -26,14 +25,10 @@ export async function POST(request: NextRequest) {
     const sessionId = body.sessionId as Id<'interviewSessions'>
     const reportId = body.reportId as Id<'assessmentReports'> | undefined
 
-    if (
-      !rateLimitAllow(['report-chat', clientIp, `${sessionId}`], 45, 60_000)
-    ) {
-      return NextResponse.json(
-        { error: 'Too many chat requests. Please wait a moment.' },
-        { status: 429 }
-      )
-    }
+    await fetchAction(api.rateLimiter.checkLimit, {
+      name: 'recruiterChat',
+      key: `report-chat:${clientIp}:${sessionId}`,
+    })
 
     const detail = await fetchQuery(
       api.recruiter.getCandidateReviewDetail,
@@ -93,14 +88,15 @@ export async function POST(request: NextRequest) {
       citations: answer.citations,
     })
   } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unable to answer the recruiter question.'
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unable to answer the recruiter question.',
+        error: message,
       },
-      { status: 400 }
+      { status: message.includes('Rate limit') ? 429 : 400 }
     )
   }
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Nunito, Lora, JetBrains_Mono } from 'next/font/google'
+import { Toaster } from 'sonner'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { Providers } from './providers'
 import '@livekit/components-styles'
@@ -75,7 +76,10 @@ export default function RootLayout({
       <body
         className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} font-sans antialiased`}
       >
-        <Providers clerkEnabled={clerkEnabled}>{children}</Providers>
+        <Providers clerkEnabled={clerkEnabled}>
+          {children}
+          <Toaster richColors position="top-right" />
+        </Providers>
       </body>
     </html>
   )

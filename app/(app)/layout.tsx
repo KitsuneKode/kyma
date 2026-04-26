@@ -1,12 +1,17 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
+import { auth } from '@clerk/nextjs/server'
 
 import { ThemeToggle } from '@/components/theme-toggle'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default async function AppLayout({ children }: { children: ReactNode }) {
   const clerkEnabled = hasClerkServerCredentials()
+  const authState = clerkEnabled ? await auth() : null
+  const role = (
+    authState?.sessionClaims?.metadata as { role?: string } | undefined
+  )?.role
 
   return (
     <>
@@ -16,12 +21,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <Link className="font-semibold" href="/">
               Kyma
             </Link>
-            <Link
-              className="text-muted-foreground transition-colors hover:text-foreground"
-              href="/admin"
-            >
-              Admin
-            </Link>
+            {role === 'admin' || role === 'recruiter' ? (
+              <Link
+                className="text-muted-foreground transition-colors hover:text-foreground"
+                href="/admin"
+              >
+                Admin
+              </Link>
+            ) : null}
             <Link
               className="text-muted-foreground transition-colors hover:text-foreground"
               href="/interviews/demo-invite"

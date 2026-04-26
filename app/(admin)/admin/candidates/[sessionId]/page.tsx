@@ -21,6 +21,7 @@ import {
   formatStatusLabel,
 } from '@/lib/recruiter/format'
 import { ReviewConsole } from '@/components/recruiter/review-console'
+import { RenderErrorBoundary } from '@/components/errors/render-error-boundary'
 
 type CandidateReviewPageProps = {
   params: Promise<{
@@ -221,26 +222,30 @@ export default async function CandidateReviewPage({
             )}
           </InfoCard>
 
-          <ReviewConsole
-            candidateName={detail.candidate.name}
-            transcript={detail.transcript}
-            evidence={detail.evidence}
-            dimensionScores={detail.report?.dimensionScores ?? []}
-            audioUrl={
-              detail.recordings.find(
-                (r) =>
-                  r.location &&
-                  (r.artifactType === 'audio' || r.artifactType === 'composite')
-              )?.location
-            }
-            recordingStartTime={
-              detail.recordings.find(
-                (r) =>
-                  r.location &&
-                  (r.artifactType === 'audio' || r.artifactType === 'composite')
-              )?.startedAt
-            }
-          />
+          <RenderErrorBoundary title="Review console">
+            <ReviewConsole
+              candidateName={detail.candidate.name}
+              transcript={detail.transcript}
+              evidence={detail.evidence}
+              dimensionScores={detail.report?.dimensionScores ?? []}
+              audioUrl={
+                detail.recordings.find(
+                  (r) =>
+                    r.location &&
+                    (r.artifactType === 'audio' ||
+                      r.artifactType === 'composite')
+                )?.location
+              }
+              recordingStartTime={
+                detail.recordings.find(
+                  (r) =>
+                    r.location &&
+                    (r.artifactType === 'audio' ||
+                      r.artifactType === 'composite')
+                )?.startedAt
+              }
+            />
+          </RenderErrorBoundary>
 
           <InfoCard
             title="Recruiter notes"
@@ -346,11 +351,13 @@ export default async function CandidateReviewPage({
             title="Recruiter copilot"
             description="Ask grounded questions about the transcript, evidence, and recommendation."
           >
-            <RecruiterChat
-              sessionId={detail.session.id}
-              reportId={detail.report?.id}
-              initialMessages={detail.chatMessages}
-            />
+            <RenderErrorBoundary title="Recruiter chat">
+              <RecruiterChat
+                sessionId={detail.session.id}
+                reportId={detail.report?.id}
+                initialMessages={detail.chatMessages}
+              />
+            </RenderErrorBoundary>
           </InfoCard>
 
           <InfoCard

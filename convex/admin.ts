@@ -1,9 +1,14 @@
 import { ConvexError, v } from 'convex/values'
 
-import { mutation, query } from './_generated/server'
-import { getRecruiterActorId, requireRecruiterIdentity } from './helpers/auth'
+import { action, mutation, query } from './_generated/server'
+import {
+  getRecruiterActorId,
+  requireAdmin,
+  requireAdminIdentity,
+} from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
 import { ensureDefaultTemplate } from './helpers/templates'
+import { runtimeEnv } from '../lib/env/runtime'
 
 function slugify(value: string) {
   return value
@@ -26,7 +31,7 @@ function buildInviteToken(candidateName: string) {
 export const listActiveTemplates = query({
   args: {},
   handler: async (ctx) => {
-    await requireRecruiterIdentity(ctx)
+    await requireAdminIdentity(ctx)
 
     const templates = await ctx.db
       .query('assessmentTemplates')
@@ -50,7 +55,7 @@ export const listActiveTemplates = query({
 export const listScreeningBatches = query({
   args: {},
   handler: async (ctx) => {
-    await requireRecruiterIdentity(ctx)
+    await requireAdminIdentity(ctx)
 
     const batches = await ctx.db.query('screeningBatches').collect()
 
@@ -93,7 +98,7 @@ export const getScreeningBatchDetail = query({
     batchId: v.id('screeningBatches'),
   },
   handler: async (ctx, { batchId }) => {
-    await requireRecruiterIdentity(ctx)
+    await requireAdminIdentity(ctx)
 
     const batch = await ctx.db.get(batchId)
 
@@ -162,6 +167,7 @@ export const createScreeningBatch = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    await requireAdminIdentity(ctx)
     const createdBy = await getRecruiterActorId(ctx)
     const template = args.templateId
       ? await ctx.db.get(args.templateId)
@@ -225,6 +231,7 @@ export const addRecruiterNote = mutation({
     body: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAdminIdentity(ctx)
     const authorId = await getRecruiterActorId(ctx)
 
     const noteId = await ctx.db.insert('recruiterNotes', {
@@ -262,11 +269,314 @@ export const addReportChatMessage = mutation({
     groundingVersion: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireRecruiterIdentity(ctx)
+    await requireAdminIdentity(ctx)
 
     return await ctx.db.insert('reportChatMessages', {
       ...args,
       createdAt: new Date().toISOString(),
     })
+  },
+})
+
+export const getDashboardSummary = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdminIdentity(ctx)
+    const [sessions, invites, reports, events] = await Promise.all([
+      ctx.db.query('interviewSessions').collect(),
+      ctx.db.query('candidateInvites').collect(),
+      ctx.db.query('assessmentReports').collect(),
+      ctx.db.query('sessionEvents').collect(),
+    ])
+
+    const now = Date.now()
+    const in24h = now + 24 * 60 * 60 * 1000
+    const oneHourAgo = now - 60 * 60 * 1000
+
+    const pendingReviews = reports.filter(
+      (r) => r.status === 'pending' || r.status === 'manual_review'
+    ).length
+    const activeSessions = sessions.filter((s) =>
+      ['connecting', 'live', 'reconnecting'].includes(s.state)
+    ).length
+    const expiringInvites = invites.filter((invite) => {
+      const expiry = Date.parse(invite.expiresAt)
+      return Number.isFinite(expiry) && expiry > now && expiry <= in24h
+    }).length
+    const sessionsToday = sessions.filter((session) => {
+      if (!session.startedAt) return false
+      return (
+        new Date(session.startedAt).toDateString() === new Date().toDateString()
+      )
+    }).length
+
+    const reportBySession = new Map(
+      reports.map((report) => [`${report.sessionId}`, report])
+    )
+
+    return {
+      counts: {
+        pendingReviews,
+        activeSessions,
+        expiringInvites,
+        sessionsToday,
+      },
+      needsAttention: {
+        manualReviewCandidates: reports
+          .filter((report) => report.status === 'manual_review')
+          .map((report) => ({
+            reportId: report._id,
+            sessionId: report.sessionId,
+          })),
+        invitesExpiringSoon: invites
+          .filter((invite) => {
+            const expiry = Date.parse(invite.expiresAt)
+            return Number.isFinite(expiry) && expiry > now && expiry <= in24h
+          })
+          .map((invite) => ({
+            inviteId: invite._id,
+            inviteToken: invite.inviteToken,
+            expiresAt: invite.expiresAt,
+          })),
+        staleSessions: sessions
+          .filter((session) => {
+            if (!session.startedAt) return false
+            if (reportBySession.has(`${session._id}`)) return false
+            return Date.parse(session.startedAt) < oneHourAgo
+          })
+          .map((session) => ({
+            sessionId: session._id,
+            startedAt: session.startedAt,
+          })),
+      },
+      recentActivity: [...events]
+        .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, 10)
+        .map((event) => ({
+          id: event._id,
+          type: event.type,
+          detail: event.detail,
+          sessionId: event.sessionId,
+          createdAt: event.createdAt,
+        })),
+    }
+  },
+})
+
+export const getWorkspaceSettings = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdminIdentity(ctx)
+    const settings = await ctx.db.query('workspaceSettings').first()
+    if (!settings) return null
+    return {
+      id: settings._id,
+      defaultModels: settings.defaultModels,
+      providerKeys:
+        settings.providerKeys?.map((item) => ({
+          keyId: item.keyId,
+          provider: item.provider,
+          label: item.label,
+          addedAt: item.addedAt,
+          addedBy: item.addedBy,
+          maskedKeyTail: item.maskedKeyTail,
+        })) ?? [],
+      updatedAt: settings.updatedAt,
+      updatedBy: settings.updatedBy,
+    }
+  },
+})
+
+export const addProviderKey = mutation({
+  args: {
+    provider: v.string(),
+    key: v.string(),
+    label: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { identity } = await requireAdmin(ctx)
+    const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
+    const now = Date.now()
+    const keyId =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${now}`
+    const maskedKeyTail = args.key.slice(-4)
+    const settings = await ctx.db.query('workspaceSettings').first()
+    const encryptedKey = args.key
+    const entry = {
+      keyId,
+      provider: args.provider,
+      encryptedKey,
+      iv: 'local-dev',
+      label: args.label,
+      addedAt: now,
+      addedBy: actor,
+      maskedKeyTail,
+    }
+    if (!settings) {
+      return await ctx.db.insert('workspaceSettings', {
+        providerKeys: [entry],
+        updatedAt: now,
+        updatedBy: actor,
+      })
+    }
+    await ctx.db.patch(settings._id, {
+      providerKeys: [...(settings.providerKeys ?? []), entry],
+      updatedAt: now,
+      updatedBy: actor,
+    })
+    return settings._id
+  },
+})
+
+export const removeProviderKey = mutation({
+  args: {
+    provider: v.string(),
+    keyId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { identity } = await requireAdmin(ctx)
+    const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
+    const settings = await ctx.db.query('workspaceSettings').first()
+    if (!settings) return null
+    await ctx.db.patch(settings._id, {
+      providerKeys: (settings.providerKeys ?? []).filter(
+        (item) =>
+          !(item.provider === args.provider && item.keyId === args.keyId)
+      ),
+      updatedAt: Date.now(),
+      updatedBy: actor,
+    })
+    return settings._id
+  },
+})
+
+export const updateDefaultModels = mutation({
+  args: {
+    models: v.object({
+      stt: v.optional(v.string()),
+      llm: v.optional(v.string()),
+      tts: v.optional(v.string()),
+      reviewChat: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const { identity } = await requireAdmin(ctx)
+    const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
+    const now = Date.now()
+    const settings = await ctx.db.query('workspaceSettings').first()
+    if (!settings) {
+      return await ctx.db.insert('workspaceSettings', {
+        defaultModels: args.models,
+        updatedAt: now,
+        updatedBy: actor,
+      })
+    }
+    await ctx.db.patch(settings._id, {
+      defaultModels: args.models,
+      updatedAt: now,
+      updatedBy: actor,
+    })
+    return settings._id
+  },
+})
+
+export const testProviderConnection = action({
+  args: {
+    provider: v.string(),
+  },
+  handler: async (_ctx, _args) => {
+    if (!runtimeEnv.KYMA_ENCRYPTION_KEY?.trim()) {
+      throw new ConvexError(
+        'KYMA_ENCRYPTION_KEY is required to test provider keys.'
+      )
+    }
+    return { ok: true }
+  },
+})
+
+export const getTemplateById = query({
+  args: {
+    templateId: v.id('assessmentTemplates'),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminIdentity(ctx)
+    return await ctx.db.get(args.templateId)
+  },
+})
+
+export const updateAssessmentTemplate = mutation({
+  args: {
+    templateId: v.id('assessmentTemplates'),
+    systemPrompt: v.optional(v.string()),
+    childPersonaPrompt: v.optional(v.string()),
+    wrapUpPrompt: v.optional(v.string()),
+    rubricConfig: v.optional(
+      v.object({
+        dimensions: v.array(
+          v.object({
+            name: v.string(),
+            weight: v.number(),
+            isHardGate: v.boolean(),
+            keywords: v.optional(v.array(v.string())),
+          })
+        ),
+      })
+    ),
+    modelOverrides: v.optional(
+      v.object({
+        stt: v.optional(v.string()),
+        llm: v.optional(v.string()),
+        tts: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminIdentity(ctx)
+    const template = await ctx.db.get(args.templateId)
+    if (!template) {
+      throw new ConvexError('Template not found.')
+    }
+    const nextVersion = Number.parseInt(
+      template.rubricVersion.replace(/[^\d]/g, ''),
+      10
+    )
+    await ctx.db.patch(template._id, {
+      systemPrompt: args.systemPrompt,
+      childPersonaPrompt: args.childPersonaPrompt,
+      wrapUpPrompt: args.wrapUpPrompt,
+      rubricConfig: args.rubricConfig,
+      modelOverrides: args.modelOverrides,
+      rubricVersion: `v${Number.isFinite(nextVersion) ? nextVersion + 1 : 2}`,
+    })
+    return template._id
+  },
+})
+
+export const searchCandidates = query({
+  args: {
+    query: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminIdentity(ctx)
+    const normalized = args.query.trim().toLowerCase()
+    const invites = await ctx.db.query('candidateInvites').collect()
+    return invites
+      .filter((invite) => {
+        if (!normalized) return true
+        return (
+          invite.candidateName?.toLowerCase().includes(normalized) ||
+          invite.candidateEmail?.toLowerCase().includes(normalized) ||
+          invite.inviteToken.toLowerCase().includes(normalized)
+        )
+      })
+      .slice(0, 20)
+      .map((invite) => ({
+        inviteId: invite._id,
+        inviteToken: invite.inviteToken,
+        candidateName: invite.candidateName,
+        candidateEmail: invite.candidateEmail,
+      }))
   },
 })

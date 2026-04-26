@@ -1,6 +1,8 @@
+import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { api } from '@/convex/_generated/api'
 import {
   createDiagnosticLogger,
   createRequestId,
@@ -11,7 +13,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 const tokenRequestSchema = z.object({
-  roomName: z.string().min(1),
+  inviteToken: z.string().min(1),
   participantName: z.string().min(1),
   canPublish: z.boolean().optional().default(true),
   canSubscribe: z.boolean().optional().default(true),
@@ -39,8 +41,55 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     )
   }
+  const { inviteToken, participantName, canPublish, canSubscribe } = parsed.data
+  const clientIp =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    request.headers.get('x-real-ip') ??
+    'unknown'
 
-  const { roomName, participantName, canPublish, canSubscribe } = parsed.data
+  try {
+    await fetchAction(api.rateLimiter.checkLimit, {
+      name: 'livekitToken',
+      key: `livekit-token:${clientIp}:${inviteToken}`,
+    })
+  } catch {
+    return NextResponse.json(
+      { error: 'Too many token requests.' },
+      { status: 429 }
+    )
+  }
+
+  const snapshot = await fetchQuery(api.interviews.getPublicSessionDetail, {
+    inviteToken,
+  }).catch(() => null)
+
+  if (!snapshot || snapshot.accessState !== 'available') {
+    return NextResponse.json(
+      { error: 'Invite is invalid, expired, or already consumed.' },
+      { status: 403 }
+    )
+  }
+
+  let roomName = snapshot.roomName
+  let sessionId = snapshot.sessionId ? `${snapshot.sessionId}` : undefined
+  if (!roomName || !sessionId) {
+    const bootstrapped = await fetchMutation(
+      api.interviews.bootstrapPublicSession,
+      {
+        inviteToken,
+        participantName,
+      }
+    ).catch(() => null)
+    if (!bootstrapped) {
+      return NextResponse.json(
+        { error: 'Unable to initialize interview.' },
+        { status: 403 }
+      )
+    }
+    roomName = bootstrapped.roomName
+    sessionId = `${bootstrapped.sessionId}`
+  }
+
   logger.info({
     event: 'token.started',
     detail: 'Creating direct LiveKit token.',
@@ -56,8 +105,14 @@ export async function POST(request: NextRequest) {
     const response = await createParticipantToken({
       roomName,
       participantName,
+      participantIdentity: `candidate-${sessionId}`,
       canPublish,
       canSubscribe,
+      metadata: JSON.stringify({
+        inviteToken,
+        sessionId,
+        role: 'candidate',
+      }),
       requestId,
     })
     logger.info({

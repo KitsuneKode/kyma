@@ -11,20 +11,26 @@ import { clientEnv } from '@/lib/env/client'
 
 export default async function AdminPage() {
   const token = await getServerConvexAuthToken()
-  const [candidates, batches] = clientEnv.NEXT_PUBLIC_CONVEX_URL
-    ? await Promise.all([
-        fetchQuery(
-          api.recruiter.listReviewCandidates,
-          {},
-          { token: token ?? undefined }
-        ).catch(() => []),
-        fetchQuery(
-          api.admin.listScreeningBatches,
-          {},
-          { token: token ?? undefined }
-        ).catch(() => []),
-      ])
-    : [[], []]
+  const [candidates, batches, dashboardSummary] =
+    clientEnv.NEXT_PUBLIC_CONVEX_URL
+      ? await Promise.all([
+          fetchQuery(
+            api.recruiter.listReviewCandidates,
+            {},
+            { token: token ?? undefined }
+          ).catch(() => []),
+          fetchQuery(
+            api.admin.listScreeningBatches,
+            {},
+            { token: token ?? undefined }
+          ).catch(() => []),
+          fetchQuery(
+            api.admin.getDashboardSummary,
+            {},
+            { token: token ?? undefined }
+          ).catch(() => null),
+        ])
+      : [[], [], null]
 
   const sessionsToday = candidates.filter((candidate) => {
     if (!candidate.startedAt) {
@@ -34,12 +40,13 @@ export default async function AdminPage() {
     const now = new Date()
     return started.toDateString() === now.toDateString()
   }).length
-  const reportsPending = candidates.filter(
-    (candidate) => candidate.reportStatus !== 'completed'
-  ).length
-  const activeBatches = batches.filter(
-    (batch) => batch.status === 'active'
-  ).length
+  const reportsPending =
+    dashboardSummary?.counts.pendingReviews ??
+    candidates.filter((candidate) => candidate.reportStatus !== 'completed')
+      .length
+  const activeBatches =
+    dashboardSummary?.counts.activeSessions ??
+    batches.filter((batch) => batch.status === 'active').length
 
   return (
     <div className="flex w-full flex-col gap-10">
@@ -72,6 +79,39 @@ export default async function AdminPage() {
           icon="folder"
         />
       </section>
+
+      {dashboardSummary ? (
+        <section className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border bg-card p-5">
+            <h3 className="font-semibold">Needs attention</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Manual review:{' '}
+              {dashboardSummary.needsAttention.manualReviewCandidates.length}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Invites expiring in 24h:{' '}
+              {dashboardSummary.needsAttention.invitesExpiringSoon.length}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Stale sessions:{' '}
+              {dashboardSummary.needsAttention.staleSessions.length}
+            </p>
+          </div>
+          <div className="rounded-2xl border bg-card p-5">
+            <h3 className="font-semibold">Recent activity</h3>
+            <div className="mt-2 space-y-2">
+              {dashboardSummary.recentActivity.map((event) => (
+                <p
+                  key={`${event.id}`}
+                  className="text-sm text-muted-foreground"
+                >
+                  {event.type}: {event.detail}
+                </p>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-4 grid gap-6 md:grid-cols-2">
         <div className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-card p-8 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] ring-1 ring-border/50 transition-all hover:-translate-y-1 hover:shadow-[0_16px_40px_-12px_rgba(0,0,0,0.15)]">

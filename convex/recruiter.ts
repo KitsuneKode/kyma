@@ -2,10 +2,11 @@ import { v } from 'convex/values'
 
 import type { Id } from './_generated/dataModel'
 import { mutation, query, type QueryCtx } from './_generated/server'
-import { getRecruiterActorId, requireRecruiterIdentity } from './helpers/auth'
+import { getRecruiterActorId, requireAdminIdentity } from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
 import { resolveInterviewPolicyFromInvite } from './helpers/interviewPolicy'
 import { runtimeEnv } from '../lib/env/runtime'
+import { rateLimiter } from './rateLimiter'
 
 const recommendationValidator = v.union(
   v.literal('strong_yes'),
@@ -82,7 +83,7 @@ async function getLatestReviewDecision(
 export const listReviewCandidates = query({
   args: {},
   handler: async (ctx) => {
-    await requireRecruiterIdentity(ctx)
+    await requireAdminIdentity(ctx)
 
     const sessions = await ctx.db.query('interviewSessions').collect()
     const sortedSessions = [...sessions].toSorted((left, right) =>
@@ -132,6 +133,7 @@ export const getSessionProcessingDetail = query({
     sessionId: v.id('interviewSessions'),
   },
   handler: async (ctx, { sessionId }) => {
+    await requireAdminIdentity(ctx)
     const session = await ctx.db.get(sessionId)
 
     if (!session) {
@@ -201,7 +203,7 @@ export const getCandidateReviewDetail = query({
     sessionId: v.id('interviewSessions'),
   },
   handler: async (ctx, { sessionId }) => {
-    await requireRecruiterIdentity(ctx)
+    await requireAdminIdentity(ctx)
 
     const session = await ctx.db.get(sessionId)
 
@@ -443,13 +445,22 @@ export const saveAssessmentReport = mutation({
     policySnapshot: v.optional(interviewPolicySnapshotValidator),
   },
   handler: async (ctx, args) => {
+    await requireAdminIdentity(ctx)
+    await rateLimiter.limit(ctx, 'reportGeneration', {
+      key: `${args.sessionId}`,
+      throws: true,
+    })
     const configuredProcessingKey =
       runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim() || undefined
 
     if (configuredProcessingKey) {
       if (args.processingKey?.trim() !== configuredProcessingKey) {
-        await requireRecruiterIdentity(ctx)
+        throw new Error('Invalid processing key.')
       }
+    } else if (runtimeEnv.NODE_ENV !== 'development') {
+      throw new Error(
+        'KYMA_PROCESSING_WRITE_KEY must be configured outside development.'
+      )
     }
 
     const now = new Date().toISOString()
@@ -516,7 +527,7 @@ export const submitReviewDecision = mutation({
     reviewerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireRecruiterIdentity(ctx)
+    await requireAdminIdentity(ctx)
     const reviewerId = await getRecruiterActorId(ctx)
 
     const decisionId = await ctx.db.insert('reviewDecisions', {

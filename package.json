@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev:web": "next dev --turbopack --port 3000",
+    "dev:web": "next dev --turbopack",
     "dev:stack": "env -u NO_COLOR FORCE_COLOR=1 concurrently -n convex,web -c \"bgBlue.bold,bgMagenta.bold\" -p \"[{time} {name}]\" -t \"HH:mm:ss\" --pad-prefix --kill-others-on-fail \"bun run convex:dev\" \"bun run dev:web\"",
     "dev:full": "env -u NO_COLOR FORCE_COLOR=1 concurrently -n convex,web,agent -c \"bgBlue.bold,bgMagenta.bold,bgGreen.bold\" -p \"[{time} {name}]\" -t \"HH:mm:ss\" --pad-prefix --kill-others-on-fail \"bun run convex:dev\" \"bun run dev:web\" \"bun run agent:dev\"",
     "build": "next build",
@@ -28,6 +28,7 @@
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@clerk/nextjs": "^7.2.3",
+    "@convex-dev/rate-limiter": "^0.3.2",
     "@livekit/agents": "^1.2.8",
     "@livekit/components-react": "^2.9.20",
     "@livekit/components-styles": "^1.2.0",
@@ -55,6 +56,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "shadcn": "^4.3.1",
+    "sonner": "^2.0.7",
     "streamdown": "^2.5.0",
     "tailwind-merge": "^3.5.0",
     "three": "^0.184.0",

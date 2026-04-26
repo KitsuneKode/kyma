@@ -42,6 +42,21 @@ const interviewPolicySnapshotValidator = v.object({
 })
 
 export default defineSchema({
+  users: defineTable({
+    clerkId: v.string(),
+    email: v.optional(v.string()),
+    name: v.optional(v.string()),
+    role: v.union(
+      v.literal('admin'),
+      v.literal('recruiter'),
+      v.literal('candidate')
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_clerk_id', ['clerkId'])
+    .index('by_email', ['email']),
+
   assessmentTemplates: defineTable({
     name: v.string(),
     role: v.string(),
@@ -55,6 +70,28 @@ export default defineSchema({
     targetDurationMinutes: v.optional(v.number()),
     allowsResume: v.optional(v.boolean()),
     interviewStyleMode: v.optional(interviewStyleModeValidator),
+    systemPrompt: v.optional(v.string()),
+    childPersonaPrompt: v.optional(v.string()),
+    wrapUpPrompt: v.optional(v.string()),
+    rubricConfig: v.optional(
+      v.object({
+        dimensions: v.array(
+          v.object({
+            name: v.string(),
+            weight: v.number(),
+            isHardGate: v.boolean(),
+            keywords: v.optional(v.array(v.string())),
+          })
+        ),
+      })
+    ),
+    modelOverrides: v.optional(
+      v.object({
+        stt: v.optional(v.string()),
+        llm: v.optional(v.string()),
+        tts: v.optional(v.string()),
+      })
+    ),
   }).index('by_status', ['status']),
 
   screeningBatches: defineTable({
@@ -101,6 +138,7 @@ export default defineSchema({
     inviteToken: v.string(),
     candidateName: v.optional(v.string()),
     candidateEmail: v.optional(v.string()),
+    userId: v.optional(v.id('users')),
     templateId: v.id('assessmentTemplates'),
     batchId: v.optional(v.id('screeningBatches')),
     eligibilityId: v.optional(v.id('candidateEligibility')),
@@ -114,7 +152,9 @@ export default defineSchema({
     expiresAt: v.string(),
   })
     .index('by_invite_token', ['inviteToken'])
-    .index('by_status', ['status']),
+    .index('by_status', ['status'])
+    .index('by_candidate_email', ['candidateEmail'])
+    .index('by_user', ['userId']),
 
   interviewSessions: defineTable({
     inviteId: v.id('candidateInvites'),
@@ -134,9 +174,11 @@ export default defineSchema({
     startedAt: v.optional(v.string()),
     endedAt: v.optional(v.string()),
     failureReason: v.optional(v.string()),
+    candidateUserId: v.optional(v.id('users')),
   })
     .index('by_invite', ['inviteId'])
-    .index('by_room_name', ['roomName']),
+    .index('by_room_name', ['roomName'])
+    .index('by_candidate_user', ['candidateUserId']),
 
   sessionEvents: defineTable({
     sessionId: v.id('interviewSessions'),
@@ -225,6 +267,7 @@ export default defineSchema({
     ),
     generatedAt: v.optional(v.string()),
     policySnapshot: v.optional(interviewPolicySnapshotValidator),
+    released: v.optional(v.boolean()),
   })
     .index('by_session', ['sessionId'])
     .index('by_status', ['status']),
@@ -295,4 +338,31 @@ export default defineSchema({
     metadataJson: v.optional(v.string()),
     createdAt: v.string(),
   }).index('by_created_at', ['createdAt']),
+
+  workspaceSettings: defineTable({
+    providerKeys: v.optional(
+      v.array(
+        v.object({
+          keyId: v.string(),
+          provider: v.string(),
+          encryptedKey: v.string(),
+          iv: v.string(),
+          label: v.optional(v.string()),
+          addedAt: v.number(),
+          addedBy: v.string(),
+          maskedKeyTail: v.optional(v.string()),
+        })
+      )
+    ),
+    defaultModels: v.optional(
+      v.object({
+        stt: v.optional(v.string()),
+        llm: v.optional(v.string()),
+        tts: v.optional(v.string()),
+        reviewChat: v.optional(v.string()),
+      })
+    ),
+    updatedAt: v.number(),
+    updatedBy: v.string(),
+  }),
 })

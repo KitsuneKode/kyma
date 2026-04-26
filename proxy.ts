@@ -4,20 +4,57 @@ import { NextResponse } from 'next/server'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 const isAdminRoute = createRouteMatcher(['/admin(.*)'])
-const isAppShellRoute = createRouteMatcher(['/video-demo(.*)', '/write-up(.*)'])
+const isDashboardRoute = createRouteMatcher(['/dashboard(.*)'])
+const isAppShellRoute = createRouteMatcher([
+  '/video-demo(.*)',
+  '/write-up(.*)',
+  '/settings(.*)',
+])
 const isAuthRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)'])
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/interviews(.*)',
+  '/api(.*)',
+])
 const hasClerk = hasClerkServerCredentials()
 
 export default hasClerk
   ? clerkMiddleware(async (auth, req) => {
-      const { userId } = await auth()
-      const isProtectedRoute = isAdminRoute(req) || isAppShellRoute(req)
+      const { userId, sessionClaims } = await auth()
+      const role = ((sessionClaims?.metadata as { role?: string } | undefined)
+        ?.role ?? null) as 'admin' | 'recruiter' | 'candidate' | null
+      const isProtectedRoute =
+        !isPublicRoute(req) ||
+        isAdminRoute(req) ||
+        isDashboardRoute(req) ||
+        isAppShellRoute(req)
 
       if (isProtectedRoute) {
         await auth.protect()
       }
 
       if (userId && isAuthRoute(req)) {
+        if (role === 'admin' || role === 'recruiter') {
+          return NextResponse.redirect(new URL('/admin', req.url))
+        }
+        if (role === 'candidate') {
+          return NextResponse.redirect(new URL('/dashboard', req.url))
+        }
+        return NextResponse.redirect(new URL('/onboarding', req.url))
+      }
+
+      if (isAdminRoute(req) && role !== 'admin' && role !== 'recruiter') {
+        return NextResponse.redirect(new URL('/dashboard', req.url))
+      }
+
+      if (
+        isDashboardRoute(req) &&
+        role !== 'candidate' &&
+        role !== 'admin' &&
+        role !== 'recruiter'
+      ) {
         return NextResponse.redirect(new URL('/admin', req.url))
       }
     })
