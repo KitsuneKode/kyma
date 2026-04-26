@@ -12,6 +12,13 @@ type CandidateInterviewCardProps = {
 
 export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
   const normalizedStatus = props.status.toLowerCase()
+  const canJoinInterview = [
+    'ready',
+    'connecting',
+    'live',
+    'reconnecting',
+    'interrupted',
+  ].some((state) => normalizedStatus.includes(state))
   const statusToneClass =
     normalizedStatus.includes('fail') || normalizedStatus.includes('expired')
       ? 'bg-red-500/15 text-red-400'
@@ -21,13 +28,13 @@ export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
         : 'bg-emerald-500/15 text-emerald-400'
 
   return (
-    <article className="rounded-2xl bg-card p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+    <article className="rounded-2xl bg-card p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)] transition-transform duration-150 ease-out hover:translate-y-[-1px]">
       <h3 className="text-base font-semibold">{props.title}</h3>
       <div className="mt-3">
         <span
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${statusToneClass}`}
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize tabular-nums ${statusToneClass}`}
         >
-          {props.status}
+          {props.status.replaceAll('_', ' ')}
         </span>
       </div>
       {props.startedAt ? (
@@ -39,15 +46,17 @@ export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
         <Button
           nativeButton={false}
           size="sm"
+          className="active:scale-[0.96]"
           render={<Link href={`/candidate/interviews/${props.sessionId}`} />}
         >
           View result
         </Button>
-        {props.inviteToken ? (
+        {props.inviteToken && canJoinInterview ? (
           <Button
             nativeButton={false}
             variant="outline"
             size="sm"
+            className="active:scale-[0.96]"
             render={<Link href={`/interviews/${props.inviteToken}`} />}
           >
             Join
