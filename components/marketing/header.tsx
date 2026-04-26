@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { Show, UserButton } from '@clerk/nextjs'
 import { Logo } from '@/components/marketing/logo'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { IconMenu2, IconX } from '@tabler/icons-react'
@@ -13,7 +14,7 @@ const menuItems = [
   { name: 'For recruiters', href: '#role-pathways' },
 ]
 
-export const HeroHeader = () => {
+export const HeroHeader = ({ clerkEnabled }: { clerkEnabled: boolean }) => {
   const [menuState, setMenuState] = React.useState(false)
   const [isScrolled, setIsScrolled] = React.useState(false)
   const [activeHash, setActiveHash] = React.useState<string>('')
@@ -113,18 +114,43 @@ export const HeroHeader = () => {
               </div>
               <div className="flex w-full flex-col items-center space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
                 <ThemeToggle />
-                <Button
-                  size="sm"
-                  variant={isScrolled ? 'default' : 'outline'}
-                  className={cn(
-                    'rounded-full px-5 text-sm font-medium transition-transform',
-                    !isScrolled && 'ring-1 ring-border/40 hover:bg-muted/30'
-                  )}
-                  render={<Link href="/sign-in" />}
-                  nativeButton={false}
-                >
-                  <span>Sign In</span>
-                </Button>
+                {clerkEnabled ? (
+                  <>
+                    <Show when="signed-out">
+                      <Button
+                        size="sm"
+                        variant={isScrolled ? 'default' : 'outline'}
+                        className={cn(
+                          'rounded-full px-5 text-sm font-medium transition-transform',
+                          !isScrolled &&
+                            'ring-1 ring-border/40 hover:bg-muted/30'
+                        )}
+                        render={<Link href="/sign-in" />}
+                        nativeButton={false}
+                      >
+                        <span>Sign In</span>
+                      </Button>
+                    </Show>
+                    <Show when="signed-in">
+                      <div className="rounded-full ring-1 ring-border/40">
+                        <UserButton />
+                      </div>
+                    </Show>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant={isScrolled ? 'default' : 'outline'}
+                    className={cn(
+                      'rounded-full px-5 text-sm font-medium transition-transform',
+                      !isScrolled && 'ring-1 ring-border/40 hover:bg-muted/30'
+                    )}
+                    render={<Link href="/sign-in" />}
+                    nativeButton={false}
+                  >
+                    <span>Sign In</span>
+                  </Button>
+                )}
               </div>
             </div>
           </div>

@@ -12,6 +12,7 @@ import { MarketingHowItWorks } from '@/components/marketing/sections/how-it-work
 import { MarketingRolePathways } from '@/components/marketing/sections/role-pathways'
 import { MarketingSystemCredibility } from '@/components/marketing/sections/system-credibility'
 import { MarketingFinalCta } from '@/components/marketing/sections/final-cta'
+import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 const trustIcons = [
   IconShieldCheck,
@@ -21,6 +22,7 @@ const trustIcons = [
 ]
 
 export default function HeroSection() {
+  const clerkEnabled = hasClerkServerCredentials()
   const sections = [
     {
       id: 'hero-main',
@@ -69,7 +71,7 @@ export default function HeroSection() {
 
   return (
     <>
-      <HeroHeader />
+      <HeroHeader clerkEnabled={clerkEnabled} />
       <main className="overflow-hidden">
         <MarketingPageComposer sections={sections} />
       </main>

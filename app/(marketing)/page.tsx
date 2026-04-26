@@ -7,15 +7,17 @@ import { PremiumFooter } from '@/components/marketing/footer-premium'
 import { HeroHeader } from '@/components/marketing/header'
 import { MobileCtaDock } from '@/components/marketing/mobile-cta-dock'
 import { cacheLife, cacheTag } from 'next/cache'
+import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 export default async function Page() {
   'use cache'
   cacheLife('hours')
   cacheTag('marketing')
+  const clerkEnabled = hasClerkServerCredentials()
 
   return (
     <>
-      <HeroHeader />
+      <HeroHeader clerkEnabled={clerkEnabled} />
       <main className="overflow-hidden bg-[#0a0a0a]">
         <PremiumHero />
         <MarketingHowItWorks />
