@@ -258,13 +258,17 @@ export const seedData = mutation({
 
       await ctx.db.patch(inviteId, { eligibilityId })
 
-      const startedAt = faker.date.recent({ days: 10 }).toISOString()
-      const endedAt = faker.date
-        .between({
-          from: new Date(startedAt),
-          to: faker.date.recent({ days: 1 }),
-        })
-        .toISOString()
+      const startedAtDate = faker.date.recent({ days: 10 })
+      const nowDate = new Date()
+      const endedAtDate =
+        startedAtDate >= nowDate
+          ? new Date(startedAtDate.getTime() + 5 * 60 * 1000)
+          : faker.date.between({
+              from: startedAtDate,
+              to: nowDate,
+            })
+      const startedAt = startedAtDate.toISOString()
+      const endedAt = endedAtDate.toISOString()
       const state = faker.helpers.arrayElement([
         'processing',
         'completed',

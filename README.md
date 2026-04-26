@@ -86,6 +86,19 @@ For active backend/schema work:
 bun run convex:dev
 ```
 
+For org-first auth cutover verification:
+
+```bash
+bun run verify:auth-org-rbac
+```
+
+If Convex schema validation fails with missing `orgId` during local cutover:
+
+```bash
+bun run db:cutover:org-rbac:dev
+bun run convex:once
+```
+
 To run the interviewer worker:
 
 ```bash

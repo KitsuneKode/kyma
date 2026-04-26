@@ -1,0 +1,79 @@
+{
+  "constants": {
+    "demoInviteToken": "demo-invite",
+    "seedOrgId": "org_seed",
+    "demoOrgId": "org_demo"
+  },
+  "clerkIds": {
+    "orgIds": ["org_test_alpha", "org_test_beta"],
+    "userIds": [
+      "user_test_candidate_01",
+      "user_test_recruiter_01",
+      "user_test_both_01"
+    ],
+    "membershipIds": [
+      "mem_test_alpha_admin_01",
+      "mem_test_alpha_recruiter_01",
+      "mem_test_beta_recruiter_01"
+    ]
+  },
+  "personaMetadata": {
+    "candidate": { "persona": "candidate" },
+    "recruiter": { "persona": "recruiter" },
+    "both": { "persona": "both" }
+  },
+  "jwtClaimFixtures": {
+    "candidateOnly": {
+      "sub": "user_test_candidate_01",
+      "metadata": { "persona": "candidate" }
+    },
+    "recruiterAllowed": {
+      "sub": "user_test_recruiter_01",
+      "org_id": "org_test_alpha",
+      "org_role": "org:member",
+      "org_permissions": ["org:recruiter:access"],
+      "metadata": { "persona": "recruiter" }
+    },
+    "recruiterDeniedNoPermission": {
+      "sub": "user_test_recruiter_01",
+      "org_id": "org_test_alpha",
+      "org_role": "org:member",
+      "org_permissions": [],
+      "metadata": { "persona": "recruiter" }
+    },
+    "orgAdmin": {
+      "sub": "user_test_both_01",
+      "org_id": "org_test_alpha",
+      "org_role": "org:admin",
+      "org_permissions": [],
+      "metadata": { "persona": "both" }
+    }
+  },
+  "webhookFixtures": {
+    "organizationCreated": {
+      "type": "organization.created",
+      "data": {
+        "id": "org_test_alpha",
+        "name": "Test Org Alpha",
+        "slug": "test-org-alpha",
+        "image_url": "https://example.com/org-alpha.png"
+      }
+    },
+    "organizationMembershipCreated": {
+      "type": "organizationMembership.created",
+      "data": {
+        "id": "mem_test_alpha_recruiter_01",
+        "role": "org:member",
+        "permissions": ["org:recruiter:access"],
+        "organization": { "id": "org_test_alpha" },
+        "public_user_data": { "user_id": "user_test_recruiter_01" }
+      }
+    }
+  },
+  "routeShortcuts": {
+    "candidate": "/candidate",
+    "recruiter": "/recruiter",
+    "recruiterOnboarding": "/onboarding/recruiter",
+    "publicDemoInterview": "/interviews/demo-invite"
+  }
+}
