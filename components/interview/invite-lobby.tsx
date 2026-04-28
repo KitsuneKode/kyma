@@ -34,25 +34,26 @@ export function InviteLobby({
     <div className="grid min-h-[100dvh] w-full items-center gap-10 px-6 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-10">
       {/* Left: Video Preview Area */}
       <section className="relative flex h-full flex-col justify-center">
-        <div className="relative overflow-hidden rounded-3xl bg-card/90 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-          <div className="pointer-events-none absolute -top-20 -left-20 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-          <div className="pointer-events-none absolute right-0 bottom-0 h-56 w-56 rounded-full bg-primary/5 blur-3xl" />
-          <PreJoin
-            defaults={{
-              username: candidateName,
-              audioEnabled: true,
-              videoEnabled: true,
-            }}
-            joinLabel={
-              isBootstrapping ? 'Preparing interview…' : 'Join interview'
-            }
-            userLabel="Candidate name"
-            persistUserChoices={false}
-            onSubmit={onSubmit}
-            onError={(error) => {
-              console.error('[kyma:prejoin] prejoin.error', error)
-            }}
-          />
+        <div className="relative overflow-hidden rounded-[2rem] bg-[#000] p-4 shadow-2xl ring-1 ring-white/10">
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,hsla(0,0%,20%,0.2)_0,transparent_70%)]" />
+          <div className="lk-theme-override">
+            <PreJoin
+              defaults={{
+                username: candidateName,
+                audioEnabled: true,
+                videoEnabled: true,
+              }}
+              joinLabel={
+                isBootstrapping ? 'Preparing interview…' : 'Join interview'
+              }
+              userLabel="Candidate name"
+              persistUserChoices={false}
+              onSubmit={onSubmit}
+              onError={(error) => {
+                console.error('[kyma:prejoin] prejoin.error', error)
+              }}
+            />
+          </div>
 
           {isBootstrapping ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-background/60 backdrop-blur-md transition-all duration-300">
