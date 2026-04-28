@@ -114,32 +114,6 @@ function summarizeTranscriptEvent(
   return `${speakerLabel}: ${excerpt}`
 }
 
-function emitDebugLog(
-  hypothesisId: string,
-  location: string,
-  message: string,
-  data: Record<string, unknown>
-) {
-  // #region agent log
-  fetch('http://127.0.0.1:7775/ingest/c816eaeb-acd1-4edb-bd45-1464db25af33', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': 'af8e6a',
-    },
-    body: JSON.stringify({
-      sessionId: 'af8e6a',
-      runId: 'baseline',
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion
-}
-
 export function InterviewWorkspace({
   initialSnapshot,
 }: InterviewWorkspaceProps) {
@@ -234,17 +208,6 @@ export function InterviewWorkspace({
         ? Value
         : never
     ) {
-      emitDebugLog(
-        'J3',
-        'components/interview/interview-workspace.tsx:handleParticipantConnected',
-        'remote participant connected',
-        {
-          participantIdentity: participant.identity,
-          isAgentLike:
-            participant.identity.includes('agent') ||
-            participant.identity.includes('tutor-screener'),
-        }
-      )
       const detail = `${participant.identity} joined the room.`
       logger.info({
         event: 'room.participant.connected',
@@ -637,14 +600,6 @@ export function InterviewWorkspace({
   }
 
   async function handleRoomConnected() {
-    emitDebugLog(
-      'J4',
-      'components/interview/interview-workspace.tsx:handleRoomConnected',
-      'candidate connected to room and awaiting remote participants',
-      {
-        roomName: roomNameRef.current ?? bootstrappedSession?.roomName ?? null,
-      }
-    )
     logger.info({
       event: 'room.connect.succeeded',
       detail: 'Candidate connected to LiveKit room.',
