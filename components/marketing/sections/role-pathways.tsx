@@ -48,17 +48,19 @@ export function MarketingRolePathways() {
   return (
     <section
       id="role-pathways"
-      className="border-y border-border/40 bg-muted/10 py-24 md:py-32"
+      className="relative isolate overflow-hidden bg-[#0a0a0a] py-24 md:py-32"
     >
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_100%,hsla(0,0%,15%,0.3)_0,transparent_60%)]" />
+
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center">
-          <p className="mb-4 text-sm font-semibold tracking-wider text-primary uppercase">
+          <p className="mb-4 text-sm font-semibold tracking-widest text-primary uppercase">
             Role Pathways
           </p>
-          <h2 className="font-serif text-4xl font-medium tracking-tight text-balance sm:text-5xl">
+          <h2 className="font-serif text-[3rem] leading-[0.95] font-medium tracking-tighter text-balance text-white sm:text-[4rem]">
             Built for both sides
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-pretty text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-pretty text-white/60">
             Candidates get a respectful experience. Recruiters get actionable
             evidence.
           </p>
@@ -77,31 +79,33 @@ export function MarketingRolePathways() {
             <motion.div
               key={pathway.title}
               variants={STAGGER_VARIANTS}
-              className="group relative flex flex-col overflow-hidden rounded-3xl bg-card p-10 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)] transition-all hover:-translate-y-1 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.35)]"
+              className="group relative flex flex-col overflow-hidden rounded-[2rem] bg-[#000] p-10 shadow-2xl ring-1 ring-white/10 transition-[box-shadow,transform] duration-300 hover:ring-white/20"
             >
-              <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 transition-colors group-hover:bg-primary/20">
-                <pathway.icon className="size-7 text-primary" stroke={1.5} />
+              <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,hsla(0,0%,20%,0.2)_0,transparent_50%)]" />
+
+              <div className="flex size-14 items-center justify-center rounded-2xl bg-white/5 transition-[background-color,transform] duration-300 group-hover:scale-110 group-hover:bg-white/10">
+                <pathway.icon className="size-7 text-white" stroke={1.5} />
               </div>
-              <h3 className="mt-8 text-2xl font-bold tracking-tight text-foreground">
+              <h3 className="mt-8 text-3xl font-semibold tracking-tight text-white">
                 {pathway.title}
               </h3>
-              <p className="mt-4 text-base leading-relaxed text-pretty text-muted-foreground">
+              <p className="mt-4 text-lg leading-relaxed text-pretty text-white/60">
                 {pathway.description}
               </p>
               <ul className="mt-8 flex flex-col gap-4">
                 {pathway.points.map((point) => (
                   <li
                     key={point}
-                    className="flex items-start gap-3 text-sm font-medium text-foreground/80"
+                    className="flex items-start gap-3 text-sm font-medium text-white/80"
                   >
-                    <span className="mt-1.5 block size-1.5 shrink-0 rounded-full bg-primary/60" />
+                    <span className="mt-1.5 block size-1.5 shrink-0 rounded-full bg-primary" />
                     {point}
                   </li>
                 ))}
               </ul>
-              <div className="mt-10 mt-auto border-t border-border/40 pt-8">
+              <div className="mt-10 mt-auto border-t border-white/10 pt-8">
                 <Button
-                  className="rounded-full bg-primary px-6 text-primary-foreground shadow-[0_0_0_1px_rgba(232,255,71,0.45),0_10px_30px_rgba(0,0,0,0.35)] transition-colors hover:bg-primary/90"
+                  className="min-h-[44px] min-w-[44px] rounded-xl bg-primary px-6 text-primary-foreground transition-[transform,background-color] duration-150 ease-out active:scale-[0.96]"
                   render={<Link href={pathway.cta.href} />}
                   nativeButton={false}
                 >

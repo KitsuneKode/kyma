@@ -8,8 +8,6 @@ import {
   IconUserScan,
 } from '@tabler/icons-react'
 
-import { staggerContainer, staggerItem } from '@/lib/motion/presets'
-
 const features = [
   {
     icon: IconShieldCheck,
@@ -37,15 +35,37 @@ const features = [
   },
 ]
 
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+}
+
+const staggerItem = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.23, 1, 0.32, 1],
+    },
+  },
+}
+
 export function MarketingSystemCredibility() {
   return (
-    <section className="py-24">
+    <section className="relative isolate bg-[#000] py-24">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+          <h2 className="text-[3rem] leading-[0.95] font-semibold tracking-tighter text-balance text-white sm:text-[4rem]">
             Built for hiring reliability
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-pretty text-muted-foreground">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-pretty text-white/60">
             Premium candidate experience, with operator-grade review controls.
           </p>
         </div>
@@ -61,15 +81,15 @@ export function MarketingSystemCredibility() {
             <motion.div
               key={feature.title}
               variants={staggerItem}
-              className="rounded-xl bg-card p-6 shadow-sm"
+              className="group rounded-[1.5rem] bg-white/5 p-8 shadow-2xl ring-1 ring-white/10 transition-colors duration-300 hover:bg-white/10"
             >
-              <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-                <feature.icon className="size-5 text-foreground" stroke={1.5} />
+              <div className="flex size-12 items-center justify-center rounded-xl bg-white/10 transition-transform duration-300 group-hover:scale-110">
+                <feature.icon className="size-6 text-white" stroke={1.5} />
               </div>
-              <h3 className="mt-5 text-sm font-semibold tracking-tight">
+              <h3 className="mt-8 text-xl font-semibold tracking-tight text-white">
                 {feature.title}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-pretty text-muted-foreground">
+              <p className="mt-3 text-base leading-relaxed text-pretty text-white/60">
                 {feature.description}
               </p>
             </motion.div>
