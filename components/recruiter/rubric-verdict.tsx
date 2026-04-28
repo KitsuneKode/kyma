@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { RubricDimension } from './rubric-dimension'
+import { RubricRadar } from './rubric-radar'
 
 function getScoreColor(score: number) {
   if (score <= 2.0) return 'text-red-500'
@@ -115,6 +116,11 @@ export function RubricVerdict({
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Dimension radar overview */}
+      <div className="mb-6 px-2">
+        <RubricRadar dimensionScores={dimensionScores} />
       </div>
 
       <div className="flex flex-col gap-1">
