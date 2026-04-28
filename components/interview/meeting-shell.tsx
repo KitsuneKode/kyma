@@ -104,9 +104,9 @@ function InterviewConference({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                className="absolute top-0 right-0 left-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/90 via-black/40 to-transparent px-6 pt-6 pb-12"
+                className="pointer-events-none absolute top-0 left-0 z-20 px-6 pt-6 pb-8"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 rounded-xl bg-black/45 px-3 py-2 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_8px_24px_-14px_rgba(0,0,0,0.75)] backdrop-blur-sm">
                   <div className="flex size-10 items-center justify-center rounded-xl bg-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.18),0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
                     <IconBuildingSkyscraper className="h-5 w-5 text-white" />
                   </div>
@@ -116,9 +116,6 @@ function InterviewConference({
                     </span>
                     <RoomName className="text-xs font-medium text-white/70 drop-shadow-sm" />
                   </div>
-                </div>
-                <div className="rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold tracking-[0.14em] text-white/80 tabular-nums shadow-[0_0_0_1px_rgba(255,255,255,0.14)]">
-                  {minutes}:{seconds}
                 </div>
               </motion.div>
             )}
@@ -132,13 +129,27 @@ function InterviewConference({
 
           {/* Bottom control bar wrapper */}
           <AnimatePresence>
+            {isIdle && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                className="pointer-events-none absolute right-5 bottom-5 z-30 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs font-semibold tracking-[0.14em] text-white/90 tabular-nums shadow-[0_8px_22px_-14px_rgba(0,0,0,0.85)]"
+              >
+                {minutes}:{seconds}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
             {!isIdle && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/70 p-2 shadow-[0_0_0_1px_rgba(255,255,255,0.14),0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
+                className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/70 p-2 shadow-[0_0_0_1px_rgba(255,255,255,0.14),0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
               >
                 <div className="lk-control-bar flex items-center gap-1 !border-none !bg-transparent !p-0 !shadow-none">
                   <TrackToggle
@@ -161,6 +172,11 @@ function InterviewConference({
                 >
                   {isSubmitting ? 'Submitting…' : 'Submit & Leave'}
                 </Button>
+
+                <div className="mx-1 h-6 w-px bg-white/20" />
+                <div className="rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs font-semibold tracking-[0.14em] text-white/90 tabular-nums shadow-[0_8px_22px_-14px_rgba(0,0,0,0.85)]">
+                  {minutes}:{seconds}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

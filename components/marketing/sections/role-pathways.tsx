@@ -51,7 +51,7 @@ export function MarketingRolePathways() {
   return (
     <section
       id="role-pathways"
-      className="relative isolate overflow-hidden bg-background py-24 md:py-32"
+      className="relative isolate scroll-mt-24 overflow-hidden bg-background pt-14 pb-24 md:scroll-mt-28 md:pt-16 md:pb-32"
     >
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_100%,hsla(0,0%,15%,0.3)_0,transparent_60%)]" />
 

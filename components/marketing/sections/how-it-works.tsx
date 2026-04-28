@@ -174,7 +174,7 @@ import { cn } from '@/lib/utils'
 
 export function MarketingHowItWorks() {
   return (
-    <section id="how-it-works" className="relative py-24 md:py-32">
+    <section id="how-it-works" className="relative py-20 md:py-24">
       {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/[0.03] blur-[120px]" />
@@ -292,7 +292,7 @@ export function MarketingHowItWorks() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.4, duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-          className="mt-16 text-center"
+          className="mt-10 text-center"
         >
           <p className="text-sm text-muted-foreground">
             Ready to streamline your tutor screening?
