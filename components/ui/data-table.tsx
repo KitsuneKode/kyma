@@ -53,9 +53,9 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div className="overflow-hidden rounded-3xl bg-card shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] ring-1 ring-border/50">
+    <div className="overflow-hidden rounded-[2rem] bg-card shadow-2xl ring-1 ring-border/20">
       {searchKey ? (
-        <div className="border-b border-border/40 bg-muted/10 px-6 py-5">
+        <div className="border-b border-border/10 bg-transparent px-6 py-5">
           <div className="relative max-w-sm">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <IconSearch className="h-4 w-4 text-muted-foreground" />
@@ -68,7 +68,7 @@ export function DataTable<TData, TValue>({
               onChange={(e) =>
                 table.getColumn(searchKey)?.setFilterValue(e.target.value)
               }
-              className="h-10 w-full rounded-xl border border-border/60 bg-background/50 pr-4 pl-10 text-sm shadow-sm transition-[border-color,box-shadow,background-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] outline-none placeholder:text-muted-foreground hover:bg-background focus-visible:border-primary/50 focus-visible:bg-background focus-visible:ring-4 focus-visible:ring-primary/10"
+              className="h-10 w-full rounded-xl border border-border/40 bg-background/50 pr-4 pl-10 text-sm shadow-sm transition-[border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] outline-none placeholder:text-muted-foreground hover:bg-background focus-visible:border-primary/50 focus-visible:bg-background focus-visible:ring-4 focus-visible:ring-primary/10"
             />
           </div>
         </div>
@@ -76,7 +76,7 @@ export function DataTable<TData, TValue>({
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="border-b border-border/40 bg-muted/20 text-left text-xs tracking-wider text-muted-foreground uppercase">
+          <thead className="border-b border-border/10 bg-transparent text-left text-[10px] tracking-widest text-muted-foreground uppercase">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
@@ -113,7 +113,7 @@ export function DataTable<TData, TValue>({
               </tr>
             ))}
           </thead>
-          <tbody className="divide-y divide-border/40">
+          <tbody className="divide-y divide-border/10">
             <AnimatePresence mode="popLayout">
               {table.getRowModel().rows.length ? (
                 table.getRowModel().rows.map((row, index) => (
@@ -130,14 +130,14 @@ export function DataTable<TData, TValue>({
                     }}
                     className={cn(
                       'group transition-colors duration-200',
-                      onRowClick && 'cursor-pointer hover:bg-muted/20'
+                      onRowClick && 'cursor-pointer hover:bg-muted/10'
                     )}
                     onClick={() => onRowClick?.(row.original)}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="px-6 py-5 text-foreground/90 transition-colors group-hover:text-foreground"
+                        className="px-6 py-5 text-foreground/90 tabular-nums transition-colors group-hover:text-foreground"
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
