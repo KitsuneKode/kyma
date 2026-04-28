@@ -19,7 +19,17 @@ import {
   type Variants,
 } from 'motion/react'
 
-const transitionVariants: { item: Variants } = {
+const transitionVariants: { container: Variants; item: Variants } = {
+  container: {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+        delayChildren: 0.3,
+      },
+    },
+  },
   item: {
     hidden: {
       opacity: 0,
@@ -181,17 +191,7 @@ export function PremiumHero() {
           <motion.div
             initial="hidden"
             animate="visible"
-            variants={{
-              container: {
-                visible: {
-                  transition: {
-                    staggerChildren: 0.05,
-                    delayChildren: 0.3,
-                  },
-                },
-              },
-              ...transitionVariants,
-            }}
+            variants={transitionVariants.container}
             className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row"
           >
             <motion.div variants={transitionVariants.item}>
