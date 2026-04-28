@@ -135,8 +135,8 @@ export function RecruiterChat({
         <motion.button
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            'group flex items-center gap-3 rounded-full border border-white/10 bg-[#0a0a0a]/90 px-5 py-3 text-sm font-medium text-white shadow-2xl backdrop-blur-xl transition-[transform,background-color] duration-200 ease-out active:scale-[0.96]',
-            isOpen ? 'bg-[#1a1a1a]/90' : 'hover:bg-[#1a1a1a]/90'
+            'group flex items-center gap-3 rounded-full border border-border/50 bg-card/90 px-5 py-3 text-sm font-medium text-foreground shadow-2xl backdrop-blur-xl transition-[transform,background-color] duration-200 ease-out active:scale-[0.96]',
+            isOpen ? 'bg-card' : 'hover:bg-card'
           )}
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -144,7 +144,7 @@ export function RecruiterChat({
         >
           <IconSparkles className="size-4 text-emerald-400" />
           <span>Ask AI Copilot</span>
-          <kbd className="ml-2 hidden rounded-md border border-white/10 bg-white/5 px-2 py-0.5 font-mono text-[10px] text-white/50 sm:inline-block">
+          <kbd className="ml-2 hidden rounded-md border border-border/50 bg-foreground/5 px-2 py-0.5 font-mono text-[10px] text-muted-foreground sm:inline-block">
             ⌘K
           </kbd>
         </motion.button>
@@ -158,7 +158,7 @@ export function RecruiterChat({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+              className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm"
               onClick={() => setIsOpen(false)}
             />
             <motion.div
@@ -171,18 +171,18 @@ export function RecruiterChat({
                 stiffness: 300,
                 mass: 0.8,
               }}
-              className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-white/10 bg-[#0a0a0a] shadow-2xl"
+              className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-border/50 bg-card shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
+              <div className="flex items-center justify-between border-b border-border/40 px-6 py-4">
                 <div className="flex items-center gap-2">
                   <IconSparkles className="size-4 text-emerald-400" />
-                  <h3 className="font-semibold tracking-tight text-white">
+                  <h3 className="font-semibold tracking-tight text-foreground">
                     Recruiter Copilot
                   </h3>
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="rounded-full p-2 text-white/50 transition-colors hover:bg-white/10 hover:text-white active:scale-[0.96]"
+                  className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground active:scale-[0.96]"
                 >
                   <IconX className="size-4" />
                 </button>
@@ -224,7 +224,7 @@ export function RecruiterChat({
                             className={cn(
                               'rounded-2xl px-5 py-4 text-[14px] leading-relaxed shadow-sm',
                               message.role === 'assistant'
-                                ? 'border border-white/5 bg-white/5 text-white/90'
+                                ? 'border border-border/40 bg-foreground/5 text-foreground/90'
                                 : 'ml-4 bg-primary text-primary-foreground'
                             )}
                           >
@@ -236,7 +236,7 @@ export function RecruiterChat({
                             </p>
                             <p>{message.content}</p>
                             {message.citationsJson ? (
-                              <div className="mt-4 border-t border-white/10 pt-4">
+                              <div className="mt-4 border-t border-border/50 pt-4">
                                 <CitationList
                                   citationsJson={message.citationsJson}
                                 />
@@ -270,7 +270,7 @@ export function RecruiterChat({
                         scale: 1,
                         filter: 'blur(0px)',
                       }}
-                      className="flex items-center gap-3 px-2 text-white/50"
+                      className="flex items-center gap-3 px-2 text-muted-foreground"
                     >
                       <IconSparkles className="size-4 animate-pulse text-emerald-400" />
                       <span className="text-xs font-medium">Thinking...</span>
@@ -280,7 +280,7 @@ export function RecruiterChat({
                 </div>
               </div>
 
-              <div className="absolute right-0 bottom-0 left-0 border-t border-white/5 bg-[#0a0a0a] p-4">
+              <div className="absolute right-0 bottom-0 left-0 border-t border-border/40 bg-card p-4">
                 {error ? (
                   <p className="mb-3 px-2 text-xs text-red-400">{error}</p>
                 ) : null}
@@ -291,14 +291,14 @@ export function RecruiterChat({
                     onChange={(e) => setQuestion(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Ask a question..."
-                    className="min-h-[52px] w-full resize-none rounded-2xl border border-white/10 bg-white/5 pt-3.5 pr-12 pb-3 pl-4 text-sm text-white transition-[border-color,box-shadow] outline-none placeholder:text-white/30 focus:border-white/20 focus:ring-4 focus:ring-white/5"
+                    className="min-h-[52px] w-full resize-none rounded-2xl border border-border/50 bg-foreground/5 pt-3.5 pr-12 pb-3 pl-4 text-sm text-foreground transition-[border-color,box-shadow] outline-none placeholder:text-muted-foreground/70 focus:border-border focus:ring-4 focus:ring-ring/20"
                     rows={1}
                     style={{ fieldSizing: 'content', maxHeight: '160px' }}
                   />
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting || !question.trim()}
-                    className="absolute right-2 bottom-2 flex size-9 items-center justify-center rounded-xl bg-white text-black transition-[transform,opacity] active:scale-[0.92] disabled:opacity-50"
+                    className="absolute right-2 bottom-2 flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-[transform,opacity] active:scale-[0.92] disabled:opacity-50"
                   >
                     <IconSend2 className="size-4" />
                   </button>

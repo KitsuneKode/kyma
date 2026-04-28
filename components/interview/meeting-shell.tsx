@@ -184,6 +184,7 @@ export function MeetingShell({
   session,
 }: MeetingShellProps) {
   return (
+    // Intentional dark-locked immersive interview experience.
     <div className="fixed inset-0 z-[100] bg-black">
       <div data-lk-theme="default" className="h-full w-full">
         <LiveKitRoom

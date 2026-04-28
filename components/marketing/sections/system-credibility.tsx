@@ -59,13 +59,13 @@ const staggerItem = {
 
 export function MarketingSystemCredibility() {
   return (
-    <section className="relative isolate bg-[#000] py-24">
+    <section className="relative isolate bg-background py-24">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center">
-          <h2 className="text-[3rem] leading-[0.95] font-semibold tracking-tighter text-balance text-white sm:text-[4rem]">
+          <h2 className="text-[3rem] leading-[0.95] font-semibold tracking-tighter text-balance text-foreground sm:text-[4rem]">
             Built for hiring reliability
           </h2>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-pretty text-white/60">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-pretty text-muted-foreground">
             Premium candidate experience, with operator-grade review controls.
           </p>
         </div>
@@ -81,15 +81,15 @@ export function MarketingSystemCredibility() {
             <motion.div
               key={feature.title}
               variants={staggerItem}
-              className="group rounded-[1.5rem] bg-white/5 p-8 shadow-2xl ring-1 ring-white/10 transition-colors duration-300 hover:bg-white/10"
+              className="group rounded-[1.5rem] bg-foreground/5 p-8 shadow-2xl ring-1 ring-border/50 transition-colors duration-300 hover:bg-foreground/10"
             >
-              <div className="flex size-12 items-center justify-center rounded-xl bg-white/10 transition-transform duration-300 group-hover:scale-110">
-                <feature.icon className="size-6 text-white" stroke={1.5} />
+              <div className="flex size-12 items-center justify-center rounded-xl bg-foreground/10 transition-transform duration-300 group-hover:scale-110">
+                <feature.icon className="size-6 text-foreground" stroke={1.5} />
               </div>
-              <h3 className="mt-8 text-xl font-semibold tracking-tight text-white">
+              <h3 className="mt-8 text-xl font-semibold tracking-tight text-foreground">
                 {feature.title}
               </h3>
-              <p className="mt-3 text-base leading-relaxed text-pretty text-white/60">
+              <p className="mt-3 text-base leading-relaxed text-pretty text-muted-foreground">
                 {feature.description}
               </p>
             </motion.div>

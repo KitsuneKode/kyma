@@ -133,9 +133,9 @@ export function PremiumRecruiterDashboard({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.5 }}
-          className="rounded-[2rem] border border-white/5 bg-[#000] p-8 shadow-2xl ring-1 ring-white/10 lg:col-span-2"
+          className="rounded-[2rem] border border-border/40 bg-card p-8 shadow-2xl ring-1 ring-border/50 lg:col-span-2"
         >
-          <h3 className="mb-8 text-sm font-bold tracking-widest text-white/40 uppercase">
+          <h3 className="mb-8 text-sm font-bold tracking-widest text-muted-foreground uppercase">
             Recent activity stream
           </h3>
           <div className="no-scrollbar flex max-h-[300px] flex-col gap-4 overflow-y-auto pr-4">
@@ -145,19 +145,19 @@ export function PremiumRecruiterDashboard({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 + i * 0.05 }}
-                className="group flex items-center justify-between gap-6 border-b border-white/[0.03] py-3 last:border-0"
+                className="group flex items-center justify-between gap-6 border-b border-border/30 py-3 last:border-0"
               >
                 <div className="flex items-center gap-4">
                   <div className="size-1.5 rounded-full bg-primary/40 transition-colors group-hover:bg-primary" />
-                  <p className="text-sm text-white/60 transition-colors group-hover:text-white/90">
-                    <span className="font-semibold text-white/90">
+                  <p className="text-sm text-muted-foreground transition-colors group-hover:text-foreground/90">
+                    <span className="font-semibold text-foreground/90">
                       {formatStatusLabel(event.type)}
                     </span>{' '}
                     {event.detail}
                   </p>
                 </div>
                 {event.createdAt ? (
-                  <span className="shrink-0 font-mono text-[10px] text-white/20 tabular-nums">
+                  <span className="shrink-0 font-mono text-[10px] text-foreground/30 tabular-nums">
                     {formatDateTime(event.createdAt)}
                   </span>
                 ) : null}
@@ -202,11 +202,11 @@ function NeedsAttentionRow({
     <div className="group flex items-center justify-between gap-4">
       <div className="flex items-center gap-3">
         {icon}
-        <span className="text-sm font-medium text-white/60 transition-colors group-hover:text-white/90">
+        <span className="text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground/90">
           {label}
         </span>
       </div>
-      <span className="font-mono text-lg font-bold text-white/90 tabular-nums transition-colors group-hover:text-amber-500">
+      <span className="font-mono text-lg font-bold text-foreground/90 tabular-nums transition-colors group-hover:text-amber-500">
         {count}
       </span>
     </div>
@@ -233,17 +233,17 @@ function QuickActionCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.5 }}
-      className="group relative overflow-hidden rounded-[2rem] bg-[#000] p-10 shadow-2xl ring-1 ring-white/10 transition-all duration-300 hover:ring-white/20"
+      className="group relative overflow-hidden rounded-[2rem] bg-card p-10 shadow-2xl ring-1 ring-border/50 transition-all duration-300 hover:ring-border"
     >
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,hsla(0,0%,20%,0.1)_0,transparent_50%)]" />
       <div className="relative z-10">
-        <div className="mb-6 flex size-14 items-center justify-center rounded-2xl bg-white/5 text-white/40 transition-all duration-300 group-hover:scale-110 group-hover:bg-white/10 group-hover:text-white">
+        <div className="mb-6 flex size-14 items-center justify-center rounded-2xl bg-foreground/5 text-foreground/40 transition-all duration-300 group-hover:scale-110 group-hover:bg-foreground/10 group-hover:text-foreground">
           {icon}
         </div>
-        <h2 className="mb-3 text-2xl font-semibold tracking-tight text-white">
+        <h2 className="mb-3 text-2xl font-semibold tracking-tight text-foreground">
           {title}
         </h2>
-        <p className="mb-10 max-w-xs text-sm leading-relaxed text-white/40 transition-colors group-hover:text-white/60">
+        <p className="mb-10 max-w-xs text-sm leading-relaxed text-muted-foreground transition-colors group-hover:text-foreground/70">
           {description}
         </p>
         <Link

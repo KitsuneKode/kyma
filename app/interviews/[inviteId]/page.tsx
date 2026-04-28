@@ -43,6 +43,7 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
   )
 
   return (
+    // Intentional dark-locked interview shell (immersive route exception).
     <main className="flex min-h-[100dvh] w-full flex-col bg-[#0a0a0a] text-foreground">
       <RenderErrorBoundary title="Interview workspace">
         <InterviewWorkspace initialSnapshot={snapshot} />

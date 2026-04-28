@@ -36,7 +36,7 @@ export function InviteLobby({
       <section className="relative flex h-full flex-col justify-center">
         <div className="relative overflow-hidden rounded-[2rem] bg-[#000] p-4 shadow-2xl ring-1 ring-white/10">
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,hsla(0,0%,20%,0.2)_0,transparent_70%)]" />
-          <div className="lk-theme-override">
+          <div className="lk-theme-override lk-theme-override--interview">
             <PreJoin
               defaults={{
                 username: candidateName,
@@ -48,7 +48,10 @@ export function InviteLobby({
               }
               userLabel="Candidate name"
               persistUserChoices={false}
-              onSubmit={onSubmit}
+              onSubmit={(choices) => {
+                // Keep candidate identity fixed to invite context.
+                void onSubmit({ ...choices, username: candidateName })
+              }}
               onError={(error) => {
                 console.error('[kyma:prejoin] prejoin.error', error)
               }}
@@ -101,8 +104,8 @@ export function InviteLobby({
             </p>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               Confirm your mic and camera on the left, then press the lime{' '}
-              <span className="font-medium text-primary">Join Call</span> button
-              to start the live interview.
+              <span className="font-medium text-primary">Join interview</span>{' '}
+              button to start the live interview.
             </p>
           </div>
 

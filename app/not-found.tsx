@@ -9,7 +9,7 @@ export default async function NotFound() {
   cacheLife('hours')
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#0a0a0a]">
+    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-background">
       <div className="pointer-events-none absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl" />
       <header className="flex h-20 items-center px-6 md:px-12">
         <Link href="/" className="transition-opacity hover:opacity-80">
@@ -18,7 +18,7 @@ export default async function NotFound() {
       </header>
 
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center p-6 text-center">
-        <div className="flex h-20 w-20 animate-in items-center justify-center rounded-3xl bg-muted/30 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.35)] duration-300 fade-in-0 zoom-in-95">
+        <div className="flex h-20 w-20 animate-in items-center justify-center rounded-3xl bg-muted/30 shadow-lg ring-1 ring-border/50 duration-300 fade-in-0 zoom-in-95">
           <IconSearch className="h-8 w-8 text-muted-foreground" />
         </div>
 

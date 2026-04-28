@@ -232,19 +232,30 @@
 
   /* LiveKit Premium Obsidian Overrides */
   .lk-theme-override {
-    --lk-bg: #000;
-    --lk-fg: #fff;
+    --lk-bg: var(--background);
+    --lk-fg: var(--foreground);
     --lk-primary: var(--primary);
-    --lk-primary-text: #000;
-    --lk-border-color: rgba(255, 255, 255, 0.1);
-    --lk-control-bg: rgba(255, 255, 255, 0.05);
-    --lk-control-hover-bg: rgba(255, 255, 255, 0.1);
+    --lk-primary-text: var(--primary-foreground);
+    --lk-border-color: color-mix(in srgb, var(--border) 80%, transparent);
+    --lk-control-bg: color-mix(in srgb, var(--foreground) 5%, transparent);
+    --lk-control-hover-bg: color-mix(
+      in srgb,
+      var(--foreground) 10%,
+      transparent
+    );
     --lk-success: var(--primary);
     --lk-danger: #ef4444;
   }
 
   .lk-theme-override .lk-button-primary {
-    @apply h-12 rounded-xl bg-primary px-8 text-base font-bold text-primary-foreground shadow-xl transition-all duration-200 hover:bg-primary/90 active:scale-[0.96];
+    @apply h-12 rounded-xl bg-primary px-8 text-base font-bold text-primary-foreground shadow-xl ring-1 ring-primary/35 transition-all duration-200 hover:bg-primary/90 hover:ring-primary/55 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60;
+    border: none !important;
+    opacity: 1 !important;
+  }
+
+  .lk-theme-override .lk-join-button,
+  .lk-theme-override .lk-prejoin .lk-join-button {
+    @apply h-12 rounded-xl bg-primary px-8 text-base font-bold text-primary-foreground shadow-xl ring-1 ring-primary/35 transition-all duration-200 hover:bg-primary/90 hover:ring-primary/55 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60;
     border: none !important;
     opacity: 1 !important;
   }
@@ -252,14 +263,57 @@
   .lk-theme-override .lk-prejoin {
     @apply bg-transparent p-0;
     border: none !important;
+    box-shadow: none !important;
+  }
+
+  .lk-theme-override--interview .lk-prejoin {
+    border: 1px solid rgba(255, 255, 255, 0.04) !important;
+    background: transparent !important;
+  }
+
+  .lk-theme-override--interview .lk-button-group-container {
+    border-radius: 0.75rem !important;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 8px 18px -12px rgba(0, 0, 0, 0.9),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
   }
 
   .lk-theme-override .lk-video-container {
-    @apply rounded-2xl border border-white/10 bg-black shadow-inner;
+    @apply rounded-2xl border border-border/50 bg-card shadow-inner;
   }
 
   .lk-theme-override .lk-form-control {
-    @apply h-11 rounded-xl border-white/10 bg-white/5 px-4 text-white focus:ring-4 focus:ring-primary/10;
+    @apply h-11 rounded-xl border-border/50 bg-foreground/5 px-4 text-foreground focus:ring-4 focus:ring-primary/10;
+  }
+
+  .lk-theme-override .lk-prejoin input.lk-form-control {
+    pointer-events: none;
+    user-select: none;
+    caret-color: transparent;
+    opacity: 0.85;
+  }
+
+  .lk-theme-override--interview .lk-join-button {
+    border-radius: 0.75rem !important;
+    background: linear-gradient(180deg, #efff70 0%, #d7ef3d 100%) !important;
+    color: #0a0a0a !important;
+    border: 1px solid rgba(232, 255, 71, 0.45) !important;
+    box-shadow:
+      0 0 0 1px rgba(232, 255, 71, 0.15),
+      0 14px 30px -16px rgba(232, 255, 71, 0.65),
+      0 8px 24px -14px rgba(0, 0, 0, 0.7) !important;
+  }
+
+  .lk-theme-override--interview .lk-join-button:hover {
+    background: linear-gradient(180deg, #f6ff96 0%, #e3f84b 100%) !important;
+    border-color: rgba(232, 255, 71, 0.62) !important;
+    transform: translateY(-1px);
+  }
+
+  .lk-theme-override--interview .lk-join-button:focus-visible {
+    outline: 2px solid rgba(232, 255, 71, 0.8) !important;
+    outline-offset: 2px !important;
   }
 }
 
@@ -271,10 +325,10 @@
 
 @layer components {
   .billboard-metric {
-    @apply relative overflow-hidden rounded-[2rem] bg-[#000] p-8 shadow-2xl ring-1 ring-white/10 transition-all duration-300 hover:ring-white/20;
+    @apply relative overflow-hidden rounded-[2rem] bg-card p-8 shadow-2xl ring-1 ring-border/50 transition-all duration-300 hover:ring-border;
   }
   .billboard-value {
-    @apply text-[5rem] leading-none font-semibold tracking-tighter text-white tabular-nums;
+    @apply text-[5rem] leading-none font-semibold tracking-tighter text-foreground tabular-nums;
   }
 }
 

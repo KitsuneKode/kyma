@@ -95,11 +95,11 @@ function HeroImageMockup() {
           clipPath: 'inset(0 0 0 0)',
         }}
         transition={{ duration: 0.8, ease: [0.77, 0, 0.175, 1], delay: 0.4 }}
-        className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-2xl ring-1 ring-white/10 backdrop-blur-3xl"
+        className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-2xl ring-1 ring-border/40 backdrop-blur-3xl"
       >
         <div className="relative overflow-hidden rounded-2xl ring-1 ring-border/20">
           <Image
-            className="relative hidden w-full rounded-xl border border-white/10 object-cover dark:block"
+            className="relative hidden w-full rounded-xl border border-border/40 object-cover dark:block"
             src="/mockups/hero.png"
             alt="Kyma recruiter dashboard showing candidate analysis"
             width={2400}
@@ -107,7 +107,7 @@ function HeroImageMockup() {
             priority
           />
           <Image
-            className="relative w-full rounded-xl border border-black/10 object-cover dark:hidden"
+            className="relative w-full rounded-xl border border-border/40 object-cover dark:hidden"
             src="/mockups/hero.png"
             alt="Kyma recruiter dashboard showing candidate analysis"
             width={2400}
@@ -122,7 +122,7 @@ function HeroImageMockup() {
 
 export function PremiumHero() {
   return (
-    <section className="relative overflow-hidden bg-[#0a0a0a] pt-24 md:pt-36">
+    <section className="relative overflow-hidden bg-background pt-24 md:pt-36">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 isolate hidden opacity-65 lg:block"

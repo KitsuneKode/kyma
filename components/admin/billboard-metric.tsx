@@ -63,13 +63,13 @@ export function BillboardMetric({
       <div className="flex h-full flex-col justify-between gap-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase">
+            <span className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase">
               {label}
             </span>
             <IconTrendingUp className="size-3 animate-pulse text-primary/50" />
           </div>
           {Icon && (
-            <div className="rounded-full bg-white/5 p-2 text-white/40 transition-colors group-hover:bg-white/10 group-hover:text-white">
+            <div className="rounded-full bg-foreground/5 p-2 text-foreground/40 transition-colors group-hover:bg-foreground/10 group-hover:text-foreground">
               <Icon className="size-4" />
             </div>
           )}
@@ -78,7 +78,7 @@ export function BillboardMetric({
         <div>
           <p className="billboard-value">{value}</p>
           {detail ? (
-            <p className="mt-2 max-w-[12rem] text-xs leading-relaxed font-medium text-white/30">
+            <p className="mt-2 max-w-[12rem] text-xs leading-relaxed font-medium text-muted-foreground">
               {detail}
             </p>
           ) : null}

@@ -19,7 +19,7 @@ export default async function Page() {
   return (
     <>
       <HeroHeader clerkEnabled={clerkEnabled} />
-      <main className="overflow-hidden bg-[#0a0a0a]">
+      <main className="overflow-hidden bg-background">
         <PremiumHero />
         <MarketingHowItWorks />
         <MarketingRolePathways />

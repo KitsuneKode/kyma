@@ -66,7 +66,7 @@ export function AppSidebar({
   const pathname = usePathname()
 
   return (
-    <Sidebar {...props} className="bg-[#0a0a0a]">
+    <Sidebar {...props} className="bg-sidebar">
       <SidebarHeader className="h-16 justify-center px-6">
         <Link
           href="/"
