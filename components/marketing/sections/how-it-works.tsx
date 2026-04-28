@@ -7,30 +7,6 @@ import {
   IconReportAnalytics,
 } from '@tabler/icons-react'
 
-const steps = [
-  {
-    icon: IconUserCheck,
-    number: '01',
-    title: 'Create a screening batch',
-    description:
-      'Recruiters launch an invite-only screening batch with template, expiry, and attempt policy set up front.',
-  },
-  {
-    icon: IconMicrophone,
-    number: '02',
-    title: 'Candidate completes live interview',
-    description:
-      'Candidates join from their invite link and complete a structured real-time voice interview with full transcript capture.',
-  },
-  {
-    icon: IconReportAnalytics,
-    number: '03',
-    title: 'Review evidence, decide fast',
-    description:
-      'Recruiters triage sessions in the queue using rubric scores, transcript citations, and recommendation context.',
-  },
-]
-
 const STAGGER_VARIANTS: any = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -42,13 +18,13 @@ const STAGGER_VARIANTS: any = {
 
 export function MarketingHowItWorks() {
   return (
-    <section id="how-it-works" className="py-24 md:py-32">
+    <section id="how-it-works" className="relative py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center">
           <p className="mb-4 text-sm font-semibold tracking-wider text-primary uppercase">
             The Workflow
           </p>
-          <h2 className="font-serif text-4xl font-medium tracking-tight text-balance sm:text-5xl">
+          <h2 className="font-serif text-[3rem] leading-[0.95] font-medium tracking-tighter text-balance sm:text-[4rem]">
             How it works
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-pretty text-muted-foreground">
@@ -57,76 +33,108 @@ export function MarketingHowItWorks() {
           </p>
         </div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-          variants={{
-            visible: { transition: { staggerChildren: 0.08 } },
-          }}
-          className="mt-16 grid gap-5 lg:auto-rows-[minmax(180px,auto)] lg:grid-cols-12"
-        >
-          <motion.aside
+        <div className="mt-24 flex flex-col gap-24">
+          {/* Step 1 - Edge to edge cinematic block */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-100px' }}
             variants={STAGGER_VARIANTS}
-            className="lg:col-span-5 lg:row-span-2"
+            className="relative isolate overflow-hidden rounded-[2rem] bg-[#000] p-10 shadow-2xl md:p-16"
           >
-            <div className="h-full rounded-3xl bg-card p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-              <p className="text-xs font-semibold tracking-[0.16em] text-primary uppercase">
-                Why teams choose Kyma
-              </p>
-              <h3 className="mt-3 text-2xl font-semibold tracking-tight text-balance">
-                One pipeline, from invite policy to final decision.
-              </h3>
-              <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
-                  Screening policy prevents unbounded retries and stale links.
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
-                  Real-time transcript capture keeps scoring auditable.
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
-                  Queue-first review helps teams prioritize what needs attention
-                  now.
-                </li>
-              </ul>
-            </div>
-          </motion.aside>
-
-          {steps.map((step, index) => {
-            const bentoSpanClass =
-              index === 0
-                ? 'lg:col-span-7'
-                : index === 1
-                  ? 'lg:col-span-4'
-                  : 'lg:col-span-3'
-
-            return (
-              <motion.div
-                key={step.number}
-                variants={STAGGER_VARIANTS}
-                className={`group relative overflow-hidden rounded-3xl bg-card p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)] transition-all hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.35)] ${bentoSpanClass}`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 transition-colors group-hover:bg-primary/20">
-                    <step.icon className="size-6 text-primary" stroke={1.5} />
-                  </div>
-                  <span className="text-xs font-bold tracking-widest text-muted-foreground tabular-nums opacity-50">
-                    STEP {step.number}
-                  </span>
+            <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,hsla(0,0%,20%,0.2)_0,transparent_50%)]" />
+            <div className="max-w-2xl">
+              <div className="mb-6 flex items-center gap-4">
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-white/5">
+                  <IconUserCheck className="size-6 text-white" stroke={1.5} />
                 </div>
-                <h3 className="mt-6 text-xl font-semibold tracking-tight text-foreground">
-                  {step.title}
-                </h3>
-                <p className="mt-3 text-base leading-relaxed text-pretty text-muted-foreground">
-                  {step.description}
-                </p>
-              </motion.div>
-            )
-          })}
-        </motion.div>
+                <span className="text-xs font-bold tracking-widest text-white/50 tabular-nums">
+                  STEP 01
+                </span>
+              </div>
+              <h3 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                Create a screening batch
+              </h3>
+              <p className="mt-4 text-lg text-pretty text-white/70">
+                Recruiters launch an invite-only screening batch with template,
+                expiry, and attempt policy set up front. No unbounded retries,
+                no stale links.
+              </p>
+            </div>
+            {/* Abstract geometric shapes or mock content inside the obsidian slab */}
+            <div className="relative mt-12 h-48 w-full overflow-hidden rounded-xl border border-white/5 bg-white/5">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.05)_0%,transparent_100%)]" />
+              <div className="flex h-full items-center justify-center">
+                <div className="h-2 w-1/3 rounded-full bg-white/10" />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Steps 2 and 3 - Asymmetric overlapping layout */}
+          <div className="relative isolate grid gap-12 lg:grid-cols-2">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-100px' }}
+              variants={STAGGER_VARIANTS}
+              className="relative z-10 rounded-[2rem] bg-[#000] p-10 shadow-2xl md:p-12 lg:mt-24 lg:-mr-12"
+            >
+              <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_100%_100%,hsla(0,0%,20%,0.2)_0,transparent_50%)]" />
+              <div className="mb-6 flex items-center gap-4">
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-white/5">
+                  <IconMicrophone className="size-6 text-white" stroke={1.5} />
+                </div>
+                <span className="text-xs font-bold tracking-widest text-white/50 tabular-nums">
+                  STEP 02
+                </span>
+              </div>
+              <h3 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                Live interview capture
+              </h3>
+              <p className="mt-4 text-pretty text-white/70">
+                Candidates join from their invite link and complete a structured
+                real-time voice interview with full transcript capture.
+              </p>
+              <div className="mt-8 flex h-32 w-full items-center justify-center rounded-xl border border-white/5 bg-white/5">
+                <div className="h-12 w-12 rounded-full border border-white/20 bg-white/10" />
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-100px' }}
+              variants={STAGGER_VARIANTS}
+              className="relative z-0 rounded-[2rem] bg-[#000] p-10 shadow-2xl md:p-12 lg:-ml-12"
+            >
+              <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_100%,hsla(0,0%,20%,0.2)_0,transparent_50%)]" />
+              <div className="mb-6 flex items-center gap-4">
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-white/5">
+                  <IconReportAnalytics
+                    className="size-6 text-white"
+                    stroke={1.5}
+                  />
+                </div>
+                <span className="text-xs font-bold tracking-widest text-white/50 tabular-nums">
+                  STEP 03
+                </span>
+              </div>
+              <h3 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                Review and decide
+              </h3>
+              <p className="mt-4 text-pretty text-white/70">
+                Recruiters triage sessions in the queue using rubric scores,
+                transcript citations, and recommendation context. Decide with
+                confidence.
+              </p>
+              <div className="mt-8 flex h-48 w-full flex-col justify-between rounded-xl border border-white/5 bg-white/5 p-4">
+                <div className="h-2 w-3/4 rounded-full bg-white/10" />
+                <div className="h-2 w-1/2 rounded-full bg-white/10" />
+                <div className="h-2 w-5/6 rounded-full bg-white/10" />
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </div>
     </section>
   )

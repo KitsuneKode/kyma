@@ -1,15 +1,14 @@
 'use client'
 
 import { useMemo } from 'react'
-import { IconShieldCheck, IconAlertTriangle } from '@tabler/icons-react'
+import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { RubricDimension } from './rubric-dimension'
 
-function scoreColor(score: number) {
-  if (score <= 2.0) return 'bg-red-500/15 text-red-300'
-  if (score <= 3.0) return 'bg-amber-500/15 text-amber-300'
-  if (score <= 4.0) return 'bg-emerald-500/10 text-emerald-300'
-  return 'bg-emerald-500/20 text-emerald-300 font-bold'
+function getScoreColor(score: number) {
+  if (score <= 2.0) return 'text-red-500'
+  if (score <= 3.0) return 'text-amber-500'
+  return 'text-emerald-500'
 }
 
 type DimensionScore = {
@@ -54,91 +53,106 @@ export function RubricVerdict({
     return sum / dimensionScores.length
   }, [dimensionScores])
 
-  const flagged = enriched.filter((d) => d.score <= 3.0)
-  const passing = enriched.filter((d) => d.score > 3.0)
-
-  const hasHardGate = flagged.some((d) => d.score <= 1.5)
-
   if (!dimensionScores.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-border/50 bg-card/80 p-6 text-center">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex h-full flex-col items-center justify-center py-24 text-center">
+        <p className="text-sm text-muted-foreground/60">
           No dimension scores available yet.
         </p>
       </div>
     )
   }
 
+  const radius = 54
+  const circumference = 2 * Math.PI * radius
+  const dashoffset = circumference - (overallScore / 5) * circumference
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-2xl bg-card/90 p-4 ring-1 ring-border/40">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            {hasHardGate ? (
-              <IconAlertTriangle className="size-4 text-red-400" />
-            ) : (
-              <IconShieldCheck className="size-4 text-emerald-400" />
-            )}
-            <span className="text-sm font-semibold">Overall</span>
+    <div className="flex flex-col">
+      {/* Massive Typographic Focal Point + Animated Ring */}
+      <div className="mb-8 flex flex-col items-center py-6">
+        <div className="relative flex items-center justify-center">
+          <svg className="size-40 -rotate-90 transform" viewBox="0 0 120 120">
+            <circle
+              className="text-muted/20"
+              strokeWidth="6"
+              stroke="currentColor"
+              fill="transparent"
+              r={radius}
+              cx="60"
+              cy="60"
+            />
+            <motion.circle
+              className={getScoreColor(overallScore)}
+              strokeWidth="6"
+              strokeDasharray={circumference}
+              strokeLinecap="round"
+              stroke="currentColor"
+              fill="transparent"
+              r={radius}
+              cx="60"
+              cy="60"
+              initial={{ strokeDashoffset: circumference }}
+              animate={{ strokeDashoffset: dashoffset }}
+              transition={{
+                duration: 1.2,
+                ease: [0.23, 1, 0.32, 1],
+                delay: 0.2,
+              }}
+            />
+          </svg>
+          <div className="absolute flex flex-col items-center text-center">
+            <span
+              className={cn(
+                'text-5xl font-semibold tracking-tighter tabular-nums',
+                getScoreColor(overallScore)
+              )}
+            >
+              {overallScore.toFixed(1)}
+            </span>
+            <span className="mt-1 text-[10px] font-bold tracking-widest text-muted-foreground/60 uppercase">
+              Overall
+            </span>
           </div>
-          <span
-            className={cn(
-              'rounded-full px-3 py-1 text-sm font-semibold tabular-nums',
-              scoreColor(overallScore)
-            )}
-          >
-            {overallScore.toFixed(1)}
-            <span className="ml-1 opacity-60">/ 5</span>
-          </span>
         </div>
-        {hasHardGate ? (
-          <p className="mt-2 text-xs text-red-300/80">
-            Hard gate triggered — at least one dimension scored ≤ 1.5
-          </p>
-        ) : null}
       </div>
 
-      {flagged.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <p className="px-1 text-[10px] font-semibold tracking-widest text-red-300/70 uppercase">
-            Flagged ({flagged.length})
-          </p>
-          {flagged.map((d) => (
-            <RubricDimension
+      <div className="flex flex-col gap-1">
+        <motion.ul
+          initial="hidden"
+          animate="visible"
+          variants={{
+            visible: { transition: { staggerChildren: 0.04 } },
+          }}
+          className="flex flex-col divide-y divide-border/20"
+        >
+          {enriched.map((d) => (
+            <motion.li
               key={d.dimension}
-              dimension={d.dimension}
-              score={d.score}
-              rationale={d.rationale}
-              evidence={d.evidence}
-              defaultOpen
-              isActive={activeDimension === d.dimension}
-              onSelect={() => onSelectDimension(d.dimension)}
-              onJumpToTime={onJumpToTime}
-            />
+              variants={{
+                hidden: { opacity: 0, y: 10, filter: 'blur(4px)' },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  filter: 'blur(0px)',
+                  transition: { duration: 0.4, ease: [0.23, 1, 0.32, 1] },
+                },
+              }}
+            >
+              <RubricDimension
+                dimension={d.dimension}
+                score={d.score}
+                rationale={d.rationale}
+                evidence={d.evidence}
+                defaultOpen={d.score <= 3.0}
+                isActive={activeDimension === d.dimension}
+                onSelect={() => onSelectDimension(d.dimension)}
+                onJumpToTime={onJumpToTime}
+              />
+            </motion.li>
           ))}
-        </div>
-      ) : null}
-
-      {passing.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <p className="px-1 text-[10px] font-semibold tracking-widest text-emerald-300/70 uppercase">
-            Passing ({passing.length})
-          </p>
-          {passing.map((d) => (
-            <RubricDimension
-              key={d.dimension}
-              dimension={d.dimension}
-              score={d.score}
-              rationale={d.rationale}
-              evidence={d.evidence}
-              defaultOpen={false}
-              isActive={activeDimension === d.dimension}
-              onSelect={() => onSelectDimension(d.dimension)}
-              onJumpToTime={onJumpToTime}
-            />
-          ))}
-        </div>
-      ) : null}
+        </motion.ul>
+      </div>
     </div>
   )
 }

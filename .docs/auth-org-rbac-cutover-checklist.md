@@ -12,6 +12,54 @@ Use this checklist to avoid getting stuck during org-first auth rollout.
   - `KYMA_PROCESSING_WRITE_KEY`
 - Ensure Clerk has Organizations enabled.
 
+## Quick Runbooks (Copy/Paste)
+
+Use one of these paths exactly. The dev path is destructive to dev data.
+
+### Dev (fastest, explicit, safe for local/dev only)
+
+1. Configure Clerk once (roles, permissions, JWT claims, webhook events) from this doc.
+2. Ensure `.env.local` has required keys (`Clerk + KYMA_PROCESSING_WRITE_KEY`).
+3. Run:
+
+```bash
+bun install
+bun run convex:once
+bun run db:cutover:org-rbac:dev
+bun run verify:auth-org-rbac
+bun run dev:stack
+```
+
+4. Verify routes manually:
+   - `/candidate`
+   - `/onboarding/recruiter`
+   - `/recruiter`
+   - `/interviews/demo-invite`
+
+### Production (explicit, no destructive reset)
+
+1. Configure Clerk in production:
+   - org roles/permissions
+   - JWT claims (`org_id`, `org_role`, `org_permissions`, `metadata.persona`)
+   - webhook endpoint + all required events
+2. Ensure production env vars include:
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+   - `CLERK_SECRET_KEY`
+   - `CLERK_FRONTEND_API_URL` or `CLERK_JWT_ISSUER_DOMAIN`
+   - `KYMA_PROCESSING_WRITE_KEY`
+3. **Backfill existing recruiter-owned data with `orgId` before schema cutover.**
+4. Deploy schema/functions (do not run dev reset/seed commands in prod).
+5. Run post-deploy QA matrix:
+   - candidate-only
+   - recruiter without org
+   - recruiter with org + permission
+   - both persona
+   - cross-org isolation
+
+Production guardrail:
+
+- Never run `db:cutover:org-rbac:dev` in production.
+
 ## 1) Clerk Configuration (Mandatory)
 
 ### Organization roles and permissions

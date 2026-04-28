@@ -324,20 +324,15 @@ export default async function CandidateReviewPage({
             )}
           </div>
         </CollapsibleInfoSection>
-
-        <CollapsibleInfoSection
-          title="Recruiter copilot"
-          description="Ask grounded questions about the transcript, evidence, and recommendation."
-        >
-          <RenderErrorBoundary title="Recruiter chat">
-            <RecruiterChat
-              sessionId={detail.session.id}
-              reportId={detail.report?.id}
-              initialMessages={detail.chatMessages}
-            />
-          </RenderErrorBoundary>
-        </CollapsibleInfoSection>
       </div>
+
+      <RenderErrorBoundary title="Recruiter chat">
+        <RecruiterChat
+          sessionId={detail.session.id}
+          reportId={detail.report?.id}
+          initialMessages={detail.chatMessages}
+        />
+      </RenderErrorBoundary>
     </div>
   )
 }
