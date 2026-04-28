@@ -78,89 +78,124 @@ export default async function CandidateHomePage() {
   const released = prioritizedInterviews.filter((item) => item.released)
 
   return (
-    <section className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">
+    <section className="mx-auto w-full max-w-4xl space-y-12">
+      <header className="space-y-4 text-center sm:text-left">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
           Candidate dashboard
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Track active interviews first, then review pending and released
           outcomes.
         </p>
       </header>
 
       {prioritizedInterviews.length === 0 ? (
-        <div className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-          No interviews are linked to your account yet.
+        <div className="flex h-64 flex-col items-center justify-center rounded-[2rem] bg-card p-5 text-center shadow-2xl ring-1 ring-border/20">
+          <p className="text-sm font-medium text-muted-foreground">
+            No interviews are linked to your account yet.
+          </p>
         </div>
       ) : (
-        <>
-          <section className="space-y-3">
-            <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-              Active
-            </h2>
-            {active.length === 0 ? (
-              <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-                No active interviews right now.
-              </p>
-            ) : (
-              active.map((item) => (
-                <CandidateInterviewCard
-                  key={`${item.sessionId}`}
-                  sessionId={`${item.sessionId}`}
-                  title={item.candidateName ?? 'Interview'}
-                  status={item.status}
-                  startedAt={item.startedAt}
-                  inviteToken={item.inviteToken}
-                />
-              ))
-            )}
+        <div className="relative space-y-16 before:absolute before:inset-y-0 before:left-[19px] before:w-[2px] before:bg-border/30">
+          <section className="relative">
+            <div className="absolute top-1 left-0 flex size-10 items-center justify-center rounded-full bg-background ring-4 ring-background">
+              <div className="size-3 rounded-full bg-primary ring-4 ring-primary/20" />
+            </div>
+            <div className="pl-16">
+              <h2 className="text-xs font-bold tracking-widest text-primary uppercase">
+                Active
+              </h2>
+              <div className="mt-6 flex flex-col gap-4">
+                {active.length === 0 ? (
+                  <p className="text-sm text-muted-foreground/60">
+                    No active interviews right now.
+                  </p>
+                ) : (
+                  active.map((item) => (
+                    <div
+                      key={`${item.sessionId}`}
+                      className="rounded-2xl bg-card shadow-lg ring-1 ring-border/20 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-xl hover:ring-border/40"
+                    >
+                      <CandidateInterviewCard
+                        sessionId={`${item.sessionId}`}
+                        title={item.candidateName ?? 'Interview'}
+                        status={item.status}
+                        startedAt={item.startedAt}
+                        inviteToken={item.inviteToken}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-              Pending release
-            </h2>
-            {pendingRelease.length === 0 ? (
-              <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-                No pending results.
-              </p>
-            ) : (
-              pendingRelease.map((item) => (
-                <CandidateInterviewCard
-                  key={`${item.sessionId}`}
-                  sessionId={`${item.sessionId}`}
-                  title={item.candidateName ?? 'Interview'}
-                  status={item.reportStatus ?? item.status}
-                  startedAt={item.startedAt}
-                  inviteToken={item.inviteToken}
-                />
-              ))
-            )}
+          <section className="relative">
+            <div className="absolute top-1 left-0 flex size-10 items-center justify-center rounded-full bg-background ring-4 ring-background">
+              <div className="size-3 rounded-full bg-muted-foreground/40 ring-4 ring-muted-foreground/10" />
+            </div>
+            <div className="pl-16">
+              <h2 className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
+                Pending release
+              </h2>
+              <div className="mt-6 flex flex-col gap-4">
+                {pendingRelease.length === 0 ? (
+                  <p className="text-sm text-muted-foreground/60">
+                    No pending results.
+                  </p>
+                ) : (
+                  pendingRelease.map((item) => (
+                    <div
+                      key={`${item.sessionId}`}
+                      className="rounded-2xl bg-card/60 opacity-80 shadow-md ring-1 ring-border/10 transition-[transform,opacity,box-shadow] hover:-translate-y-0.5 hover:opacity-100 hover:shadow-lg hover:ring-border/30"
+                    >
+                      <CandidateInterviewCard
+                        sessionId={`${item.sessionId}`}
+                        title={item.candidateName ?? 'Interview'}
+                        status={item.reportStatus ?? item.status}
+                        startedAt={item.startedAt}
+                        inviteToken={item.inviteToken}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-              Released
-            </h2>
-            {released.length === 0 ? (
-              <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-                No released outcomes yet.
-              </p>
-            ) : (
-              released.map((item) => (
-                <CandidateInterviewCard
-                  key={`${item.sessionId}`}
-                  sessionId={`${item.sessionId}`}
-                  title={item.candidateName ?? 'Interview'}
-                  status={item.reportStatus ?? item.status}
-                  startedAt={item.startedAt}
-                  inviteToken={item.inviteToken}
-                />
-              ))
-            )}
+          <section className="relative">
+            <div className="absolute top-1 left-0 flex size-10 items-center justify-center rounded-full bg-background ring-4 ring-background">
+              <div className="size-3 rounded-full bg-emerald-500/60 ring-4 ring-emerald-500/10" />
+            </div>
+            <div className="pl-16">
+              <h2 className="text-xs font-bold tracking-widest text-emerald-500 uppercase">
+                Released
+              </h2>
+              <div className="mt-6 flex flex-col gap-4">
+                {released.length === 0 ? (
+                  <p className="text-sm text-muted-foreground/60">
+                    No released outcomes yet.
+                  </p>
+                ) : (
+                  released.map((item) => (
+                    <div
+                      key={`${item.sessionId}`}
+                      className="rounded-2xl bg-card shadow-lg ring-1 ring-border/20 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-xl hover:ring-border/40"
+                    >
+                      <CandidateInterviewCard
+                        sessionId={`${item.sessionId}`}
+                        title={item.candidateName ?? 'Interview'}
+                        status={item.reportStatus ?? item.status}
+                        startedAt={item.startedAt}
+                        inviteToken={item.inviteToken}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </section>
-        </>
+        </div>
       )}
     </section>
   )
