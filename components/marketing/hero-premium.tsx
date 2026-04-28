@@ -146,7 +146,7 @@ export function PremiumHero() {
 
               <div className="flex size-6 items-center justify-center rounded-full bg-background transition-colors duration-[200ms] group-hover:bg-muted">
                 <motion.div
-                  className="size-3 text-foreground"
+                  className="size-5 text-foreground"
                   whileHover={{ scale: 0.8, filter: 'blur(1px)' }}
                   transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
                 >

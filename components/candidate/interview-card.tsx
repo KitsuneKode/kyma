@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
+import { Surface } from '@/components/ui/surface'
 
 type CandidateInterviewCardProps = {
   sessionId: string
@@ -28,7 +29,12 @@ export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
         : 'bg-emerald-500/15 text-emerald-400'
 
   return (
-    <article className="rounded-2xl bg-card p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)] transition-transform duration-150 ease-out hover:translate-y-[-1px]">
+    <Surface
+      elevation="raised"
+      interactive
+      padding="lg"
+      className="transition-transform duration-150 ease-out hover:-translate-y-px"
+    >
       <h3 className="text-base font-semibold">{props.title}</h3>
       <div className="mt-3">
         <span
@@ -63,6 +69,6 @@ export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
           </Button>
         ) : null}
       </div>
-    </article>
+    </Surface>
   )
 }

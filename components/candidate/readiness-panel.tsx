@@ -5,6 +5,7 @@ import { useMutation, useQuery } from 'convex/react'
 
 import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
+import { Surface } from '@/components/ui/surface'
 
 type ReadinessChecks = {
   browserSupported: boolean
@@ -101,7 +102,7 @@ export function CandidateReadinessPanel() {
         </p>
       </div>
 
-      <div className="rounded-2xl bg-card p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+      <Surface elevation="raised" padding="lg">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium">Latest run</p>
@@ -120,7 +121,7 @@ export function CandidateReadinessPanel() {
             {running ? 'Running checks...' : 'Run readiness checks'}
           </Button>
         </div>
-      </div>
+      </Surface>
 
       {error ? (
         <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
@@ -133,23 +134,20 @@ export function CandidateReadinessPanel() {
           History
         </h2>
         {!runs || runs.length === 0 ? (
-          <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+          <Surface padding="md" className="text-sm text-muted-foreground">
             No readiness history yet.
-          </p>
+          </Surface>
         ) : (
           <div className="space-y-2">
             {runs.slice(0, 5).map((run) => (
-              <article
-                key={`${run._id}`}
-                className="rounded-2xl bg-card p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]"
-              >
+              <Surface key={`${run._id}`} padding="md">
                 <p className="text-sm font-medium">
                   {new Date(run.ranAt).toLocaleString()}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {run.notes}
                 </p>
-              </article>
+              </Surface>
             ))}
           </div>
         )}
