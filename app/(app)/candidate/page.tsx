@@ -118,7 +118,7 @@ export default async function CandidateHomePage() {
                     >
                       <CandidateInterviewCard
                         sessionId={`${item.sessionId}`}
-                        title={item.candidateName ?? 'Interview'}
+                        templateName={item.templateName ?? 'Interview'}
                         status={item.status}
                         startedAt={item.startedAt}
                         inviteToken={item.inviteToken}
@@ -151,7 +151,7 @@ export default async function CandidateHomePage() {
                     >
                       <CandidateInterviewCard
                         sessionId={`${item.sessionId}`}
-                        title={item.candidateName ?? 'Interview'}
+                        templateName={item.templateName ?? 'Interview'}
                         status={item.reportStatus ?? item.status}
                         startedAt={item.startedAt}
                         inviteToken={item.inviteToken}
@@ -184,7 +184,7 @@ export default async function CandidateHomePage() {
                     >
                       <CandidateInterviewCard
                         sessionId={`${item.sessionId}`}
-                        title={item.candidateName ?? 'Interview'}
+                        templateName={item.templateName ?? 'Interview'}
                         status={item.reportStatus ?? item.status}
                         startedAt={item.startedAt}
                         inviteToken={item.inviteToken}

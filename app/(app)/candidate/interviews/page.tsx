@@ -88,7 +88,7 @@ export default async function CandidateInterviewsPage({
           <CandidateInterviewCard
             key={`${item.sessionId}`}
             sessionId={`${item.sessionId}`}
-            title={item.candidateName ?? 'Interview'}
+            templateName={item.templateName ?? 'Interview'}
             status={item.reportStatus ?? item.status}
             startedAt={item.startedAt}
             inviteToken={item.inviteToken}
