@@ -5,6 +5,7 @@ import {
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
+  PolarRadiusAxis,
   ResponsiveContainer,
 } from 'recharts'
 import { formatDimensionLabel } from '@/lib/recruiter/format'
@@ -44,6 +45,7 @@ export function RubricRadar({ dimensionScores }: RubricRadarProps) {
             fontWeight: 500,
           }}
         />
+        <PolarRadiusAxis domain={[0, 5]} tick={false} axisLine={false} />
         <Radar
           name="Score"
           dataKey="score"
