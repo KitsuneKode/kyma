@@ -7,9 +7,13 @@ export const metadata: Metadata = {
   description: 'Product and engineering write-up for Kyma.',
 }
 
-async function readWriteUp() {
-  const filePath = path.join(process.cwd(), 'WRITE_UP.md')
-  return fs.readFile(filePath, 'utf-8')
+async function readWriteUp(): Promise<string | null> {
+  try {
+    const filePath = path.join(process.cwd(), 'WRITE_UP.md')
+    return await fs.readFile(filePath, 'utf-8')
+  } catch {
+    return null
+  }
 }
 
 export default async function WriteUpPage() {
@@ -28,9 +32,15 @@ export default async function WriteUpPage() {
       </section>
 
       <article className="mt-6 rounded-2xl border bg-card p-6 shadow-sm md:p-8">
-        <pre className="overflow-x-auto text-sm leading-7 whitespace-pre-wrap">
-          {content}
-        </pre>
+        {content !== null ? (
+          <pre className="overflow-x-auto text-sm leading-7 whitespace-pre-wrap">
+            {content}
+          </pre>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Write-up is not available yet. Check back soon.
+          </p>
+        )}
       </article>
     </main>
   )

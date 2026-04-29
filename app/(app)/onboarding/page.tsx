@@ -2,6 +2,7 @@ import { auth, clerkClient } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 
 import { personaFromSessionClaims } from '@/lib/auth/clerk-role'
+import { Button } from '@/components/ui/button'
 
 async function choosePersona(formData: FormData) {
   'use server'
@@ -85,12 +86,9 @@ export default async function OnboardingPage() {
               screening journey.
             </p>
             <input name="persona" type="hidden" value="candidate" />
-            <button
-              className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
-              type="submit"
-            >
+            <Button type="submit" className="mt-4 w-full">
               Continue as candidate
-            </button>
+            </Button>
           </form>
 
           <form action={choosePersona} className="rounded-2xl border p-5">
@@ -100,12 +98,9 @@ export default async function OnboardingPage() {
               operations.
             </p>
             <input name="persona" type="hidden" value="recruiter" />
-            <button
-              className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
-              type="submit"
-            >
+            <Button type="submit" className="mt-4 w-full">
               Continue as recruiter
-            </button>
+            </Button>
           </form>
 
           <form
@@ -117,12 +112,9 @@ export default async function OnboardingPage() {
               Keep one login for both candidate and recruiter workflows.
             </p>
             <input name="persona" type="hidden" value="both" />
-            <button
-              className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
-              type="submit"
-            >
+            <Button type="submit" className="mt-4 w-full">
               Continue with both
-            </button>
+            </Button>
           </form>
         </div>
       </section>

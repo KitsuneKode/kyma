@@ -1012,6 +1012,9 @@ export const listCandidateInterviews = query({
     return await Promise.all(
       sessions.map(async (session) => {
         const invite = await ctx.db.get(session.inviteId)
+        const template = invite?.templateId
+          ? await ctx.db.get(invite.templateId)
+          : null
         const report = await ctx.db
           .query('assessmentReports')
           .withIndex('by_session', (q) => q.eq('sessionId', session._id))
@@ -1020,6 +1023,7 @@ export const listCandidateInterviews = query({
           sessionId: session._id,
           inviteToken: invite?.inviteToken,
           candidateName: invite?.candidateName,
+          templateName: template?.name ?? 'Interview',
           status: session.state,
           inviteStatus: invite?.status,
           startedAt: session.startedAt,
