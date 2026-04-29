@@ -2,6 +2,7 @@
 
 import { type LocalUserChoices } from '@livekit/components-react'
 import { motion } from 'motion/react'
+import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import {
@@ -117,6 +118,7 @@ function summarizeTranscriptEvent(
 export function InterviewWorkspace({
   initialSnapshot,
 }: InterviewWorkspaceProps) {
+  const router = useRouter()
   const [requestId] = useState(() => createRequestId('client'))
   const [view, setView] = useState<InterviewView>(() =>
     initialSnapshot.state === 'processing' ||
@@ -827,7 +829,7 @@ export function InterviewWorkspace({
             >
               <Button
                 className="rounded-full bg-primary px-8 py-6 font-medium text-primary-foreground shadow-[0_0_0_1px_rgba(232,255,71,0.45),0_10px_30px_rgba(0,0,0,0.35)] transition-colors hover:bg-primary/90"
-                onClick={() => window.close()}
+                onClick={() => router.push('/')}
               >
                 Return Home
               </Button>
