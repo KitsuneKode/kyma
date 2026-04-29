@@ -6,6 +6,10 @@ import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { clientEnv } from '@/lib/env/client'
+import {
+  formatDateTime,
+  formatRecommendationLabel,
+} from '@/lib/recruiter/format'
 
 type InterviewResultPageProps = {
   params: Promise<{ id: string }>
@@ -38,71 +42,56 @@ export default async function CandidateInterviewResultPage({
           Back to interviews
         </Button>
       </header>
+
       {!result ? (
-        <p className="text-sm text-muted-foreground">
-          No released result found.
+        <p className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+          This result could not be loaded. Please try again or contact support.
         </p>
-      ) : (
-        <>
-          <div className="rounded-2xl bg-card p-4 text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-            <p className="text-muted-foreground">
-              Interview state:{' '}
-              <span className="text-foreground">{result.state}</span>
+      ) : result.resultState === 'processing' ? (
+        <div className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+          <p className="text-sm font-medium text-amber-400">Processing</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Your interview is being reviewed. This usually takes a few minutes.
+            Check back shortly.
+          </p>
+        </div>
+      ) : result.resultState === 'under_review' ? (
+        <div className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+          <p className="text-sm font-medium text-muted-foreground">
+            Under review
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Your report is being reviewed by the recruiting team. You will be
+            notified when a decision is ready.
+          </p>
+        </div>
+      ) : result.resultState === 'released' && result.report ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Outcome
             </p>
-            <p className="mt-1 text-muted-foreground">
-              Result availability:{' '}
-              <span className="text-foreground">{result.resultState}</span>
+            <p className="mt-2 text-lg font-semibold">
+              {formatRecommendationLabel(result.report.recommendation)}
             </p>
-          </div>
-          {result.report ? (
-            <div className="space-y-3 rounded-2xl bg-card p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Released assessment
-              </p>
-              <p className="font-medium">
-                Recommendation: {result.report.recommendation}
-              </p>
-              <p className="text-sm text-muted-foreground">
+            {result.report.summary ? (
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
                 {result.report.summary}
               </p>
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-              {result.resultState === 'processing'
-                ? 'Your interview is still processing.'
-                : result.resultState === 'under_review'
-                  ? 'Your report is under recruiter review.'
-                  : 'No released assessment is available for this interview yet.'}
-            </div>
-          )}
-          <section className="space-y-3">
-            <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-              Transcript timeline
-            </h2>
-            {result.transcript.length === 0 ? (
-              <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-                Transcript is not available yet.
+            ) : null}
+            {result.report.generatedAt ? (
+              <p className="mt-4 text-xs text-muted-foreground">
+                Report generated {formatDateTime(result.report.generatedAt)}
               </p>
-            ) : (
-              <div className="space-y-2">
-                {result.transcript.map((segment) => (
-                  <article
-                    key={`${segment.id}`}
-                    className="rounded-2xl bg-card p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]"
-                  >
-                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                      {segment.speaker}
-                    </p>
-                    <p className="mt-2 text-sm">{segment.text}</p>
-                    <p className="mt-2 text-xs text-muted-foreground tabular-nums">
-                      {new Date(segment.startedAt).toLocaleString()}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        </>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+          <p className="text-sm text-muted-foreground">
+            No result is available for this interview yet.
+          </p>
+        </div>
       )}
     </section>
   )
