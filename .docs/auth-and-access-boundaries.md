@@ -3,6 +3,7 @@
 ## Source of truth
 
 - Clerk is the authentication authority for operator routes.
+- Recruiter authorization is Clerk Organizations (`orgId` + org permissions).
 - Candidate interview invites remain token-based and public.
 
 ## Route ownership
@@ -13,6 +14,7 @@
 - `(app)` group owns authenticated operator experiences:
   - `/admin*`
   - `/candidate*`
+  - `/onboarding*`
   - `/video-demo`
   - `/write-up`
 - Public candidate flow:
@@ -21,18 +23,28 @@
 
 ## Middleware policy
 
-- Protect `/admin*`, `/candidate*`, `/video-demo`, and `/write-up` when Clerk credentials are present.
-- Redirect signed-in users away from auth pages via persona routing.
+- [`proxy.ts`](../proxy.ts) delegates redirects to `resolveAppRoute` in [`lib/auth/routing.ts`](../lib/auth/routing.ts).
+- Protect recruiter, candidate, onboarding, and app-shell routes when Clerk credentials are present.
+- Redirect signed-in users away from auth pages via workspace routing.
 - Never require Clerk login for `/interviews/[inviteId]`.
+
+## Workspace preference (routing only)
+
+- Set via Clerk `publicMetadata.preferredWorkspace` (`candidate` | `recruiter`).
+- Exposed in JWT as `sessionClaims.metadata.preferredWorkspace` (legacy `metadata.persona` still read).
+- Parsed by `preferredWorkspaceFromSessionClaims` in [`lib/auth/clerk-role.ts`](../lib/auth/clerk-role.ts).
+- **Not** used to deny recruiter or candidate API access.
 
 ## Candidate portal boundary
 
-- `/candidate/*` is candidate-only by default.
-- Recruiters and admins must use explicit impersonation tooling for candidate-view workflows, not direct navigation to candidate routes.
+- `/candidate/*` requires sign-in only.
+- Recruiters with org access may use candidate routes; recruiter-only operations remain org-gated.
 
-## Role-ready seam
+## Convex projection
 
-- **Clerk is the source of truth for `role`:** set `user.publicMetadata.role` (`admin` | `recruiter` | `candidate`) via Clerk Dashboard, Backend API, or webhooks — not from untrusted client code.
-- **JWT template** must include that metadata so the Next.js `auth().sessionClaims` and Convex `ctx.auth.getUserIdentity()` see the same claim; app code reads the role via `lib/auth/clerk-role.ts` (`roleFromSessionClaims`) and middleware (`proxy.ts`).
-- Optional: sync `users.role` in Convex with a **Clerk webhook** for analytics or queries that cannot read JWT; authorization must still use JWT/Convex identity checks in public functions.
-- `lib/auth/access.ts` remains a generic signed-in/ anonymous helper unless extended to use `roleFromSessionClaims` for RSCs.
+- Clerk webhooks sync `users.preferredWorkspace` for analytics/queries.
+- Authorization in Convex recruiter functions uses JWT org claims via [`convex/helpers/auth.ts`](../convex/helpers/auth.ts).
+
+## Local troubleshooting
+
+See **Stuck on `/onboarding`** in [`.docs/auth-org-rbac-cutover-checklist.md`](auth-org-rbac-cutover-checklist.md). Set `KYMA_AUTH_DEBUG=1` for an on-page claim comparison banner.

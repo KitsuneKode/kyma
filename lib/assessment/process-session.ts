@@ -16,6 +16,7 @@ const PROCESSING_WRITE_KEY = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
 export async function markAssessmentProcessing(sessionId: SessionId) {
   const detail = await fetchQuery(api.recruiter.getSessionProcessingDetail, {
     sessionId,
+    processingKey: PROCESSING_WRITE_KEY,
   })
 
   if (detail?.report?.status === 'completed') {
@@ -70,6 +71,7 @@ export async function processInterviewAssessment(
 
   const detail = await fetchQuery(api.recruiter.getSessionProcessingDetail, {
     sessionId,
+    processingKey: PROCESSING_WRITE_KEY,
   })
 
   if (!detail) {

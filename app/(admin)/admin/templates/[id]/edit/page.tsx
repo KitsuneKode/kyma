@@ -1,7 +1,11 @@
+import Link from 'next/link'
 import { fetchQuery } from 'convex/nextjs'
 import type { Id } from '@/convex/_generated/dataModel'
 
 import { api } from '@/convex/_generated/api'
+import { TemplateEditForm } from '@/components/admin/template-edit-form'
+import { PageHeader } from '@/components/admin/page-header'
+import { Button } from '@/components/ui/button'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { clientEnv } from '@/lib/env/client'
 
@@ -22,22 +26,28 @@ export default async function TemplateEditPage({
           { token: token ?? undefined }
         ).catch(() => null)
       : null
+
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Edit template</h1>
+    <div className="flex w-full max-w-3xl flex-col gap-8">
+      <PageHeader
+        eyebrow="Template library"
+        title={template?.name ?? 'Edit template'}
+        description="Update template metadata and interviewer prompts. Saving creates a new rubric version snapshot."
+        actions={
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link href="/recruiter/templates" />}
+          >
+            Back to templates
+          </Button>
+        }
+      />
       {!template ? (
         <p className="text-sm text-muted-foreground">Template not found.</p>
       ) : (
-        <div className="space-y-3 rounded-2xl bg-card p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-          <p className="font-medium">{template.name}</p>
-          <p className="text-sm text-muted-foreground">
-            Rubric version: {template.rubricVersion}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Use Convex mutation `admin.updateAssessmentTemplate` to save edits.
-          </p>
-        </div>
+        <TemplateEditForm template={template} />
       )}
-    </section>
+    </div>
   )
 }

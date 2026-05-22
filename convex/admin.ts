@@ -59,6 +59,59 @@ function normalizeProvider(provider: string) {
   return value
 }
 
+export const bootstrapOrgTemplates = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
+    const template = await ensureDefaultTemplate(ctx, orgId)
+    return { templateId: template._id }
+  },
+})
+
+export const createAssessmentTemplate = mutation({
+  args: {
+    name: v.string(),
+    role: v.optional(v.string()),
+    targetDurationMinutes: v.optional(v.number()),
+    allowsResume: v.optional(v.boolean()),
+    interviewStyleMode: v.optional(
+      v.union(v.literal('standard'), v.literal('intensive'))
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
+    const actor = (await getRecruiterActorId(ctx)) ?? 'recruiter'
+    const name = args.name.trim()
+    if (!name) {
+      throw new ConvexError('Template name is required.')
+    }
+
+    const templateId = await ctx.db.insert('assessmentTemplates', {
+      orgId,
+      name,
+      role: args.role?.trim() || 'teacher',
+      status: 'active',
+      createdBy: actor,
+      rubricVersion: 'v1',
+      targetDurationMinutes: args.targetDurationMinutes,
+      allowsResume: args.allowsResume ?? true,
+      interviewStyleMode: args.interviewStyleMode ?? 'standard',
+    })
+
+    await logAuditEvent(ctx, {
+      orgId,
+      actorId: actor,
+      action: 'template.created',
+      resource: `template:${templateId}`,
+      metadata: { name },
+    })
+
+    return templateId
+  },
+})
+
 export const listActiveTemplates = query({
   args: {},
   handler: async (ctx) => {
@@ -215,6 +268,11 @@ export const createScreeningBatch = mutation({
 
     if (!template) {
       throw new ConvexError('Assessment template not found.')
+    }
+    if (template.orgId !== orgId) {
+      throw new ConvexError(
+        'Assessment template does not belong to this organization.'
+      )
     }
 
     const now = new Date().toISOString()
@@ -699,6 +757,7 @@ export const getTemplateById = query({
 export const updateAssessmentTemplate = mutation({
   args: {
     templateId: v.id('assessmentTemplates'),
+    name: v.optional(v.string()),
     systemPrompt: v.optional(v.string()),
     childPersonaPrompt: v.optional(v.string()),
     wrapUpPrompt: v.optional(v.string()),
@@ -738,6 +797,7 @@ export const updateAssessmentTemplate = mutation({
     const nextRubricVersion = `v${Number.isFinite(nextVersion) ? nextVersion + 1 : 2}`
 
     await ctx.db.patch(template._id, {
+      ...(args.name?.trim() ? { name: args.name.trim() } : {}),
       systemPrompt: args.systemPrompt,
       childPersonaPrompt: args.childPersonaPrompt,
       wrapUpPrompt: args.wrapUpPrompt,
@@ -768,6 +828,11 @@ export const listTemplateVersions = query({
   },
   handler: async (ctx, args) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
+    const template = await ctx.db.get(args.templateId)
+    if (!template || template.orgId !== orgId) {
+      return []
+    }
     const versions = await ctx.db
       .query('assessmentTemplateVersions')
       .withIndex('by_template_and_saved_at', (q) =>
@@ -791,8 +856,12 @@ export const searchCandidates = query({
   },
   handler: async (ctx, args) => {
     await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
     const normalized = args.query.trim().toLowerCase()
-    const invites = await ctx.db.query('candidateInvites').collect()
+    const invites = await ctx.db
+      .query('candidateInvites')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .collect()
     return invites
       .filter((invite) => {
         if (!normalized) return true

@@ -3,6 +3,7 @@ import { ClerkProvider } from '@clerk/nextjs'
 import { Outfit, Lora, IBM_Plex_Mono } from 'next/font/google'
 import { Suspense } from 'react'
 import { Toaster } from 'sonner'
+import { kymaClerkAppearance } from '@/lib/clerk/appearance'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { Providers } from './providers'
 import '@livekit/components-styles'
@@ -102,5 +103,7 @@ export default function RootLayout({
     return content
   }
 
-  return <ClerkProvider>{content}</ClerkProvider>
+  return (
+    <ClerkProvider appearance={kymaClerkAppearance}>{content}</ClerkProvider>
+  )
 }

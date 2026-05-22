@@ -1,50 +1,46 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { connection } from 'next/server'
-import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
-import { auth } from '@clerk/nextjs/server'
+import { Show, UserButton } from '@clerk/nextjs'
 
+import { WorkspaceSwitcher } from '@/components/auth/workspace-switcher'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { personaFromSessionClaims } from '@/lib/auth/clerk-role'
+import { getUserAppAccess } from '@/lib/auth/access'
+import { signInPath } from '@/lib/auth/workspace-intent'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   await connection()
   const clerkEnabled = hasClerkServerCredentials()
-  const authState = clerkEnabled ? await auth() : null
-  const persona = personaFromSessionClaims(
-    authState?.sessionClaims as Record<string, unknown> | null | undefined
-  )
+  const access = clerkEnabled ? await getUserAppAccess() : null
+  const preferredWorkspace =
+    access?.isSignedIn &&
+    access.preferredWorkspace !== 'anonymous' &&
+    access.preferredWorkspace !== 'unassigned'
+      ? access.preferredWorkspace
+      : null
 
   return (
     <>
       <header className="border-b">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
             <Link className="font-semibold" href="/">
               Kyma
             </Link>
-            {persona === 'recruiter' || persona === 'both' ? (
-              <Link
-                className="text-muted-foreground transition-colors hover:text-foreground"
-                href="/recruiter"
-              >
-                Recruiter
-              </Link>
-            ) : null}
-            {persona === 'candidate' || persona === 'both' ? (
-              <Link
-                className="text-muted-foreground transition-colors hover:text-foreground"
-                href="/candidate"
-              >
-                Candidate
-              </Link>
+            {access?.isSignedIn ? (
+              <WorkspaceSwitcher
+                preferredWorkspace={preferredWorkspace}
+                canAccessRecruiter={access.canAccessRecruiter}
+              />
             ) : null}
             <Link
               className="text-muted-foreground transition-colors hover:text-foreground"
               href="/interviews/demo-invite"
             >
-              Candidate Flow
+              Demo interview
             </Link>
           </div>
           <div className="flex items-center gap-4">
@@ -52,8 +48,20 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             {clerkEnabled ? (
               <>
                 <Show when="signed-out">
-                  <SignInButton />
-                  <SignUpButton />
+                  <Link
+                    href={signInPath('candidate')}
+                    className={cn(
+                      buttonVariants({ variant: 'ghost', size: 'sm' })
+                    )}
+                  >
+                    Candidate sign in
+                  </Link>
+                  <Link
+                    href={signInPath('recruiter')}
+                    className={cn(buttonVariants({ size: 'sm' }))}
+                  >
+                    Recruiter sign in
+                  </Link>
                 </Show>
                 <Show when="signed-in">
                   <UserButton />

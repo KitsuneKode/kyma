@@ -2,6 +2,10 @@ import { ConvexError, v } from 'convex/values'
 
 import { mutation } from './_generated/server'
 import { requireAdmin } from './helpers/auth'
+import {
+  clerkIdFromIdentity,
+  ensureUserForIdentity,
+} from './helpers/clerkIdentity'
 import { runtimeEnv } from '../lib/env/runtime'
 
 function isBootstrapAdminEmail(email?: string) {
@@ -12,6 +16,19 @@ function isBootstrapAdminEmail(email?: string) {
       .filter(Boolean) ?? []
   return allowlist.includes(email.toLowerCase())
 }
+
+/** Ensures a Convex `users` row exists for the signed-in Clerk account (webhook fallback). */
+export const ensureCurrentUser = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new ConvexError('You must be signed in to sync your profile.')
+    }
+    const user = await ensureUserForIdentity(ctx, identity)
+    return { userId: user._id, clerkId: clerkIdFromIdentity(identity) }
+  },
+})
 
 export const upsert = mutation({
   args: {
@@ -80,6 +97,9 @@ export const syncFromClerkWebhook = mutation({
     clerkId: v.string(),
     email: v.optional(v.string()),
     name: v.optional(v.string()),
+    preferredWorkspace: v.optional(
+      v.union(v.literal('candidate'), v.literal('recruiter'))
+    ),
   },
   handler: async (ctx, args) => {
     const expectedKey = runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
@@ -108,6 +128,9 @@ export const syncFromClerkWebhook = mutation({
       await ctx.db.patch(existing._id, {
         email: args.email,
         name: args.name,
+        ...(args.preferredWorkspace
+          ? { preferredWorkspace: args.preferredWorkspace }
+          : {}),
         updatedAt: now,
       })
       return existing._id
@@ -117,6 +140,7 @@ export const syncFromClerkWebhook = mutation({
       clerkId: args.clerkId,
       email: args.email,
       name: args.name,
+      preferredWorkspace: args.preferredWorkspace,
       role: isBootstrapAdminEmail(args.email) ? 'admin' : 'candidate',
       createdAt: now,
       updatedAt: now,

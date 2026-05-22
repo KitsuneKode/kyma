@@ -9,6 +9,11 @@ import {
 } from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
 import { resolveInterviewPolicyFromInvite } from './helpers/interviewPolicy'
+import {
+  hasTrustedProcessingKey,
+  resolveOrgIdForPipelineWrite,
+} from './helpers/processingAuth'
+import { isDevelopmentMode } from '../lib/runtime-mode'
 import { runtimeEnv } from '../lib/env/runtime'
 import { rateLimiter } from './rateLimiter'
 
@@ -139,10 +144,16 @@ export const listReviewCandidates = query({
 export const getSessionProcessingDetail = query({
   args: {
     sessionId: v.id('interviewSessions'),
+    processingKey: v.optional(v.string()),
   },
-  handler: async (ctx, { sessionId }) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+  handler: async (ctx, { sessionId, processingKey }) => {
+    const orgId = hasTrustedProcessingKey(processingKey)
+      ? await resolveOrgIdForPipelineWrite(ctx, sessionId, processingKey)
+      : await (async () => {
+          await requireAdminIdentity(ctx)
+          return await requireOrgId(ctx)
+        })()
+
     const session = await ctx.db.get(sessionId)
 
     if (!session || session.orgId !== orgId) {
@@ -455,20 +466,28 @@ export const saveAssessmentReport = mutation({
     policySnapshot: v.optional(interviewPolicySnapshotValidator),
   },
   handler: async (ctx, args) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
-    await rateLimiter.limit(ctx, 'reportGeneration', {
-      key: `${args.sessionId}`,
-      throws: true,
-    })
-    const configuredProcessingKey =
-      runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim() || undefined
+    const pipelineWrite = hasTrustedProcessingKey(args.processingKey)
+    let orgId: string
+    if (pipelineWrite) {
+      orgId = await resolveOrgIdForPipelineWrite(
+        ctx,
+        args.sessionId,
+        args.processingKey
+      )
+    } else {
+      await requireAdminIdentity(ctx)
+      orgId = await requireOrgId(ctx)
+    }
 
-    if (configuredProcessingKey) {
-      if (args.processingKey?.trim() !== configuredProcessingKey) {
-        throw new Error('Invalid processing key.')
-      }
-    } else if (runtimeEnv.NODE_ENV !== 'development') {
+    if (!pipelineWrite) {
+      await rateLimiter.limit(ctx, 'reportGeneration', {
+        key: `${args.sessionId}`,
+        throws: true,
+      })
+    } else if (
+      !runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim() &&
+      !isDevelopmentMode(runtimeEnv.NODE_ENV)
+    ) {
       throw new Error(
         'KYMA_PROCESSING_WRITE_KEY must be configured outside development.'
       )

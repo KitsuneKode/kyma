@@ -1,3 +1,6 @@
+export type PreferredWorkspace = 'candidate' | 'recruiter'
+
+/** @deprecated Legacy routing hint; do not write `both` for new users. */
 export type PersonaHint = 'candidate' | 'recruiter' | 'both'
 
 export type RecruiterCapability =
@@ -30,8 +33,37 @@ function readMetadata(sessionClaims: SessionClaims) {
   return metadata as Record<string, unknown>
 }
 
+function parsePreferredWorkspaceValue(
+  value: unknown
+): PreferredWorkspace | null {
+  if (value === 'candidate' || value === 'recruiter') {
+    return value
+  }
+  return null
+}
+
 /**
- * Persona hint only. Never use this for recruiter authorization decisions.
+ * Workspace preference for post-login routing and nav only.
+ * Never use this for recruiter authorization decisions.
+ */
+export function preferredWorkspaceFromSessionClaims(
+  sessionClaims: SessionClaims
+): PreferredWorkspace | null {
+  const metadata = readMetadata(sessionClaims)
+  if (!metadata) return null
+
+  const preferred = parsePreferredWorkspaceValue(metadata.preferredWorkspace)
+  if (preferred) return preferred
+
+  const legacyPersona = metadata.persona
+  if (legacyPersona === 'both') {
+    return null
+  }
+  return parsePreferredWorkspaceValue(legacyPersona)
+}
+
+/**
+ * Legacy persona hint parser. Prefer `preferredWorkspaceFromSessionClaims`.
  */
 export function personaFromSessionClaims(
   sessionClaims: SessionClaims
@@ -41,5 +73,16 @@ export function personaFromSessionClaims(
   if (raw === 'candidate' || raw === 'recruiter' || raw === 'both') {
     return raw
   }
+
+  const preferred = parsePreferredWorkspaceValue(metadata?.preferredWorkspace)
+  if (preferred) {
+    return preferred
+  }
+
   return null
+}
+
+export function hasLegacyBothPersona(sessionClaims: SessionClaims): boolean {
+  const metadata = readMetadata(sessionClaims)
+  return metadata?.persona === 'both'
 }

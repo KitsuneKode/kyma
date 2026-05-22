@@ -14,6 +14,7 @@ import {
   resolveInterviewPolicyFromInvite,
   type InterviewPolicy,
 } from './helpers/interviewPolicy'
+import { findUserByIdentity } from './helpers/clerkIdentity'
 import { ensureDefaultTemplate } from './helpers/templates'
 import { isDevelopmentMode } from '../lib/runtime-mode'
 import { runtimeEnv } from '../lib/env/runtime'
@@ -957,10 +958,7 @@ export const linkCandidateInviteByEmail = mutation({
     if (!identity?.email) {
       return null
     }
-    const user = await ctx.db
-      .query('users')
-      .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
-      .unique()
+    const user = await findUserByIdentity(ctx, identity)
     if (!user) {
       return null
     }
@@ -998,10 +996,7 @@ export const listCandidateInterviews = query({
     if (!identity) {
       throw new ConvexError('You must be signed in to access interviews.')
     }
-    const user = await ctx.db
-      .query('users')
-      .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
-      .unique()
+    const user = await findUserByIdentity(ctx, identity)
     if (!user) {
       return []
     }
@@ -1048,10 +1043,7 @@ export const getCandidateInterviewResult = query({
         'You must be signed in to access interview results.'
       )
     }
-    const user = await ctx.db
-      .query('users')
-      .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
-      .unique()
+    const user = await findUserByIdentity(ctx, identity)
     if (!user) return null
     const session = await ctx.db.get(args.sessionId)
     if (!session || `${session.candidateUserId}` !== `${user._id}`) {

@@ -1,4 +1,6 @@
 import Link from 'next/link'
+
+import { signInPath, signUpPath } from '@/lib/auth/workspace-intent'
 import { Button } from '@/components/ui/button'
 
 export function MarketingFinalCta() {
@@ -49,11 +51,35 @@ export function MarketingFinalCta() {
             size="lg"
             variant="outline"
             className="h-12 rounded-xl px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30"
-            render={<Link href="/sign-in" />}
+            render={<Link href={signUpPath('recruiter')} />}
             nativeButton={false}
           >
-            Open recruiter workspace
+            Start as recruiter
           </Button>
+          <Button
+            size="lg"
+            variant="ghost"
+            className="h-12 rounded-xl px-8 text-base"
+            render={<Link href={signUpPath('candidate')} />}
+            nativeButton={false}
+          >
+            Create candidate account
+          </Button>
+          <p className="w-full text-center text-sm text-muted-foreground">
+            <Link
+              href={signInPath('candidate')}
+              className="underline-offset-4 hover:underline"
+            >
+              Candidate sign in
+            </Link>
+            {' · '}
+            <Link
+              href={signInPath('recruiter')}
+              className="underline-offset-4 hover:underline"
+            >
+              Recruiter sign in
+            </Link>
+          </p>
         </div>
       </div>
     </section>

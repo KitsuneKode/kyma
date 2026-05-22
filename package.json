@@ -25,6 +25,7 @@
     "db:reset:dev": "bunx convex run devSeed:resetDevData '{\"confirm\":\"RESET_DEV_ONLY\"}'",
     "db:seed:dev": "bunx convex run devSeed:seedDevData '{\"confirm\":\"SEED_DEV_ONLY\"}'",
     "db:cutover:org-rbac:dev": "bun run db:reset:dev && bun run db:seed:dev",
+    "clerk:setup-auth": "bun run scripts/clerk-setup-kyma-auth.ts",
     "verify:auth-org-rbac": "bun run fmt && bun run typecheck && bun run lint && bun run test",
     "agent:dev": "bun run agents/worker.ts dev",
     "agent:start": "bun run agents/worker.ts start",

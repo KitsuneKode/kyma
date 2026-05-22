@@ -33,9 +33,8 @@ const RECOMMENDATION_FILTERS = [
   'all',
   'strong_yes',
   'yes',
-  'maybe',
+  'mixed',
   'no',
-  'strong_no',
 ] as const
 
 function scoreChipColor(score?: number) {

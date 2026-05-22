@@ -3,20 +3,19 @@
 ## Scope
 
 - Recruiter authorization source of truth is Clerk Organizations context.
-- Candidate authorization source of truth is signed-in identity plus persona hint.
-- `publicMetadata` is for persona/routing hints only.
+- Candidate authorization source of truth is signed-in user identity only.
+- `publicMetadata.preferredWorkspace` is a routing preference only (not authorization).
 - Convex mirrors are projection/cache and never authoritative for recruiter authz.
 
-## Persona Hint Contract
+## Workspace preference contract
 
-- Claim location: `sessionClaims.metadata.persona`
-- Allowed values:
-  - `candidate`
-  - `recruiter`
-  - `both`
-- Invalid/missing persona falls back to onboarding.
+- Claim location: `sessionClaims.metadata.preferredWorkspace`
+- Allowed values: `candidate` | `recruiter`
+- Legacy read: `sessionClaims.metadata.persona` (`candidate` | `recruiter` | `both`)
+- Do not write `both` for new users; dual access is derived at runtime when the user has recruiter org permission.
+- Missing preference → `/auth/continue` (defaults to candidate); `/onboarding` is optional.
 
-## Route Contract
+## Route contract
 
 ### Public routes
 
@@ -29,32 +28,23 @@
 ### Candidate routes
 
 - `/candidate/*`
-- Requires signed-in user.
+- Requires signed-in user only.
 - Must not require org context.
-- Persona gate:
-  - allow `candidate`
-  - allow `both`
-  - deny `recruiter` (redirect recruiter workspace when org context exists)
+- Any signed-in user may access (including recruiters).
 
 ### Recruiter routes
 
 - `/recruiter/*`
-- `/admin/*` (current recruiter workspace path)
+- `/admin/*` (recruiter workspace)
 - Requires signed-in user.
 - Requires active Clerk org context (`orgId`).
-- Requires one of:
-  - role `org:admin`, or
-  - permission `org:recruiter:access`.
+- Requires `org:admin` or `org:recruiter:access`.
 
 ### Auth route redirects
 
-- Signed-in user visiting `/sign-in` or `/sign-up`:
-  - persona `recruiter` + active org + recruiter access -> `/recruiter`
-  - persona `both` + active org + recruiter access -> `/recruiter`
-  - persona `candidate` or `both` without recruiter access -> `/candidate`
-  - missing/invalid persona -> `/onboarding`
+Signed-in user visiting `/sign-in` or `/sign-up` uses `getPostSignInPath` in [`lib/auth/access.ts`](../lib/auth/access.ts) backed by [`lib/auth/routing.ts`](../lib/auth/routing.ts).
 
-## Recruiter RBAC Matrix
+## Recruiter RBAC matrix
 
 | Capability                   | Clerk permission                 | Notes                                    |
 | ---------------------------- | -------------------------------- | ---------------------------------------- |
@@ -68,15 +58,33 @@
 
 `org:admin` bypasses all recruiter capability checks.
 
-## Fallback and Redirect Rules
+## Fallback and redirect rules
 
-- Missing active org on recruiter routes -> `/onboarding`.
-- Missing recruiter permission with active org -> `/candidate`.
-- Missing persona hint -> `/onboarding`.
-- Candidate routes are always org-independent.
+Implemented in `resolveAppRoute` ([`lib/auth/routing.ts`](../lib/auth/routing.ts)):
 
-## API Contract
+- Missing active org on recruiter routes → `/onboarding/recruiter`
+- Missing recruiter permission with active org → `/candidate`
+- Candidate routes never require a stored workspace preference
+- Missing workspace preference after sign-in → `/auth/continue`
+- Completed onboarding on `/onboarding` → workspace home
 
-- Any recruiter API/Convex operation must be guarded by active org context and permission checks from Clerk claims/context.
-- Candidate APIs must remain personal-account scoped (user identity / candidate ownership).
-- Future entitlements checks must be org-scoped and composed after permission checks.
+## Auth entry points
+
+| URL                                        | Audience                                           |
+| ------------------------------------------ | -------------------------------------------------- |
+| `/sign-in/candidate`, `/sign-up/candidate` | Candidates                                         |
+| `/sign-in/recruiter`, `/sign-up/recruiter` | Recruiters                                         |
+| `/sign-in`, `/sign-up`                     | General (with cross-links)                         |
+| `/auth/continue`                           | Post-login workspace persist + redirect (internal) |
+
+## UI
+
+- First-run: [`app/(app)/onboarding/page.tsx`](<../app/(app)/onboarding/page.tsx>) (candidate vs recruiter workspace choice)
+- Header workspace switcher when `canAccessRecruiter` ([`components/auth/workspace-switcher.tsx`](../components/auth/workspace-switcher.tsx))
+- Recruiter org switcher stays in admin layout only
+
+## API contract
+
+- Recruiter API/Convex operations: active org + permission checks from Clerk JWT.
+- Candidate APIs: user identity / candidate ownership only.
+- Entitlements (future): org-scoped, composed after permission checks.

@@ -6,11 +6,13 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { IconMenu2, IconX } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import React from 'react'
+import { signInPath } from '@/lib/auth/workspace-intent'
 import { cn } from '@/lib/utils'
 import { motion, useScroll, useSpring } from 'motion/react'
 
 const menuItems = [
   { name: 'How it works', href: '#how-it-works' },
+  { name: 'For candidates', href: '#role-pathways' },
   { name: 'For recruiters', href: '#role-pathways' },
 ]
 
@@ -125,10 +127,19 @@ export const HeroHeader = ({ clerkEnabled }: { clerkEnabled: boolean }) => {
                           !isScrolled &&
                             'ring-1 ring-border/40 hover:bg-muted/30'
                         )}
-                        render={<Link href="/sign-in" />}
+                        render={<Link href={signInPath('recruiter')} />}
                         nativeButton={false}
                       >
-                        <span>Sign In</span>
+                        <span>Recruiter sign in</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="rounded-full px-4 text-sm"
+                        render={<Link href={signInPath('candidate')} />}
+                        nativeButton={false}
+                      >
+                        <span>Candidate</span>
                       </Button>
                     </Show>
                     <Show when="signed-in">

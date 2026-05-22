@@ -1,6 +1,7 @@
 import { fetchMutation, fetchQuery } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
+import { CandidateEmptyState } from '@/components/candidate/candidate-empty-state'
 import { CandidateInterviewCard } from '@/components/candidate/interview-card'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { clientEnv } from '@/lib/env/client'
@@ -90,11 +91,7 @@ export default async function CandidateHomePage() {
       </header>
 
       {prioritizedInterviews.length === 0 ? (
-        <div className="flex h-64 flex-col items-center justify-center rounded-[2rem] bg-card p-5 text-center shadow-2xl ring-1 ring-border/20">
-          <p className="text-sm font-medium text-muted-foreground">
-            No interviews are linked to your account yet.
-          </p>
-        </div>
+        <CandidateEmptyState />
       ) : (
         <div className="relative space-y-16 before:absolute before:inset-y-0 before:left-[19px] before:w-[2px] before:bg-border/30">
           <section className="relative">

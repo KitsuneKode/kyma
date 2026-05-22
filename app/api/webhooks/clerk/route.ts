@@ -16,7 +16,28 @@ type ClerkWebhookUser = {
   last_name?: string | null
   email_addresses?: ClerkEmailAddress[]
   primary_email_address_id?: string
-  public_metadata?: { persona?: unknown }
+  public_metadata?: {
+    persona?: unknown
+    preferredWorkspace?: unknown
+  }
+}
+
+function preferredWorkspaceFromWebhookUser(
+  user: ClerkWebhookUser
+): 'candidate' | 'recruiter' | undefined {
+  const metadata = user.public_metadata
+  if (!metadata || typeof metadata !== 'object') {
+    return undefined
+  }
+  const preferred = metadata.preferredWorkspace
+  if (preferred === 'candidate' || preferred === 'recruiter') {
+    return preferred
+  }
+  const legacy = metadata.persona
+  if (legacy === 'candidate' || legacy === 'recruiter') {
+    return legacy
+  }
+  return undefined
 }
 
 type ClerkWebhookOrganization = {
@@ -93,6 +114,7 @@ export async function POST(request: NextRequest) {
         clerkId: user.id,
         email: pickPrimaryEmail(user),
         name: fullName(user),
+        preferredWorkspace: preferredWorkspaceFromWebhookUser(user),
       })
     }
 

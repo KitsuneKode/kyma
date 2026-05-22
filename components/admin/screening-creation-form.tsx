@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { startTransition, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery } from 'convex/react'
@@ -155,6 +156,22 @@ export function ScreeningCreationForm() {
               >
                 Assessment template
               </Label>
+              {templates === undefined ? (
+                <p className="text-sm text-muted-foreground">
+                  Loading templates...
+                </p>
+              ) : templates.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No active templates yet.{' '}
+                  <Link
+                    href="/recruiter/templates/new"
+                    className="font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    Create a template
+                  </Link>{' '}
+                  first.
+                </p>
+              ) : null}
               <Select
                 value={templateId || undefined}
                 onValueChange={(val) =>

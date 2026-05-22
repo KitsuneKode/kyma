@@ -13,6 +13,7 @@ import type * as devSeed from "../devSeed.js";
 import type * as devSeedMutations from "../devSeedMutations.js";
 import type * as helpers_audit from "../helpers/audit.js";
 import type * as helpers_auth from "../helpers/auth.js";
+import type * as helpers_clerkIdentity from "../helpers/clerkIdentity.js";
 import type * as helpers_encryption from "../helpers/encryption.js";
 import type * as helpers_interviewPolicy from "../helpers/interviewPolicy.js";
 import type * as helpers_templates from "../helpers/templates.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   devSeedMutations: typeof devSeedMutations;
   "helpers/audit": typeof helpers_audit;
   "helpers/auth": typeof helpers_auth;
+  "helpers/clerkIdentity": typeof helpers_clerkIdentity;
   "helpers/encryption": typeof helpers_encryption;
   "helpers/interviewPolicy": typeof helpers_interviewPolicy;
   "helpers/templates": typeof helpers_templates;

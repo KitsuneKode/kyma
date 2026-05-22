@@ -24,6 +24,10 @@ Programmatic dev data setup is implemented with Convex actions + Faker.
 - `devSeedMutations.clearTableChunk` (mutation)
 - `devSeedMutations.seedData` (mutation)
 
+## What reset clears
+
+All dev seed tables, including `users`, `organizations`, `orgMemberships`, `candidatePreferences`, and `candidateReadinessRuns`.
+
 ## What gets seeded
 
 - Users: admin, recruiters, candidates

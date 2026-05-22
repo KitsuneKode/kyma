@@ -26,7 +26,7 @@ export function PremiumFooter() {
             <ul className="mt-6 space-y-4 text-sm text-muted-foreground">
               <li>
                 <Link
-                  href="#features"
+                  href="#how-it-works"
                   className="transition-colors hover:text-foreground"
                 >
                   Features

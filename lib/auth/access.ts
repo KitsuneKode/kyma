@@ -1,33 +1,42 @@
+import { cache } from 'react'
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 
 import {
-  personaFromSessionClaims,
+  hasLegacyBothPersona,
+  preferredWorkspaceFromSessionClaims,
   RECRUITER_PERMISSION_MAP,
-  type PersonaHint,
+  type PreferredWorkspace,
   type RecruiterCapability,
 } from '@/lib/auth/clerk-role'
+import {
+  getPostSignInPathFromContext,
+  resolveAppRoute,
+  type AppRouteContext,
+} from '@/lib/auth/routing'
 
 export type UserAppAccess = {
   isSignedIn: boolean
-  persona: PersonaHint | 'anonymous' | 'unassigned'
+  preferredWorkspace: PreferredWorkspace | 'anonymous' | 'unassigned'
+  hasLegacyBoth: boolean
   orgId: string | null
   canAccessRecruiter: boolean
 }
 
-export async function getUserAppAccess(): Promise<UserAppAccess> {
+async function getUserAppAccessUncached(): Promise<UserAppAccess> {
   const { userId, sessionClaims, has, orgId } = await auth()
 
   if (!userId) {
     return {
       isSignedIn: false,
-      persona: 'anonymous',
+      preferredWorkspace: 'anonymous',
+      hasLegacyBoth: false,
       orgId: null,
       canAccessRecruiter: false,
     }
   }
 
-  const persona = personaFromSessionClaims(
+  const preferredWorkspace = preferredWorkspaceFromSessionClaims(
     sessionClaims as Record<string, unknown> | null | undefined
   )
   const canAccessRecruiter = Boolean(
@@ -38,48 +47,41 @@ export async function getUserAppAccess(): Promise<UserAppAccess> {
 
   return {
     isSignedIn: true,
-    persona: persona ?? 'unassigned',
+    preferredWorkspace: preferredWorkspace ?? 'unassigned',
+    hasLegacyBoth: hasLegacyBothPersona(
+      sessionClaims as Record<string, unknown> | null | undefined
+    ),
     orgId: orgId ?? null,
     canAccessRecruiter,
   }
 }
 
-export async function requireAdminOrRecruiterPageAccess() {
-  return await requireRecruiterPageAccess()
-}
+export const getUserAppAccess = cache(getUserAppAccessUncached)
 
-export async function requireDashboardPageAccess() {
-  const access = await getUserAppAccess()
-  if (!access.isSignedIn) {
-    redirect('/sign-in')
+function toRouteContext(
+  access: UserAppAccess,
+  pathname: string
+): AppRouteContext {
+  return {
+    pathname,
+    isSignedIn: access.isSignedIn,
+    preferredWorkspace:
+      access.preferredWorkspace === 'anonymous' ||
+      access.preferredWorkspace === 'unassigned'
+        ? null
+        : access.preferredWorkspace,
+    hasLegacyBoth: access.hasLegacyBoth,
+    orgId: access.orgId,
+    canAccessRecruiter: access.canAccessRecruiter,
   }
-  if (access.persona === 'unassigned') {
-    redirect('/onboarding')
-  }
-  if (access.persona === 'recruiter') {
-    redirect('/recruiter')
-  }
-  return access
 }
 
 export function getPostSignInPath(access: UserAppAccess): string {
-  if (
-    !access.isSignedIn ||
-    access.persona === 'anonymous' ||
-    access.persona === 'unassigned'
-  ) {
-    return '/onboarding'
-  }
-  if (access.persona === 'recruiter') {
-    if (access.canAccessRecruiter) {
-      return '/recruiter'
-    }
-    return '/onboarding/recruiter'
-  }
-  if (access.persona === 'both' && access.canAccessRecruiter) {
-    return '/recruiter'
-  }
-  return '/candidate'
+  return getPostSignInPathFromContext(toRouteContext(access, '/'))
+}
+
+export async function requireAdminOrRecruiterPageAccess() {
+  return await requireRecruiterPageAccess()
 }
 
 export async function requireOrgPermission(
@@ -89,11 +91,9 @@ export async function requireOrgPermission(
   if (!access.isSignedIn) {
     redirect('/sign-in')
   }
-  if (access.persona === 'unassigned') {
-    redirect('/onboarding')
-  }
-  if (!access.orgId) {
-    redirect('/onboarding/recruiter')
+  const target = resolveAppRoute(toRouteContext(access, '/recruiter'))
+  if (target) {
+    redirect(target)
   }
   const { has } = await auth()
   const allowed = Boolean(
@@ -101,7 +101,10 @@ export async function requireOrgPermission(
     has?.({ permission: RECRUITER_PERMISSION_MAP[capability] })
   )
   if (!allowed) {
-    redirect('/candidate')
+    if (!access.orgId) {
+      redirect('/onboarding/recruiter')
+    }
+    redirect('/onboarding/recruiter?setup=jwt')
   }
   return access
 }
@@ -115,11 +118,9 @@ export async function requireCandidatePageAccess() {
   if (!access.isSignedIn) {
     redirect('/sign-in')
   }
-  if (access.persona === 'unassigned') {
-    redirect('/onboarding')
-  }
-  if (access.persona === 'recruiter' && access.canAccessRecruiter) {
-    redirect('/recruiter')
+  const target = resolveAppRoute(toRouteContext(access, '/candidate'))
+  if (target) {
+    redirect(target)
   }
   return access
 }

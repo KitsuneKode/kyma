@@ -22,6 +22,10 @@
     "recruiter": { "persona": "recruiter" },
     "both": { "persona": "both" }
   },
+  "preferredWorkspaceMetadata": {
+    "candidate": { "preferredWorkspace": "candidate" },
+    "recruiter": { "preferredWorkspace": "recruiter" }
+  },
   "jwtClaimFixtures": {
     "candidateOnly": {
       "sub": "user_test_candidate_01",

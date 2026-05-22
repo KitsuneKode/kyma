@@ -9,6 +9,7 @@ import {
   IconBrain,
   IconClockPlay,
 } from '@tabler/icons-react'
+import { signInPath, signUpPath } from '@/lib/auth/workspace-intent'
 import { Button } from '@/components/ui/button'
 import { TextEffect } from '@/components/ui/text-effect'
 import {
@@ -183,26 +184,26 @@ export function PremiumHero() {
             as="p"
             className="mx-auto mt-8 max-w-3xl text-lg leading-relaxed text-pretty text-muted-foreground"
           >
-            Run invite-only screening batches, capture transcript-backed
-            signals, and move candidates from interview to decision with a
-            recruiter-first workflow your team can trust.
+            Candidates join from an invite link for a respectful live interview.
+            Recruiters review transcript-backed evidence and move to decision
+            with a workflow built for tutoring teams.
           </TextEffect>
 
           <motion.div
             initial="hidden"
             animate="visible"
             variants={transitionVariants.container}
-            className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row"
+            className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row sm:flex-wrap"
           >
             <motion.div variants={transitionVariants.item}>
               <div className="rounded-[calc(var(--radius-xl)+0.125rem)] border border-border/60 bg-muted/20 p-[3px] shadow-sm backdrop-blur-sm">
                 <Button
                   size="lg"
                   className="min-h-[44px] min-w-[44px] rounded-xl px-8 text-base shadow-inner transition-[transform,background-color] duration-150 ease-out active:scale-[0.96]"
-                  render={<Link href="/sign-in" />}
+                  render={<Link href={signUpPath('candidate')} />}
                   nativeButton={false}
                 >
-                  <span className="text-nowrap">Open recruiter workspace</span>
+                  <span className="text-nowrap">Create candidate account</span>
                 </Button>
               </div>
             </motion.div>
@@ -211,12 +212,42 @@ export function PremiumHero() {
                 size="lg"
                 variant="outline"
                 className="h-12 min-h-[44px] min-w-[44px] rounded-xl px-8 text-base ring-1 ring-border/40 transition-[transform,background-color] duration-150 ease-out hover:bg-muted/30 active:scale-[0.96]"
+                render={<Link href={signUpPath('recruiter')} />}
+                nativeButton={false}
+              >
+                <span className="text-nowrap">Start as recruiter</span>
+              </Button>
+            </motion.div>
+            <motion.div variants={transitionVariants.item}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground"
                 render={<Link href="/interviews/demo-invite" />}
                 nativeButton={false}
               >
-                <span className="text-nowrap">Try candidate interview</span>
+                Try demo interview
               </Button>
             </motion.div>
+            <motion.p
+              variants={transitionVariants.item}
+              className="w-full text-center text-sm text-muted-foreground"
+            >
+              Already have an account?{' '}
+              <Link
+                href={signInPath('candidate')}
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                Sign in as candidate
+              </Link>
+              {' · '}
+              <Link
+                href={signInPath('recruiter')}
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                Sign in as recruiter
+              </Link>
+            </motion.p>
           </motion.div>
         </div>
 

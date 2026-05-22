@@ -6,28 +6,36 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from './_generated/server'
+import {
+  ensureUserForIdentity,
+  findUserByIdentity,
+} from './helpers/clerkIdentity'
 
-async function resolveSignedInCandidateUserId(ctx: QueryCtx | MutationCtx) {
+async function resolveSignedInCandidateUserId(ctx: MutationCtx) {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) {
     throw new ConvexError('You must be signed in to access readiness checks.')
   }
-
-  const user = await ctx.db
-    .query('users')
-    .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
-    .unique()
-  if (!user) {
-    throw new ConvexError('Candidate profile not found.')
-  }
-
+  const user = await ensureUserForIdentity(ctx, identity)
   return user._id
+}
+
+async function findCandidateUserIdForQuery(ctx: QueryCtx) {
+  const identity = await ctx.auth.getUserIdentity()
+  if (!identity) {
+    return null
+  }
+  const user = await findUserByIdentity(ctx, identity)
+  return user?._id ?? null
 }
 
 export const getCandidateReadinessRuns = query({
   args: {},
   handler: async (ctx) => {
-    const candidateUserId = await resolveSignedInCandidateUserId(ctx)
+    const candidateUserId = await findCandidateUserIdForQuery(ctx)
+    if (!candidateUserId) {
+      return []
+    }
     const runs = await ctx.db
       .query('candidateReadinessRuns')
       .withIndex('by_candidate_user', (q) =>

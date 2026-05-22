@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { motion } from 'motion/react'
 import { IconUser, IconBriefcase } from '@tabler/icons-react'
 
+import { signInPath, signUpPath } from '@/lib/auth/workspace-intent'
 import { Button } from '@/components/ui/button'
 
 const pathways = [
@@ -18,7 +19,15 @@ const pathways = [
       'Structured interview flow with transparent expectations',
       'Reliable transcript capture throughout the session',
     ],
-    cta: { label: 'Try a demo interview', href: '/interviews/demo-invite' },
+    primaryCta: {
+      label: 'Create candidate account',
+      href: signUpPath('candidate'),
+    },
+    secondaryCta: {
+      label: 'Try demo interview',
+      href: '/interviews/demo-invite',
+    },
+    signInHref: signInPath('candidate'),
   },
   {
     icon: IconBriefcase,
@@ -31,7 +40,15 @@ const pathways = [
       'Needs-attention-first recruiter home',
       'Evidence-linked recommendations and reviewer notes',
     ],
-    cta: { label: 'Open recruiter workspace', href: '/recruiter' },
+    primaryCta: {
+      label: 'Start as recruiter',
+      href: signUpPath('recruiter'),
+    },
+    secondaryCta: {
+      label: 'Recruiter sign in',
+      href: signInPath('recruiter'),
+    },
+    signInHref: signInPath('recruiter'),
   },
 ]
 
@@ -106,13 +123,21 @@ export function MarketingRolePathways() {
                   </li>
                 ))}
               </ul>
-              <div className="mt-10 mt-auto border-t border-border/50 pt-8">
+              <div className="mt-10 mt-auto flex flex-col gap-3 border-t border-border/50 pt-8">
                 <Button
                   className="min-h-[44px] min-w-[44px] rounded-xl bg-primary px-6 text-primary-foreground transition-[transform,background-color] duration-150 ease-out active:scale-[0.96]"
-                  render={<Link href={pathway.cta.href} />}
+                  render={<Link href={pathway.primaryCta.href} />}
                   nativeButton={false}
                 >
-                  {pathway.cta.label}
+                  {pathway.primaryCta.label}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="min-h-[44px] rounded-xl"
+                  render={<Link href={pathway.secondaryCta.href} />}
+                  nativeButton={false}
+                >
+                  {pathway.secondaryCta.label}
                 </Button>
               </div>
             </motion.div>

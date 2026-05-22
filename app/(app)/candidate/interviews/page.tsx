@@ -2,6 +2,7 @@ import { fetchQuery } from 'convex/nextjs'
 import Link from 'next/link'
 
 import { api } from '@/convex/_generated/api'
+import { CandidateEmptyState } from '@/components/candidate/candidate-empty-state'
 import { CandidateInterviewCard } from '@/components/candidate/interview-card'
 import { Button } from '@/components/ui/button'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
@@ -80,9 +81,13 @@ export default async function CandidateInterviewsPage({
         ))}
       </div>
       {filtered.length === 0 ? (
-        <p className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-          No interviews match this filter.
-        </p>
+        interviews.length === 0 ? (
+          <CandidateEmptyState />
+        ) : (
+          <p className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+            No interviews match this filter.
+          </p>
+        )
       ) : (
         filtered.map((item) => (
           <CandidateInterviewCard

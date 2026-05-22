@@ -92,6 +92,19 @@ For org-first auth cutover verification:
 bun run verify:auth-org-rbac
 ```
 
+Bootstrap Clerk permissions and Convex JWT template:
+
+```bash
+bun run clerk:setup-auth
+```
+
+Auth entry points:
+
+- Candidates: `/sign-in/candidate` or `/sign-up/candidate`
+- Recruiters: `/sign-in/recruiter` or `/sign-up/recruiter`
+
+Auth onboarding stuck after signup? Finish the session-token JSON step from `bun run clerk:setup-auth`, then see [`.docs/auth-org-rbac-cutover-checklist.md`](.docs/auth-org-rbac-cutover-checklist.md) (`KYMA_AUTH_DEBUG=1` helps).
+
 If Convex schema validation fails with missing `orgId` during local cutover:
 
 ```bash

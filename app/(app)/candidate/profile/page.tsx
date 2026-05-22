@@ -1,7 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 
 import { CandidateProfilePanel } from '@/components/candidate/profile-panel'
-
 export default async function CandidateProfilePage() {
   const { sessionClaims } = await auth()
   const claims = sessionClaims as

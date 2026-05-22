@@ -46,6 +46,9 @@ export default defineSchema({
     clerkId: v.string(),
     email: v.optional(v.string()),
     name: v.optional(v.string()),
+    preferredWorkspace: v.optional(
+      v.union(v.literal('candidate'), v.literal('recruiter'))
+    ),
     role: v.union(
       v.literal('admin'),
       v.literal('recruiter'),

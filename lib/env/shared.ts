@@ -33,6 +33,7 @@ export const serverSchema = {
   KYMA_REVIEW_CHAT_MODEL: z.string().min(1).optional(),
   KYMA_PROCESSING_WRITE_KEY: z.string().min(1).optional(),
   KYMA_ADMIN_EMAILS: z.string().min(1).optional(),
+  KYMA_AUTH_DEBUG: z.enum(['0', '1']).optional(),
   KYMA_ENCRYPTION_KEY: z.string().min(1).optional(),
   INNGEST_APP_ID: z.string().min(1).optional(),
   INNGEST_EVENT_KEY: z.string().min(1).optional(),

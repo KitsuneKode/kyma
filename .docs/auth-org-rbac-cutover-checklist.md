@@ -18,9 +18,17 @@ Use one of these paths exactly. The dev path is destructive to dev data.
 
 ### Dev (fastest, explicit, safe for local/dev only)
 
-1. Configure Clerk once (roles, permissions, JWT claims, webhook events) from this doc.
-2. Ensure `.env.local` has required keys (`Clerk + KYMA_PROCESSING_WRITE_KEY`).
-3. Run:
+1. Run automated Clerk bootstrap (permissions, convex JWT template):
+
+```bash
+bun run clerk:setup-auth
+```
+
+Then complete the printed **Sessions → Customize session token** JSON paste (one-time).
+
+2. Configure any remaining Clerk items (webhooks, membership optional) from this doc.
+3. Ensure `.env.local` has required keys (`Clerk + KYMA_PROCESSING_WRITE_KEY`).
+4. Run:
 
 ```bash
 bun install
@@ -30,7 +38,7 @@ bun run verify:auth-org-rbac
 bun run dev:stack
 ```
 
-4. Verify routes manually:
+5. Verify routes manually:
    - `/candidate`
    - `/onboarding/recruiter`
    - `/recruiter`
@@ -53,12 +61,40 @@ bun run dev:stack
    - candidate-only
    - recruiter without org
    - recruiter with org + permission
-   - both persona
+   - recruiter workspace without org
    - cross-org isolation
 
 Production guardrail:
 
 - Never run `db:cutover:org-rbac:dev` in production.
+
+## Stuck on `/onboarding` after signup?
+
+Symptom: clicking **Continue as candidate/recruiter** reloads the same page.
+
+1. Open Clerk Dashboard → **Users** → your user → **Public metadata**. After a click you should see `preferredWorkspace` (or legacy `persona`).
+2. Open **JWT Templates** → **Session token** (default). Claims must include:
+   - `metadata.preferredWorkspace` from `{{user.public_metadata.preferredWorkspace}}`
+   - Legacy fallback: `metadata.persona` from `{{user.public_metadata.persona}}`
+   - `org_id`, `org_role`, `org_permissions` for recruiter routes
+3. Open **JWT Templates** → **convex** (application ID `convex`). Same org claims as above.
+4. **Organizations** enabled; membership mode **optional** (candidate + recruiter on one login).
+5. Sign out and sign in once after changing the JWT template (forces a fresh session).
+6. Local debug: set `KYMA_AUTH_DEBUG=1` in `.env.local` and reload `/onboarding` to compare API metadata vs session claims.
+
+Example session-token claims JSON (adjust to your Clerk UI):
+
+```json
+{
+  "metadata": {
+    "preferredWorkspace": "{{user.public_metadata.preferredWorkspace}}",
+    "persona": "{{user.public_metadata.persona}}"
+  },
+  "org_id": "{{org.id}}",
+  "org_role": "{{org.role}}",
+  "org_permissions": "{{org_membership.permissions}}"
+}
+```
 
 ## 1) Clerk Configuration (Mandatory)
 
@@ -83,7 +119,8 @@ Include these claims for app + Convex guards:
 - `org_id`
 - `org_role`
 - `org_permissions`
-- `metadata.persona` (`candidate|recruiter|both`) for routing hints only
+- `metadata.preferredWorkspace` (`candidate|recruiter`) for routing hints only
+- Legacy: `metadata.persona` (`candidate|recruiter|both`) until all environments migrate
 
 ### Clerk webhook subscriptions
 
@@ -135,7 +172,7 @@ Then verify behavior manually:
 - Candidate user without org can access candidate routes.
 - Recruiter persona without active org is redirected to recruiter onboarding.
 - Recruiter with active org and permission can access recruiter routes.
-- Both persona supports both contexts with one login.
+- Users with org access can switch candidate/recruiter workspaces from the header.
 - Cross-org isolation holds for recruiter data.
 
 ## 4) Smoke Matrix
@@ -152,10 +189,11 @@ Then verify behavior manually:
 - Create/join/select org -> recruiter workspace loads.
 - Organization switcher changes context and access scope.
 
-### Both persona user
+### Dual-workspace user (org member + candidate)
 
-- Can use candidate routes directly.
-- Can enter recruiter routes only with active org.
+- `/sign-in/candidate` or `/sign-in/recruiter` for clear entry.
+- Header workspace switcher persists preference.
+- Recruiter routes still require active org.
 
 ## 5) Rollback Plan
 
