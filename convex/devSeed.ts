@@ -78,7 +78,16 @@ export const seedDevData = action({
   handler: async (
     ctx,
     args
-  ): Promise<{ ok: boolean; candidates: number; recruiters: number }> => {
+  ): Promise<{
+    ok: boolean
+    orgId: string
+    templateId: string
+    batchId: string
+    candidates: number
+    recruiters: number
+    sampleInviteTokens: string[]
+    sampleReviewSessionIds: string[]
+  }> => {
     assertDevelopmentMode()
     if (args.confirm !== SEED_CONFIRMATION) {
       throw new ConvexError(
