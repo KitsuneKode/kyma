@@ -5,8 +5,11 @@ import { api } from '@/convex/_generated/api'
 import { CandidateEmptyState } from '@/components/candidate/candidate-empty-state'
 import { CandidateInterviewCard } from '@/components/candidate/interview-card'
 import { Button } from '@/components/ui/button'
+import { WorkspacePageHeader } from '@/components/workspace/page-header'
+import { WorkspaceSurface } from '@/components/workspace/surface'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { clientEnv } from '@/lib/env/client'
+import { runConvexFetch } from '@/lib/convex/server-fetch'
 
 type CandidateInterviewsPageProps = {
   searchParams: Promise<{ status?: string }>
@@ -49,19 +52,27 @@ export default async function CandidateInterviewsPage({
   const { status } = await searchParams
   const filter = status ?? 'all'
   const token = await getServerConvexAuthToken()
-  const interviews =
+  const interviewsResult =
     clientEnv.NEXT_PUBLIC_CONVEX_URL && token
-      ? await fetchQuery(
-          api.interviews.listCandidateInterviews,
-          {},
-          { token: token ?? undefined }
-        ).catch(() => [])
-      : []
+      ? await runConvexFetch(() =>
+          fetchQuery(
+            api.interviews.listCandidateInterviews,
+            {},
+            { token: token ?? undefined }
+          )
+        )
+      : { ok: true as const, data: [] }
+
+  const interviews = interviewsResult.ok ? interviewsResult.data : []
   const filtered = interviews.filter((interview) => inFilter(filter, interview))
 
   return (
-    <section className="space-y-5">
-      <h1 className="text-2xl font-semibold">All interviews</h1>
+    <section className="space-y-8">
+      <WorkspacePageHeader
+        eyebrow="Your interviews"
+        title="All interviews"
+        description="Filter by active sessions, pending release, or released outcomes."
+      />
       <div className="flex flex-wrap gap-2">
         {[
           ['all', 'All'],
@@ -84,21 +95,25 @@ export default async function CandidateInterviewsPage({
         interviews.length === 0 ? (
           <CandidateEmptyState />
         ) : (
-          <p className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-            No interviews match this filter.
-          </p>
+          <WorkspaceSurface className="p-5">
+            <p className="text-sm text-muted-foreground">
+              No interviews match this filter.
+            </p>
+          </WorkspaceSurface>
         )
       ) : (
-        filtered.map((item) => (
-          <CandidateInterviewCard
-            key={`${item.sessionId}`}
-            sessionId={`${item.sessionId}`}
-            templateName={item.templateName ?? 'Interview'}
-            status={item.reportStatus ?? item.status}
-            startedAt={item.startedAt}
-            inviteToken={item.inviteToken}
-          />
-        ))
+        <div className="flex flex-col gap-4">
+          {filtered.map((item) => (
+            <CandidateInterviewCard
+              key={`${item.sessionId}`}
+              sessionId={`${item.sessionId}`}
+              templateName={item.templateName ?? 'Interview'}
+              status={item.reportStatus ?? item.status}
+              startedAt={item.startedAt}
+              inviteToken={item.inviteToken}
+            />
+          ))}
+        </div>
       )}
     </section>
   )

@@ -2,10 +2,7 @@ import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
 import { Surface } from '@/components/ui/surface'
-import {
-  formatRecommendationLabel,
-  formatStatusLabel,
-} from '@/lib/recruiter/format'
+import { StatusBadge } from '@/components/workspace/status-badge'
 
 type CandidateInterviewCardProps = {
   sessionId: string
@@ -13,35 +10,6 @@ type CandidateInterviewCardProps = {
   status: string
   startedAt?: string
   inviteToken?: string
-}
-
-function statusBadgeClass(status: string) {
-  const s = status.toLowerCase()
-  if (
-    s === 'no' ||
-    s.includes('fail') ||
-    s.includes('expired') ||
-    s.includes('reject')
-  ) {
-    return 'bg-red-500/15 text-red-400'
-  }
-  if (
-    s === 'mixed' ||
-    s.includes('pending') ||
-    s.includes('processing') ||
-    s.includes('manual_review') ||
-    s.includes('interrupted')
-  ) {
-    return 'bg-amber-500/15 text-amber-400'
-  }
-  return 'bg-emerald-500/15 text-emerald-400'
-}
-
-function displayLabel(status: string) {
-  if (['strong_yes', 'yes', 'mixed', 'no'].includes(status)) {
-    return formatRecommendationLabel(status)
-  }
-  return formatStatusLabel(status)
 }
 
 const ACTIVE_STATES = [
@@ -60,19 +28,10 @@ export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
   const isProcessing = normalizedStatus.includes('processing')
 
   return (
-    <Surface
-      elevation="raised"
-      interactive
-      padding="lg"
-      className="transition-transform duration-150 ease-out hover:-translate-y-px"
-    >
+    <Surface elevation="raised" interactive padding="lg">
       <h3 className="text-base font-semibold">{props.templateName}</h3>
       <div className="mt-3">
-        <span
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${statusBadgeClass(props.status)}`}
-        >
-          {displayLabel(props.status)}
-        </span>
+        <StatusBadge status={props.status} />
       </div>
       {props.startedAt ? (
         <p className="mt-3 text-sm text-muted-foreground tabular-nums">

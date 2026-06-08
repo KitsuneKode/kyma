@@ -10,6 +10,8 @@ import {
   formatDateTime,
   formatRecommendationLabel,
 } from '@/lib/recruiter/format'
+import { WorkspaceSurface } from '@/components/workspace/surface'
+import { runConvexFetch } from '@/lib/convex/server-fetch'
 
 type InterviewResultPageProps = {
   params: Promise<{ id: string }>
@@ -20,14 +22,18 @@ export default async function CandidateInterviewResultPage({
 }: InterviewResultPageProps) {
   const { id } = await params
   const token = await getServerConvexAuthToken()
-  const result =
+  const resultFetch =
     clientEnv.NEXT_PUBLIC_CONVEX_URL && token
-      ? await fetchQuery(
-          api.interviews.getCandidateInterviewResult,
-          { sessionId: id as Id<'interviewSessions'> },
-          { token: token ?? undefined }
-        ).catch(() => null)
-      : null
+      ? await runConvexFetch(() =>
+          fetchQuery(
+            api.interviews.getCandidateInterviewResult,
+            { sessionId: id as Id<'interviewSessions'> },
+            { token: token ?? undefined }
+          )
+        )
+      : { ok: false as const, kind: 'unknown' as const }
+
+  const result = resultFetch.ok ? resultFetch.data : null
 
   return (
     <section className="space-y-6">
@@ -43,20 +49,27 @@ export default async function CandidateInterviewResultPage({
         </Button>
       </header>
 
-      {!result ? (
-        <p className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-          This result could not be loaded. Please try again or contact support.
-        </p>
+      {!resultFetch.ok || !result ? (
+        <WorkspaceSurface className="p-5">
+          <p className="text-sm text-muted-foreground">
+            {resultFetch.ok
+              ? 'This result could not be loaded. Please try again or contact support.'
+              : (resultFetch.message ??
+                'This result could not be loaded. Please try again or contact support.')}
+          </p>
+        </WorkspaceSurface>
       ) : result.resultState === 'processing' ? (
-        <div className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-          <p className="text-sm font-medium text-amber-400">Processing</p>
+        <WorkspaceSurface className="p-6">
+          <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+            Processing
+          </p>
           <p className="mt-2 text-sm text-muted-foreground">
             Your interview is being reviewed. This usually takes a few minutes.
             Check back shortly.
           </p>
-        </div>
+        </WorkspaceSurface>
       ) : result.resultState === 'under_review' ? (
-        <div className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+        <WorkspaceSurface className="p-6">
           <p className="text-sm font-medium text-muted-foreground">
             Under review
           </p>
@@ -64,34 +77,32 @@ export default async function CandidateInterviewResultPage({
             Your report is being reviewed by the recruiting team. You will be
             notified when a decision is ready.
           </p>
-        </div>
+        </WorkspaceSurface>
       ) : result.resultState === 'released' && result.report ? (
-        <div className="space-y-4">
-          <div className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
-            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Outcome
+        <WorkspaceSurface className="p-6">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Outcome
+          </p>
+          <p className="mt-2 text-lg font-semibold">
+            {formatRecommendationLabel(result.report.recommendation)}
+          </p>
+          {result.report.summary ? (
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+              {result.report.summary}
             </p>
-            <p className="mt-2 text-lg font-semibold">
-              {formatRecommendationLabel(result.report.recommendation)}
+          ) : null}
+          {result.report.generatedAt ? (
+            <p className="mt-4 text-xs text-muted-foreground">
+              Report generated {formatDateTime(result.report.generatedAt)}
             </p>
-            {result.report.summary ? (
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                {result.report.summary}
-              </p>
-            ) : null}
-            {result.report.generatedAt ? (
-              <p className="mt-4 text-xs text-muted-foreground">
-                Report generated {formatDateTime(result.report.generatedAt)}
-              </p>
-            ) : null}
-          </div>
-        </div>
+          ) : null}
+        </WorkspaceSurface>
       ) : (
-        <div className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+        <WorkspaceSurface className="p-6">
           <p className="text-sm text-muted-foreground">
             No result is available for this interview yet.
           </p>
-        </div>
+        </WorkspaceSurface>
       )}
     </section>
   )
