@@ -5,99 +5,178 @@ import { motion } from 'motion/react'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { ReviewActions } from '@/components/recruiter/review-actions'
+import { StatusBadge } from '@/components/workspace/status-badge'
 import {
   formatConfidenceLabel,
+  formatDateTime,
   formatRecommendationLabel,
+  formatStatusLabel,
 } from '@/lib/recruiter/format'
+import { cn } from '@/lib/utils'
 
 type MetricPill = { label: string; value: string }
 
-export function DecisionBar({
+function formatSessionDuration(
+  startedAt?: string | null,
+  endedAt?: string | null
+) {
+  if (!startedAt) return 'Session timing not available'
+
+  const startLabel = formatDateTime(startedAt)
+  const endLabel = endedAt ? formatDateTime(endedAt) : 'In progress'
+
+  if (!endedAt) {
+    return `Started ${startLabel} · ${endLabel}`
+  }
+
+  const startMs = new Date(startedAt).getTime()
+  const endMs = new Date(endedAt).getTime()
+  const durationMin = Math.max(1, Math.round((endMs - startMs) / 60_000))
+
+  return `Started ${startLabel} · Ended ${endLabel} · ${durationMin} min`
+}
+
+export function ReviewCommandHeader({
   candidateName,
+  templateName,
+  templateRole,
   recommendation,
   confidence,
+  reportStatus,
+  sessionState,
   reportId,
   sessionId,
   metrics,
   backHref,
   readOnly = false,
   released = false,
+  startedAt,
+  endedAt,
+  className,
 }: {
   candidateName?: string
+  templateName?: string
+  templateRole?: string
   recommendation?: string | null
   confidence?: string | null
+  reportStatus?: string | null
+  sessionState?: string | null
   reportId?: string
   sessionId: string
   metrics?: MetricPill[]
   backHref?: string
   readOnly?: boolean
   released?: boolean
+  startedAt?: string | null
+  endedAt?: string | null
+  className?: string
 }) {
+  const eyebrow = [templateName, templateRole].filter(Boolean).join(' · ')
+
   return (
-    <motion.section
+    <motion.header
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-      className="sticky top-0 z-20 rounded-2xl bg-card/95 px-5 py-4 shadow-md ring-1 ring-border/40 backdrop-blur-sm"
+      style={{ ['--review-header-height' as string]: '5.5rem' }}
+      className={cn(
+        'sticky top-0 z-20 rounded-[28px] bg-card/95 px-5 py-4 shadow-md ring-1 ring-border/40 backdrop-blur-sm',
+        className
+      )}
     >
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          {backHref ? (
-            <Button
-              nativeButton={false}
-              variant="ghost"
-              size="icon-sm"
-              render={<Link href={backHref} />}
-            >
-              <IconArrowLeft className="size-4" />
-            </Button>
-          ) : null}
-          <div>
-            {candidateName ? (
-              <h1 className="text-lg font-semibold tracking-tight">
-                {candidateName}
-              </h1>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            {backHref ? (
+              <Button
+                nativeButton={false}
+                variant="ghost"
+                size="icon-sm"
+                render={<Link href={backHref} />}
+                className="mt-0.5 shrink-0 active:scale-[0.96]"
+              >
+                <IconArrowLeft className="size-4" />
+              </Button>
             ) : null}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-                {formatRecommendationLabel(recommendation)}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {formatConfidenceLabel(confidence)} confidence
-              </span>
+            <div className="min-w-0">
+              {eyebrow ? (
+                <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                  {eyebrow}
+                </p>
+              ) : null}
+              {candidateName ? (
+                <h1 className="mt-1 text-xl font-semibold tracking-tight text-balance">
+                  {candidateName}
+                </h1>
+              ) : null}
+              <p className="mt-1 text-sm text-muted-foreground">
+                {formatSessionDuration(startedAt, endedAt)}
+              </p>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {readOnly ? (
+              <span className="rounded-full border border-border/70 bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
+                Read-only preview
+              </span>
+            ) : (
+              <ReviewActions
+                reportId={reportId}
+                sessionId={sessionId}
+                released={released}
+                compact
+              />
+            )}
           </div>
         </div>
 
-        {metrics?.length ? (
-          <div className="hidden items-center gap-3 lg:flex">
-            {metrics.map((m) => (
-              <div
-                key={m.label}
-                className="rounded-lg bg-muted/40 px-3 py-1.5 text-center"
-              >
-                <p className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
-                  {m.label}
-                </p>
-                <p className="text-sm font-semibold tabular-nums">{m.value}</p>
-              </div>
-            ))}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge
+              status={recommendation ?? 'pending'}
+              label={formatRecommendationLabel(recommendation)}
+            />
+            <StatusBadge
+              status={confidence ?? 'pending'}
+              label={`${formatConfidenceLabel(confidence)} confidence`}
+            />
+            <StatusBadge
+              status={reportStatus ?? 'pending'}
+              label={formatStatusLabel(reportStatus ?? 'pending')}
+            />
+            <StatusBadge
+              status={sessionState ?? 'pending'}
+              label={formatStatusLabel(sessionState ?? 'unknown')}
+            />
+            <StatusBadge
+              status={released ? 'released' : 'pending'}
+              label={released ? 'Released' : 'Not released'}
+            />
           </div>
-        ) : null}
 
-        {readOnly ? (
-          <span className="rounded-full border border-border/70 bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
-            Read-only preview
-          </span>
-        ) : (
-          <ReviewActions
-            reportId={reportId}
-            sessionId={sessionId}
-            released={released}
-            compact
-          />
-        )}
+          {metrics?.length ? (
+            <div className="hidden items-center gap-2 md:flex">
+              {metrics.map((metric) => (
+                <div
+                  key={metric.label}
+                  className="rounded-xl bg-muted/40 px-3 py-1.5 text-center ring-1 ring-border/40"
+                >
+                  <p className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
+                    {metric.label}
+                  </p>
+                  <p className="font-mono text-sm font-semibold tabular-nums">
+                    {metric.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
-    </motion.section>
+    </motion.header>
   )
 }
+
+/** @deprecated Use ReviewCommandHeader */
+export const DecisionBar = ReviewCommandHeader

@@ -30,6 +30,7 @@ type RubricDimensionProps = {
   isActive: boolean
   onSelect: () => void
   onJumpToTime?: (sec: number) => void
+  variant?: 'card' | 'flat'
 }
 
 function formatTime(seconds: number) {
@@ -48,16 +49,28 @@ export function RubricDimension({
   isActive,
   onSelect,
   onJumpToTime,
+  variant = 'card',
 }: RubricDimensionProps) {
   const [expanded, setExpanded] = useState(defaultOpen)
+  const isFlat = variant === 'flat'
 
   return (
     <div
       className={cn(
-        'rounded-2xl border transition-[border-color,background-color] duration-200',
-        isActive
-          ? 'border-primary/20 bg-primary/[0.04]'
-          : 'border-border/40 bg-transparent'
+        'transition-[border-color,background-color] duration-200',
+        isFlat
+          ? cn(
+              'border-l-2',
+              isActive
+                ? 'border-l-primary bg-primary/[0.04]'
+                : 'border-l-transparent'
+            )
+          : cn(
+              'rounded-2xl border',
+              isActive
+                ? 'border-primary/20 bg-primary/[0.04]'
+                : 'border-border/40 bg-transparent'
+            )
       )}
     >
       <button

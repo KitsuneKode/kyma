@@ -45,3 +45,24 @@ Use `components/workspace/` primitives:
 
 - Recruiter: sidebar + sticky org header (`app/(admin)/layout.tsx`)
 - Candidate: sidebar + sticky portal header (`app/(app)/candidate/layout.tsx`)
+
+## Candidate review page
+
+Route: `/recruiter/candidates/[sessionId]` via `CandidateReviewWorkspace`.
+
+### Zone map
+
+1. **Command header** (`ReviewCommandHeader`) — sticky; eyebrow (template · role), candidate name, session timing, `StatusBadge` row, turn metrics at `md+`, `ReviewActions`.
+2. **Primary console** (`ReviewConsole`) — `xl` split: transcript + audio (left), sticky rubric panel (right). Transcript uses viewport-aware height (`min-h-[420px] max-h-[min(70dvh,720px)]`).
+3. **Assessment bento** (`ReviewAssessmentBento`) — score profile, executive summary, strengths/concerns, teaching simulation chips.
+4. **Detail tabs** (`ReviewDetailTabs`) — Notes (default) | Session | Timeline | Recordings | Decisions.
+
+Floating `RecruiterChat` stays a sibling outside the workspace shell (`⌘K`).
+
+### Chart rule
+
+Rubric visualization: **radar + horizontal score bars + dimension list** only. Do not add a third ring/donut chart for the same `dimensionScores`.
+
+### Tab contract
+
+Metadata sections that were previously collapsible accordions belong in detail tabs. Notes is the default tab; session operational facts, events timeline, recordings, and recruiter decisions each get one tab panel inside `WorkspaceSurface`.
