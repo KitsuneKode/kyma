@@ -2,6 +2,7 @@ import { ConvexError } from 'convex/values'
 
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import { runtimeEnv } from '../../lib/env/runtime'
+import { getOrgContextFromIdentity } from './orgContext'
 
 function hasRecruiterAuthConfig() {
   return Boolean(
@@ -46,25 +47,7 @@ function getOrgContext(
     Awaited<ReturnType<QueryCtx['auth']['getUserIdentity']>>
   >
 ) {
-  const orgIdCandidate = (identity as Record<string, unknown>)['org_id']
-  const orgRoleCandidate = (identity as Record<string, unknown>)['org_role']
-  const orgPermissionsCandidate = (identity as Record<string, unknown>)[
-    'org_permissions'
-  ]
-  const orgId =
-    typeof orgIdCandidate === 'string' && orgIdCandidate.trim()
-      ? orgIdCandidate
-      : null
-  const orgRole =
-    typeof orgRoleCandidate === 'string' && orgRoleCandidate.trim()
-      ? orgRoleCandidate
-      : null
-  const orgPermissions = Array.isArray(orgPermissionsCandidate)
-    ? orgPermissionsCandidate.filter(
-        (permission): permission is string => typeof permission === 'string'
-      )
-    : []
-  return { orgId, orgRole, orgPermissions }
+  return getOrgContextFromIdentity(identity as Record<string, unknown>)
 }
 
 function hasOrgAccess(

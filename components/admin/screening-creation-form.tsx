@@ -3,11 +3,12 @@
 import Link from 'next/link'
 import { startTransition, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation } from 'convex/react'
 import { motion } from '@/components/motion/client-motion'
 
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
+import { ConvexAuthSetupPanel } from '@/components/auth/convex-auth-setup-panel'
 import {
   ScreeningCandidateFields,
   type ScreeningCandidateDraft,
@@ -23,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
 
 const STAGGER_VARIANTS: any = {
   hidden: { opacity: 0, y: 10 },
@@ -45,7 +47,11 @@ function createCandidateDraft(): CandidateDraft {
 
 export function ScreeningCreationForm() {
   const router = useRouter()
-  const templates = useQuery(api.admin.listActiveTemplates)
+  const {
+    data: templates,
+    authLoading,
+    isAuthenticated,
+  } = useAuthenticatedQuery(api.admin.listActiveTemplates, {})
   const createScreeningBatch = useMutation(api.admin.createScreeningBatch)
   const [batchName, setBatchName] = useState('Primary tutor screening')
   const [expiryDays, setExpiryDays] = useState('7')
@@ -176,6 +182,22 @@ export function ScreeningCreationForm() {
       )
       setIsSubmitting(false)
     }
+  }
+
+  if (authLoading) {
+    return (
+      <p className="py-16 text-center text-sm text-muted-foreground">
+        Connecting to Convex…
+      </p>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="py-8">
+        <ConvexAuthSetupPanel />
+      </div>
+    )
   }
 
   return (

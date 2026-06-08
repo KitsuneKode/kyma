@@ -1,13 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { useAction, useMutation, useQuery } from 'convex/react'
+import { useAction, useMutation } from 'convex/react'
 
 import type { FunctionReturnType } from 'convex/server'
 
 import { api } from '@/convex/_generated/api'
+import { ConvexAuthSetupPanel } from '@/components/auth/convex-auth-setup-panel'
 import { PageHeader } from '@/components/admin/page-header'
 import { WorkspaceSurface } from '@/components/workspace/surface'
+import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -216,7 +218,39 @@ function SettingsForms({ settings }: { settings: WorkspaceSettings }) {
 }
 
 export default function SettingsPage() {
-  const settings = useQuery(api.admin.getWorkspaceSettings, {})
+  const {
+    data: settings,
+    authLoading,
+    isAuthenticated,
+  } = useAuthenticatedQuery(api.admin.getWorkspaceSettings, {})
+
+  if (authLoading) {
+    return (
+      <div className="flex w-full flex-col gap-8">
+        <PageHeader
+          eyebrow="Configuration"
+          title="Workspace Settings"
+          description="Manage BYOK provider keys and default models."
+        />
+        <WorkspaceSurface className="p-6">
+          <p className="text-sm text-muted-foreground">Connecting to Convex…</p>
+        </WorkspaceSurface>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex w-full flex-col gap-8">
+        <PageHeader
+          eyebrow="Configuration"
+          title="Workspace Settings"
+          description="Manage BYOK provider keys and default models."
+        />
+        <ConvexAuthSetupPanel />
+      </div>
+    )
+  }
 
   if (settings === undefined) {
     return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useOrganizationList } from '@clerk/nextjs'
+import { useOrganizationList, useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
@@ -16,6 +16,7 @@ function slugify(value: string) {
 
 export function RecruiterOrgOnboarding() {
   const router = useRouter()
+  const { getToken } = useAuth()
   const { isLoaded, createOrganization, setActive, userMemberships } =
     useOrganizationList({
       userMemberships: { infinite: true },
@@ -31,6 +32,13 @@ export function RecruiterOrgOnboarding() {
   }
 
   const memberships = userMemberships.data ?? []
+
+  async function activateOrganization(organizationId: string) {
+    await setActive?.({ organization: organizationId })
+    await getToken({ template: 'convex', skipCache: true }).catch(() => null)
+    router.push('/recruiter')
+    router.refresh()
+  }
 
   function handleCreate(event: React.FormEvent) {
     event.preventDefault()
@@ -51,9 +59,7 @@ export function RecruiterOrgOnboarding() {
           name: trimmed,
           slug: slugify(trimmed) || undefined,
         })
-        await setActive?.({ organization: organization.id })
-        router.push('/recruiter')
-        router.refresh()
+        await activateOrganization(organization.id)
       } catch (createError) {
         setError(
           createError instanceof Error
@@ -68,9 +74,7 @@ export function RecruiterOrgOnboarding() {
     setError(null)
     startTransition(async () => {
       try {
-        await setActive?.({ organization: organizationId })
-        router.push('/recruiter')
-        router.refresh()
+        await activateOrganization(organizationId)
       } catch (selectError) {
         setError(
           selectError instanceof Error

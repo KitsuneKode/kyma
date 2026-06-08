@@ -16,7 +16,10 @@ import type * as helpers_auth from "../helpers/auth.js";
 import type * as helpers_clerkIdentity from "../helpers/clerkIdentity.js";
 import type * as helpers_encryption from "../helpers/encryption.js";
 import type * as helpers_interviewPolicy from "../helpers/interviewPolicy.js";
+import type * as helpers_orgAccess from "../helpers/orgAccess.js";
+import type * as helpers_orgContext from "../helpers/orgContext.js";
 import type * as helpers_processingAuth from "../helpers/processingAuth.js";
+import type * as helpers_releasePolicy from "../helpers/releasePolicy.js";
 import type * as helpers_templates from "../helpers/templates.js";
 import type * as interviews from "../interviews.js";
 import type * as livekit from "../livekit.js";
@@ -26,6 +29,7 @@ import type * as rateLimiter from "../rateLimiter.js";
 import type * as readiness from "../readiness.js";
 import type * as recruiter from "../recruiter.js";
 import type * as users from "../users.js";
+import type * as workspace from "../workspace.js";
 
 import type {
   ApiFromModules,
@@ -42,7 +46,10 @@ declare const fullApi: ApiFromModules<{
   "helpers/clerkIdentity": typeof helpers_clerkIdentity;
   "helpers/encryption": typeof helpers_encryption;
   "helpers/interviewPolicy": typeof helpers_interviewPolicy;
+  "helpers/orgAccess": typeof helpers_orgAccess;
+  "helpers/orgContext": typeof helpers_orgContext;
   "helpers/processingAuth": typeof helpers_processingAuth;
+  "helpers/releasePolicy": typeof helpers_releasePolicy;
   "helpers/templates": typeof helpers_templates;
   interviews: typeof interviews;
   livekit: typeof livekit;
@@ -52,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   readiness: typeof readiness;
   recruiter: typeof recruiter;
   users: typeof users;
+  workspace: typeof workspace;
 }>;
 
 /**

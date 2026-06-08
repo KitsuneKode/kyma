@@ -6,11 +6,13 @@ import { useEffect, useRef } from 'react'
 
 import { api } from '@/convex/_generated/api'
 
-/** Syncs the signed-in Clerk user to Convex `users` once per session (webhook fallback). */
+/** Syncs Clerk user + active org into Convex after auth is ready (webhook fallback). */
 export function EnsureConvexUser() {
   const { isSignedIn } = useAuth()
   const { isAuthenticated, isLoading } = useConvexAuth()
-  const ensureCurrentUser = useMutation(api.users.ensureCurrentUser)
+  const ensureCurrentWorkspace = useMutation(
+    api.workspace.ensureCurrentWorkspace
+  )
   const syncedRef = useRef(false)
 
   useEffect(() => {
@@ -19,10 +21,10 @@ export function EnsureConvexUser() {
     }
 
     syncedRef.current = true
-    void ensureCurrentUser({}).catch(() => {
+    void ensureCurrentWorkspace({}).catch(() => {
       syncedRef.current = false
     })
-  }, [ensureCurrentUser, isAuthenticated, isLoading, isSignedIn])
+  }, [ensureCurrentWorkspace, isAuthenticated, isLoading, isSignedIn])
 
   return null
 }
