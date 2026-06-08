@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import {
+  ConnectionState,
   type DisconnectReason,
   Room,
   RoomEvent,
@@ -346,6 +347,34 @@ export function InterviewWorkspace({
       )
     }
 
+    function handleConnectionStateChanged(state: ConnectionState) {
+      if (
+        state === ConnectionState.Disconnected &&
+        sessionIdRef.current &&
+        !completionRequestedRef.current
+      ) {
+        setSession((current) => {
+          if (current.state !== 'reconnecting') {
+            return current
+          }
+
+          const message =
+            'Live connection failed. Check your network and rejoin the interview.'
+          setConnectionError(message)
+          void persistEffectEvent('reconnect-failed', message, 'interrupted')
+
+          return {
+            ...current,
+            state: 'interrupted',
+            events: [
+              ...current.events,
+              createLocalEvent('reconnect-failed', message),
+            ],
+          }
+        })
+      }
+    }
+
     function handleDisconnected() {
       if (completionRequestedRef.current) {
         logger.info({
@@ -379,6 +408,9 @@ export function InterviewWorkspace({
       })
       setBootstrappedSession(null)
       setView('prejoin')
+      setConnectionError(
+        'The interview room disconnected. Rejoin when you are ready to continue.'
+      )
       setSession((current) => ({
         ...current,
         state: 'interrupted',
@@ -483,6 +515,7 @@ export function InterviewWorkspace({
     room.on(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished)
     room.on(RoomEvent.Reconnecting, handleReconnecting)
     room.on(RoomEvent.Reconnected, handleReconnected)
+    room.on(RoomEvent.ConnectionStateChanged, handleConnectionStateChanged)
     room.on(RoomEvent.Disconnected, handleDisconnected)
     room.on(RoomEvent.TranscriptionReceived, handleTranscriptionReceived)
 
@@ -493,6 +526,7 @@ export function InterviewWorkspace({
       room.off(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished)
       room.off(RoomEvent.Reconnecting, handleReconnecting)
       room.off(RoomEvent.Reconnected, handleReconnected)
+      room.off(RoomEvent.ConnectionStateChanged, handleConnectionStateChanged)
       room.off(RoomEvent.Disconnected, handleDisconnected)
       room.off(RoomEvent.TranscriptionReceived, handleTranscriptionReceived)
     }
@@ -656,7 +690,6 @@ export function InterviewWorkspace({
     completionRequestedRef.current = true
     setIsSubmittingInterview(true)
     setConnectionError(null)
-    setView('processing')
     logger.info({
       event: 'session.processing.started',
       detail: 'Candidate submitted the interview for post-call processing.',
@@ -715,6 +748,7 @@ export function InterviewWorkspace({
 
       setConnectionError(message)
       completionRequestedRef.current = false
+      setView('meeting')
       logger.error({
         event: 'session.processing.failed',
         detail: message,
@@ -811,9 +845,9 @@ export function InterviewWorkspace({
               }}
             >
               <p className="mx-auto mt-6 max-w-sm text-base leading-relaxed text-pretty text-muted-foreground">
-                Your recording has been securely saved. The team will review the
-                conversation and follow up with you shortly. You can close this
-                window now.
+                Your interview has been submitted. The team will review the
+                conversation details and follow up with you shortly. You can
+                close this window now.
               </p>
             </motion.div>
 
