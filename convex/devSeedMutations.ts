@@ -195,8 +195,15 @@ export const seedData = mutation({
   args: {
     candidates: v.optional(v.number()),
     recruiters: v.optional(v.number()),
+    targetOrgId: v.optional(v.string()),
+    targetOrgName: v.optional(v.string()),
+    ownerClerkUserId: v.optional(v.string()),
+    ownerEmail: v.optional(v.string()),
+    ownerName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const orgId = args.targetOrgId?.trim() || SEED_ORG_ID
+    const orgName = args.targetOrgName?.trim() || SEED_ORG_NAME
     const recruiterCount = Math.max(1, Math.min(args.recruiters ?? 3, 12))
     const candidateCount = Math.max(5, Math.min(args.candidates ?? 24, 200))
     const now = Date.now()
@@ -205,25 +212,29 @@ export const seedData = mutation({
     const sampleReviewSessionIds: string[] = []
 
     await ctx.db.insert('organizations', {
-      clerkOrgId: SEED_ORG_ID,
-      name: SEED_ORG_NAME,
+      clerkOrgId: orgId,
+      name: orgName,
       slug: 'kyma-seed-academy',
       createdAt: now,
       updatedAt: now,
     })
 
-    const adminClerkId = `clerk_admin_${faker.string.alphanumeric(10)}`
+    const adminClerkId =
+      args.ownerClerkUserId?.trim() ||
+      `clerk_admin_${faker.string.alphanumeric(10)}`
     const adminId = await ctx.db.insert('users', {
       clerkId: adminClerkId,
-      email: `admin+${faker.string.alphanumeric(6).toLowerCase()}@kyma.local`,
-      name: faker.person.fullName(),
+      email:
+        args.ownerEmail?.trim() ||
+        `admin+${faker.string.alphanumeric(6).toLowerCase()}@kyma.local`,
+      name: args.ownerName?.trim() || faker.person.fullName(),
       role: 'admin',
       createdAt: now,
       updatedAt: now,
     })
     await ctx.db.insert('orgMemberships', {
       clerkMembershipId: `seed_membership_admin_${faker.string.alphanumeric(8)}`,
-      clerkOrgId: SEED_ORG_ID,
+      clerkOrgId: orgId,
       clerkUserId: adminClerkId,
       role: 'org:admin',
       permissions: ['org:recruiter:access'],
@@ -245,7 +256,7 @@ export const seedData = mutation({
       recruiterIds.push(recruiterId)
       await ctx.db.insert('orgMemberships', {
         clerkMembershipId: `seed_membership_recruiter_${index}_${faker.string.alphanumeric(8)}`,
-        clerkOrgId: SEED_ORG_ID,
+        clerkOrgId: orgId,
         clerkUserId: recruiterClerkId,
         role: 'org:member',
         permissions: ['org:recruiter:access'],
@@ -269,7 +280,7 @@ export const seedData = mutation({
     }
 
     const templateId = await ctx.db.insert('assessmentTemplates', {
-      orgId: SEED_ORG_ID,
+      orgId,
       name: 'AI Tutor Screener Default',
       role: 'tutor',
       status: 'active',
@@ -313,7 +324,7 @@ export const seedData = mutation({
     })
 
     await ctx.db.insert('assessmentTemplateVersions', {
-      orgId: SEED_ORG_ID,
+      orgId,
       templateId,
       rubricVersion: 'v3',
       savedAt: now,
@@ -353,7 +364,7 @@ export const seedData = mutation({
     })
 
     const batchId = await ctx.db.insert('screeningBatches', {
-      orgId: SEED_ORG_ID,
+      orgId,
       name: `Seed Batch ${faker.date.recent({ days: 2 }).toISOString().slice(0, 10)}`,
       templateId,
       createdBy: `user:${recruiterIds[0]}`,
@@ -367,7 +378,7 @@ export const seedData = mutation({
 
     const openInviteToken = `seed-open-${faker.string.alphanumeric(14).toLowerCase()}`
     const openInviteId = await ctx.db.insert('candidateInvites', {
-      orgId: SEED_ORG_ID,
+      orgId,
       inviteToken: openInviteToken,
       candidateName: 'Nisha Rao',
       candidateEmail: 'nisha.rao@example.test',
@@ -377,7 +388,7 @@ export const seedData = mutation({
       expiresAt: faker.date.soon({ days: 7 }).toISOString(),
     })
     const openEligibilityId = await ctx.db.insert('candidateEligibility', {
-      orgId: SEED_ORG_ID,
+      orgId,
       batchId,
       inviteId: openInviteId,
       candidateName: 'Nisha Rao',
@@ -410,7 +421,7 @@ export const seedData = mutation({
         sampleInviteTokens.push(inviteToken)
       }
       const inviteId = await ctx.db.insert('candidateInvites', {
-        orgId: SEED_ORG_ID,
+        orgId,
         inviteToken,
         candidateName: realisticCandidate?.name ?? candidate?.name,
         candidateEmail: realisticCandidate?.email ?? candidate?.email,
@@ -430,7 +441,7 @@ export const seedData = mutation({
       })
 
       const eligibilityId = await ctx.db.insert('candidateEligibility', {
-        orgId: SEED_ORG_ID,
+        orgId,
         batchId,
         inviteId,
         candidateName:
@@ -474,7 +485,7 @@ export const seedData = mutation({
               'live',
             ] as const)
       const sessionId = await ctx.db.insert('interviewSessions', {
-        orgId: SEED_ORG_ID,
+        orgId,
         inviteId,
         state,
         provider: 'livekit',
@@ -500,7 +511,7 @@ export const seedData = mutation({
       }
 
       await ctx.db.insert('sessionEvents', {
-        orgId: SEED_ORG_ID,
+        orgId,
         sessionId,
         type: 'session.bootstrap',
         detail: `Seeded session for ${realisticCandidate?.name ?? candidate?.name ?? 'candidate'}`,
@@ -509,7 +520,7 @@ export const seedData = mutation({
 
       if (candidateIndex === 0) {
         await ctx.db.insert('sessionEvents', {
-          orgId: SEED_ORG_ID,
+          orgId,
           sessionId,
           type: 'teaching-simulation-started',
           detail: 'Child-persona fraction misconception simulation started.',
@@ -518,7 +529,7 @@ export const seedData = mutation({
           ).toISOString(),
         })
         await ctx.db.insert('sessionEvents', {
-          orgId: SEED_ORG_ID,
+          orgId,
           sessionId,
           type: 'candidate-screen-share-started',
           detail: 'Candidate shared a whiteboard to draw equivalent fractions.',
@@ -527,7 +538,7 @@ export const seedData = mutation({
           ).toISOString(),
         })
         await ctx.db.insert('sessionEvents', {
-          orgId: SEED_ORG_ID,
+          orgId,
           sessionId,
           type: 'teaching-simulation-completed',
           detail: 'Simulation completed with a follow-up check question.',
@@ -543,7 +554,7 @@ export const seedData = mutation({
       ) {
         const egressId = `egress_${faker.string.alphanumeric(12).toLowerCase()}`
         await ctx.db.insert('recordingArtifacts', {
-          orgId: SEED_ORG_ID,
+          orgId,
           sessionId,
           provider: 'livekit',
           egressId,
@@ -604,7 +615,7 @@ export const seedData = mutation({
         candidateIndex === 0 ? 'yes' : randomRecommendation()
       const confidence = candidateIndex === 0 ? 'high' : randomConfidence()
       const reportId = await ctx.db.insert('assessmentReports', {
-        orgId: SEED_ORG_ID,
+        orgId,
         sessionId,
         status:
           candidateIndex === 0
@@ -669,7 +680,7 @@ export const seedData = mutation({
       for (let index = 0; index < evidenceLength; index += 1) {
         const evidence = evidenceItems?.[index]
         await ctx.db.insert('dimensionEvidence', {
-          orgId: SEED_ORG_ID,
+          orgId,
           reportId,
           sessionId,
           dimension:
@@ -698,7 +709,7 @@ export const seedData = mutation({
 
       if (candidateIndex === 0 || faker.datatype.boolean()) {
         await ctx.db.insert('reviewDecisions', {
-          orgId: SEED_ORG_ID,
+          orgId,
           reportId,
           sessionId,
           decision:
@@ -720,7 +731,7 @@ export const seedData = mutation({
       }
 
       await ctx.db.insert('recruiterNotes', {
-        orgId: SEED_ORG_ID,
+        orgId,
         sessionId,
         reportId,
         authorId: `user:${faker.helpers.arrayElement(recruiterIds)}`,
@@ -732,7 +743,7 @@ export const seedData = mutation({
       })
 
       await ctx.db.insert('reportChatMessages', {
-        orgId: SEED_ORG_ID,
+        orgId,
         sessionId,
         reportId,
         role: 'user',
@@ -741,7 +752,7 @@ export const seedData = mutation({
       })
 
       await ctx.db.insert('reportChatMessages', {
-        orgId: SEED_ORG_ID,
+        orgId,
         sessionId,
         reportId,
         role: 'assistant',
@@ -760,7 +771,7 @@ export const seedData = mutation({
     }
 
     await ctx.db.insert('workspaceSettings', {
-      orgId: SEED_ORG_ID,
+      orgId,
       defaultModels: {
         stt: 'deepgram/nova-3',
         llm: 'openai/gpt-4.1-mini',
@@ -772,7 +783,7 @@ export const seedData = mutation({
     })
 
     await ctx.db.insert('auditEvents', {
-      orgId: SEED_ORG_ID,
+      orgId,
       actorId: `user:${adminId}`,
       action: 'seed.dev.completed',
       resource: 'workspace:dev',
@@ -785,7 +796,7 @@ export const seedData = mutation({
 
     return {
       ok: true,
-      orgId: SEED_ORG_ID,
+      orgId,
       templateId: `${templateId}`,
       batchId: `${batchId}`,
       candidates: candidateCount,

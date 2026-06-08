@@ -4,6 +4,8 @@ import { ConvexError, v } from 'convex/values'
 
 import { api } from './_generated/api'
 import { action } from './_generated/server'
+import { clerkIdFromIdentity } from './helpers/clerkIdentity'
+import { getOrgContextFromIdentity } from './helpers/orgContext'
 import { runtimeEnv } from '../lib/env/runtime'
 
 const RESET_CONFIRMATION = 'RESET_DEV_ONLY'
@@ -110,6 +112,76 @@ export const seedDevData = action({
     return await ctx.runMutation(api.devSeedMutations.seedData, {
       candidates: args.candidates,
       recruiters: args.recruiters,
+    })
+  },
+})
+
+export const seedDevDataForActiveOrg = action({
+  args: {
+    confirm: v.string(),
+    candidates: v.optional(v.number()),
+    recruiters: v.optional(v.number()),
+    orgName: v.optional(v.string()),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    ok: boolean
+    orgId: string
+    templateId: string
+    batchId: string
+    candidates: number
+    recruiters: number
+    sampleInviteTokens: string[]
+    sampleReviewSessionIds: string[]
+  }> => {
+    assertDevelopmentMode()
+    if (args.confirm !== SEED_CONFIRMATION) {
+      throw new ConvexError(
+        `Confirmation mismatch. Pass "${SEED_CONFIRMATION}" to seed dev data.`
+      )
+    }
+
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new ConvexError(
+        'You must be signed in to seed your workspace. Configure the Clerk "convex" JWT template, sign out/in, then retry.'
+      )
+    }
+
+    const { orgId } = getOrgContextFromIdentity(
+      identity as Record<string, unknown>
+    )
+    if (!orgId) {
+      throw new ConvexError(
+        'Select an active organization in the header switcher before seeding recruiter data.'
+      )
+    }
+
+    const clerkUserId = clerkIdFromIdentity(identity)
+
+    for (const table of SEED_TABLES) {
+      while (true) {
+        const result = await ctx.runMutation(
+          api.devSeedMutations.clearTableChunk,
+          {
+            table,
+            limit: 200,
+          }
+        )
+        if (result.deleted === 0) break
+      }
+    }
+
+    return await ctx.runMutation(api.devSeedMutations.seedData, {
+      candidates: args.candidates,
+      recruiters: args.recruiters,
+      targetOrgId: orgId,
+      targetOrgName: args.orgName?.trim() || 'Development Workspace',
+      ownerClerkUserId: clerkUserId,
+      ownerEmail: identity.email ?? undefined,
+      ownerName: identity.name ?? undefined,
     })
   },
 })
