@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 
 import { signInPath, signUpPath } from '@/lib/auth/workspace-intent'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,23 @@ const pressable =
 type MarketingCtaRowProps = {
   variant?: 'hero' | 'section'
   className?: string
+}
+
+function SecondaryLinkGroup({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 text-center">
+      <p className="text-xs font-medium tracking-[0.12em] text-muted-foreground uppercase">
+        {label}
+      </p>
+      <p className="text-sm text-muted-foreground">{children}</p>
+    </div>
+  )
 }
 
 /**
@@ -52,34 +70,50 @@ export function MarketingCtaRow({
       >
         <span className="text-nowrap">Try demo interview</span>
       </Button>
-      <p
-        className={cn(
-          'text-center text-sm text-muted-foreground',
-          isHero ? 'w-full' : 'w-full sm:w-auto'
-        )}
-      >
-        Already hiring?{' '}
-        <Link
-          href={signInPath('recruiter')}
-          className="font-medium text-foreground underline-offset-4 hover:underline"
-        >
-          Recruiter sign in
-        </Link>
-        <span className="mx-1.5 text-border">·</span>
-        <Link
-          href={signUpPath('candidate')}
-          className="font-medium text-foreground/80 underline-offset-4 hover:text-foreground hover:underline"
-        >
-          Candidate account
-        </Link>
-        <span className="mx-1.5 text-border">·</span>
-        <Link
-          href={signInPath('candidate')}
-          className="font-medium text-foreground/80 underline-offset-4 hover:text-foreground hover:underline"
-        >
-          Candidate sign in
-        </Link>
-      </p>
+
+      {isHero ? (
+        <div className="flex w-full flex-col items-center justify-center gap-4 pt-2 sm:flex-row sm:gap-10">
+          <SecondaryLinkGroup label="For hiring teams">
+            <Link
+              href={signInPath('recruiter')}
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              Recruiter sign in
+            </Link>
+          </SecondaryLinkGroup>
+          <SecondaryLinkGroup label="For candidates">
+            <Link
+              href={signInPath('candidate')}
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              Sign in
+            </Link>
+            <span className="mx-1.5 text-border">·</span>
+            <Link
+              href={signUpPath('candidate')}
+              className="font-medium text-foreground/80 underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Create account
+            </Link>
+          </SecondaryLinkGroup>
+        </div>
+      ) : (
+        <p className="w-full text-center text-sm text-muted-foreground sm:w-auto">
+          <Link
+            href={signInPath('recruiter')}
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            Recruiter sign in
+          </Link>
+          <span className="mx-1.5 text-border">·</span>
+          <Link
+            href={signInPath('candidate')}
+            className="font-medium text-foreground/80 underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Candidate sign in
+          </Link>
+        </p>
+      )}
     </div>
   )
 }
