@@ -14,26 +14,7 @@ import {
 import { BillboardMetric } from '@/components/admin/billboard-metric'
 import { PageHeader } from '@/components/admin/page-header'
 import { formatStatusLabel, formatDateTime } from '@/lib/recruiter/format'
-
-type ActivityEvent = {
-  id: string
-  type: string
-  detail: string
-  createdAt?: string
-}
-
-type DashboardSummary = {
-  counts: {
-    pendingReviews: number
-    activeSessions: number
-  }
-  needsAttention: {
-    manualReviewCandidates: any[]
-    invitesExpiringSoon: any[]
-    staleSessions: any[]
-  }
-  recentActivity: ActivityEvent[]
-}
+import type { DashboardSummary } from '@/lib/recruiter/types'
 
 export function PremiumRecruiterDashboard({
   sessionsToday,
@@ -106,6 +87,7 @@ export function PremiumRecruiterDashboard({
 
           <div className="flex flex-col gap-6">
             <NeedsAttentionRow
+              href="/recruiter/candidates?status=manual_review"
               icon={<IconEye className="size-4 text-amber-500/50" />}
               label="Manual review"
               count={
@@ -114,6 +96,7 @@ export function PremiumRecruiterDashboard({
               }
             />
             <NeedsAttentionRow
+              href="/recruiter/screenings"
               icon={<IconClock className="size-4 text-amber-500/50" />}
               label="Invites expiring"
               count={
@@ -121,6 +104,7 @@ export function PremiumRecruiterDashboard({
               }
             />
             <NeedsAttentionRow
+              href="/recruiter/candidates"
               icon={<IconClock className="size-4 text-amber-500/50" />}
               label="Stale sessions"
               count={dashboardSummary?.needsAttention.staleSessions.length ?? 0}
@@ -190,16 +174,21 @@ export function PremiumRecruiterDashboard({
 }
 
 function NeedsAttentionRow({
+  href,
   icon,
   label,
   count,
 }: {
+  href: string
   icon: React.ReactNode
   label: string
   count: number
 }) {
   return (
-    <div className="group flex items-center justify-between gap-4">
+    <Link
+      href={href}
+      className="group flex items-center justify-between gap-4 rounded-xl px-2 py-1 transition-colors hover:bg-amber-500/5"
+    >
       <div className="flex items-center gap-3">
         {icon}
         <span className="text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground/90">
@@ -209,7 +198,7 @@ function NeedsAttentionRow({
       <span className="font-mono text-lg font-bold text-foreground/90 tabular-nums transition-colors group-hover:text-amber-500">
         {count}
       </span>
-    </div>
+    </Link>
   )
 }
 

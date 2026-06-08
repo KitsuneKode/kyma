@@ -20,6 +20,8 @@ export function DecisionBar({
   sessionId,
   metrics,
   backHref,
+  readOnly = false,
+  released = false,
 }: {
   candidateName?: string
   recommendation?: string | null
@@ -28,6 +30,8 @@ export function DecisionBar({
   sessionId: string
   metrics?: MetricPill[]
   backHref?: string
+  readOnly?: boolean
+  released?: boolean
 }) {
   return (
     <motion.section
@@ -81,7 +85,18 @@ export function DecisionBar({
           </div>
         ) : null}
 
-        <ReviewActions reportId={reportId} sessionId={sessionId} compact />
+        {readOnly ? (
+          <span className="rounded-full border border-border/70 bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
+            Read-only preview
+          </span>
+        ) : (
+          <ReviewActions
+            reportId={reportId}
+            sessionId={sessionId}
+            released={released}
+            compact
+          />
+        )}
       </div>
     </motion.section>
   )

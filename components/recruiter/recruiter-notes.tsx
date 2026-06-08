@@ -30,6 +30,7 @@ export function RecruiterNotes({
   const addRecruiterNote = useMutation(api.admin.addRecruiterNote)
   const [value, setValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSave() {
     if (!value.trim()) {
@@ -37,6 +38,7 @@ export function RecruiterNotes({
     }
 
     setIsSaving(true)
+    setError(null)
 
     try {
       await addRecruiterNote({
@@ -48,6 +50,12 @@ export function RecruiterNotes({
       startTransition(() => {
         router.refresh()
       })
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : 'Unable to save the recruiter note.'
+      )
     } finally {
       setIsSaving(false)
     }
@@ -87,6 +95,8 @@ export function RecruiterNotes({
           {isSaving ? 'Saving...' : 'Save note'}
         </Button>
       </div>
+
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   )
 }

@@ -37,8 +37,10 @@ export function ScreeningCreationForm() {
   const [batchName, setBatchName] = useState('Primary tutor screening')
   const [expiryDays, setExpiryDays] = useState('7')
   const [allowedAttempts, setAllowedAttempts] = useState('1')
-  const [templateId, setTemplateId] =
-    useState<Id<'assessmentTemplates'> | null>(null)
+  const [candidateReleaseMode, setCandidateReleaseMode] = useState<
+    'inherit' | 'auto' | 'manual'
+  >('inherit')
+  const [templateId, setTemplateId] = useState('')
   const [candidates, setCandidates] = useState<
     { name: string; email: string }[]
   >([{ name: '', email: '' }])
@@ -46,9 +48,29 @@ export function ScreeningCreationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    if (templates?.length && !templateId) {
-      setTemplateId(templates[0].id)
+    if (!templates?.length) {
+      setTemplateId('')
+      return
     }
+    setTemplateId((current) => {
+      if (current && templates.some((template) => template.id === current)) {
+        return current
+      }
+      return templates[0].id
+    })
+  }, [templates])
+
+  const selectedTemplateId = useMemo(() => {
+    if (!templates?.length) {
+      return ''
+    }
+    if (
+      templateId &&
+      templates.some((template) => template.id === templateId)
+    ) {
+      return templateId
+    }
+    return templates[0].id
   }, [templates, templateId])
 
   const parsedCandidates = useMemo(
@@ -103,7 +125,10 @@ export function ScreeningCreationForm() {
           Date.now() +
             1000 * 60 * 60 * 24 * (Number.parseInt(expiryDays, 10) || 7)
         ).toISOString(),
-        templateId: templateId || undefined,
+        templateId: selectedTemplateId
+          ? (selectedTemplateId as Id<'assessmentTemplates'>)
+          : undefined,
+        candidateReleaseMode,
         candidates: parsedCandidates,
       })
 
@@ -172,34 +197,33 @@ export function ScreeningCreationForm() {
                   first.
                 </p>
               ) : null}
-              <Select
-                value={templateId || undefined}
-                onValueChange={(val) =>
-                  setTemplateId(val as Id<'assessmentTemplates'>)
-                }
-                disabled={!templates?.length}
-              >
-                <SelectTrigger
-                  id="template"
-                  className="h-12 rounded-xl border-border/40 bg-background px-4 text-base transition-[border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-muted/10 focus:ring-4 focus:ring-primary/10"
+              {templates && templates.length > 0 ? (
+                <Select
+                  value={selectedTemplateId}
+                  onValueChange={(value) => setTemplateId(value ?? '')}
                 >
-                  <SelectValue placeholder="Select a template" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates?.map((template) => (
-                    <SelectItem
-                      key={template.id}
-                      value={template.id}
-                      className="rounded-lg"
-                    >
-                      {template.name}{' '}
-                      <span className="ml-2 text-xs opacity-50">
-                        · rubric {template.rubricVersion}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <SelectTrigger
+                    id="template"
+                    className="h-12 rounded-xl border-border/40 bg-background px-4 text-base transition-[border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-muted/10 focus:ring-4 focus:ring-primary/10"
+                  >
+                    <SelectValue placeholder="Select a template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem
+                        key={template.id}
+                        value={template.id}
+                        className="rounded-lg"
+                      >
+                        {template.name}{' '}
+                        <span className="ml-2 text-xs opacity-50">
+                          · rubric {template.rubricVersion}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
             </motion.div>
 
             <motion.div
@@ -256,6 +280,36 @@ export function ScreeningCreationForm() {
                   className="h-12 rounded-xl border-border/40 bg-background px-4 text-base tabular-nums transition-[border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-muted/10 focus-visible:ring-4 focus-visible:ring-primary/10"
                 />
               </div>
+            </motion.div>
+
+            <motion.div
+              variants={STAGGER_VARIANTS}
+              className="flex flex-col gap-3"
+            >
+              <Label className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
+                Candidate release
+              </Label>
+              <Select
+                value={candidateReleaseMode}
+                onValueChange={(value) =>
+                  setCandidateReleaseMode(
+                    (value ?? 'inherit') as 'inherit' | 'auto' | 'manual'
+                  )
+                }
+              >
+                <SelectTrigger className="h-12 rounded-xl border-border/40 bg-background px-4 text-base">
+                  <SelectValue placeholder="Release policy" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inherit">
+                    Inherit workspace default
+                  </SelectItem>
+                  <SelectItem value="auto">
+                    Auto-release on Advance / Reject
+                  </SelectItem>
+                  <SelectItem value="manual">Manual release only</SelectItem>
+                </SelectContent>
+              </Select>
             </motion.div>
 
             <motion.div

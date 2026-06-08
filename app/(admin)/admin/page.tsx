@@ -1,31 +1,47 @@
+import { fetchQuery } from 'convex/nextjs'
+
+import { api } from '@/convex/_generated/api'
+import { PremiumRecruiterDashboard } from '@/components/recruiter/premium-dashboard'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { clientEnv } from '@/lib/env/client'
-import { PremiumRecruiterDashboard } from '@/components/recruiter/premium-dashboard'
-import { api } from '@/convex/_generated/api'
-import { fetchQuery } from 'convex/nextjs'
+import { runConvexFetch } from '@/lib/convex/server-fetch'
 
 export default async function AdminPage() {
   const token = await getServerConvexAuthToken()
-  const [candidates, batches, dashboardSummary] =
+  const [candidatesResult, batchesResult, dashboardResult] =
     clientEnv.NEXT_PUBLIC_CONVEX_URL
       ? await Promise.all([
-          fetchQuery(
-            api.recruiter.listReviewCandidates,
-            {},
-            { token: token ?? undefined }
-          ).catch(() => []),
-          fetchQuery(
-            api.admin.listScreeningBatches,
-            {},
-            { token: token ?? undefined }
-          ).catch(() => []),
-          fetchQuery(
-            api.admin.getDashboardSummary,
-            {},
-            { token: token ?? undefined }
-          ).catch(() => null),
+          runConvexFetch(() =>
+            fetchQuery(
+              api.recruiter.listReviewCandidates,
+              {},
+              { token: token ?? undefined }
+            )
+          ),
+          runConvexFetch(() =>
+            fetchQuery(
+              api.admin.listScreeningBatches,
+              {},
+              { token: token ?? undefined }
+            )
+          ),
+          runConvexFetch(() =>
+            fetchQuery(
+              api.admin.getDashboardSummary,
+              {},
+              { token: token ?? undefined }
+            )
+          ),
         ])
-      : [[], [], null]
+      : [
+          { ok: true as const, data: [] },
+          { ok: true as const, data: [] },
+          { ok: true as const, data: null },
+        ]
+
+  const candidates = candidatesResult.ok ? candidatesResult.data : []
+  const batches = batchesResult.ok ? batchesResult.data : []
+  const dashboardSummary = dashboardResult.ok ? dashboardResult.data : null
 
   const sessionsToday = candidates.filter((candidate) => {
     if (!candidate.startedAt) return false

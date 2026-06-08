@@ -1,38 +1,78 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAction, useMutation, useQuery } from 'convex/react'
 
 import { api } from '@/convex/_generated/api'
 import { PageHeader } from '@/components/admin/page-header'
+import { WorkspaceSurface } from '@/components/workspace/surface'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function SettingsPage() {
   const settings = useQuery(api.admin.getWorkspaceSettings, {})
   const addProviderKey = useMutation(api.admin.addProviderKey)
   const removeProviderKey = useMutation(api.admin.removeProviderKey)
   const updateDefaultModels = useMutation(api.admin.updateDefaultModels)
+  const updateCandidateReleaseMode = useMutation(
+    api.admin.updateCandidateReleaseMode
+  )
   const testProviderConnection = useAction(api.admin.testProviderConnection)
   const [provider, setProvider] = useState('openai')
   const [key, setKey] = useState('')
   const [label, setLabel] = useState('')
   const [models, setModels] = useState({
-    stt: settings?.defaultModels?.stt ?? '',
-    llm: settings?.defaultModels?.llm ?? '',
-    tts: settings?.defaultModels?.tts ?? '',
-    reviewChat: settings?.defaultModels?.reviewChat ?? '',
+    stt: '',
+    llm: '',
+    tts: '',
+    reviewChat: '',
   })
+  const [releaseMode, setReleaseMode] = useState<'auto' | 'manual'>('auto')
+
+  useEffect(() => {
+    if (!settings) {
+      return
+    }
+    setModels({
+      stt: settings.defaultModels?.stt ?? '',
+      llm: settings.defaultModels?.llm ?? '',
+      tts: settings.defaultModels?.tts ?? '',
+      reviewChat: settings.defaultModels?.reviewChat ?? '',
+    })
+    setReleaseMode(settings.candidateReleaseMode ?? 'auto')
+  }, [settings])
+
+  if (settings === undefined) {
+    return (
+      <div className="flex w-full flex-col gap-8">
+        <PageHeader
+          eyebrow="Configuration"
+          title="Workspace Settings"
+          description="Manage BYOK provider keys and default models."
+        />
+        <WorkspaceSurface className="p-6">
+          <p className="text-sm text-muted-foreground">Loading settings…</p>
+        </WorkspaceSurface>
+      </div>
+    )
+  }
 
   return (
     <div className="flex w-full flex-col gap-8">
       <PageHeader
         eyebrow="Configuration"
         title="Workspace Settings"
-        description="Manage BYOK provider keys and default models."
+        description="Manage BYOK provider keys, default models, and candidate release policy."
       />
 
-      <section className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+      <WorkspaceSurface className="p-6">
         <h2 className="text-lg font-semibold">Provider keys</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <Input
@@ -97,9 +137,9 @@ export default function SettingsPage() {
             </div>
           ))}
         </div>
-      </section>
+      </WorkspaceSurface>
 
-      <section className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+      <WorkspaceSurface className="p-6">
         <h2 className="text-lg font-semibold">Default models</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <Input
@@ -149,7 +189,39 @@ export default function SettingsPage() {
         >
           Save model defaults
         </Button>
-      </section>
+      </WorkspaceSurface>
+
+      <WorkspaceSurface className="p-6">
+        <h2 className="text-lg font-semibold">Candidate results</h2>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          Auto-release shares outcomes when recruiters choose Advance or Reject.
+          Manual release requires an explicit action from the review console.
+        </p>
+        <div className="mt-4 max-w-sm">
+          <Select
+            value={releaseMode}
+            onValueChange={(value) =>
+              setReleaseMode(value as 'auto' | 'manual')
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Release mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">
+                Auto-release on Advance / Reject
+              </SelectItem>
+              <SelectItem value="manual">Manual release only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button
+          className="mt-4"
+          onClick={() => void updateCandidateReleaseMode({ mode: releaseMode })}
+        >
+          Save release policy
+        </Button>
+      </WorkspaceSurface>
     </div>
   )
 }

@@ -26,21 +26,26 @@ const DECISIONS: Array<{
 type ReviewActionsProps = {
   reportId?: string
   sessionId: string
+  released?: boolean
   compact?: boolean
 }
 
 export function ReviewActions({
   reportId,
   sessionId,
+  released = false,
   compact = false,
 }: ReviewActionsProps) {
   const router = useRouter()
   const submitReviewDecision = useMutation(api.recruiter.submitReviewDecision)
+  const releaseReport = useMutation(api.recruiter.releaseReport)
   const [rationale, setRationale] = useState('')
   const [selectedDecision, setSelectedDecision] =
     useState<ReviewDecision>('advance')
   const [error, setError] = useState<string | null>(null)
+  const [releaseError, setReleaseError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isReleasing, setIsReleasing] = useState(false)
 
   async function handleSubmit() {
     if (!reportId) {
@@ -76,19 +81,59 @@ export function ReviewActions({
     }
   }
 
+  async function handleRelease() {
+    if (!reportId) {
+      setReleaseError('Wait for the assessment report before releasing.')
+      return
+    }
+
+    setIsReleasing(true)
+    setReleaseError(null)
+
+    try {
+      await releaseReport({
+        reportId: reportId as Id<'assessmentReports'>,
+        sessionId: sessionId as Id<'interviewSessions'>,
+      })
+      startTransition(() => {
+        router.refresh()
+      })
+    } catch (releaseFailure) {
+      setReleaseError(
+        releaseFailure instanceof Error
+          ? releaseFailure.message
+          : 'Unable to release the report to the candidate.'
+      )
+    } finally {
+      setIsReleasing(false)
+    }
+  }
+
   return (
     <div
       className={
         compact ? 'space-y-3' : 'space-y-4 rounded-lg bg-muted/20 px-4 py-4'
       }
     >
-      <div>
-        <h3 className="text-sm font-semibold">Review action</h3>
-        {!compact ? (
-          <p className="mt-1 text-sm text-muted-foreground">
-            Record a reviewer decision for this report.
-          </p>
-        ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">Review action</h3>
+          {!compact ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Record a reviewer decision for this report.
+            </p>
+          ) : null}
+        </div>
+        <span
+          className={cn(
+            'rounded-full px-2.5 py-0.5 text-xs font-semibold',
+            released
+              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+              : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+          )}
+        >
+          {released ? 'Released to candidate' : 'Not released'}
+        </span>
       </div>
 
       <ButtonGroup className="mt-4 flex-wrap gap-2">
@@ -128,11 +173,25 @@ export function ReviewActions({
         </p>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        {!released && reportId ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleRelease}
+            disabled={isReleasing || isSaving}
+          >
+            {isReleasing ? 'Releasing…' : 'Release to candidate'}
+          </Button>
+        ) : null}
         <Button type="button" onClick={handleSubmit} disabled={isSaving}>
           {isSaving ? 'Saving…' : 'Save review action'}
         </Button>
       </div>
+
+      {releaseError ? (
+        <p className="text-sm text-destructive">{releaseError}</p>
+      ) : null}
     </div>
   )
 }
