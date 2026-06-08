@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'motion/react'
+import { motion } from '@/components/motion/client-motion'
 import {
   IconUserCheck,
   IconMicrophone,
@@ -294,8 +294,8 @@ export function MarketingHowItWorks() {
           transition={{ delay: 0.4, duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
           className="mt-10 text-center"
         >
-          <p className="text-sm text-muted-foreground">
-            Ready to streamline your tutor screening?
+          <p className="text-sm text-pretty text-muted-foreground">
+            Ready to run structured screenings with evidence-backed review?
           </p>
         </motion.div>
       </div>

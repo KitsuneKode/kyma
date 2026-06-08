@@ -10,21 +10,25 @@ import {
 
 const faqs = [
   {
+    id: 'session-look',
     question: 'What does a typical screening session look like?',
     answer:
-      'Most sessions run around 15 to 20 minutes. Candidates complete a prejoin device check, join the live interviewer, and are evaluated against a structured rubric aligned to tutoring outcomes.',
+      'Most sessions run around 15 to 20 minutes. Candidates complete a prejoin device check, join the live interviewer, and are evaluated against a structured rubric your team defines.',
   },
   {
+    id: 'invite-retries',
     question: 'How do invite links and retries work?',
     answer:
       'Recruiters control this through screening batch policy. You can set expiry windows and attempt limits, and optionally allow resume behavior for disconnects before final submission.',
   },
   {
+    id: 'trust-recommendation',
     question: 'How do recruiters trust the recommendation?',
     answer:
       'Recommendations are grounded in transcript evidence and rubric dimensions. Reviewers can inspect session details, notes, and citations before taking the final decision.',
   },
   {
+    id: 'standardize-roles',
     question: 'Can we standardize different role types or cohorts?',
     answer:
       'Yes. Screening Templates define repeatable interview structures, while Screening Batches let you apply policy and candidate lists per hiring cohort.',
@@ -47,10 +51,10 @@ export function PremiumFaq() {
 
         <div className="mx-auto max-w-3xl">
           <Accordion className="w-full">
-            {faqs.map((faq, index) => (
+            {faqs.map((faq) => (
               <AccordionItem
-                key={index}
-                value={`item-${index}`}
+                key={faq.id}
+                value={faq.id}
                 className="rounded-2xl border border-border/40 bg-card/80 px-5 py-2 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
               >
                 <AccordionTrigger className="text-left text-lg font-medium transition-colors hover:text-primary hover:no-underline">

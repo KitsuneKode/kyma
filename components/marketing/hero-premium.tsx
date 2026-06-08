@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useEffect } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
 import {
   IconMicrophone,
@@ -9,16 +8,16 @@ import {
   IconBrain,
   IconClockPlay,
 } from '@tabler/icons-react'
-import { signInPath, signUpPath } from '@/lib/auth/workspace-intent'
-import { Button } from '@/components/ui/button'
-import { TextEffect } from '@/components/ui/text-effect'
+import { MarketingCtaRow } from '@/components/marketing/marketing-cta-row'
 import {
   motion,
   useMotionValue,
   useSpring,
   useTransform,
   type Variants,
-} from 'motion/react'
+} from '@/components/motion/client-motion'
+import { TextEffect } from '@/components/ui/text-effect'
+import { MOUSE_PARALLAX_SPRING } from '@/lib/motion/constants'
 
 const transitionVariants: { container: Variants; item: Variants } = {
   container: {
@@ -34,7 +33,7 @@ const transitionVariants: { container: Variants; item: Variants } = {
   item: {
     hidden: {
       opacity: 0,
-      filter: 'blur(12px)',
+      filter: 'blur(8px)',
       y: 12,
     },
     visible: {
@@ -65,9 +64,8 @@ function HeroImageMockup() {
     return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [mouseX, mouseY])
 
-  const springConfig = { damping: 30, stiffness: 100, mass: 1 }
-  const springX = useSpring(mouseX, springConfig)
-  const springY = useSpring(mouseY, springConfig)
+  const springX = useSpring(mouseX, MOUSE_PARALLAX_SPRING)
+  const springY = useSpring(mouseY, MOUSE_PARALLAX_SPRING)
 
   const rotateX = useTransform(springY, [-1, 1], [3, -3])
   const rotateY = useTransform(springX, [-1, 1], [-3, 3])
@@ -86,7 +84,7 @@ function HeroImageMockup() {
         initial={{
           opacity: 0,
           scale: 0.95,
-          filter: 'blur(10px)',
+          filter: 'blur(8px)',
           clipPath: 'inset(0 0 100% 0)',
         }}
         animate={{
@@ -96,7 +94,7 @@ function HeroImageMockup() {
           clipPath: 'inset(0 0 0 0)',
         }}
         transition={{ duration: 0.8, ease: [0.77, 0, 0.175, 1], delay: 0.4 }}
-        className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-2xl ring-1 ring-border/40 backdrop-blur-3xl"
+        className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-2xl ring-1 ring-border/40 backdrop-blur-xl"
       >
         <div className="relative overflow-hidden rounded-2xl ring-1 ring-border/20">
           <Image
@@ -145,13 +143,13 @@ export function PremiumHero() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="relative z-10 text-center sm:mx-auto lg:mt-0 lg:mr-auto">
           <motion.div
-            initial={{ opacity: 0, y: 12, filter: 'blur(12px)' }}
+            initial={{ opacity: 0, y: 12, filter: 'blur(8px)' }}
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
             transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
           >
             <div className="group mx-auto flex w-fit cursor-default items-center gap-4 rounded-full border border-border/50 bg-muted/20 p-1 pl-4 shadow-sm backdrop-blur-md transition-colors duration-[200ms] ease-out hover:bg-muted/40">
               <span className="text-sm font-medium tracking-wide text-foreground uppercase">
-                The AI Tutor Screener
+                AI interview screening for hiring teams
               </span>
               <span className="block h-4 w-px bg-border"></span>
 
@@ -174,7 +172,7 @@ export function PremiumHero() {
             as="h1"
             className="mx-auto mt-8 max-w-5xl text-[5rem] leading-[0.95] font-semibold tracking-tighter text-balance antialiased md:text-[6rem] lg:mt-12 xl:text-[7rem]"
           >
-            Screen tutors with live interview evidence, not resume guesswork
+            Hire with live interview evidence, not resume guesswork
           </TextEffect>
           <TextEffect
             per="line"
@@ -184,70 +182,20 @@ export function PremiumHero() {
             as="p"
             className="mx-auto mt-8 max-w-3xl text-lg leading-relaxed text-pretty text-muted-foreground"
           >
-            Candidates join from an invite link for a respectful live interview.
-            Recruiters review transcript-backed evidence and move to decision
-            with a workflow built for tutoring teams.
+            Launch structured voice screenings, review transcript-backed
+            rubrics, and move candidates to decision faster—built for
+            recruitment teams running high-volume interviews.
           </TextEffect>
 
           <motion.div
             initial="hidden"
             animate="visible"
             variants={transitionVariants.container}
-            className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row sm:flex-wrap"
+            className="mt-12"
           >
             <motion.div variants={transitionVariants.item}>
-              <div className="rounded-[calc(var(--radius-xl)+0.125rem)] border border-border/60 bg-muted/20 p-[3px] shadow-sm backdrop-blur-sm">
-                <Button
-                  size="lg"
-                  className="min-h-[44px] min-w-[44px] rounded-xl px-8 text-base shadow-inner transition-[transform,background-color] duration-150 ease-out active:scale-[0.96]"
-                  render={<Link href={signUpPath('candidate')} />}
-                  nativeButton={false}
-                >
-                  <span className="text-nowrap">Create candidate account</span>
-                </Button>
-              </div>
+              <MarketingCtaRow variant="hero" />
             </motion.div>
-            <motion.div variants={transitionVariants.item}>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 min-h-[44px] min-w-[44px] rounded-xl px-8 text-base ring-1 ring-border/40 transition-[transform,background-color] duration-150 ease-out hover:bg-muted/30 active:scale-[0.96]"
-                render={<Link href={signUpPath('recruiter')} />}
-                nativeButton={false}
-              >
-                <span className="text-nowrap">Start as recruiter</span>
-              </Button>
-            </motion.div>
-            <motion.div variants={transitionVariants.item}>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-muted-foreground"
-                render={<Link href="/interviews/demo-invite" />}
-                nativeButton={false}
-              >
-                Try demo interview
-              </Button>
-            </motion.div>
-            <motion.p
-              variants={transitionVariants.item}
-              className="w-full text-center text-sm text-muted-foreground"
-            >
-              Already have an account?{' '}
-              <Link
-                href={signInPath('candidate')}
-                className="font-medium text-foreground underline-offset-4 hover:underline"
-              >
-                Sign in as candidate
-              </Link>
-              {' · '}
-              <Link
-                href={signInPath('recruiter')}
-                className="font-medium text-foreground underline-offset-4 hover:underline"
-              >
-                Sign in as recruiter
-              </Link>
-            </motion.p>
           </motion.div>
         </div>
 
@@ -256,24 +204,32 @@ export function PremiumHero() {
 
       <div className="mx-auto mt-24 max-w-7xl px-6 pb-24 md:mt-32 md:pb-32">
         <p className="mb-12 text-center text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-          Evaluate for what matters in tutoring
+          Built for high-signal hiring decisions
         </p>
-        <div className="grid grid-cols-2 items-center justify-items-center gap-8 opacity-70 transition-colors duration-[200ms] ease-out hover:opacity-100 md:grid-cols-4">
+        <div className="grid grid-cols-2 items-center justify-items-center gap-8 opacity-70 transition-[opacity] duration-200 ease-out hover:opacity-100 md:grid-cols-4">
           <div className="flex flex-col items-center gap-3 text-center">
             <IconShieldCheck className="h-8 w-8 text-foreground" stroke={1.5} />
-            <span className="text-sm font-medium">Student-Safe Judgment</span>
+            <span className="text-sm font-medium text-balance">
+              Policy-controlled invites
+            </span>
           </div>
           <div className="flex flex-col items-center gap-3 text-center">
             <IconBrain className="h-8 w-8 text-foreground" stroke={1.5} />
-            <span className="text-sm font-medium">Concept Simplification</span>
+            <span className="text-sm font-medium text-balance">
+              Structured rubrics
+            </span>
           </div>
           <div className="flex flex-col items-center gap-3 text-center">
             <IconClockPlay className="h-8 w-8 text-foreground" stroke={1.5} />
-            <span className="text-sm font-medium">Adaptive Patience</span>
+            <span className="text-sm font-medium text-balance">
+              Faster recruiter triage
+            </span>
           </div>
           <div className="flex flex-col items-center gap-3 text-center">
             <IconMicrophone className="h-8 w-8 text-foreground" stroke={1.5} />
-            <span className="text-sm font-medium">Communication Clarity</span>
+            <span className="text-sm font-medium text-balance">
+              Transcript-backed review
+            </span>
           </div>
         </div>
       </div>

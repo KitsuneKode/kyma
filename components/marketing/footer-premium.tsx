@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { Logo } from '@/components/marketing/logo'
+import { CopyrightYear } from '@/components/marketing/copyright-year'
+import { signInPath } from '@/lib/auth/workspace-intent'
 
 export function PremiumFooter() {
   return (
@@ -13,9 +15,9 @@ export function PremiumFooter() {
             >
               <Logo className="h-8 w-auto" />
             </Link>
-            <p className="mt-6 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Empowering recruitment teams with scalable, evidence-based AI
-              screening. Hire the best tutors with confidence.
+            <p className="mt-6 max-w-xs text-sm leading-relaxed text-pretty text-muted-foreground">
+              Structured live interviews and evidence-backed review for
+              recruitment teams. Hire with confidence, not guesswork.
             </p>
           </div>
 
@@ -42,10 +44,10 @@ export function PremiumFooter() {
               </li>
               <li>
                 <Link
-                  href="/sign-in"
+                  href={signInPath('recruiter')}
                   className="transition-colors hover:text-foreground"
                 >
-                  Recruiter Hub
+                  Recruiter sign in
                 </Link>
               </li>
             </ul>
@@ -110,7 +112,7 @@ export function PremiumFooter() {
 
         <div className="mt-24 flex flex-col items-center justify-between gap-4 border-t border-border/20 pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Kyma. All rights reserved.
+            © <CopyrightYear /> Kyma. All rights reserved.
           </p>
           <div className="flex gap-4">
             <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground opacity-50" />

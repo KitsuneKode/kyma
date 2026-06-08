@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 
+import { signUpPath } from '@/lib/auth/workspace-intent'
 import { Button } from '@/components/ui/button'
 
 export function MobileCtaDock() {
@@ -11,10 +12,10 @@ export function MobileCtaDock() {
         <div className="grid grid-cols-2 gap-2">
           <Button
             className="h-11 min-h-[44px] min-w-[44px] rounded-xl bg-primary text-primary-foreground transition-[transform,background-color] duration-150 ease-out active:scale-[0.96]"
-            render={<Link href="/sign-in" />}
+            render={<Link href={signUpPath('recruiter')} />}
             nativeButton={false}
           >
-            Recruiter sign in
+            Get started
           </Button>
           <Button
             variant="outline"
@@ -22,7 +23,7 @@ export function MobileCtaDock() {
             render={<Link href="/interviews/demo-invite" />}
             nativeButton={false}
           >
-            Try interview
+            Demo interview
           </Button>
         </div>
       </div>

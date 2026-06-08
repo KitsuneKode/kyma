@@ -1,47 +1,29 @@
 'use client'
 
 import Link from 'next/link'
-import { motion } from 'motion/react'
+import { motion } from '@/components/motion/client-motion'
 import { IconUser, IconBriefcase } from '@tabler/icons-react'
 
 import { signInPath, signUpPath } from '@/lib/auth/workspace-intent'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 const pathways = [
   {
-    icon: IconUser,
-    title: 'For candidates',
-    description:
-      'A focused and respectful screening experience. Candidates join from any device, complete a guided live interview, and get a consistent process every time.',
-    points: [
-      'Invite-link entry with clear access state',
-      'Device check before joining the interview',
-      'Structured interview flow with transparent expectations',
-      'Reliable transcript capture throughout the session',
-    ],
-    primaryCta: {
-      label: 'Create candidate account',
-      href: signUpPath('candidate'),
-    },
-    secondaryCta: {
-      label: 'Try demo interview',
-      href: '/interviews/demo-invite',
-    },
-    signInHref: signInPath('candidate'),
-  },
-  {
+    id: 'for-recruiters',
     icon: IconBriefcase,
-    title: 'For recruiters',
+    featured: true,
+    title: 'For recruiters & hiring teams',
     description:
-      'Review candidates with evidence instead of impressions. Recruiter workflows prioritize queue clarity, screening controls, and faster decisions.',
+      'Run structured screenings at scale. Review candidates with transcript-backed evidence instead of impressions, with queue clarity and policy controls built in.',
     points: [
-      'Screening Batches with explicit invite policy',
-      'Screening Templates for consistent assessment structure',
+      'Screening batches with explicit invite and retry policy',
+      'Reusable templates for consistent assessment structure',
       'Needs-attention-first recruiter home',
       'Evidence-linked recommendations and reviewer notes',
     ],
     primaryCta: {
-      label: 'Start as recruiter',
+      label: 'Get started as recruiter',
       href: signUpPath('recruiter'),
     },
     secondaryCta: {
@@ -49,6 +31,29 @@ const pathways = [
       href: signInPath('recruiter'),
     },
     signInHref: signInPath('recruiter'),
+  },
+  {
+    id: 'for-candidates',
+    icon: IconUser,
+    featured: false,
+    title: 'For candidates',
+    description:
+      'A focused, respectful interview experience. Candidates join from any device via invite link and complete a guided live session with clear expectations.',
+    points: [
+      'Invite-link entry with clear access state',
+      'Device check before joining the interview',
+      'Structured interview flow with transparent expectations',
+      'Reliable transcript capture throughout the session',
+    ],
+    primaryCta: {
+      label: 'Try demo interview',
+      href: '/interviews/demo-invite',
+    },
+    secondaryCta: {
+      label: 'Create candidate account',
+      href: signUpPath('candidate'),
+    },
+    signInHref: signInPath('candidate'),
   },
 ]
 
@@ -78,11 +83,11 @@ export function MarketingRolePathways() {
             Role Pathways
           </p>
           <h2 className="font-serif text-[3rem] leading-[0.95] font-medium tracking-tighter text-balance text-foreground sm:text-[4rem]">
-            Built for both sides
+            One platform, two clear paths
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-pretty text-muted-foreground">
-            Candidates get a respectful experience. Recruiters get actionable
-            evidence.
+            Recruitment teams operate the workspace. Candidates get a polished
+            interview experience through your invite links.
           </p>
         </div>
 
@@ -98,8 +103,14 @@ export function MarketingRolePathways() {
           {pathways.map((pathway) => (
             <motion.div
               key={pathway.title}
+              id={pathway.id}
               variants={STAGGER_VARIANTS}
-              className="group relative flex flex-col overflow-hidden rounded-[2rem] bg-card p-10 shadow-2xl ring-1 ring-border/50 transition-[box-shadow,transform] duration-300 hover:ring-border"
+              className={cn(
+                'group relative flex scroll-mt-28 flex-col overflow-hidden rounded-[2rem] bg-card p-10 shadow-2xl ring-1 transition-[box-shadow,transform] duration-300 md:scroll-mt-32',
+                pathway.featured
+                  ? 'ring-primary/30 hover:ring-primary/50'
+                  : 'ring-border/50 hover:ring-border'
+              )}
             >
               <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,hsla(0,0%,20%,0.2)_0,transparent_50%)]" />
 
