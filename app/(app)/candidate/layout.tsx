@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { WorkspacePromptBanner } from '@/components/auth/workspace-prompt-banner'
+import { WorkspaceShell } from '@/components/workspace/workspace-shell'
 import { requireCandidatePageAccess } from '@/lib/auth/access'
 import { fetchMutation } from 'convex/nextjs'
 import { api } from '@/convex/_generated/api'
@@ -47,14 +48,12 @@ export default async function CandidateLayout({
             </span>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto bg-muted/10">
-          <div className="mx-auto w-full max-w-7xl p-8">
-            {access.preferredWorkspace === 'unassigned' ? (
-              <WorkspacePromptBanner variant="candidate-default" />
-            ) : null}
-            {children}
-          </div>
-        </main>
+        <WorkspaceShell>
+          {access.preferredWorkspace === 'unassigned' ? (
+            <WorkspacePromptBanner variant="candidate-default" />
+          ) : null}
+          {children}
+        </WorkspaceShell>
       </SidebarInset>
     </SidebarProvider>
   )

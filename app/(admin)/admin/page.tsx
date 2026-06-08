@@ -1,10 +1,14 @@
+import Link from 'next/link'
 import { fetchQuery } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
 import { PremiumRecruiterDashboard } from '@/components/recruiter/premium-dashboard'
+import { WorkspaceEmptyState } from '@/components/workspace/empty-state'
+import { Button } from '@/components/ui/button'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { clientEnv } from '@/lib/env/client'
 import { runConvexFetch } from '@/lib/convex/server-fetch'
+import { signInPath } from '@/lib/auth/workspace-intent'
 
 export default async function AdminPage() {
   const token = await getServerConvexAuthToken()
@@ -38,6 +42,45 @@ export default async function AdminPage() {
           { ok: true as const, data: [] },
           { ok: true as const, data: null },
         ]
+
+  const failedResult = [candidatesResult, batchesResult, dashboardResult].find(
+    (result) => !result.ok
+  )
+
+  if (failedResult && !failedResult.ok) {
+    return (
+      <WorkspaceEmptyState
+        eyebrow="Recruiter workspace"
+        title={
+          failedResult.kind === 'auth'
+            ? 'Sign in required'
+            : 'Unable to load dashboard'
+        }
+        description={
+          failedResult.message ??
+          'Your session may have expired or your organization access changed.'
+        }
+        action={
+          failedResult.kind === 'auth' ? (
+            <Button
+              nativeButton={false}
+              render={<Link href={signInPath('recruiter')} />}
+            >
+              Sign in again
+            </Button>
+          ) : (
+            <Button
+              nativeButton={false}
+              variant="outline"
+              render={<Link href="/recruiter" />}
+            >
+              Retry from recruiter home
+            </Button>
+          )
+        }
+      />
+    )
+  }
 
   const candidates = candidatesResult.ok ? candidatesResult.data : []
   const batches = batchesResult.ok ? batchesResult.data : []
