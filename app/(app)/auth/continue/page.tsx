@@ -1,6 +1,10 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 
+import {
+  resolveWorkspaceForContinue,
+  shouldPersistWorkspaceForContinue,
+} from '@/lib/auth/continue-workspace'
 import { RECRUITER_PERMISSION_MAP } from '@/lib/auth/clerk-role'
 import {
   getPreferredWorkspaceFromClerk,
@@ -20,12 +24,11 @@ export default async function AuthContinuePage({ searchParams }: PageProps) {
   }
 
   const params = await searchParams
-  const intent = parseWorkspaceIntent(params.workspace) ?? 'candidate'
-
+  const explicitIntent = parseWorkspaceIntent(params.workspace)
   const existing = await getPreferredWorkspaceFromClerk(userId)
-  const workspace = existing ?? intent
+  const workspace = resolveWorkspaceForContinue({ explicitIntent, existing })
 
-  if (!existing) {
+  if (shouldPersistWorkspaceForContinue({ explicitIntent, existing })) {
     await setPreferredWorkspaceHint(userId, workspace)
   }
 

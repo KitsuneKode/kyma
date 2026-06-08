@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation'
+import { renderIntentAuthPage } from '@/lib/auth/intent-auth-page'
 
 export default function SignInRecruiterPage() {
-  redirect('/sign-in?workspace=recruiter')
+  return renderIntentAuthPage('sign-in', 'recruiter')
 }

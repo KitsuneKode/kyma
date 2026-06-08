@@ -68,6 +68,23 @@ The App Router is split into three layout shells:
 - Candidate invite route (`/interviews/[inviteId]`) stays public by design and enforces invite token rules at the data layer.
 - Candidate portal routes (`/candidate/*`) require sign-in only; recruiter authorization is org-scoped on `/admin*` routes.
 
+## Post-login routing
+
+Signed-in users should never remain stuck on the marketing homepage (`/`). Middleware delegates to `resolveAppRoute` in [`lib/auth/routing.ts`](../lib/auth/routing.ts), which sends `/` to the workspace home based on `preferredWorkspace` in Clerk session metadata.
+
+| Entry                  | URL                  | After auth                                                                     |
+| ---------------------- | -------------------- | ------------------------------------------------------------------------------ |
+| Candidate sign-in      | `/sign-in/candidate` | `/auth/continue?workspace=candidate` → `/candidate`                            |
+| Candidate sign-up      | `/sign-up/candidate` | `/auth/continue?workspace=candidate` → `/candidate`                            |
+| Recruiter sign-in      | `/sign-in/recruiter` | `/auth/continue?workspace=recruiter` → `/recruiter` or `/onboarding/recruiter` |
+| Recruiter sign-up      | `/sign-up/recruiter` | same as recruiter sign-in                                                      |
+| General sign-in        | `/sign-in`           | `/auth/continue` (defaults to candidate) when preference unset                 |
+| Signed-in visit to `/` | `/`                  | `/candidate`, `/recruiter`, `/onboarding/recruiter`, or `/auth/continue`       |
+
+Explicit workspace intent in `/auth/continue?workspace=` overrides a stale stored preference for that sign-in flow. `preferredWorkspace` is routing-only; recruiter authorization still requires org context.
+
+Marketing CTAs use path-based auth URLs via [`lib/auth/workspace-intent.ts`](../lib/auth/workspace-intent.ts) (`signInPath`, `signUpPath`).
+
 ## Rate limits (HTTP)
 
 Shared helper: `lib/http/rate-limit.ts` — used by bootstrap and report-chat routes (in-memory buckets; replace with Redis/Upstash in production if needed).

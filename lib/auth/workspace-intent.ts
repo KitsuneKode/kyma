@@ -27,12 +27,12 @@ export function signInPath(intent?: WorkspaceIntent | null) {
   if (!intent) {
     return '/sign-in'
   }
-  return `/sign-in?${workspaceIntentSearchParam(intent)}`
+  return `/sign-in/${intent}`
 }
 
 export function signUpPath(intent?: WorkspaceIntent | null) {
   if (!intent) {
     return '/sign-up'
   }
-  return `/sign-up?${workspaceIntentSearchParam(intent)}`
+  return `/sign-up/${intent}`
 }

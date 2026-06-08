@@ -86,6 +86,11 @@ export function resolveAppRoute(ctx: AppRouteContext): string | null {
     return null
   }
 
+  if (pathname === '/') {
+    const target = getPostSignInPathFromContext(ctx)
+    return target === '/' ? null : target
+  }
+
   if (isAuthPath(pathname)) {
     const target = getPostSignInPathFromContext(ctx)
     if (target === pathname) {

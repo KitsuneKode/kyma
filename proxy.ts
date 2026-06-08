@@ -72,6 +72,7 @@ export default hasClerk
       })
 
       const shouldResolve =
+        pathname === '/' ||
         isAuthRoute(req) ||
         isRecruiterRoute(req) ||
         isCandidateRoute(req) ||

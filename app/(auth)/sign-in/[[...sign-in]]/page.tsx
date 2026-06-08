@@ -22,7 +22,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
 
   const access = await getUserAppAccess()
   if (access.isSignedIn) {
-    if (access.preferredWorkspace === 'unassigned' && intent) {
+    if (intent) {
       redirect(authContinuePath(intent))
     }
     redirect(getPostSignInPath(access))

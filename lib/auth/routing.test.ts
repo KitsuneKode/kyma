@@ -137,4 +137,39 @@ describe('resolveAppRoute', () => {
       )
     ).toBeNull()
   })
+
+  it('redirects signed-in users away from marketing homepage', () => {
+    expect(
+      resolveAppRoute(
+        ctx({
+          pathname: '/',
+          preferredWorkspace: 'candidate',
+        })
+      )
+    ).toBe('/candidate')
+  })
+
+  it('redirects signed-in unassigned users from homepage to auth continue', () => {
+    expect(
+      resolveAppRoute(
+        ctx({
+          pathname: '/',
+          preferredWorkspace: null,
+        })
+      )
+    ).toBe('/auth/continue')
+  })
+
+  it('redirects signed-in recruiters from homepage to recruiter home', () => {
+    expect(
+      resolveAppRoute(
+        ctx({
+          pathname: '/',
+          preferredWorkspace: 'recruiter',
+          orgId: 'org_test',
+          canAccessRecruiter: true,
+        })
+      )
+    ).toBe('/recruiter')
+  })
 })
