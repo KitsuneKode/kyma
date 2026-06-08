@@ -13,6 +13,10 @@ Problems.md
 transcript.txt
 document.pdf
 .agents
+.augment/
+.factory/
+.junie/
+.zencoder/
 .claude 
 .kiro
 .pi

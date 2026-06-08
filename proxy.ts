@@ -18,6 +18,7 @@ const isAppShellRoute = createRouteMatcher([
   '/settings(.*)',
 ])
 const isAuthRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)'])
+const isDevPreviewRoute = createRouteMatcher(['/dev(.*)'])
 const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
@@ -26,6 +27,7 @@ const isPublicRoute = createRouteMatcher([
   '/api(.*)',
 ])
 const hasClerk = hasClerkServerCredentials()
+const allowDevPreviewRoutes = process.env.NODE_ENV !== 'production'
 
 export default hasClerk
   ? clerkMiddleware(async (auth, req) => {
@@ -44,7 +46,8 @@ export default hasClerk
       )
 
       const isProtectedRoute =
-        !isPublicRoute(req) ||
+        (!isPublicRoute(req) &&
+          !(allowDevPreviewRoutes && isDevPreviewRoute(req))) ||
         isRecruiterRoute(req) ||
         isCandidateRoute(req) ||
         isOnboardingRoute(req) ||
