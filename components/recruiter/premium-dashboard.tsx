@@ -125,30 +125,11 @@ export function PremiumRecruiterDashboard({
           </h3>
           <div className="no-scrollbar flex max-h-[300px] flex-col gap-4 overflow-y-auto pr-4">
             {dashboardSummary?.recentActivity.length ? (
-              dashboardSummary.recentActivity.slice(0, 8).map((event, i) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 + i * 0.05 }}
-                  className="group flex items-center justify-between gap-6 border-b border-border/30 py-3 last:border-0"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="size-1.5 rounded-full bg-primary/40 transition-colors group-hover:bg-primary" />
-                    <p className="text-sm text-muted-foreground transition-colors group-hover:text-foreground/90">
-                      <span className="font-semibold text-foreground/90">
-                        {formatStatusLabel(event.type)}
-                      </span>{' '}
-                      {event.detail}
-                    </p>
-                  </div>
-                  {event.createdAt ? (
-                    <span className="shrink-0 font-mono text-[10px] text-foreground/30 tabular-nums">
-                      {formatDateTime(event.createdAt)}
-                    </span>
-                  ) : null}
-                </motion.div>
-              ))
+              dashboardSummary.recentActivity
+                .slice(0, 8)
+                .map((event, i) => (
+                  <ActivityStreamRow key={event.id} event={event} index={i} />
+                ))
             ) : (
               <p className="py-6 text-sm text-muted-foreground">
                 No recent activity yet. Completed sessions and review actions
@@ -178,6 +159,64 @@ export function PremiumRecruiterDashboard({
         />
       </section>
     </div>
+  )
+}
+
+function ActivityStreamRow({
+  event,
+  index,
+}: {
+  event: DashboardSummary['recentActivity'][number]
+  index: number
+}) {
+  const rowClassName =
+    'group flex items-center justify-between gap-6 rounded-xl border-b border-border/30 px-2 py-3 transition-colors last:border-0 hover:bg-muted/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+  const reviewHref = event.sessionId
+    ? `/recruiter/candidates/${event.sessionId}`
+    : null
+
+  const content = (
+    <>
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="size-1.5 shrink-0 rounded-full bg-primary/40 transition-colors group-hover:bg-primary" />
+        <p className="truncate text-sm text-muted-foreground transition-colors group-hover:text-foreground/90">
+          <span className="font-semibold text-foreground/90">
+            {formatStatusLabel(event.type)}
+          </span>{' '}
+          {event.detail}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-3">
+        {event.createdAt ? (
+          <span className="font-mono text-[10px] text-foreground/30 tabular-nums transition-colors group-hover:text-foreground/50">
+            {formatDateTime(event.createdAt)}
+          </span>
+        ) : null}
+        {reviewHref ? (
+          <IconArrowRight className="size-3.5 text-foreground/20 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+        ) : null}
+      </div>
+    </>
+  )
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.6 + index * 0.05 }}
+    >
+      {reviewHref ? (
+        <Link
+          href={reviewHref}
+          className={rowClassName}
+          aria-label={`Open review for ${event.detail}`}
+        >
+          {content}
+        </Link>
+      ) : (
+        <div className={rowClassName}>{content}</div>
+      )}
+    </motion.div>
   )
 }
 
