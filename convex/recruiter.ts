@@ -10,6 +10,16 @@ import {
 import { logAuditEvent } from './helpers/audit'
 import { resolveInterviewPolicyFromInvite } from './helpers/interviewPolicy'
 import {
+  assertOrgOwnsReport,
+  assertOrgOwnsSession,
+  assertReportBelongsToSession,
+} from './helpers/orgAccess'
+import {
+  releaseReportToCandidate,
+  resolveReleaseMode,
+  shouldAutoRelease,
+} from './helpers/releasePolicy'
+import {
   hasTrustedProcessingKey,
   resolveOrgIdForPipelineWrite,
 } from './helpers/processingAuth'
@@ -221,10 +231,15 @@ export const getSessionProcessingDetail = query({
 export const getCandidateReviewDetail = query({
   args: {
     sessionId: v.id('interviewSessions'),
+    processingKey: v.optional(v.string()),
   },
-  handler: async (ctx, { sessionId }) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+  handler: async (ctx, { sessionId, processingKey }) => {
+    const orgId = hasTrustedProcessingKey(processingKey)
+      ? await resolveOrgIdForPipelineWrite(ctx, sessionId, processingKey)
+      : await (async () => {
+          await requireAdminIdentity(ctx)
+          return await requireOrgId(ctx)
+        })()
 
     const session = await ctx.db.get(sessionId)
 
@@ -334,6 +349,9 @@ export const getCandidateReviewDetail = query({
             generatedAt: report.generatedAt,
             dimensionScores: report.dimensionScores ?? [],
             policySnapshot: report.policySnapshot,
+            released: report.released ?? false,
+            releasedAt: report.releasedAt,
+            releasedBy: report.releasedBy,
           }
         : null,
       transcriptMetrics: {
@@ -477,6 +495,7 @@ export const saveAssessmentReport = mutation({
     } else {
       await requireAdminIdentity(ctx)
       orgId = await requireOrgId(ctx)
+      await assertOrgOwnsSession(ctx, orgId, args.sessionId)
     }
 
     if (!pipelineWrite) {
@@ -563,6 +582,10 @@ export const submitReviewDecision = mutation({
     const orgId = await requireOrgId(ctx)
     const reviewerId = await getRecruiterActorId(ctx)
 
+    await assertOrgOwnsSession(ctx, orgId, args.sessionId)
+    const report = await assertOrgOwnsReport(ctx, orgId, args.reportId)
+    assertReportBelongsToSession(report, args.sessionId)
+
     const decisionId = await ctx.db.insert('reviewDecisions', {
       orgId,
       ...args,
@@ -581,6 +604,43 @@ export const submitReviewDecision = mutation({
       },
     })
 
+    const session = await ctx.db.get(args.sessionId)
+    const invite = session ? await ctx.db.get(session.inviteId) : null
+    if (invite) {
+      const releaseMode = await resolveReleaseMode(ctx, invite)
+      if (shouldAutoRelease(args.decision, releaseMode)) {
+        await releaseReportToCandidate(ctx, {
+          reportId: args.reportId,
+          actorId: reviewerId ?? undefined,
+          orgId,
+          sessionId: args.sessionId,
+        })
+      }
+    }
+
     return decisionId
+  },
+})
+
+export const releaseReport = mutation({
+  args: {
+    reportId: v.id('assessmentReports'),
+    sessionId: v.id('interviewSessions'),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminIdentity(ctx)
+    const orgId = await requireOrgId(ctx)
+    const actorId = await getRecruiterActorId(ctx)
+
+    await assertOrgOwnsSession(ctx, orgId, args.sessionId)
+    const report = await assertOrgOwnsReport(ctx, orgId, args.reportId)
+    assertReportBelongsToSession(report, args.sessionId)
+
+    return await releaseReportToCandidate(ctx, {
+      reportId: args.reportId,
+      actorId: actorId ?? undefined,
+      orgId,
+      sessionId: args.sessionId,
+    })
   },
 })

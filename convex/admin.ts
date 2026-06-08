@@ -9,6 +9,7 @@ import {
   requireOrgId,
 } from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
+import { assertOrgOwnsReport, assertOrgOwnsSession } from './helpers/orgAccess'
 import { ensureDefaultTemplate } from './helpers/templates'
 import { decryptProviderKey, encryptProviderKey } from './helpers/encryption'
 import { runtimeEnv } from '../lib/env/runtime'
@@ -251,6 +252,9 @@ export const createScreeningBatch = mutation({
     templateId: v.optional(v.id('assessmentTemplates')),
     targetDurationMinutes: v.optional(v.number()),
     allowsResume: v.optional(v.boolean()),
+    candidateReleaseMode: v.optional(
+      v.union(v.literal('auto'), v.literal('manual'), v.literal('inherit'))
+    ),
     candidates: v.array(
       v.object({
         candidateName: v.string(),
@@ -286,6 +290,7 @@ export const createScreeningBatch = mutation({
       allowedAttempts: args.allowedAttempts,
       targetDurationMinutes: args.targetDurationMinutes,
       allowsResume: args.allowsResume,
+      candidateReleaseMode: args.candidateReleaseMode ?? 'inherit',
       createdAt: now,
     })
 
@@ -336,6 +341,16 @@ export const addRecruiterNote = mutation({
     const orgId = await requireOrgId(ctx)
     const authorId = await getRecruiterActorId(ctx)
 
+    await assertOrgOwnsSession(ctx, orgId, args.sessionId)
+    if (args.reportId) {
+      const report = await assertOrgOwnsReport(ctx, orgId, args.reportId)
+      if (report.sessionId !== args.sessionId) {
+        throw new ConvexError(
+          'Assessment report does not belong to this session.'
+        )
+      }
+    }
+
     const noteId = await ctx.db.insert('recruiterNotes', {
       orgId,
       ...args,
@@ -376,6 +391,16 @@ export const addReportChatMessage = mutation({
     await requireAdminIdentity(ctx)
     const orgId = await requireOrgId(ctx)
 
+    await assertOrgOwnsSession(ctx, orgId, args.sessionId)
+    if (args.reportId) {
+      const report = await assertOrgOwnsReport(ctx, orgId, args.reportId)
+      if (report.sessionId !== args.sessionId) {
+        throw new ConvexError(
+          'Assessment report does not belong to this session.'
+        )
+      }
+    }
+
     return await ctx.db.insert('reportChatMessages', {
       orgId,
       ...args,
@@ -389,7 +414,25 @@ export const getDashboardSummary = query({
   handler: async (ctx) => {
     await requireAdminIdentity(ctx)
     const orgId = await requireOrgId(ctx)
-    const [sessions, invites, reports, events] = await Promise.all([
+    const [
+      manualReviewReports,
+      pendingReports,
+      sessions,
+      invites,
+      recentEvents,
+    ] = await Promise.all([
+      ctx.db
+        .query('assessmentReports')
+        .withIndex('by_org_id_and_status', (q) =>
+          q.eq('orgId', orgId).eq('status', 'manual_review')
+        )
+        .collect(),
+      ctx.db
+        .query('assessmentReports')
+        .withIndex('by_org_id_and_status', (q) =>
+          q.eq('orgId', orgId).eq('status', 'pending')
+        )
+        .collect(),
       ctx.db
         .query('interviewSessions')
         .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
@@ -399,22 +442,19 @@ export const getDashboardSummary = query({
         .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
         .collect(),
       ctx.db
-        .query('assessmentReports')
-        .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-        .collect(),
-      ctx.db
         .query('sessionEvents')
-        .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-        .collect(),
+        .withIndex('by_org_id_and_created_at', (q) => q.eq('orgId', orgId))
+        .order('desc')
+        .take(10),
     ])
+
+    const reports = [...manualReviewReports, ...pendingReports]
 
     const now = Date.now()
     const in24h = now + 24 * 60 * 60 * 1000
     const oneHourAgo = now - 60 * 60 * 1000
 
-    const pendingReviews = reports.filter(
-      (r) => r.status === 'pending' || r.status === 'manual_review'
-    ).length
+    const pendingReviews = reports.length
     const activeSessions = sessions.filter((s) =>
       ['connecting', 'live', 'reconnecting'].includes(s.state)
     ).length
@@ -433,6 +473,18 @@ export const getDashboardSummary = query({
       reports.map((report) => [`${report.sessionId}`, report])
     )
 
+    const manualReviewCandidates = await Promise.all(
+      manualReviewReports.map(async (report) => {
+        const session = await ctx.db.get(report.sessionId)
+        const invite = session ? await ctx.db.get(session.inviteId) : null
+        return {
+          reportId: report._id,
+          sessionId: report.sessionId,
+          candidateName: invite?.candidateName ?? 'Candidate',
+        }
+      })
+    )
+
     return {
       counts: {
         pendingReviews,
@@ -441,12 +493,7 @@ export const getDashboardSummary = query({
         sessionsToday,
       },
       needsAttention: {
-        manualReviewCandidates: reports
-          .filter((report) => report.status === 'manual_review')
-          .map((report) => ({
-            reportId: report._id,
-            sessionId: report.sessionId,
-          })),
+        manualReviewCandidates,
         invitesExpiringSoon: invites
           .filter((invite) => {
             const expiry = Date.parse(invite.expiresAt)
@@ -456,6 +503,7 @@ export const getDashboardSummary = query({
             inviteId: invite._id,
             inviteToken: invite.inviteToken,
             expiresAt: invite.expiresAt,
+            candidateName: invite.candidateName,
           })),
         staleSessions: sessions
           .filter((session) => {
@@ -468,16 +516,13 @@ export const getDashboardSummary = query({
             startedAt: session.startedAt,
           })),
       },
-      recentActivity: [...events]
-        .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
-        .slice(0, 10)
-        .map((event) => ({
-          id: event._id,
-          type: event.type,
-          detail: event.detail,
-          sessionId: event.sessionId,
-          createdAt: event.createdAt,
-        })),
+      recentActivity: recentEvents.map((event) => ({
+        id: event._id,
+        type: event.type,
+        detail: event.detail,
+        sessionId: event.sessionId,
+        createdAt: event.createdAt,
+      })),
     }
   },
 })
@@ -495,6 +540,7 @@ export const getWorkspaceSettings = query({
     return {
       id: settings._id,
       defaultModels: settings.defaultModels,
+      candidateReleaseMode: settings.candidateReleaseMode ?? 'auto',
       providerKeys:
         settings.providerKeys?.map((item) => ({
           keyId: item.keyId,
@@ -612,6 +658,36 @@ export const updateDefaultModels = mutation({
     }
     await ctx.db.patch(settings._id, {
       defaultModels: args.models,
+      updatedAt: now,
+      updatedBy: actor,
+    })
+    return settings._id
+  },
+})
+
+export const updateCandidateReleaseMode = mutation({
+  args: {
+    mode: v.union(v.literal('auto'), v.literal('manual')),
+  },
+  handler: async (ctx, args) => {
+    const { identity } = await requireAdmin(ctx)
+    const orgId = await requireOrgId(ctx)
+    const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
+    const now = Date.now()
+    const settings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
+    if (!settings) {
+      return await ctx.db.insert('workspaceSettings', {
+        orgId,
+        candidateReleaseMode: args.mode,
+        updatedAt: now,
+        updatedBy: actor,
+      })
+    }
+    await ctx.db.patch(settings._id, {
+      candidateReleaseMode: args.mode,
       updatedAt: now,
       updatedBy: actor,
     })

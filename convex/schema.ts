@@ -172,6 +172,9 @@ export default defineSchema({
     allowedAttempts: v.number(),
     targetDurationMinutes: v.optional(v.number()),
     allowsResume: v.optional(v.boolean()),
+    candidateReleaseMode: v.optional(
+      v.union(v.literal('auto'), v.literal('manual'), v.literal('inherit'))
+    ),
     createdAt: v.string(),
   })
     .index('by_org_id', ['orgId'])
@@ -267,7 +270,8 @@ export default defineSchema({
   })
     .index('by_org_id', ['orgId'])
     .index('by_session', ['sessionId'])
-    .index('by_session_and_dedupe_key', ['sessionId', 'dedupeKey']),
+    .index('by_session_and_dedupe_key', ['sessionId', 'dedupeKey'])
+    .index('by_org_id_and_created_at', ['orgId', 'createdAt']),
 
   transcriptSegments: defineTable({
     sessionId: v.id('interviewSessions'),
@@ -378,10 +382,13 @@ export default defineSchema({
     generatedAt: v.optional(v.string()),
     policySnapshot: v.optional(interviewPolicySnapshotValidator),
     released: v.optional(v.boolean()),
+    releasedAt: v.optional(v.string()),
+    releasedBy: v.optional(v.string()),
   })
     .index('by_org_id', ['orgId'])
     .index('by_session', ['sessionId'])
-    .index('by_status', ['status']),
+    .index('by_status', ['status'])
+    .index('by_org_id_and_status', ['orgId', 'status']),
 
   dimensionEvidence: defineTable({
     orgId: v.string(),
@@ -484,6 +491,9 @@ export default defineSchema({
         tts: v.optional(v.string()),
         reviewChat: v.optional(v.string()),
       })
+    ),
+    candidateReleaseMode: v.optional(
+      v.union(v.literal('auto'), v.literal('manual'))
     ),
     updatedAt: v.number(),
     updatedBy: v.string(),

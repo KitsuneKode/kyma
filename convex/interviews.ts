@@ -86,7 +86,7 @@ function isInviteExpired(expiresAt: string) {
   const parsed = Date.parse(expiresAt)
 
   if (Number.isNaN(parsed)) {
-    return false
+    return true
   }
 
   return parsed <= Date.now()
@@ -423,6 +423,7 @@ export const bootstrapPublicSession = mutation({
   },
   handler: async (ctx, { inviteToken, participantName }) => {
     const invite = await ensureInvite(ctx, inviteToken)
+    const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite)
     const existingSession = await ctx.db
       .query('interviewSessions')
       .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
@@ -475,6 +476,10 @@ export const bootstrapPublicSession = mutation({
         )
       }
       if (existingSession.state === 'interrupted') {
+        if (!policy.allowsResume) {
+          throw new ConvexError('This screening does not allow session resume.')
+        }
+
         const reopenedRoomName = `interview-${inviteToken}-${Date.now()}`
         const reopenedAt = new Date().toISOString()
 
@@ -506,6 +511,13 @@ export const bootstrapPublicSession = mutation({
         sessionId: existingSession._id,
         roomName: existingSession.roomName,
         templateName: template?.name ?? 'AI Tutor Screener',
+      }
+    }
+
+    if (invite.eligibilityId) {
+      const eligibility = await ctx.db.get(invite.eligibilityId)
+      if (eligibility && eligibility.attemptCount >= policy.maxAttempts) {
+        throw new ConvexError('Maximum attempts reached for this invite.')
       }
     }
 
@@ -969,20 +981,17 @@ export const linkCandidateInviteByEmail = mutation({
       )
       .collect()
     await Promise.all(
-      invites.map((invite) =>
-        ctx.db.patch(invite._id, {
+      invites.map(async (invite) => {
+        await ctx.db.patch(invite._id, {
           userId: user._id,
         })
-      )
-    )
-    const sessions = await ctx.db.query('interviewSessions').collect()
-    await Promise.all(
-      sessions.map(async (session) => {
-        const invite = invites.find(
-          (candidateInvite) => candidateInvite._id === session.inviteId
-        )
-        if (!invite) return
-        await ctx.db.patch(session._id, { candidateUserId: user._id })
+        const session = await ctx.db
+          .query('interviewSessions')
+          .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
+          .first()
+        if (session) {
+          await ctx.db.patch(session._id, { candidateUserId: user._id })
+        }
       })
     )
     return { linkedInvites: invites.length }

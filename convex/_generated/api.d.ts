@@ -16,6 +16,7 @@ import type * as helpers_auth from "../helpers/auth.js";
 import type * as helpers_clerkIdentity from "../helpers/clerkIdentity.js";
 import type * as helpers_encryption from "../helpers/encryption.js";
 import type * as helpers_interviewPolicy from "../helpers/interviewPolicy.js";
+import type * as helpers_processingAuth from "../helpers/processingAuth.js";
 import type * as helpers_templates from "../helpers/templates.js";
 import type * as interviews from "../interviews.js";
 import type * as livekit from "../livekit.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   "helpers/clerkIdentity": typeof helpers_clerkIdentity;
   "helpers/encryption": typeof helpers_encryption;
   "helpers/interviewPolicy": typeof helpers_interviewPolicy;
+  "helpers/processingAuth": typeof helpers_processingAuth;
   "helpers/templates": typeof helpers_templates;
   interviews: typeof interviews;
   livekit: typeof livekit;

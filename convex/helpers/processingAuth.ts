@@ -5,12 +5,18 @@ import type { MutationCtx, QueryCtx } from '../_generated/server'
 import { isDevelopmentMode } from '../../lib/runtime-mode'
 import { runtimeEnv } from '../../lib/env/runtime'
 
+const DEV_PROCESSING_KEY = '__dev_preview__'
+
 export function hasTrustedProcessingKey(processingKey?: string) {
   const configured = runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
   if (configured) {
     return processingKey?.trim() === configured
   }
-  return isDevelopmentMode(runtimeEnv.NODE_ENV)
+  if (!isDevelopmentMode(runtimeEnv.NODE_ENV)) {
+    return false
+  }
+  const normalized = processingKey?.trim() ?? ''
+  return normalized === '' || normalized === DEV_PROCESSING_KEY
 }
 
 export async function resolveOrgIdForPipelineWrite(
