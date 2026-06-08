@@ -4,11 +4,14 @@ import Link from 'next/link'
 import { startTransition, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery } from 'convex/react'
-import { motion } from 'motion/react'
-import { IconPlus, IconTrash } from '@tabler/icons-react'
+import { motion } from '@/components/motion/client-motion'
 
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
+import {
+  ScreeningCandidateFields,
+  type ScreeningCandidateDraft,
+} from '@/components/admin/screening-candidate-fields'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,6 +33,16 @@ const STAGGER_VARIANTS: any = {
   },
 }
 
+type CandidateDraft = ScreeningCandidateDraft
+
+function createCandidateDraft(): CandidateDraft {
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    email: '',
+  }
+}
+
 export function ScreeningCreationForm() {
   const router = useRouter()
   const templates = useQuery(api.admin.listActiveTemplates)
@@ -41,9 +54,9 @@ export function ScreeningCreationForm() {
     'inherit' | 'auto' | 'manual'
   >('inherit')
   const [templateId, setTemplateId] = useState('')
-  const [candidates, setCandidates] = useState<
-    { name: string; email: string }[]
-  >([{ name: '', email: '' }])
+  const [candidates, setCandidates] = useState<CandidateDraft[]>([
+    createCandidateDraft(),
+  ])
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -73,35 +86,51 @@ export function ScreeningCreationForm() {
     return templates[0].id
   }, [templates, templateId])
 
-  const parsedCandidates = useMemo(
-    () =>
-      candidates
-        .map((c) => ({
-          candidateName: c.name.trim(),
-          candidateEmail: c.email.trim() || undefined,
-        }))
-        .filter((c) => c.candidateName.length > 0),
-    [candidates]
-  )
+  const parsedCandidates = useMemo(() => {
+    const next: Array<{
+      candidateName: string
+      candidateEmail?: string
+    }> = []
+
+    for (const candidate of candidates) {
+      const candidateName = candidate.name.trim()
+      if (candidateName.length === 0) {
+        continue
+      }
+
+      const candidateEmail = candidate.email.trim()
+      next.push({
+        candidateName,
+        candidateEmail: candidateEmail.length > 0 ? candidateEmail : undefined,
+      })
+    }
+
+    return next
+  }, [candidates])
 
   const addCandidate = () => {
-    setCandidates([...candidates, { name: '', email: '' }])
+    setCandidates((current) => [...current, createCandidateDraft()])
   }
 
-  const removeCandidate = (index: number) => {
-    if (candidates.length > 1) {
-      setCandidates(candidates.filter((_, i) => i !== index))
-    }
+  const removeCandidate = (id: string) => {
+    setCandidates((current) => {
+      if (current.length <= 1) {
+        return current
+      }
+      return current.filter((candidate) => candidate.id !== id)
+    })
   }
 
   const updateCandidate = (
-    index: number,
+    id: string,
     field: 'name' | 'email',
     value: string
   ) => {
-    const newCandidates = [...candidates]
-    newCandidates[index][field] = value
-    setCandidates(newCandidates)
+    setCandidates((current) =>
+      current.map((candidate) =>
+        candidate.id === id ? { ...candidate, [field]: value } : candidate
+      )
+    )
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -312,65 +341,13 @@ export function ScreeningCreationForm() {
               </Select>
             </motion.div>
 
-            <motion.div
-              variants={STAGGER_VARIANTS}
-              className="flex flex-col gap-4 border-t border-border/20 pt-8"
-            >
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
-                  Eligible candidates
-                </Label>
-              </div>
-              <div className="flex flex-col gap-3">
-                {candidates.map((candidate, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex items-center gap-3"
-                  >
-                    <Input
-                      value={candidate.name}
-                      onChange={(e) =>
-                        updateCandidate(index, 'name', e.target.value)
-                      }
-                      placeholder="Name"
-                      className="h-12 flex-1 rounded-xl border-border/40 bg-background text-base transition-[border-color,box-shadow,background-color] duration-300 hover:bg-muted/10 focus-visible:ring-4 focus-visible:ring-primary/10"
-                    />
-                    <Input
-                      value={candidate.email}
-                      onChange={(e) =>
-                        updateCandidate(index, 'email', e.target.value)
-                      }
-                      placeholder="Email"
-                      type="email"
-                      className="h-12 flex-1 rounded-xl border-border/40 bg-background text-base transition-[border-color,box-shadow,background-color] duration-300 hover:bg-muted/10 focus-visible:ring-4 focus-visible:ring-primary/10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeCandidate(index)}
-                      disabled={candidates.length === 1}
-                      className="h-12 w-12 shrink-0 rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-                    >
-                      <IconTrash className="size-5" />
-                    </Button>
-                  </motion.div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addCandidate}
-                  className="mt-2 h-12 w-full gap-2 rounded-xl border-dashed border-border/40 text-muted-foreground transition-colors hover:bg-muted/20 hover:text-foreground active:scale-[0.98]"
-                >
-                  <IconPlus className="size-4" />
-                  Add another candidate
-                </Button>
-              </div>
-            </motion.div>
+            <ScreeningCandidateFields
+              candidates={candidates}
+              onAddCandidate={addCandidate}
+              onRemoveCandidate={removeCandidate}
+              onUpdateCandidate={updateCandidate}
+              staggerVariants={STAGGER_VARIANTS}
+            />
 
             {error && (
               <motion.div variants={STAGGER_VARIANTS}>

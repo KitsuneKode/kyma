@@ -36,10 +36,14 @@ export function RecruiterChat({
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (!isOpen) {
+      return
     }
+
+    const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 100)
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+
+    return () => window.clearTimeout(focusTimer)
   }, [isOpen, messages.length])
 
   useEffect(() => {
@@ -181,6 +185,8 @@ export function RecruiterChat({
                   </h3>
                 </div>
                 <button
+                  type="button"
+                  aria-label="Close recruiter copilot"
                   onClick={() => setIsOpen(false)}
                   className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground active:scale-[0.96]"
                 >
@@ -288,6 +294,7 @@ export function RecruiterChat({
                   <textarea
                     ref={inputRef}
                     value={question}
+                    aria-label="Ask about this candidate"
                     onChange={(e) => setQuestion(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Ask a question..."
@@ -296,6 +303,8 @@ export function RecruiterChat({
                     style={{ fieldSizing: 'content', maxHeight: '160px' }}
                   />
                   <button
+                    type="button"
+                    aria-label="Send question"
                     onClick={handleSubmit}
                     disabled={isSubmitting || !question.trim()}
                     className="absolute right-2 bottom-2 flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-[transform,opacity] active:scale-[0.92] disabled:opacity-50"

@@ -8,6 +8,7 @@ import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
+import { StatusBadge } from '@/components/workspace/status-badge'
 import { cn } from '@/lib/utils'
 
 type ReviewDecision = 'advance' | 'reject' | 'manual_review' | 'hold'
@@ -124,16 +125,10 @@ export function ReviewActions({
             </p>
           ) : null}
         </div>
-        <span
-          className={cn(
-            'rounded-full px-2.5 py-0.5 text-xs font-semibold',
-            released
-              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-              : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-          )}
-        >
-          {released ? 'Released to candidate' : 'Not released'}
-        </span>
+        <StatusBadge
+          status={released ? 'released' : 'pending_release'}
+          label={released ? 'Released to candidate' : 'Not released'}
+        />
       </div>
 
       <ButtonGroup className="mt-4 flex-wrap gap-2">

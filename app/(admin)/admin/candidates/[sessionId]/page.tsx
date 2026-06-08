@@ -1,13 +1,11 @@
-import Link from 'next/link'
 import { fetchQuery } from 'convex/nextjs'
 import type { Id } from '@/convex/_generated/dataModel'
 import { api } from '@/convex/_generated/api'
-import { Button } from '@/components/ui/button'
 import { RecruiterChat } from '@/components/recruiter/recruiter-chat'
 import { RecruiterNotes } from '@/components/recruiter/recruiter-notes'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { DecisionBar } from '@/components/recruiter/decision-bar'
-import { WorkspaceEmptyState } from '@/components/workspace/empty-state'
+import { RecruiterReviewAccessPanel } from '@/components/recruiter/recruiter-review-access-panel'
 import { CollapsibleInfoSection } from '@/components/admin/collapsible-info-section'
 import { InfoCard } from '@/components/admin/info-card'
 import { InfoRow } from '@/components/admin/info-row'
@@ -17,7 +15,6 @@ import { formatDateTime, formatStatusLabel } from '@/lib/recruiter/format'
 import { ReviewConsole } from '@/components/recruiter/review-console'
 import { RenderErrorBoundary } from '@/components/errors/render-error-boundary'
 import { runConvexFetch } from '@/lib/convex/server-fetch'
-import { signInPath } from '@/lib/auth/workspace-intent'
 
 type CandidateReviewPageProps = {
   params: Promise<{
@@ -28,8 +25,10 @@ type CandidateReviewPageProps = {
 export default async function CandidateReviewPage({
   params,
 }: CandidateReviewPageProps) {
-  const { sessionId } = await params
-  const token = await getServerConvexAuthToken()
+  const [{ sessionId }, token] = await Promise.all([
+    params,
+    getServerConvexAuthToken(),
+  ])
   const detailResult = clientEnv.NEXT_PUBLIC_CONVEX_URL
     ? await runConvexFetch(() =>
         fetchQuery(
@@ -51,42 +50,10 @@ export default async function CandidateReviewPage({
     const failureMessage = detailResult.ok ? undefined : detailResult.message
 
     return (
-      <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-5xl flex-col gap-6 px-6 py-10">
-        <WorkspaceEmptyState
-          eyebrow="Recruiter review"
-          title={
-            failureKind === 'auth'
-              ? 'Sign in required'
-              : failureKind === 'not_found'
-                ? 'Candidate session not found'
-                : 'Unable to load review'
-          }
-          description={
-            failureKind === 'not_found'
-              ? 'The session id may be invalid, or Convex is not configured in this environment.'
-              : (failureMessage ??
-                'Your session may have expired or you may not have access to this organization.')
-          }
-          action={
-            failureKind === 'auth' ? (
-              <Button
-                nativeButton={false}
-                render={<Link href={signInPath('recruiter')} />}
-              >
-                Sign in again
-              </Button>
-            ) : (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={<Link href="/recruiter/candidates" />}
-              >
-                Back to candidates
-              </Button>
-            )
-          }
-        />
-      </main>
+      <RecruiterReviewAccessPanel
+        failureKind={failureKind}
+        failureMessage={failureMessage}
+      />
     )
   }
 

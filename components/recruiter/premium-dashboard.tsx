@@ -1,7 +1,8 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { motion } from 'motion/react'
+import { motion } from '@/components/motion/client-motion'
 import {
   IconUsers,
   IconFolder,
@@ -123,30 +124,37 @@ export function PremiumRecruiterDashboard({
             Recent activity stream
           </h3>
           <div className="no-scrollbar flex max-h-[300px] flex-col gap-4 overflow-y-auto pr-4">
-            {dashboardSummary?.recentActivity.slice(0, 8).map((event, i) => (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 + i * 0.05 }}
-                className="group flex items-center justify-between gap-6 border-b border-border/30 py-3 last:border-0"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="size-1.5 rounded-full bg-primary/40 transition-colors group-hover:bg-primary" />
-                  <p className="text-sm text-muted-foreground transition-colors group-hover:text-foreground/90">
-                    <span className="font-semibold text-foreground/90">
-                      {formatStatusLabel(event.type)}
-                    </span>{' '}
-                    {event.detail}
-                  </p>
-                </div>
-                {event.createdAt ? (
-                  <span className="shrink-0 font-mono text-[10px] text-foreground/30 tabular-nums">
-                    {formatDateTime(event.createdAt)}
-                  </span>
-                ) : null}
-              </motion.div>
-            ))}
+            {dashboardSummary?.recentActivity.length ? (
+              dashboardSummary.recentActivity.slice(0, 8).map((event, i) => (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 + i * 0.05 }}
+                  className="group flex items-center justify-between gap-6 border-b border-border/30 py-3 last:border-0"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="size-1.5 rounded-full bg-primary/40 transition-colors group-hover:bg-primary" />
+                    <p className="text-sm text-muted-foreground transition-colors group-hover:text-foreground/90">
+                      <span className="font-semibold text-foreground/90">
+                        {formatStatusLabel(event.type)}
+                      </span>{' '}
+                      {event.detail}
+                    </p>
+                  </div>
+                  {event.createdAt ? (
+                    <span className="shrink-0 font-mono text-[10px] text-foreground/30 tabular-nums">
+                      {formatDateTime(event.createdAt)}
+                    </span>
+                  ) : null}
+                </motion.div>
+              ))
+            ) : (
+              <p className="py-6 text-sm text-muted-foreground">
+                No recent activity yet. Completed sessions and review actions
+                will appear here.
+              </p>
+            )}
           </div>
         </motion.div>
       </div>
@@ -180,7 +188,7 @@ function NeedsAttentionRow({
   count,
 }: {
   href: string
-  icon: React.ReactNode
+  icon: ReactNode
   label: string
   count: number
 }) {
@@ -211,7 +219,7 @@ function QuickActionCard({
   delay,
 }: {
   href: string
-  icon: React.ReactNode
+  icon: ReactNode
   title: string
   description: string
   cta: string

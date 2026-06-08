@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useAction, useMutation, useQuery } from 'convex/react'
+
+import type { FunctionReturnType } from 'convex/server'
 
 import { api } from '@/convex/_generated/api'
 import { PageHeader } from '@/components/admin/page-header'
@@ -16,8 +18,22 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-export default function SettingsPage() {
-  const settings = useQuery(api.admin.getWorkspaceSettings, {})
+type WorkspaceSettings = NonNullable<
+  FunctionReturnType<typeof api.admin.getWorkspaceSettings>
+>
+
+function settingsFormKey(settings: WorkspaceSettings) {
+  return [
+    settings.candidateReleaseMode ?? 'auto',
+    settings.defaultModels?.stt ?? '',
+    settings.defaultModels?.llm ?? '',
+    settings.defaultModels?.tts ?? '',
+    settings.defaultModels?.reviewChat ?? '',
+    settings.providerKeys?.length ?? 0,
+  ].join('|')
+}
+
+function SettingsForms({ settings }: { settings: WorkspaceSettings }) {
   const addProviderKey = useMutation(api.admin.addProviderKey)
   const removeProviderKey = useMutation(api.admin.removeProviderKey)
   const updateDefaultModels = useMutation(api.admin.updateDefaultModels)
@@ -29,49 +45,17 @@ export default function SettingsPage() {
   const [key, setKey] = useState('')
   const [label, setLabel] = useState('')
   const [models, setModels] = useState({
-    stt: '',
-    llm: '',
-    tts: '',
-    reviewChat: '',
+    stt: settings.defaultModels?.stt ?? '',
+    llm: settings.defaultModels?.llm ?? '',
+    tts: settings.defaultModels?.tts ?? '',
+    reviewChat: settings.defaultModels?.reviewChat ?? '',
   })
-  const [releaseMode, setReleaseMode] = useState<'auto' | 'manual'>('auto')
-
-  useEffect(() => {
-    if (!settings) {
-      return
-    }
-    setModels({
-      stt: settings.defaultModels?.stt ?? '',
-      llm: settings.defaultModels?.llm ?? '',
-      tts: settings.defaultModels?.tts ?? '',
-      reviewChat: settings.defaultModels?.reviewChat ?? '',
-    })
-    setReleaseMode(settings.candidateReleaseMode ?? 'auto')
-  }, [settings])
-
-  if (settings === undefined) {
-    return (
-      <div className="flex w-full flex-col gap-8">
-        <PageHeader
-          eyebrow="Configuration"
-          title="Workspace Settings"
-          description="Manage BYOK provider keys and default models."
-        />
-        <WorkspaceSurface className="p-6">
-          <p className="text-sm text-muted-foreground">Loading settings…</p>
-        </WorkspaceSurface>
-      </div>
-    )
-  }
+  const [releaseMode, setReleaseMode] = useState<'auto' | 'manual'>(
+    settings.candidateReleaseMode ?? 'auto'
+  )
 
   return (
-    <div className="flex w-full flex-col gap-8">
-      <PageHeader
-        eyebrow="Configuration"
-        title="Workspace Settings"
-        description="Manage BYOK provider keys, default models, and candidate release policy."
-      />
-
+    <>
       <WorkspaceSurface className="p-6">
         <h2 className="text-lg font-semibold">Provider keys</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -95,6 +79,7 @@ export default function SettingsPage() {
         </div>
         <div className="mt-3 flex gap-3">
           <Button
+            type="button"
             onClick={() => {
               void addProviderKey({
                 provider,
@@ -106,6 +91,7 @@ export default function SettingsPage() {
             Add key
           </Button>
           <Button
+            type="button"
             variant="outline"
             onClick={() => void testProviderConnection({ provider })}
           >
@@ -113,7 +99,7 @@ export default function SettingsPage() {
           </Button>
         </div>
         <div className="mt-4 space-y-2">
-          {settings?.providerKeys?.map((item) => (
+          {settings.providerKeys?.map((item) => (
             <div
               key={item.keyId}
               className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/20 p-3"
@@ -123,6 +109,7 @@ export default function SettingsPage() {
                 {item.maskedKeyTail ?? '****'}
               </p>
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() =>
@@ -175,6 +162,7 @@ export default function SettingsPage() {
           />
         </div>
         <Button
+          type="button"
           className="mt-4"
           onClick={() =>
             void updateDefaultModels({
@@ -216,12 +204,62 @@ export default function SettingsPage() {
           </Select>
         </div>
         <Button
+          type="button"
           className="mt-4"
           onClick={() => void updateCandidateReleaseMode({ mode: releaseMode })}
         >
           Save release policy
         </Button>
       </WorkspaceSurface>
+    </>
+  )
+}
+
+export default function SettingsPage() {
+  const settings = useQuery(api.admin.getWorkspaceSettings, {})
+
+  if (settings === undefined) {
+    return (
+      <div className="flex w-full flex-col gap-8">
+        <PageHeader
+          eyebrow="Configuration"
+          title="Workspace Settings"
+          description="Manage BYOK provider keys and default models."
+        />
+        <WorkspaceSurface className="p-6">
+          <p className="text-sm text-muted-foreground">Loading settings…</p>
+        </WorkspaceSurface>
+      </div>
+    )
+  }
+
+  if (settings === null) {
+    return (
+      <div className="flex w-full flex-col gap-8">
+        <PageHeader
+          eyebrow="Configuration"
+          title="Workspace Settings"
+          description="Workspace settings are not available for this organization yet."
+        />
+        <WorkspaceSurface className="p-6">
+          <p className="text-sm text-muted-foreground">
+            Settings could not be loaded. Confirm your organization access and
+            try again.
+          </p>
+        </WorkspaceSurface>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-8">
+      <PageHeader
+        eyebrow="Configuration"
+        title="Workspace Settings"
+        description="Manage BYOK provider keys, default models, and candidate release policy."
+      />
+
+      <SettingsForms key={settingsFormKey(settings)} settings={settings} />
     </div>
   )
 }

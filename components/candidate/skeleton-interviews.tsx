@@ -16,14 +16,21 @@ export function SkeletonCandidateInterviews() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Pulse key={index} className="h-8 w-24 rounded-full" />
+        {(
+          [
+            ['all', 'All'],
+            ['active', 'Active'],
+            ['pending_release', 'Pending release'],
+            ['released', 'Released'],
+          ] as const
+        ).map(([value]) => (
+          <Pulse key={`filter-${value}`} className="h-8 w-24 rounded-full" />
         ))}
       </div>
 
       <div className="flex flex-col gap-4">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <Pulse key={index} className="h-36 rounded-2xl" />
+        {(['card-a', 'card-b', 'card-c'] as const).map((id) => (
+          <Pulse key={id} className="h-36 rounded-2xl" />
         ))}
       </div>
     </div>

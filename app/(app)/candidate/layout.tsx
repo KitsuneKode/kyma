@@ -23,16 +23,22 @@ export default async function CandidateLayout({
   children: ReactNode
 }) {
   await connection()
-  const access = await requireCandidatePageAccess()
+  const [access, token] = await Promise.all([
+    requireCandidatePageAccess(),
+    getServerConvexAuthToken(),
+  ])
   const clerkEnabled = hasClerkServerCredentials()
-  const token = await getServerConvexAuthToken()
 
   if (clientEnv.NEXT_PUBLIC_CONVEX_URL && token) {
-    await fetchMutation(
-      api.interviews.linkCandidateInviteByEmail,
-      {},
-      { token: token ?? undefined }
-    ).catch(() => null)
+    try {
+      await fetchMutation(
+        api.interviews.linkCandidateInviteByEmail,
+        {},
+        { token: token ?? undefined }
+      )
+    } catch {
+      // Best-effort linking; candidate routes still render if this fails.
+    }
   }
 
   return (

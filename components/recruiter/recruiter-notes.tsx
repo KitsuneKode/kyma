@@ -80,7 +80,11 @@ export function RecruiterNotes({
         )}
       </div>
 
+      <label className="block text-sm font-medium" htmlFor="recruiter-note">
+        New note
+      </label>
       <textarea
+        id="recruiter-note"
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder="Capture your recruiter observations here."

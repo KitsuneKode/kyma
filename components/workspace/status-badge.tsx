@@ -39,9 +39,11 @@ function displayLabel(status: string) {
 
 export function StatusBadge({
   status,
+  label,
   className,
 }: {
   status: string
+  label?: string
   className?: string
 }) {
   return (
@@ -52,7 +54,7 @@ export function StatusBadge({
         className
       )}
     >
-      {displayLabel(status)}
+      {label ?? displayLabel(status)}
     </span>
   )
 }

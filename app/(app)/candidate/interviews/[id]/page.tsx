@@ -10,6 +10,7 @@ import {
   formatDateTime,
   formatRecommendationLabel,
 } from '@/lib/recruiter/format'
+import { WorkspacePageHeader } from '@/components/workspace/page-header'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 import { runConvexFetch } from '@/lib/convex/server-fetch'
 
@@ -20,8 +21,10 @@ type InterviewResultPageProps = {
 export default async function CandidateInterviewResultPage({
   params,
 }: InterviewResultPageProps) {
-  const { id } = await params
-  const token = await getServerConvexAuthToken()
+  const [{ id }, token] = await Promise.all([
+    params,
+    getServerConvexAuthToken(),
+  ])
   const resultFetch =
     clientEnv.NEXT_PUBLIC_CONVEX_URL && token
       ? await runConvexFetch(() =>
@@ -37,17 +40,21 @@ export default async function CandidateInterviewResultPage({
 
   return (
     <section className="space-y-6">
-      <header className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Interview result</h1>
-        <Button
-          nativeButton={false}
-          variant="outline"
-          size="sm"
-          render={<Link href="/candidate/interviews" />}
-        >
-          Back to interviews
-        </Button>
-      </header>
+      <WorkspacePageHeader
+        eyebrow="Interview outcome"
+        title="Interview result"
+        description="Review your released outcome or current processing status."
+        actions={
+          <Button
+            nativeButton={false}
+            variant="outline"
+            size="sm"
+            render={<Link href="/candidate/interviews" />}
+          >
+            Back to interviews
+          </Button>
+        }
+      />
 
       {!resultFetch.ok || !result ? (
         <WorkspaceSurface className="p-5">
