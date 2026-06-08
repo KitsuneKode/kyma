@@ -20,13 +20,6 @@ export async function POST(request: NextRequest) {
     request.headers.get('x-real-ip') ??
     'unknown'
 
-  await fetchAction(api.rateLimiter.checkLimit, {
-    name: 'publicSnapshot',
-    key: `bootstrap:${clientIp}`,
-  }).catch(() => {
-    throw new Error('RATE_LIMITED')
-  })
-
   const body = await request.json().catch(() => null)
   const parsed = bootstrapBodySchema.safeParse(body)
 
@@ -45,14 +38,22 @@ export async function POST(request: NextRequest) {
   }
 
   const { inviteToken, participantName } = parsed.data
-  logger.info({
-    event: 'bootstrap.started',
-    detail: 'Bootstrapping interview session.',
-    inviteToken,
-    participantIdentity: participantName,
-  })
 
   try {
+    await fetchAction(api.rateLimiter.checkLimit, {
+      name: 'publicSnapshot',
+      key: `bootstrap:${clientIp}`,
+    }).catch(() => {
+      throw new Error('RATE_LIMITED')
+    })
+
+    logger.info({
+      event: 'bootstrap.started',
+      detail: 'Bootstrapping interview session.',
+      inviteToken,
+      participantIdentity: participantName,
+    })
+
     const session = await fetchMutation(api.interviews.bootstrapPublicSession, {
       inviteToken,
       participantName,

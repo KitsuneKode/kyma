@@ -26,10 +26,12 @@ export async function POST(request: NextRequest) {
     actor: 'server',
     requestId,
   })
+  let sessionIdForFailure: string | undefined
 
   try {
     const json = await request.json()
     const { sessionId, inviteToken } = bodySchema.parse(json)
+    sessionIdForFailure = sessionId
     const typedSessionId = sessionId as Id<'interviewSessions'>
     const allowed = await fetchQuery(
       api.interviews.verifyPublicSessionProcessingAccess,
@@ -93,18 +95,10 @@ export async function POST(request: NextRequest) {
       error instanceof Error
         ? error.message
         : 'Unable to start interview processing.'
-    const sessionId =
-      error instanceof z.ZodError
-        ? undefined
-        : await request
-            .clone()
-            .json()
-            .then((body) => body?.sessionId as string | undefined)
-            .catch(() => undefined)
 
-    if (sessionId) {
+    if (sessionIdForFailure) {
       await markAssessmentFailed(
-        sessionId as Id<'interviewSessions'>,
+        sessionIdForFailure as Id<'interviewSessions'>,
         `Assessment processing could not be started: ${message}`
       ).catch(() => null)
     }

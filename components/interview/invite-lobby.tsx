@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { PreJoin, type LocalUserChoices } from '@livekit/components-react'
 
 import { formatDurationPolicy, formatExpiryLabel } from '@/lib/interview/policy'
@@ -29,6 +30,10 @@ export function InviteLobby({
   onSubmit,
 }: InviteLobbyProps) {
   const companyName = initialSnapshot.templateName?.trim()
+  const interviewLabel = companyName
+    ? companyName.replace(/\s+default$/i, '')
+    : 'Kyma'
+  const [prejoinError, setPrejoinError] = useState<string | null>(null)
 
   return (
     <div className="grid min-h-[100dvh] w-full items-center gap-10 px-6 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-10">
@@ -53,7 +58,11 @@ export function InviteLobby({
                 void onSubmit({ ...choices, username: candidateName })
               }}
               onError={(error) => {
-                console.error('[kyma:prejoin] prejoin.error', error)
+                setPrejoinError(
+                  error instanceof Error && error.name === 'NotSupportedError'
+                    ? 'Camera and microphone preview is not supported in this browser context. Try Chrome on HTTPS or localhost.'
+                    : 'Unable to start the device preview. Check camera and microphone permissions.'
+                )
               }}
             />
           </div>
@@ -72,6 +81,12 @@ export function InviteLobby({
             {connectionError}
           </div>
         ) : null}
+
+        {prejoinError ? (
+          <div className="mt-5 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-4 text-sm font-medium text-amber-100 backdrop-blur-sm">
+            {prejoinError}
+          </div>
+        ) : null}
       </section>
 
       {/* Right: Sleek Typography and Details */}
@@ -85,7 +100,7 @@ export function InviteLobby({
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1">
               <span className="flex size-2 animate-pulse rounded-full bg-primary" />
               <p className="text-xs font-semibold tracking-wider text-primary uppercase">
-                {companyName ? `${companyName} Interview` : 'Kyma Interview'}
+                {interviewLabel} interview
               </p>
             </div>
             <h1 className="mt-2 text-5xl font-semibold tracking-tight text-balance antialiased sm:text-6xl lg:text-7xl">
