@@ -35,11 +35,12 @@ async function assertTranscriptWriteThrottle(
   sessionId: Id<'interviewSessions'>
 ) {
   const since = new Date(Date.now() - WRITE_WINDOW_MS).toISOString()
-  const segments = await ctx.db
+  const recent = await ctx.db
     .query('transcriptSegments')
-    .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-    .collect()
-  const recent = segments.filter((segment) => segment.startedAt >= since)
+    .withIndex('by_session_and_started_at', (q) =>
+      q.eq('sessionId', sessionId).gte('startedAt', since)
+    )
+    .take(MAX_TRANSCRIPT_WRITES_PER_WINDOW + 1)
 
   if (recent.length > MAX_TRANSCRIPT_WRITES_PER_WINDOW) {
     throw new ConvexError(

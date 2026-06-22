@@ -221,6 +221,7 @@ export default defineSchema({
     .index('by_org_id', ['orgId'])
     .index('by_session', ['sessionId'])
     .index('by_session_and_dedupe_key', ['sessionId', 'dedupeKey'])
+    .index('by_session_and_created_at', ['sessionId', 'createdAt'])
     .index('by_org_id_and_created_at', ['orgId', 'createdAt']),
 
   transcriptSegments: defineTable({
@@ -237,10 +238,8 @@ export default defineSchema({
     endedAt: v.optional(v.string()),
   })
     .index('by_session', ['sessionId'])
-    .index('by_session_and_source_segment_id', [
-      'sessionId',
-      'sourceSegmentId',
-    ]),
+    .index('by_session_and_source_segment_id', ['sessionId', 'sourceSegmentId'])
+    .index('by_session_and_started_at', ['sessionId', 'startedAt']),
 
   candidateReadinessRuns: defineTable({
     candidateUserId: v.id('users'),

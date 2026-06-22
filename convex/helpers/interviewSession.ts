@@ -49,11 +49,12 @@ export async function assertSessionEventThrottle(
   sessionId: Id<'interviewSessions'>
 ) {
   const since = new Date(Date.now() - WRITE_WINDOW_MS).toISOString()
-  const events = await ctx.db
+  const recent = await ctx.db
     .query('sessionEvents')
-    .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-    .collect()
-  const recent = events.filter((event) => event.createdAt >= since)
+    .withIndex('by_session_and_created_at', (q) =>
+      q.eq('sessionId', sessionId).gte('createdAt', since)
+    )
+    .take(MAX_SESSION_EVENTS_PER_WINDOW + 1)
 
   if (recent.length > MAX_SESSION_EVENTS_PER_WINDOW) {
     throw new ConvexError(
@@ -62,14 +63,15 @@ export async function assertSessionEventThrottle(
   }
 }
 
-export function isInviteExpired(expiresAt: string) {
+export function isInviteExpired(expiresAt: string, nowMs?: number) {
   const parsed = Date.parse(expiresAt)
 
   if (Number.isNaN(parsed)) {
     return true
   }
 
-  return parsed <= Date.now()
+  const now = nowMs ?? Date.now()
+  return parsed <= now
 }
 
 export async function requireInviteSessionWriteAccess(
@@ -104,7 +106,8 @@ export async function requireInviteSessionWriteAccess(
 
 export function deriveAccessState(
   invite: Pick<Doc<'candidateInvites'>, 'status' | 'expiresAt'> | null,
-  session: Pick<Doc<'interviewSessions'>, 'state'> | null
+  session: Pick<Doc<'interviewSessions'>, 'state'> | null,
+  nowMs?: number
 ) {
   if (!invite) {
     return {
@@ -113,7 +116,7 @@ export function deriveAccessState(
     }
   }
 
-  if (invite.status === 'expired' || isInviteExpired(invite.expiresAt)) {
+  if (invite.status === 'expired' || isInviteExpired(invite.expiresAt, nowMs)) {
     return {
       accessState: 'expired' as const,
       accessMessage:
