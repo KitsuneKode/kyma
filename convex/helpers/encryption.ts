@@ -1,11 +1,11 @@
 import { ConvexError } from 'convex/values'
 
-import { runtimeEnv } from '../../lib/env/runtime'
+import { convexEnv } from '../../lib/env/convex'
 
 const IV_LENGTH = 12
 
 function getEncryptionKeyBytes() {
-  const key = runtimeEnv.KYMA_ENCRYPTION_KEY?.trim()
+  const key = convexEnv.KYMA_ENCRYPTION_KEY?.trim()
   if (!key) {
     throw new ConvexError(
       'KYMA_ENCRYPTION_KEY is required for BYOK encryption operations.'

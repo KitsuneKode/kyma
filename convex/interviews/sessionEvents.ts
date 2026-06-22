@@ -1,8 +1,8 @@
 import { ConvexError, v } from 'convex/values'
 
 import { internalMutation, mutation } from '../_generated/server'
-import { isDevelopmentMode } from '../../lib/runtime-mode'
-import { runtimeEnv } from '../../lib/env/runtime'
+import { isConvexDevelopmentMode } from '../../lib/env/convex-deployment-mode'
+import { convexEnv } from '../../lib/env/convex'
 import type { InterviewSessionState } from '../../lib/interview/types'
 import { interviewSessionStateValidator } from '../validators'
 import {
@@ -35,12 +35,12 @@ export const appendSessionEvent = mutation({
       state,
     }
   ) => {
-    const configuredProcessingKey = runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+    const configuredProcessingKey = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
     const hasTrustedKey =
       Boolean(configuredProcessingKey) &&
       processingKey === configuredProcessingKey
     const allowDevelopmentBypass =
-      !configuredProcessingKey && isDevelopmentMode(runtimeEnv.NODE_ENV)
+      !configuredProcessingKey && isConvexDevelopmentMode(convexEnv)
 
     const session =
       hasTrustedKey || allowDevelopmentBypass

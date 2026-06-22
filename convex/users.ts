@@ -5,7 +5,7 @@ import {
   clerkIdFromIdentity,
   ensureUserForIdentity,
 } from './helpers/clerkIdentity'
-import { runtimeEnv } from '../lib/env/runtime'
+import { convexEnv } from '../lib/env/convex'
 
 /** Ensures a Convex `users` row exists for the signed-in Clerk account (webhook fallback). */
 export const ensureCurrentUser = mutation({
@@ -68,7 +68,7 @@ export const syncFromClerkWebhook = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const expectedKey = runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+    const expectedKey = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
     if (!expectedKey) {
       throw new ConvexError(
         'KYMA_PROCESSING_WRITE_KEY is required for Clerk webhook sync.'

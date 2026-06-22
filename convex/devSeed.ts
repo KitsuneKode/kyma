@@ -6,7 +6,7 @@ import { api } from './_generated/api'
 import { action } from './_generated/server'
 import { clerkIdFromIdentity } from './helpers/clerkIdentity'
 import { getOrgContextFromIdentity } from './helpers/orgContext'
-import { runtimeEnv } from '../lib/env/runtime'
+import { convexEnv } from '../lib/env/convex'
 
 const RESET_CONFIRMATION = 'RESET_DEV_ONLY'
 const SEED_CONFIRMATION = 'SEED_DEV_ONLY'
@@ -36,7 +36,7 @@ const SEED_TABLES = [
 ] as const
 
 function assertDevelopmentMode() {
-  if (runtimeEnv.NODE_ENV === 'production') {
+  if (convexEnv.NODE_ENV === 'production') {
     throw new ConvexError('Dev seed/reset is blocked in production mode.')
   }
 }

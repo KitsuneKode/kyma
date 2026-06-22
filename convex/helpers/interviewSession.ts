@@ -12,14 +12,14 @@ import {
 } from './interviewPolicy'
 import { ensureDefaultTemplate } from './templates'
 import { isEnabledDemoInviteToken as isEnabledDemoInviteTokenForEnv } from '../../lib/interview/demo-invite'
-import { runtimeEnv } from '../../lib/env/runtime'
+import { convexEnv } from '../../lib/env/convex'
 
 export const WRITE_WINDOW_MS = 60_000
 export const MAX_SESSION_EVENTS_PER_WINDOW = 90
 export const DEMO_ORG_ID = 'org_demo'
 
 export function isEnabledDemoInviteToken(inviteToken: string) {
-  return isEnabledDemoInviteTokenForEnv(inviteToken, runtimeEnv)
+  return isEnabledDemoInviteTokenForEnv(inviteToken, convexEnv)
 }
 
 export function resolveInviteSessionPurpose(

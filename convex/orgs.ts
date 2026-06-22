@@ -1,10 +1,10 @@
 import { ConvexError, v } from 'convex/values'
 
 import { mutation } from './_generated/server'
-import { runtimeEnv } from '../lib/env/runtime'
+import { convexEnv } from '../lib/env/convex'
 
 function requireWebhookWriteKey(writeKey: string) {
-  const expectedKey = runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+  const expectedKey = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
   if (!expectedKey) {
     throw new ConvexError(
       'KYMA_PROCESSING_WRITE_KEY is required for Clerk webhook sync.'

@@ -1,5 +1,9 @@
 import { v } from 'convex/values'
 
+import { RUBRIC_DIMENSIONS } from '../lib/rubric/constants'
+
+export { reviewDecisionValidator } from '../lib/domain/review-decision'
+
 export const recommendationValidator = v.union(
   v.literal('strong_yes'),
   v.literal('yes'),
@@ -14,15 +18,10 @@ export const confidenceValidator = v.union(
 )
 
 export const rubricDimensionValidator = v.union(
-  v.literal('clarity'),
-  v.literal('simplification'),
-  v.literal('patience'),
-  v.literal('warmth'),
-  v.literal('listening'),
-  v.literal('fluency'),
-  v.literal('adaptability'),
-  v.literal('engagement'),
-  v.literal('accuracy')
+  ...(RUBRIC_DIMENSIONS.map((dimension) => v.literal(dimension)) as [
+    ReturnType<typeof v.literal<(typeof RUBRIC_DIMENSIONS)[number]>>,
+    ...ReturnType<typeof v.literal<(typeof RUBRIC_DIMENSIONS)[number]>>[],
+  ])
 )
 
 /** Stored on assessment reports/evidence; supports custom template dimension names. */

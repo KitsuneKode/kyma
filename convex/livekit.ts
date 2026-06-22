@@ -4,8 +4,8 @@ import { mutation } from './_generated/server'
 import { finalizeInterviewForProcessing } from './helpers/finalizeInterviewProcessing'
 import { transitionSessionSafely } from '../lib/interview/session-machine'
 import type { InterviewSessionState } from '../lib/interview/types'
-import { isDevelopmentMode } from '../lib/runtime-mode'
-import { runtimeEnv } from '../lib/env/runtime'
+import { isConvexDevelopmentMode } from '../lib/env/convex-deployment-mode'
+import { convexEnv } from '../lib/env/convex'
 
 function mapArtifactStatus(event: string, hasError: boolean) {
   if (hasError) {
@@ -82,12 +82,12 @@ export const ingestWebhookEvent = mutation({
     details: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const configuredProcessingKey = runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+    const configuredProcessingKey = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
     const hasValidProcessingKey =
       Boolean(configuredProcessingKey) &&
       args.processingKey === configuredProcessingKey
     const allowDevelopmentBypass =
-      !configuredProcessingKey && isDevelopmentMode(runtimeEnv.NODE_ENV)
+      !configuredProcessingKey && isConvexDevelopmentMode(convexEnv)
     if (!hasValidProcessingKey && !allowDevelopmentBypass) {
       return null
     }

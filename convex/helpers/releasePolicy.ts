@@ -4,7 +4,9 @@ import { logAuditEvent } from './audit'
 
 export type CandidateReleaseMode = 'auto' | 'manual'
 
-export type ReviewDecisionKind = 'advance' | 'reject' | 'manual_review' | 'hold'
+import type { ReviewDecision } from '../../lib/domain/review-decision'
+
+export type ReviewDecisionKind = ReviewDecision
 
 export async function resolveReleaseMode(
   ctx: QueryCtx | MutationCtx,

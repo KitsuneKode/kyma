@@ -12,7 +12,7 @@ import { logAuditEvent } from './helpers/audit'
 import { assertOrgOwnsReport, assertOrgOwnsSession } from './helpers/orgAccess'
 import { ensureDefaultTemplate } from './helpers/templates'
 import { decryptProviderKey, encryptProviderKey } from './helpers/encryption'
-import { runtimeEnv } from '../lib/env/runtime'
+import { convexEnv } from '../lib/env/convex'
 import { modelOverridesValidator } from './validators'
 import { DEFAULT_TEMPLATE_STARTER_CONTENT } from '../lib/templates/default-assessment-content'
 import { slugify } from '../lib/format/slug'
@@ -669,7 +669,7 @@ export const testProviderConnection = action({
   },
   handler: async (ctx, args) => {
     await ctx.runQuery(api.admin.assertAdminForAction, {})
-    if (!runtimeEnv.KYMA_ENCRYPTION_KEY?.trim()) {
+    if (!convexEnv.KYMA_ENCRYPTION_KEY?.trim()) {
       throw new ConvexError(
         'KYMA_ENCRYPTION_KEY is required to test provider keys.'
       )

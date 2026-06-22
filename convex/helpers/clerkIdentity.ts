@@ -2,7 +2,7 @@ import { ConvexError } from 'convex/values'
 
 import type { Doc } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
-import { runtimeEnv } from '../../lib/env/runtime'
+import { convexEnv } from '../../lib/env/convex'
 
 type AuthIdentity = NonNullable<
   Awaited<ReturnType<QueryCtx['auth']['getUserIdentity']>>
@@ -11,7 +11,7 @@ type AuthIdentity = NonNullable<
 function isBootstrapAdminEmail(email?: string | null) {
   if (!email) return false
   const allowlist =
-    runtimeEnv.KYMA_ADMIN_EMAILS?.split(',')
+    convexEnv.KYMA_ADMIN_EMAILS?.split(',')
       .map((item) => item.trim().toLowerCase())
       .filter(Boolean) ?? []
   return allowlist.includes(email.toLowerCase())

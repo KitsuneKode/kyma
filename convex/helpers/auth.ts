@@ -1,17 +1,17 @@
 import { ConvexError } from 'convex/values'
 
 import type { MutationCtx, QueryCtx } from '../_generated/server'
-import { runtimeEnv } from '../../lib/env/runtime'
+import { convexEnv } from '../../lib/env/convex'
 import { getOrgContextFromIdentity } from './orgContext'
 
 const ORG_RECRUITER_ACCESS = 'org:recruiter:access'
 
 function hasRecruiterAuthConfig() {
   return Boolean(
-    runtimeEnv.CLERK_SECRET_KEY?.trim() &&
-    runtimeEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() &&
-    (runtimeEnv.CLERK_FRONTEND_API_URL?.trim() ||
-      runtimeEnv.CLERK_JWT_ISSUER_DOMAIN?.trim())
+    convexEnv.CLERK_SECRET_KEY?.trim() &&
+    convexEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() &&
+    (convexEnv.CLERK_FRONTEND_API_URL?.trim() ||
+      convexEnv.CLERK_JWT_ISSUER_DOMAIN?.trim())
   )
 }
 

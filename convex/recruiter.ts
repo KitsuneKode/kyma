@@ -24,22 +24,16 @@ import {
   hasTrustedProcessingKey,
   resolveOrgIdForPipelineWrite,
 } from './helpers/processingAuth'
-import { isDevelopmentMode } from '../lib/runtime-mode'
-import { runtimeEnv } from '../lib/env/runtime'
+import { isConvexDevelopmentMode } from '../lib/env/convex-deployment-mode'
+import { convexEnv } from '../lib/env/convex'
 import { rateLimiter } from './rateLimiter'
 import {
   confidenceValidator,
   interviewPolicySnapshotValidator,
   recommendationValidator,
+  reviewDecisionValidator,
   scoringDimensionValidator,
 } from './validators'
-
-const reviewDecisionValidator = v.union(
-  v.literal('advance'),
-  v.literal('reject'),
-  v.literal('manual_review'),
-  v.literal('hold')
-)
 
 function countWords(text: string) {
   return text.trim().split(/\s+/).filter(Boolean).length
@@ -498,7 +492,7 @@ export const saveAssessmentReport = mutation({
         args.sessionId,
         args.processingKey
       )
-    } else if (!isDevelopmentMode(runtimeEnv.NODE_ENV)) {
+    } else if (!isConvexDevelopmentMode(convexEnv)) {
       throw new ConvexError(
         'Assessment reports must be written via the processing pipeline in production.'
       )
@@ -514,8 +508,8 @@ export const saveAssessmentReport = mutation({
         throws: true,
       })
     } else if (
-      !runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim() &&
-      !isDevelopmentMode(runtimeEnv.NODE_ENV)
+      !convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim() &&
+      !isConvexDevelopmentMode(convexEnv)
     ) {
       throw new Error(
         'KYMA_PROCESSING_WRITE_KEY must be configured outside development.'
