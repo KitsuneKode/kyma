@@ -4,6 +4,10 @@ import { api } from '@/convex/_generated/api'
 import { CandidateEmptyState } from '@/components/candidate/candidate-empty-state'
 import { CandidateInterviewCard } from '@/components/candidate/interview-card'
 import { WorkspacePageHeader } from '@/components/workspace/page-header'
+import {
+  isActiveStatus,
+  isPendingRelease,
+} from '@/lib/candidate/status-filters'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { clientEnv } from '@/lib/env/client'
 import { runConvexFetch } from '@/lib/convex/server-fetch'
@@ -17,32 +21,6 @@ function stateWeight(status: string) {
     return 1
   }
   return 2
-}
-
-function isActiveStatus(status: string) {
-  return [
-    'ready',
-    'connecting',
-    'live',
-    'reconnecting',
-    'interrupted',
-  ].includes(status)
-}
-
-function isPendingRelease(item: {
-  status: string
-  reportStatus?: string
-  released: boolean
-}) {
-  if (item.released) {
-    return false
-  }
-
-  return (
-    item.status === 'processing' ||
-    item.reportStatus === 'processing' ||
-    item.reportStatus === 'manual_review'
-  )
 }
 
 export default async function CandidateHomePage() {

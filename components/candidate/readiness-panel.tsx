@@ -6,55 +6,10 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { Surface } from '@/components/ui/surface'
-
-type ReadinessChecks = {
-  browserSupported: boolean
-  audioInputAvailable: boolean
-  videoInputAvailable: boolean
-  networkOnline: boolean
-  secureContext: boolean
-  mediaPermissionsGranted: boolean
-}
-
-async function runChecks(): Promise<ReadinessChecks> {
-  const browserSupported =
-    typeof navigator !== 'undefined' &&
-    Boolean(navigator.mediaDevices?.getUserMedia)
-  const networkOnline =
-    typeof navigator !== 'undefined' ? navigator.onLine : false
-  const secureContext =
-    typeof window !== 'undefined' ? window.isSecureContext : false
-
-  let audioInputAvailable = false
-  let videoInputAvailable = false
-  let mediaPermissionsGranted = false
-
-  if (browserSupported) {
-    const devices = await navigator.mediaDevices.enumerateDevices()
-    audioInputAvailable = devices.some((device) => device.kind === 'audioinput')
-    videoInputAvailable = devices.some((device) => device.kind === 'videoinput')
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: true,
-      })
-      mediaPermissionsGranted = true
-      stream.getTracks().forEach((track) => track.stop())
-    } catch {
-      mediaPermissionsGranted = false
-    }
-  }
-
-  return {
-    browserSupported,
-    audioInputAvailable,
-    videoInputAvailable,
-    networkOnline,
-    secureContext,
-    mediaPermissionsGranted,
-  }
-}
+import {
+  countPassingReadinessChecks,
+  runReadinessChecks,
+} from '@/lib/candidate/readiness-checks'
 
 export function CandidateReadinessPanel() {
   const [running, setRunning] = useState(false)
@@ -67,14 +22,14 @@ export function CandidateReadinessPanel() {
     if (!latest) {
       return null
     }
-    return Object.values(latest.checks).filter(Boolean).length
+    return countPassingReadinessChecks(latest.checks)
   }, [latest])
 
   async function handleRunReadiness() {
     setRunning(true)
     setError(null)
     try {
-      const checks = await runChecks()
+      const checks = await runReadinessChecks()
       await saveRun({
         checks,
         notes: checks.mediaPermissionsGranted

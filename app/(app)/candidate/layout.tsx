@@ -9,6 +9,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
+import { CandidateInviteLinkBanner } from '@/components/candidate/candidate-invite-link-banner'
 import { WorkspacePromptBanner } from '@/components/auth/workspace-prompt-banner'
 import { WorkspaceShell } from '@/components/workspace/workspace-shell'
 import { requireCandidatePageAccess } from '@/lib/auth/access'
@@ -29,6 +30,8 @@ export default async function CandidateLayout({
   ])
   const clerkEnabled = hasClerkServerCredentials()
 
+  let linkError: string | null = null
+
   if (clientEnv.NEXT_PUBLIC_CONVEX_URL && token) {
     try {
       await fetchMutation(
@@ -36,8 +39,11 @@ export default async function CandidateLayout({
         {},
         { token: token ?? undefined }
       )
-    } catch {
-      // Best-effort linking; candidate routes still render if this fails.
+    } catch (error) {
+      linkError =
+        error instanceof Error
+          ? error.message
+          : 'Unable to link screening invites to your account.'
     }
   }
 
@@ -58,6 +64,7 @@ export default async function CandidateLayout({
           {access.preferredWorkspace === 'unassigned' ? (
             <WorkspacePromptBanner variant="candidate-default" />
           ) : null}
+          <CandidateInviteLinkBanner initialError={linkError} />
           {children}
         </WorkspaceShell>
       </SidebarInset>
