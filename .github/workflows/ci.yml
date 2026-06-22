@@ -28,7 +28,7 @@ jobs:
         run: bun run lint
 
       - name: Convex validation (schema + bundle)
-        run: bun run convex:once
+        run: bun run convex:ci
         env:
           CONVEX_AGENT_MODE: anonymous
 
