@@ -205,6 +205,7 @@ export default defineSchema({
     sessionPurpose: v.optional(sessionPurposeValidator),
   })
     .index('by_org_id', ['orgId'])
+    .index('by_org_id_and_state', ['orgId', 'state'])
     .index('by_invite', ['inviteId'])
     .index('by_room_name', ['roomName'])
     .index('by_candidate_user', ['candidateUserId']),
