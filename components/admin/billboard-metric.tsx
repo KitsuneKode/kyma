@@ -1,39 +1,14 @@
 'use client'
 
 import { motion } from 'motion/react'
-import {
-  IconLayoutDashboard,
-  IconUsers,
-  IconFolder,
-  IconTrendingUp,
-} from '@tabler/icons-react'
+import { IconLayoutDashboard, IconUsers, IconFolder } from '@tabler/icons-react'
+
+import { cn } from '@/lib/utils'
 
 const ICON_MAP = {
   dashboard: IconLayoutDashboard,
   users: IconUsers,
   folder: IconFolder,
-}
-
-function Sparkline({ color = 'var(--primary)' }: { color?: string }) {
-  return (
-    <div className="absolute inset-0 -z-10 opacity-10">
-      <svg
-        className="h-full w-full"
-        preserveAspectRatio="none"
-        viewBox="0 0 100 40"
-      >
-        <motion.path
-          d="M 0 35 Q 10 30 20 35 T 40 25 T 60 30 T 80 15 T 100 20"
-          fill="none"
-          stroke={color}
-          strokeWidth="2"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1.5, ease: 'easeInOut' }}
-        />
-      </svg>
-    </div>
-  )
 }
 
 export function BillboardMetric({
@@ -42,43 +17,52 @@ export function BillboardMetric({
   detail,
   delay = 0,
   icon,
+  emphasis = false,
 }: {
   label: string
   value: string
   detail?: string
   delay?: number
   icon?: keyof typeof ICON_MAP
+  emphasis?: boolean
 }) {
   const Icon = icon ? ICON_MAP[icon] : null
+  const isZero = value.trim() === '0'
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
-      animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-      transition={{ duration: 0.5, delay, ease: [0.23, 1, 0.32, 1] }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay, ease: [0.23, 1, 0.32, 1] }}
       className="billboard-metric group"
     >
-      <Sparkline color={icon === 'users' ? 'var(--primary)' : '#60a5fa'} />
-
-      <div className="flex h-full flex-col justify-between gap-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase">
-              {label}
-            </span>
-            <IconTrendingUp className="size-3 animate-pulse text-primary/50" />
-          </div>
-          {Icon && (
-            <div className="rounded-full bg-foreground/5 p-2 text-foreground/40 transition-colors group-hover:bg-foreground/10 group-hover:text-foreground">
+      <div className="flex h-full flex-col gap-7">
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+            {label}
+          </span>
+          {Icon ? (
+            <div className="flex size-8 items-center justify-center rounded-xl bg-foreground/[0.04] text-muted-foreground/70 ring-1 ring-border/40 transition-colors group-hover:text-foreground/80">
               <Icon className="size-4" />
             </div>
-          )}
+          ) : null}
         </div>
 
-        <div>
-          <p className="billboard-value">{value}</p>
+        <div className="mt-auto">
+          <p
+            className={cn(
+              'billboard-value',
+              isZero
+                ? 'text-muted-foreground/45'
+                : emphasis
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : undefined
+            )}
+          >
+            {value}
+          </p>
           {detail ? (
-            <p className="mt-2 max-w-[12rem] text-xs leading-relaxed font-medium text-muted-foreground">
+            <p className="mt-3 max-w-[14rem] text-xs leading-relaxed text-muted-foreground">
               {detail}
             </p>
           ) : null}

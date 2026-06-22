@@ -5,18 +5,19 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const surfaceVariants = cva(
-  'relative overflow-hidden bg-card transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]',
+  'relative overflow-hidden bg-card transition-all duration-200 ease-[var(--ease-out)]',
   {
     variants: {
       elevation: {
-        default: 'rounded-2xl shadow-sm ring-1 ring-border/20 hover:shadow-md',
+        default:
+          'rounded-3xl shadow-[var(--shadow-sm)] ring-1 ring-border/50 hover:shadow-[var(--shadow-md)]',
         raised:
-          'rounded-[2rem] shadow-lg ring-1 ring-border/30 hover:shadow-xl',
+          'rounded-3xl shadow-[var(--shadow-md)] ring-1 ring-border/60 hover:shadow-[var(--shadow-lg)]',
         floating:
-          'rounded-[2rem] shadow-2xl ring-1 ring-border/40 hover:shadow-[0_32px_64px_-24px_rgba(0,0,0,0.35)]',
-        sunken: 'rounded-2xl bg-muted/30 shadow-inner',
+          'rounded-3xl shadow-[var(--shadow-lg)] ring-1 ring-border/70 hover:shadow-[var(--shadow-xl)]',
+        sunken: 'rounded-2xl bg-muted/30 ring-1 ring-border/30',
         glass:
-          'rounded-2xl bg-card/80 shadow-lg ring-1 ring-border/20 backdrop-blur-xl',
+          'rounded-3xl bg-card/80 shadow-[var(--shadow-md)] ring-1 ring-border/40 backdrop-blur-xl',
       },
       interactive: {
         true: 'cursor-pointer hover:-translate-y-0.5',

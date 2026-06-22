@@ -66,27 +66,28 @@ export function PremiumRecruiterDashboard({
           detail="Candidates awaiting final human-verified decision."
           delay={0.25}
           icon="users"
+          emphasis
         />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Needs Attention - Obsidian System Alert Style */}
+        {/* Needs attention — the single focal panel of this view */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="rounded-[2rem] border border-amber-500/10 bg-amber-500/[0.03] p-8 shadow-[var(--shadow-md)] ring-1 ring-amber-500/5"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+          className="rounded-3xl bg-card p-7 shadow-[var(--shadow-md)] ring-1 ring-amber-500/20"
         >
-          <div className="mb-8 flex items-center gap-3">
-            <div className="flex size-8 items-center justify-center rounded-full bg-amber-500/10">
-              <IconAlertCircle className="size-4 text-amber-500" />
+          <div className="mb-7 flex items-center gap-2.5">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 ring-1 ring-amber-500/15">
+              <IconAlertCircle className="size-4 text-amber-600 dark:text-amber-400" />
             </div>
-            <h3 className="text-sm font-bold tracking-widest text-amber-500/80 uppercase">
+            <h3 className="text-xs font-semibold tracking-[0.16em] text-amber-700/80 uppercase dark:text-amber-300/80">
               Needs attention
             </h3>
           </div>
 
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-1">
             <NeedsAttentionRow
               href="/recruiter/candidates?status=manual_review"
               icon={<IconEye className="size-4 text-amber-500/50" />}

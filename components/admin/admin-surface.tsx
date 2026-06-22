@@ -19,7 +19,7 @@ export function AdminSurface<T extends ElementType = 'section'>({
   return (
     <Component
       className={cn(
-        'relative overflow-hidden rounded-[28px] bg-card/95 p-6 shadow-[0_16px_48px_-20px_rgba(15,23,42,0.18)] ring-1 ring-border/60 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-linear-to-r before:from-transparent before:via-foreground/10 before:to-transparent',
+        'relative overflow-hidden rounded-3xl bg-card p-6 shadow-[var(--shadow-sm)] ring-1 ring-border/60 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-linear-to-r before:from-transparent before:via-foreground/[0.07] before:to-transparent',
         className
       )}
       {...(props as any)}
