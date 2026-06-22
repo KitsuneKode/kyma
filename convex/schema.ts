@@ -4,6 +4,7 @@ import { v } from 'convex/values'
 import {
   confidenceValidator,
   interviewPolicySnapshotValidator,
+  interviewSessionStateValidator,
   interviewStyleModeValidator,
   modelOverridesValidator,
   recommendationValidator,
@@ -187,17 +188,7 @@ export default defineSchema({
   interviewSessions: defineTable({
     orgId: v.string(),
     inviteId: v.id('candidateInvites'),
-    state: v.union(
-      v.literal('created'),
-      v.literal('ready'),
-      v.literal('connecting'),
-      v.literal('live'),
-      v.literal('reconnecting'),
-      v.literal('interrupted'),
-      v.literal('processing'),
-      v.literal('completed'),
-      v.literal('failed')
-    ),
+    state: interviewSessionStateValidator,
     provider: v.literal('livekit'),
     roomName: v.optional(v.string()),
     participantName: v.optional(v.string()),
@@ -461,4 +452,19 @@ export default defineSchema({
     updatedAt: v.number(),
     updatedBy: v.string(),
   }).index('by_org_id', ['orgId']),
+
+  agentWorkerHeartbeats: defineTable({
+    workerId: v.string(),
+    agentName: v.string(),
+    status: v.union(
+      v.literal('running'),
+      v.literal('draining'),
+      v.literal('stopped')
+    ),
+    activeJobs: v.optional(v.number()),
+    version: v.optional(v.string()),
+    lastSeenAt: v.number(),
+  })
+    .index('by_worker_id', ['workerId'])
+    .index('by_last_seen_at', ['lastSeenAt']),
 })

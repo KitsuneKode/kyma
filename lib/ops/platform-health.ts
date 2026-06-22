@@ -1,9 +1,13 @@
 import 'server-only'
 
+import { fetchQuery } from 'convex/nextjs'
+
+import { api } from '@/convex/_generated/api'
 import { serverEnv } from '@/lib/env/server'
 import { clientEnv } from '@/lib/env/client'
 import { hasLivekitRecordingConfig } from '@/lib/livekit/recording'
 import { providerFromModelId } from '@/lib/providers/resolve-model'
+import { classifyWorkerLiveness } from '@/lib/agent/worker-liveness'
 
 export type HealthCheckStatus = 'ok' | 'warn' | 'error' | 'unknown'
 
@@ -87,7 +91,51 @@ function scoringCredentialsStatus(): HealthCheck {
   }
 }
 
-export function collectPlatformHealthChecks(): HealthCheck[] {
+async function agentWorkerLivenessStatus(): Promise<HealthCheck> {
+  const isProd = serverEnv.NODE_ENV === 'production'
+  const processingKey = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+  const label = 'Agent worker liveness'
+
+  if (!isSet(clientEnv.NEXT_PUBLIC_CONVEX_URL)) {
+    return {
+      id: 'agent-worker-liveness',
+      label,
+      status: 'unknown',
+      detail: 'Convex URL not set — cannot read agent worker heartbeats.',
+    }
+  }
+
+  if (!processingKey) {
+    return {
+      id: 'agent-worker-liveness',
+      label,
+      status: isProd ? 'error' : 'warn',
+      detail:
+        'KYMA_PROCESSING_WRITE_KEY not set — agent worker cannot report heartbeats.',
+    }
+  }
+
+  try {
+    const liveness = await fetchQuery(api.agentWorker.getWorkerLiveness, {
+      processingKey,
+    })
+    const { status, detail } = classifyWorkerLiveness({
+      mostRecentSeenAt: liveness.mostRecentSeenAt,
+      now: Date.now(),
+      isProd,
+    })
+    return { id: 'agent-worker-liveness', label, status, detail }
+  } catch {
+    return {
+      id: 'agent-worker-liveness',
+      label,
+      status: 'unknown',
+      detail: 'Unable to read agent worker heartbeats from Convex.',
+    }
+  }
+}
+
+export async function collectPlatformHealthChecks(): Promise<HealthCheck[]> {
   const isProd = serverEnv.NODE_ENV === 'production'
   const clerkConfigured =
     isSet(serverEnv.CLERK_SECRET_KEY) &&
@@ -95,6 +143,8 @@ export function collectPlatformHealthChecks(): HealthCheck[] {
   const clerkJwtConfigured =
     isSet(serverEnv.CLERK_FRONTEND_API_URL) ||
     isSet(serverEnv.CLERK_JWT_ISSUER_DOMAIN)
+
+  const agentWorkerLiveness = await agentWorkerLivenessStatus()
 
   return [
     {
@@ -193,6 +243,7 @@ export function collectPlatformHealthChecks(): HealthCheck[] {
         ? `Dispatching agent "${serverEnv.LIVEKIT_AGENT_NAME}". Run bun run agent:start in production.`
         : 'LIVEKIT_AGENT_NAME not set — token dispatch may not start the interviewer worker.',
     },
+    agentWorkerLiveness,
     {
       id: 'recording-playback',
       label: 'Recording playback',

@@ -20,7 +20,7 @@ type DiagnosticPayload = {
   error?: unknown
 }
 
-type DiagnosticLogger = {
+export type DiagnosticLogger = {
   debug: (payload: Omit<DiagnosticPayload, 'level'>) => void
   info: (payload: Omit<DiagnosticPayload, 'level'>) => void
   warn: (payload: Omit<DiagnosticPayload, 'level'>) => void

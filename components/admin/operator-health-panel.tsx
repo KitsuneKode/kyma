@@ -32,8 +32,8 @@ function statusClass(status: HealthCheckStatus) {
   }
 }
 
-export function OperatorHealthPanel() {
-  const checks = collectPlatformHealthChecks()
+export async function OperatorHealthPanel() {
+  const checks = await collectPlatformHealthChecks()
   const summary = summarizeHealth(checks)
 
   return (

@@ -1,11 +1,72 @@
 import { cli, ServerOptions, WorkerPermissions } from '@livekit/agents'
 import { fileURLToPath } from 'node:url'
+import { hostname } from 'node:os'
+import { fetchMutation } from 'convex/nextjs'
 
+import { api } from '@/convex/_generated/api'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
+import type { DiagnosticLogger } from '@/lib/interview/diagnostics'
 import { runtimeEnv } from '@/lib/env/runtime'
+import { WORKER_HEARTBEAT_INTERVAL_MS } from '@/lib/agent/worker-liveness'
 
 const workerFile = fileURLToPath(import.meta.url)
 const agentFile = fileURLToPath(new URL('./interviewer.ts', import.meta.url))
+
+function createWorkerId() {
+  const random =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID().slice(0, 8)
+      : `${Date.now()}`
+  return `${hostname()}-${process.pid}-${random}`
+}
+
+/**
+ * Periodically reports worker liveness to Convex so the operator health panel
+ * can detect a downed agent worker. Best-effort: heartbeat failures are logged
+ * but never crash the worker.
+ */
+function startWorkerHeartbeat(logger: DiagnosticLogger) {
+  const workerId = createWorkerId()
+  const agentName = runtimeEnv.LIVEKIT_AGENT_NAME ?? 'tutor-screener'
+  const version = process.env.npm_package_version
+  let stopped = false
+
+  async function send(status: 'running' | 'draining' | 'stopped') {
+    try {
+      await fetchMutation(api.agentWorker.recordWorkerHeartbeat, {
+        processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
+        workerId,
+        agentName,
+        status,
+        version,
+      })
+    } catch (error) {
+      logger.warn({
+        event: 'worker.heartbeat.failed',
+        detail: 'Unable to record agent worker heartbeat in Convex.',
+        error,
+      })
+    }
+  }
+
+  void send('running')
+  const interval = setInterval(() => {
+    if (!stopped) void send('running')
+  }, WORKER_HEARTBEAT_INTERVAL_MS)
+  if (typeof interval.unref === 'function') {
+    interval.unref()
+  }
+
+  const shutdown = () => {
+    if (stopped) return
+    stopped = true
+    clearInterval(interval)
+    void send('stopped')
+  }
+  process.once('SIGINT', shutdown)
+  process.once('SIGTERM', shutdown)
+  process.once('beforeExit', shutdown)
+}
 
 function createServerOptions() {
   const logger = createDiagnosticLogger('agent-worker', {
@@ -33,11 +94,13 @@ function createServerOptions() {
 }
 
 if (process.argv[1] === workerFile) {
-  createDiagnosticLogger('agent-worker', {
+  const runLogger = createDiagnosticLogger('agent-worker', {
     actor: 'agent',
-  }).info({
+  })
+  runLogger.info({
     event: 'worker.run.start',
     detail: 'Starting LiveKit agent worker.',
   })
+  startWorkerHeartbeat(runLogger)
   cli.runApp(createServerOptions())
 }

@@ -47,6 +47,18 @@ export const workspaceProviderKeyValidator = v.object({
   maskedKeyTail: v.optional(v.string()),
 })
 
+export const interviewSessionStateValidator = v.union(
+  v.literal('created'),
+  v.literal('ready'),
+  v.literal('connecting'),
+  v.literal('live'),
+  v.literal('reconnecting'),
+  v.literal('interrupted'),
+  v.literal('processing'),
+  v.literal('completed'),
+  v.literal('failed')
+)
+
 export const interviewStyleModeValidator = v.union(
   v.literal('standard'),
   v.literal('intensive')
