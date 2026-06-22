@@ -95,6 +95,22 @@ Next.js handles:
 - live transcript and state feedback
 - admin dashboard and report views
 
+#### Client state and data libraries
+
+- Server state is owned by Convex (`useQuery`/`useMutation`): reactive, cached,
+  subscription-based. We deliberately do **not** add TanStack Query — it would be
+  a redundant second data layer on top of Convex. The only non-Convex calls are
+  one-shot POSTs to Next routes (interview bootstrap/process, report-chat), which
+  are imperative actions and not cache-worthy.
+- Local/UI state for the two complex client surfaces uses per-mount `zustand`
+  stores (`components/interview/interview-workspace-store.ts`, the review console
+  store in `components/recruiter/review-context.tsx`) so consumers subscribe to
+  narrow slices via selectors and avoid re-rendering on high-frequency updates
+  (e.g. audio `timeupdate`).
+- Date/duration display uses `date-fns` via `lib/format/date.ts`. These helpers
+  are display-only; never call them inside Convex queries (wall-clock reads break
+  query caching).
+
 ### Auth
 
 `Clerk` protects the admin side.
