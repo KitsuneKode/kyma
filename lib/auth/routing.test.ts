@@ -138,7 +138,7 @@ describe('resolveAppRoute', () => {
     ).toBeNull()
   })
 
-  it('redirects signed-in users away from marketing homepage', () => {
+  it('allows signed-in users on the marketing homepage', () => {
     expect(
       resolveAppRoute(
         ctx({
@@ -146,10 +146,8 @@ describe('resolveAppRoute', () => {
           preferredWorkspace: 'candidate',
         })
       )
-    ).toBe('/candidate')
-  })
+    ).toBeNull()
 
-  it('redirects signed-in unassigned users from homepage to auth continue', () => {
     expect(
       resolveAppRoute(
         ctx({
@@ -157,10 +155,8 @@ describe('resolveAppRoute', () => {
           preferredWorkspace: null,
         })
       )
-    ).toBe('/auth/continue')
-  })
+    ).toBeNull()
 
-  it('redirects signed-in recruiters from homepage to recruiter home', () => {
     expect(
       resolveAppRoute(
         ctx({
@@ -170,6 +166,28 @@ describe('resolveAppRoute', () => {
           canAccessRecruiter: true,
         })
       )
-    ).toBe('/recruiter')
+    ).toBeNull()
+  })
+
+  it('preserves recruiter intent when redirecting from recruiter sign-in', () => {
+    expect(
+      resolveAppRoute(
+        ctx({
+          pathname: '/sign-in/recruiter',
+          preferredWorkspace: null,
+        })
+      )
+    ).toBe('/auth/continue?workspace=recruiter')
+  })
+
+  it('preserves candidate intent when redirecting from candidate sign-in', () => {
+    expect(
+      resolveAppRoute(
+        ctx({
+          pathname: '/sign-in/candidate',
+          preferredWorkspace: null,
+        })
+      )
+    ).toBe('/auth/continue?workspace=candidate')
   })
 })

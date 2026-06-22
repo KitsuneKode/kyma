@@ -5,10 +5,10 @@ import { AuthDebugBanner } from '@/components/auth/auth-debug-banner'
 import { WorkspaceOnboardingForm } from '@/components/auth/workspace-onboarding-form'
 import {
   hasLegacyBothPersona,
-  preferredWorkspaceFromSessionClaims,
   RECRUITER_PERMISSION_MAP,
 } from '@/lib/auth/clerk-role'
 import { resolveAppRoute } from '@/lib/auth/routing'
+import { getPreferredWorkspaceForRouting } from '@/lib/auth/workspace-routing-cookie'
 
 export default async function OnboardingPage() {
   const { userId, sessionClaims, orgId, has } = await auth()
@@ -20,8 +20,9 @@ export default async function OnboardingPage() {
     | Record<string, unknown>
     | null
     | undefined
-  const preferredWorkspace =
-    preferredWorkspaceFromSessionClaims(sessionClaimsRecord)
+  const preferredWorkspace = await getPreferredWorkspaceForRouting({
+    sessionClaims: sessionClaimsRecord,
+  })
   const hasLegacyBoth = hasLegacyBothPersona(sessionClaimsRecord)
   const canAccessRecruiter = Boolean(
     orgId &&

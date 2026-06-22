@@ -26,6 +26,18 @@ function isAuthPath(pathname: string) {
   )
 }
 
+function workspaceIntentFromAuthPath(
+  pathname: string
+): PreferredWorkspace | null {
+  if (pathname === '/sign-in/recruiter' || pathname === '/sign-up/recruiter') {
+    return 'recruiter'
+  }
+  if (pathname === '/sign-in/candidate' || pathname === '/sign-up/candidate') {
+    return 'candidate'
+  }
+  return null
+}
+
 function isRecruiterPath(pathname: string) {
   return (
     pathname === '/recruiter' ||
@@ -86,13 +98,16 @@ export function resolveAppRoute(ctx: AppRouteContext): string | null {
     return null
   }
 
+  // Marketing homepage stays public for signed-in users (logo / "home" navigation).
+  // Post-login routing is handled by /auth/continue and sign-in redirects.
   if (pathname === '/') {
-    const target = getPostSignInPathFromContext(ctx)
-    return target === '/' ? null : target
+    return null
   }
 
   if (isAuthPath(pathname)) {
-    const target = getPostSignInPathFromContext(ctx)
+    const target = ctx.preferredWorkspace
+      ? getPostSignInPathFromContext(ctx)
+      : authContinuePath(workspaceIntentFromAuthPath(pathname))
     if (target === pathname) {
       return null
     }

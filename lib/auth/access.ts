@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 
 import {
   hasLegacyBothPersona,
-  preferredWorkspaceFromSessionClaims,
   RECRUITER_PERMISSION_MAP,
   type PreferredWorkspace,
   type RecruiterCapability,
@@ -14,6 +13,7 @@ import {
   resolveAppRoute,
   type AppRouteContext,
 } from '@/lib/auth/routing'
+import { getPreferredWorkspaceForRouting } from '@/lib/auth/workspace-routing-cookie'
 
 export type UserAppAccess = {
   isSignedIn: boolean
@@ -36,9 +36,9 @@ async function getUserAppAccessUncached(): Promise<UserAppAccess> {
     }
   }
 
-  const preferredWorkspace = preferredWorkspaceFromSessionClaims(
-    sessionClaims as Record<string, unknown> | null | undefined
-  )
+  const preferredWorkspace = await getPreferredWorkspaceForRouting({
+    sessionClaims: sessionClaims as Record<string, unknown> | null | undefined,
+  })
   const canAccessRecruiter = Boolean(
     orgId &&
     (has?.({ role: 'org:admin' }) ||

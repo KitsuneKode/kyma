@@ -8,6 +8,7 @@ import {
   getPreferredWorkspaceFromClerk,
   getRedirectPathAfterWorkspaceChoice,
   setPreferredWorkspaceHint,
+  setWorkspaceRoutingCookie,
 } from '@/lib/auth/workspace'
 
 export type SetPreferredWorkspaceResult =
@@ -24,6 +25,7 @@ export async function setPreferredWorkspace(
 
   try {
     await setPreferredWorkspaceHint(userId, workspace)
+    await setWorkspaceRoutingCookie(workspace)
     const confirmed = await getPreferredWorkspaceFromClerk(userId)
     if (confirmed !== workspace) {
       return {

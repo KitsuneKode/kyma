@@ -44,11 +44,12 @@ describe('resolveWorkspaceForContinue', () => {
 })
 
 describe('shouldPersistWorkspaceForContinue', () => {
-  it('persists when explicit intent is present', () => {
+  it('persists when explicit intent is present and preference differs', () => {
     expect(
       shouldPersistWorkspaceForContinue({
         explicitIntent: 'candidate',
         existing: 'recruiter',
+        workspace: 'candidate',
       })
     ).toBe(true)
   })
@@ -58,6 +59,7 @@ describe('shouldPersistWorkspaceForContinue', () => {
       shouldPersistWorkspaceForContinue({
         explicitIntent: null,
         existing: null,
+        workspace: 'candidate',
       })
     ).toBe(true)
   })
@@ -67,6 +69,17 @@ describe('shouldPersistWorkspaceForContinue', () => {
       shouldPersistWorkspaceForContinue({
         explicitIntent: null,
         existing: 'recruiter',
+        workspace: 'recruiter',
+      })
+    ).toBe(false)
+  })
+
+  it('skips persist when explicit intent matches existing preference', () => {
+    expect(
+      shouldPersistWorkspaceForContinue({
+        explicitIntent: 'recruiter',
+        existing: 'recruiter',
+        workspace: 'recruiter',
       })
     ).toBe(false)
   })

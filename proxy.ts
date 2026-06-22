@@ -3,10 +3,14 @@ import { NextResponse } from 'next/server'
 
 import {
   hasLegacyBothPersona,
-  preferredWorkspaceFromSessionClaims,
   RECRUITER_PERMISSION_MAP,
 } from '@/lib/auth/clerk-role'
 import { resolveAppRoute } from '@/lib/auth/routing'
+import {
+  resolvePreferredWorkspaceForRouting,
+  shouldClearWorkspaceRoutingCookie,
+  WORKSPACE_ROUTING_COOKIE_NAME,
+} from '@/lib/auth/workspace-routing-cookie'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 const isRecruiterRoute = createRouteMatcher(['/recruiter(.*)', '/admin(.*)'])
@@ -32,8 +36,13 @@ export default hasClerk
         | Record<string, unknown>
         | null
         | undefined
-      const preferredWorkspace =
-        preferredWorkspaceFromSessionClaims(sessionClaimsRecord)
+      const routingCookie = req.cookies.get(
+        WORKSPACE_ROUTING_COOKIE_NAME
+      )?.value
+      const preferredWorkspace = resolvePreferredWorkspaceForRouting({
+        sessionClaims: sessionClaimsRecord,
+        routingCookie,
+      })
       const hasLegacyBoth = hasLegacyBothPersona(sessionClaimsRecord)
       const canAccessRecruiter = Boolean(
         orgId &&
@@ -77,14 +86,33 @@ export default hasClerk
       })
 
       const shouldResolve =
-        pathname === '/' ||
         isAuthRoute(req) ||
         isRecruiterRoute(req) ||
         isCandidateRoute(req) ||
         isOnboardingRoute(req)
 
       if (shouldResolve && redirectTarget && redirectTarget !== pathname) {
-        return NextResponse.redirect(new URL(redirectTarget, req.url))
+        const response = NextResponse.redirect(new URL(redirectTarget, req.url))
+        if (
+          shouldClearWorkspaceRoutingCookie({
+            sessionClaims: sessionClaimsRecord,
+            routingCookie,
+          })
+        ) {
+          response.cookies.delete(WORKSPACE_ROUTING_COOKIE_NAME)
+        }
+        return response
+      }
+
+      if (
+        shouldClearWorkspaceRoutingCookie({
+          sessionClaims: sessionClaimsRecord,
+          routingCookie,
+        })
+      ) {
+        const response = NextResponse.next()
+        response.cookies.delete(WORKSPACE_ROUTING_COOKIE_NAME)
+        return response
       }
     })
   : function proxy() {

@@ -6,10 +6,10 @@ import { ClerkJwtSetupCard } from '@/components/auth/clerk-jwt-setup-card'
 import { RecruiterOrgOnboarding } from '@/components/auth/recruiter-org-onboarding'
 import {
   hasLegacyBothPersona,
-  preferredWorkspaceFromSessionClaims,
   RECRUITER_PERMISSION_MAP,
 } from '@/lib/auth/clerk-role'
 import { resolveAppRoute } from '@/lib/auth/routing'
+import { getPreferredWorkspaceForRouting } from '@/lib/auth/workspace-routing-cookie'
 
 type PageProps = {
   searchParams: Promise<{ setup?: string | string[] }>
@@ -30,8 +30,9 @@ export default async function RecruiterOrgOnboardingPage({
     | Record<string, unknown>
     | null
     | undefined
-  const preferredWorkspace =
-    preferredWorkspaceFromSessionClaims(sessionClaimsRecord)
+  const preferredWorkspace = await getPreferredWorkspaceForRouting({
+    sessionClaims: sessionClaimsRecord,
+  })
   const hasLegacyBoth = hasLegacyBothPersona(sessionClaimsRecord)
   const canAccessRecruiter = Boolean(
     orgId &&
