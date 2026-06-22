@@ -8,9 +8,11 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
   type ReactNode,
 } from 'react'
+import { useStore } from 'zustand'
+import { createStore, type StoreApi } from 'zustand/vanilla'
+import { useShallow } from 'zustand/react/shallow'
 
 import type { CandidateReviewDetail } from '@/components/recruiter/candidate-review-workspace'
 
@@ -29,16 +31,50 @@ type EvidenceWithTiming = Evidence & {
   startedAtSec?: number
 }
 
-type ReviewPlaybackState = {
+type DimensionSummary = DimensionScore & {
+  evidenceCount: number
+  evidence: EvidenceWithTiming[]
+}
+
+const PLAYBACK_RATES = [1, 1.25, 1.5, 2] as const
+type PlaybackRate = (typeof PLAYBACK_RATES)[number]
+
+/**
+ * High-frequency, mutable playback/focus state lives in a per-provider Zustand
+ * store so consumers can subscribe to narrow slices via selectors. This keeps
+ * the rubric/focus panels from re-rendering on every audio `timeupdate` tick.
+ */
+type ReviewStoreState = {
   isPlaying: boolean
   currentTime: number
   duration: number
   volume: number
   isMuted: boolean
-  playbackRate: number
+  playbackRate: PlaybackRate
   rateTransitioning: boolean
+  activeDimensionOverride: string | null
+  transcriptMode: 'all' | 'cited'
+}
+
+function createReviewStore() {
+  return createStore<ReviewStoreState>()(() => ({
+    isPlaying: false,
+    currentTime: 0,
+    duration: 0,
+    volume: 1,
+    isMuted: false,
+    playbackRate: 1,
+    rateTransitioning: false,
+    activeDimensionOverride: null,
+    transcriptMode: 'all',
+  }))
+}
+
+type ReviewActions = {
   audioRef: React.RefObject<HTMLAudioElement | null>
+  transcriptRef: React.RefObject<HTMLDivElement | null>
   togglePlay: () => void
+  stopPlayback: () => void
   handleTimeUpdate: () => void
   handleLoadedMetadata: () => void
   handleSeek: (value: number | readonly number[]) => void
@@ -46,45 +82,26 @@ type ReviewPlaybackState = {
   handleVolumeChange: (value: number | readonly number[]) => void
   jumpToTime: (timeSec?: number) => void
   cyclePlaybackRate: () => void
-  stopPlayback: () => void
-  playedPct: number
-}
-
-type ReviewFocusState = {
-  activeDimension: string | null
   setActiveDimension: (dimension: string | null) => void
-  transcriptMode: 'all' | 'cited'
   setTranscriptMode: (mode: 'all' | 'cited') => void
-  deferredActiveDimension: string | null
-  activeEvidence: EvidenceWithTiming[]
-  citedSegmentIds: Set<string>
-  visibleTranscript: TranscriptSegmentWithTiming[]
-  activeSegmentId: string | null
-  transcriptRef: React.RefObject<HTMLDivElement | null>
 }
 
-type ReviewContextValue = {
+type ReviewData = {
   candidateName: string
-  transcript: TranscriptSegment[]
-  evidence: Evidence[]
-  dimensionScores: DimensionScore[]
   audioUrl?: string
   recordingStartTime?: string
   transcriptWithTimes: TranscriptSegmentWithTiming[]
   evidenceWithTiming: EvidenceWithTiming[]
-  dimensionSummaries: Array<
-    DimensionScore & {
-      evidenceCount: number
-      evidence: EvidenceWithTiming[]
-    }
-  >
-  playback: ReviewPlaybackState
-  focus: ReviewFocusState
+  dimensionScores: DimensionScore[]
+  dimensionSummaries: DimensionSummary[]
+  defaultActiveDimension: string | null
 }
 
-const ReviewContext = createContext<ReviewContextValue | null>(null)
-
-const PLAYBACK_RATES = [1, 1.25, 1.5, 2] as const
+const ReviewStoreContext = createContext<StoreApi<ReviewStoreState> | null>(
+  null
+)
+const ReviewActionsContext = createContext<ReviewActions | null>(null)
+const ReviewDataContext = createContext<ReviewData | null>(null)
 
 function normaliseSnippet(value: string) {
   return value
@@ -131,16 +148,11 @@ export function ReviewProvider({
   recordingStartTime,
   children,
 }: ReviewProviderProps) {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(1)
-  const [isMuted, setIsMuted] = useState(false)
-  const [activeDimension, setActiveDimension] = useState<string | null>(null)
-  const [playbackRate, setPlaybackRate] =
-    useState<(typeof PLAYBACK_RATES)[number]>(1)
-  const [transcriptMode, setTranscriptMode] = useState<'all' | 'cited'>('all')
-  const [rateTransitioning, setRateTransitioning] = useState(false)
+  const storeRef = useRef<StoreApi<ReviewStoreState>>(null)
+  if (storeRef.current === null) {
+    storeRef.current = createReviewStore()
+  }
+  const store = storeRef.current
 
   const audioRef = useRef<HTMLAudioElement>(null)
   const transcriptRef = useRef<HTMLDivElement>(null)
@@ -176,7 +188,7 @@ export function ReviewProvider({
     }))
   }, [baseTimeMs, evidence])
 
-  const dimensionSummaries = useMemo(() => {
+  const dimensionSummaries = useMemo<DimensionSummary[]>(() => {
     return dimensionScores.map((score) => {
       const dimensionEvidence = evidenceWithTiming.filter(
         (item) => item.dimension === score.dimension
@@ -200,7 +212,247 @@ export function ReviewProvider({
     )
   }, [dimensionSummaries])
 
-  const resolvedActiveDimension = activeDimension ?? defaultActiveDimension
+  const togglePlay = useCallback(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    if (store.getState().isPlaying) {
+      audio.pause()
+      store.setState({ isPlaying: false })
+      return
+    }
+    void audio.play()
+    store.setState({ isPlaying: true })
+  }, [store])
+
+  const stopPlayback = useCallback(() => {
+    store.setState({ isPlaying: false })
+  }, [store])
+
+  const handleTimeUpdate = useCallback(() => {
+    if (audioRef.current)
+      store.setState({ currentTime: audioRef.current.currentTime })
+  }, [store])
+
+  const handleLoadedMetadata = useCallback(() => {
+    if (audioRef.current)
+      store.setState({ duration: audioRef.current.duration })
+  }, [store])
+
+  const handleSeek = useCallback(
+    (value: number | readonly number[]) => {
+      const nextTime = Array.isArray(value) ? value[0] : (value as number)
+      if (!audioRef.current || nextTime === undefined) return
+      audioRef.current.currentTime = nextTime
+      store.setState({ currentTime: nextTime })
+    },
+    [store]
+  )
+
+  const toggleMute = useCallback(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    const nextMuted = !store.getState().isMuted
+    audio.muted = nextMuted
+    store.setState({ isMuted: nextMuted })
+  }, [store])
+
+  const handleVolumeChange = useCallback(
+    (value: number | readonly number[]) => {
+      const nextVolume = Array.isArray(value) ? value[0] : (value as number)
+      if (nextVolume === undefined) return
+      store.setState({ volume: nextVolume })
+      const audio = audioRef.current
+      if (!audio) return
+      audio.volume = nextVolume
+      if (nextVolume > 0 && store.getState().isMuted) {
+        store.setState({ isMuted: false })
+        audio.muted = false
+      } else if (nextVolume === 0 && !store.getState().isMuted) {
+        store.setState({ isMuted: true })
+        audio.muted = true
+      }
+    },
+    [store]
+  )
+
+  const jumpToTime = useCallback(
+    (timeSec?: number) => {
+      if (!audioRef.current || timeSec === undefined) return
+      audioRef.current.currentTime = timeSec
+      store.setState({ currentTime: timeSec })
+      if (!store.getState().isPlaying) {
+        void audioRef.current.play()
+        store.setState({ isPlaying: true })
+      }
+    },
+    [store]
+  )
+
+  const cyclePlaybackRate = useCallback(() => {
+    store.setState({ rateTransitioning: true })
+    const current = store.getState().playbackRate
+    const nextIndex =
+      (PLAYBACK_RATES.indexOf(current) + 1) % PLAYBACK_RATES.length
+    const nextRate = PLAYBACK_RATES[nextIndex]
+    setTimeout(() => {
+      store.setState({ playbackRate: nextRate, rateTransitioning: false })
+      if (audioRef.current) audioRef.current.playbackRate = nextRate
+    }, 80)
+  }, [store])
+
+  const setActiveDimension = useCallback(
+    (dimension: string | null) => {
+      store.setState({ activeDimensionOverride: dimension })
+    },
+    [store]
+  )
+
+  const setTranscriptMode = useCallback(
+    (mode: 'all' | 'cited') => {
+      store.setState({ transcriptMode: mode })
+    },
+    [store]
+  )
+
+  const actions = useMemo<ReviewActions>(
+    () => ({
+      audioRef,
+      transcriptRef,
+      togglePlay,
+      stopPlayback,
+      handleTimeUpdate,
+      handleLoadedMetadata,
+      handleSeek,
+      toggleMute,
+      handleVolumeChange,
+      jumpToTime,
+      cyclePlaybackRate,
+      setActiveDimension,
+      setTranscriptMode,
+    }),
+    [
+      togglePlay,
+      stopPlayback,
+      handleTimeUpdate,
+      handleLoadedMetadata,
+      handleSeek,
+      toggleMute,
+      handleVolumeChange,
+      jumpToTime,
+      cyclePlaybackRate,
+      setActiveDimension,
+      setTranscriptMode,
+    ]
+  )
+
+  const data = useMemo<ReviewData>(
+    () => ({
+      candidateName,
+      audioUrl,
+      recordingStartTime,
+      transcriptWithTimes,
+      evidenceWithTiming,
+      dimensionScores,
+      dimensionSummaries,
+      defaultActiveDimension,
+    }),
+    [
+      candidateName,
+      audioUrl,
+      recordingStartTime,
+      transcriptWithTimes,
+      evidenceWithTiming,
+      dimensionScores,
+      dimensionSummaries,
+      defaultActiveDimension,
+    ]
+  )
+
+  return (
+    <ReviewStoreContext.Provider value={store}>
+      <ReviewActionsContext.Provider value={actions}>
+        <ReviewDataContext.Provider value={data}>
+          {children}
+        </ReviewDataContext.Provider>
+      </ReviewActionsContext.Provider>
+    </ReviewStoreContext.Provider>
+  )
+}
+
+function useReviewStoreApi() {
+  const store = useContext(ReviewStoreContext)
+  if (!store) {
+    throw new Error('useReviewStore must be used within ReviewProvider')
+  }
+  return store
+}
+
+function useReviewStore<T>(selector: (state: ReviewStoreState) => T): T {
+  return useStore(useReviewStoreApi(), selector)
+}
+
+export function useReviewData() {
+  const data = useContext(ReviewDataContext)
+  if (!data) {
+    throw new Error('useReviewData must be used within ReviewProvider')
+  }
+  return data
+}
+
+export function useReviewActions() {
+  const actions = useContext(ReviewActionsContext)
+  if (!actions) {
+    throw new Error('useReviewActions must be used within ReviewProvider')
+  }
+  return actions
+}
+
+/** Resolved active dimension (override or default); only re-renders on change. */
+export function useReviewActiveDimension() {
+  const override = useReviewStore((state) => state.activeDimensionOverride)
+  const { defaultActiveDimension } = useReviewData()
+  return override ?? defaultActiveDimension
+}
+
+export function useReviewPlayback() {
+  const slice = useReviewStore(
+    useShallow((state) => ({
+      isPlaying: state.isPlaying,
+      currentTime: state.currentTime,
+      duration: state.duration,
+      volume: state.volume,
+      isMuted: state.isMuted,
+      playbackRate: state.playbackRate,
+      rateTransitioning: state.rateTransitioning,
+    }))
+  )
+  const actions = useReviewActions()
+  const playedPct =
+    slice.duration > 0 ? (slice.currentTime / slice.duration) * 100 : 0
+
+  return {
+    ...slice,
+    audioRef: actions.audioRef,
+    togglePlay: actions.togglePlay,
+    stopPlayback: actions.stopPlayback,
+    handleTimeUpdate: actions.handleTimeUpdate,
+    handleLoadedMetadata: actions.handleLoadedMetadata,
+    handleSeek: actions.handleSeek,
+    toggleMute: actions.toggleMute,
+    handleVolumeChange: actions.handleVolumeChange,
+    jumpToTime: actions.jumpToTime,
+    cyclePlaybackRate: actions.cyclePlaybackRate,
+    playedPct,
+  }
+}
+
+export function useReviewFocus() {
+  const { transcriptWithTimes, evidenceWithTiming } = useReviewData()
+  const actions = useReviewActions()
+  const transcriptMode = useReviewStore((state) => state.transcriptMode)
+  const currentTime = useReviewStore((state) => state.currentTime)
+  const isPlaying = useReviewStore((state) => state.isPlaying)
+  const resolvedActiveDimension = useReviewActiveDimension()
   const deferredActiveDimension = useDeferredValue(resolvedActiveDimension)
 
   const activeEvidence = useMemo(() => {
@@ -249,194 +501,25 @@ export function ReviewProvider({
   }, [currentTime, isPlaying, transcriptWithTimes])
 
   useEffect(() => {
-    if (!isPlaying || !activeSegmentId || !transcriptRef.current) return
-    const activeEl = transcriptRef.current.querySelector(
+    if (!isPlaying || !activeSegmentId || !actions.transcriptRef.current) return
+    const activeEl = actions.transcriptRef.current.querySelector(
       `[data-segment-id="${activeSegmentId}"]`
     )
     if (activeEl instanceof HTMLElement) {
       activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
-  }, [activeSegmentId, isPlaying])
+  }, [actions.transcriptRef, activeSegmentId, isPlaying])
 
-  const togglePlay = useCallback(() => {
-    if (!audioRef.current) return
-    if (isPlaying) {
-      audioRef.current.pause()
-      setIsPlaying(false)
-      return
-    }
-    void audioRef.current.play()
-    setIsPlaying(true)
-  }, [isPlaying])
-
-  const stopPlayback = useCallback(() => {
-    setIsPlaying(false)
-  }, [])
-
-  const handleTimeUpdate = useCallback(() => {
-    if (audioRef.current) setCurrentTime(audioRef.current.currentTime)
-  }, [])
-
-  const handleLoadedMetadata = useCallback(() => {
-    if (audioRef.current) setDuration(audioRef.current.duration)
-  }, [])
-
-  const handleSeek = useCallback((value: number | readonly number[]) => {
-    const nextTime = Array.isArray(value) ? value[0] : value
-    if (!audioRef.current || nextTime === undefined) return
-    audioRef.current.currentTime = nextTime
-    setCurrentTime(nextTime)
-  }, [])
-
-  const toggleMute = useCallback(() => {
-    if (!audioRef.current) return
-    const nextMuted = !isMuted
-    audioRef.current.muted = nextMuted
-    setIsMuted(nextMuted)
-  }, [isMuted])
-
-  const handleVolumeChange = useCallback(
-    (value: number | readonly number[]) => {
-      const nextVolume = Array.isArray(value) ? value[0] : value
-      if (nextVolume === undefined) return
-      setVolume(nextVolume)
-      if (!audioRef.current) return
-      audioRef.current.volume = nextVolume
-      if (nextVolume > 0 && isMuted) {
-        setIsMuted(false)
-        audioRef.current.muted = false
-      } else if (nextVolume === 0 && !isMuted) {
-        setIsMuted(true)
-        audioRef.current.muted = true
-      }
-    },
-    [isMuted]
-  )
-
-  const jumpToTime = useCallback(
-    (timeSec?: number) => {
-      if (!audioRef.current || timeSec === undefined) return
-      audioRef.current.currentTime = timeSec
-      setCurrentTime(timeSec)
-      if (!isPlaying) {
-        void audioRef.current.play()
-        setIsPlaying(true)
-      }
-    },
-    [isPlaying]
-  )
-
-  const cyclePlaybackRate = useCallback(() => {
-    setRateTransitioning(true)
-    const nextIndex =
-      (PLAYBACK_RATES.indexOf(playbackRate) + 1) % PLAYBACK_RATES.length
-    const nextRate = PLAYBACK_RATES[nextIndex]
-    setTimeout(() => {
-      setPlaybackRate(nextRate)
-      if (audioRef.current) audioRef.current.playbackRate = nextRate
-      setRateTransitioning(false)
-    }, 80)
-  }, [playbackRate])
-
-  const playedPct = duration > 0 ? (currentTime / duration) * 100 : 0
-
-  const value = useMemo<ReviewContextValue>(
-    () => ({
-      candidateName,
-      transcript,
-      evidence,
-      dimensionScores,
-      audioUrl,
-      recordingStartTime,
-      transcriptWithTimes,
-      evidenceWithTiming,
-      dimensionSummaries,
-      playback: {
-        isPlaying,
-        currentTime,
-        duration,
-        volume,
-        isMuted,
-        playbackRate,
-        rateTransitioning,
-        audioRef,
-        togglePlay,
-        handleTimeUpdate,
-        handleLoadedMetadata,
-        handleSeek,
-        toggleMute,
-        handleVolumeChange,
-        jumpToTime,
-        cyclePlaybackRate,
-        stopPlayback,
-        playedPct,
-      },
-      focus: {
-        activeDimension: resolvedActiveDimension,
-        setActiveDimension,
-        transcriptMode,
-        setTranscriptMode,
-        deferredActiveDimension,
-        activeEvidence,
-        citedSegmentIds,
-        visibleTranscript,
-        activeSegmentId,
-        transcriptRef,
-      },
-    }),
-    [
-      activeEvidence,
-      activeSegmentId,
-      audioUrl,
-      candidateName,
-      citedSegmentIds,
-      currentTime,
-      deferredActiveDimension,
-      dimensionScores,
-      dimensionSummaries,
-      duration,
-      evidence,
-      evidenceWithTiming,
-      isMuted,
-      isPlaying,
-      playbackRate,
-      playedPct,
-      rateTransitioning,
-      recordingStartTime,
-      resolvedActiveDimension,
-      transcript,
-      transcriptMode,
-      transcriptWithTimes,
-      playedPct,
-      togglePlay,
-      handleTimeUpdate,
-      handleLoadedMetadata,
-      handleSeek,
-      toggleMute,
-      handleVolumeChange,
-      jumpToTime,
-      cyclePlaybackRate,
-      stopPlayback,
-    ]
-  )
-
-  return (
-    <ReviewContext.Provider value={value}>{children}</ReviewContext.Provider>
-  )
-}
-
-export function useReviewContext() {
-  const context = useContext(ReviewContext)
-  if (!context) {
-    throw new Error('useReviewContext must be used within ReviewProvider')
+  return {
+    activeDimension: resolvedActiveDimension,
+    setActiveDimension: actions.setActiveDimension,
+    transcriptMode,
+    setTranscriptMode: actions.setTranscriptMode,
+    deferredActiveDimension,
+    activeEvidence,
+    citedSegmentIds,
+    visibleTranscript,
+    activeSegmentId,
+    transcriptRef: actions.transcriptRef,
   }
-  return context
-}
-
-export function useReviewPlayback() {
-  return useReviewContext().playback
-}
-
-export function useReviewFocus() {
-  return useReviewContext().focus
 }

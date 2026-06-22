@@ -8,10 +8,15 @@ import { formatDimensionLabel } from '@/lib/recruiter/format'
 import { formatTime } from '@/lib/format/time'
 import { cn } from '@/lib/utils'
 import { WorkspaceSurface } from '@/components/workspace/surface'
-import { useReviewContext } from '@/components/recruiter/review-context'
+import {
+  useReviewActions,
+  useReviewData,
+  useReviewFocus,
+} from '@/components/recruiter/review-context'
 
 export function ReviewConsoleTranscript() {
-  const { candidateName, focus, playback } = useReviewContext()
+  const { candidateName } = useReviewData()
+  const { jumpToTime } = useReviewActions()
   const {
     activeDimension,
     transcriptMode,
@@ -20,7 +25,7 @@ export function ReviewConsoleTranscript() {
     visibleTranscript,
     activeSegmentId,
     transcriptRef,
-  } = focus
+  } = useReviewFocus()
 
   return (
     <>
@@ -71,7 +76,7 @@ export function ReviewConsoleTranscript() {
                     key={segment.id}
                     type="button"
                     data-segment-id={segment.id}
-                    onClick={() => playback.jumpToTime(segment.startSec)}
+                    onClick={() => jumpToTime(segment.startSec)}
                     className={cn(
                       'group flex min-h-10 gap-3 rounded-lg border-l-2 px-3 py-2.5 text-left transition-[border-color,background-color] duration-200 active:scale-[0.98]',
                       isActive

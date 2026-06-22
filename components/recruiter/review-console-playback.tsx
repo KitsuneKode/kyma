@@ -14,10 +14,14 @@ import { Slider } from '@/components/ui/slider'
 import { formatTime } from '@/lib/format/time'
 import { cn } from '@/lib/utils'
 import { WorkspaceSurface } from '@/components/workspace/surface'
-import { useReviewContext } from '@/components/recruiter/review-context'
+import {
+  useReviewData,
+  useReviewPlayback,
+} from '@/components/recruiter/review-context'
 
 export function ReviewConsolePlayback() {
-  const { audioUrl, playback } = useReviewContext()
+  const { audioUrl } = useReviewData()
+  const playback = useReviewPlayback()
   const {
     isPlaying,
     currentTime,

@@ -6,7 +6,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useReducer,
   useRef,
   useState,
   type Dispatch,
@@ -14,15 +13,21 @@ import {
 } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { type DisconnectReason, Room } from 'livekit-client'
+import { useStore } from 'zustand'
+import { type StoreApi } from 'zustand/vanilla'
+import { useShallow } from 'zustand/react/shallow'
 
 import { api } from '@/convex/_generated/api'
 import { InviteLobby } from '@/components/interview/invite-lobby'
 import { InviteAccessScreen } from '@/components/interview/invite-access-screen'
 import { MeetingShell } from '@/components/interview/meeting-shell'
 import {
-  bootstrapInterviewSession,
-  type BootstrappedInterviewSession,
-} from '@/lib/interview/bootstrap'
+  createWorkspaceStore,
+  type InterviewView,
+  type WorkspaceState,
+  type WorkspaceStore,
+} from '@/components/interview/interview-workspace-store'
+import { bootstrapInterviewSession } from '@/lib/interview/bootstrap'
 import {
   createDiagnosticLogger,
   createRequestId,
@@ -66,83 +71,15 @@ type InterviewWorkspaceProps = {
   initialSnapshot: InterviewSessionSnapshot
 }
 
-type InterviewView = 'prejoin' | 'meeting' | 'processing'
-
-type WorkspaceState = {
-  view: InterviewView
-  session: InterviewSessionSnapshot
-  participantName: string
-  preJoinChoices: LocalUserChoices | null
-  bootstrappedSession: BootstrappedInterviewSession | null
-  connectionError: string | null
-  isBootstrapping: boolean
-  isSubmittingInterview: boolean
-  agentJoinTimedOut: boolean
-}
-
-type WorkspaceAction =
-  | {
-      type: 'PATCH'
-      patch:
-        | Partial<WorkspaceState>
-        | ((state: WorkspaceState) => Partial<WorkspaceState>)
-    }
-  | {
-      type: 'UPDATE_SESSION'
-      updater: SetStateAction<InterviewSessionSnapshot>
-    }
-
-function createInitialWorkspaceState(
-  initialSnapshot: InterviewSessionSnapshot
-): WorkspaceState {
-  return {
-    view:
-      initialSnapshot.state === 'processing' ||
-      initialSnapshot.state === 'completed'
-        ? 'processing'
-        : 'prejoin',
-    session: initialSnapshot,
-    participantName: initialSnapshot.candidateName ?? 'Demo Candidate',
-    preJoinChoices: null,
-    bootstrappedSession: null,
-    connectionError: null,
-    isBootstrapping: false,
-    isSubmittingInterview: false,
-    agentJoinTimedOut: false,
-  }
-}
-
-function workspaceReducer(
-  state: WorkspaceState,
-  action: WorkspaceAction
-): WorkspaceState {
-  switch (action.type) {
-    case 'PATCH': {
-      const patch =
-        typeof action.patch === 'function' ? action.patch(state) : action.patch
-      return { ...state, ...patch }
-    }
-    case 'UPDATE_SESSION': {
-      const nextSession =
-        typeof action.updater === 'function'
-          ? action.updater(state.session)
-          : action.updater
-      return { ...state, session: nextSession }
-    }
-    default:
-      return state
-  }
-}
-
 export function InterviewWorkspace({
   initialSnapshot,
 }: InterviewWorkspaceProps) {
   const [requestId] = useState(() => createRequestId('client'))
-  const [workspace, dispatch] = useReducer(
-    workspaceReducer,
-    initialSnapshot,
-    createInitialWorkspaceState
-  )
+  const storeRef = useRef<StoreApi<WorkspaceStore>>(null)
+  if (storeRef.current === null) {
+    storeRef.current = createWorkspaceStore(initialSnapshot)
+  }
+  const store = storeRef.current
   const {
     view,
     session,
@@ -153,54 +90,58 @@ export function InterviewWorkspace({
     isBootstrapping,
     isSubmittingInterview,
     agentJoinTimedOut,
-  } = workspace
+  } = useStore(
+    store,
+    useShallow((state) => ({
+      view: state.view,
+      session: state.session,
+      participantName: state.participantName,
+      preJoinChoices: state.preJoinChoices,
+      bootstrappedSession: state.bootstrappedSession,
+      connectionError: state.connectionError,
+      isBootstrapping: state.isBootstrapping,
+      isSubmittingInterview: state.isSubmittingInterview,
+      agentJoinTimedOut: state.agentJoinTimedOut,
+    }))
+  )
 
+  const patchWorkspace = useCallback(
+    (patch: Partial<WorkspaceState>) => store.getState().patch(patch),
+    [store]
+  )
   const setSession = useCallback<
     Dispatch<SetStateAction<InterviewSessionSnapshot>>
-  >((updater) => dispatch({ type: 'UPDATE_SESSION', updater }), [])
+  >((updater) => store.getState().updateSession(updater), [store])
   const setView = useCallback<Dispatch<SetStateAction<InterviewView>>>(
     (updater) =>
-      dispatch({
-        type: 'PATCH',
-        patch: (state) => ({
-          view: typeof updater === 'function' ? updater(state.view) : updater,
-        }),
-      }),
-    []
+      store.getState().patch((state) => ({
+        view: typeof updater === 'function' ? updater(state.view) : updater,
+      })),
+    [store]
   )
   const setConnectionError = useCallback<
     Dispatch<SetStateAction<string | null>>
   >(
     (updater) =>
-      dispatch({
-        type: 'PATCH',
-        patch: (state) => ({
-          connectionError:
-            typeof updater === 'function'
-              ? updater(state.connectionError)
-              : updater,
-        }),
-      }),
-    []
+      store.getState().patch((state) => ({
+        connectionError:
+          typeof updater === 'function'
+            ? updater(state.connectionError)
+            : updater,
+      })),
+    [store]
   )
   const setBootstrappedSession = useCallback<
-    Dispatch<SetStateAction<BootstrappedInterviewSession | null>>
+    Dispatch<SetStateAction<WorkspaceState['bootstrappedSession']>>
   >(
     (updater) =>
-      dispatch({
-        type: 'PATCH',
-        patch: (state) => ({
-          bootstrappedSession:
-            typeof updater === 'function'
-              ? updater(state.bootstrappedSession)
-              : updater,
-        }),
-      }),
-    []
-  )
-  const patchWorkspace = useCallback(
-    (patch: Partial<WorkspaceState>) => dispatch({ type: 'PATCH', patch }),
-    []
+      store.getState().patch((state) => ({
+        bootstrappedSession:
+          typeof updater === 'function'
+            ? updater(state.bootstrappedSession)
+            : updater,
+      })),
+    [store]
   )
   const room = useMemo(
     () =>

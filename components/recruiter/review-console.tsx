@@ -4,7 +4,11 @@ import { ReviewProvider } from '@/components/recruiter/review-context'
 import { ReviewConsolePlayback } from '@/components/recruiter/review-console-playback'
 import { ReviewConsoleTranscript } from '@/components/recruiter/review-console-transcript'
 import { RubricVerdict } from '@/components/recruiter/rubric-verdict'
-import { useReviewContext } from '@/components/recruiter/review-context'
+import {
+  useReviewActions,
+  useReviewActiveDimension,
+  useReviewData,
+} from '@/components/recruiter/review-context'
 import type { CandidateReviewDetail } from '@/components/recruiter/candidate-review-workspace'
 
 type ReviewConsoleProps = {
@@ -19,10 +23,9 @@ type ReviewConsoleProps = {
 }
 
 function ReviewConsoleBody() {
-  const { dimensionScores, evidenceWithTiming, focus, playback } =
-    useReviewContext()
-  const { activeDimension, setActiveDimension } = focus
-  const { jumpToTime } = playback
+  const { dimensionScores, evidenceWithTiming } = useReviewData()
+  const activeDimension = useReviewActiveDimension()
+  const { setActiveDimension, jumpToTime } = useReviewActions()
 
   return (
     <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,420px)]">
