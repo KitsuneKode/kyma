@@ -33,11 +33,21 @@ You send a candidate a link, they join a short guided interview in-browser, and 
 
 ## Product preview
 
-![Kyma hero preview](public/readme-hero.png)
-![Kyma candidate flow preview](public/readme-candidate.png)
-![Kyma recruiter dashboard preview](public/readme-recruiter.png)
+Screenshots captured from the live site at [kyma.kitsunelabs.xyz](https://kyma.kitsunelabs.xyz).
 
-SVG sources for these previews live in `public/brand/readme-hero.svg`, `public/brand/readme-candidate.svg`, and `public/brand/readme-recruiter.svg`. Regenerate PNGs with `bun run brand:export`.
+![Kyma marketing homepage with hero and product preview](public/readme-hero.png)
+
+_Homepage — voice-first tutor screening positioning and interactive product demo._
+
+![Kyma live interview transcript with teaching simulation](public/readme-candidate.png)
+
+_Candidate flow — AI-led interview transcript with mid-interview teaching simulation._
+
+![Kyma recruiter review workspace with rubric scores](public/readme-recruiter.png)
+
+_Recruiter dashboard — structured review with transcript sync, rubric scores, and recommendation._
+
+Regenerate screenshots after UI changes: `bun run readme:capture`
 
 ## Solutions (SEO landing pages)
 
@@ -59,7 +69,7 @@ Public persona pages for programmatic SEO and audience-specific positioning:
 ### Product walkthrough media
 
 - Demo video: _coming soon_
-- Screenshots: `public/brand/readme-hero.svg` (source) and exported `public/readme-hero.png`, `public/readme-candidate.png`, `public/readme-recruiter.png`
+- Screenshots: `public/readme-hero.png`, `public/readme-candidate.png`, `public/readme-recruiter.png` (captured from production via `bun run readme:capture`)
 
 ### Icon and brand assets
 

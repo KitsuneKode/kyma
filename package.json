@@ -30,6 +30,7 @@
     "db:cutover:org-rbac:dev": "bun run db:reset:dev && bun run db:seed:dev",
     "clerk:setup-auth": "bun run scripts/clerk-setup-kyma-auth.ts",
     "brand:export": "bun run scripts/export-brand-pngs.ts",
+    "readme:capture": "node scripts/capture-readme-screenshots.mjs",
     "verify:auth-org-rbac": "bun run fmt && bun run typecheck && bun run lint && bun run test",
     "agent:dev": "bun run agents/worker.ts dev",
     "agent:start": "bun run agents/worker.ts start",

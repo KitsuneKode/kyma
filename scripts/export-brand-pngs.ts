@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Export brand SVG sources to PNG assets used by README, GitHub, and legacy fallbacks.
+ * Export brand SVG sources to PNG assets used by GitHub and legacy fallbacks.
  *
  * Usage: bun run scripts/export-brand-pngs.ts
  */
@@ -27,9 +27,6 @@ mkdirSync(brandDir, { recursive: true })
 
 const markSvg = join(brandDir, 'kyma-mark.svg')
 const ogSvg = join(brandDir, 'og-image.svg')
-const readmeHeroSvg = join(brandDir, 'readme-hero.svg')
-const readmeCandidateSvg = join(brandDir, 'readme-candidate.svg')
-const readmeRecruiterSvg = join(brandDir, 'readme-recruiter.svg')
 
 renderPng(markSvg, 512, join(publicDir, 'kyma-mark.png'))
 renderPng(markSvg, 16, join(publicDir, 'favicon-16x16.png'))
@@ -39,9 +36,6 @@ renderPng(markSvg, 180, join(publicDir, 'apple-touch-icon.png'))
 renderPng(markSvg, 192, join(publicDir, 'android-chrome-192x192.png'))
 renderPng(markSvg, 512, join(publicDir, 'android-chrome-512x512.png'))
 renderPng(ogSvg, 1200, join(publicDir, 'og-image.png'))
-renderPng(readmeHeroSvg, 1400, join(publicDir, 'readme-hero.png'))
-renderPng(readmeCandidateSvg, 1400, join(publicDir, 'readme-candidate.png'))
-renderPng(readmeRecruiterSvg, 1400, join(publicDir, 'readme-recruiter.png'))
 
 const faviconIco = join(publicDir, 'favicon.ico')
 const appFaviconIco = join(root, 'app', 'favicon.ico')
@@ -63,4 +57,4 @@ if (magick.status !== 0) {
 
 writeFileSync(appFaviconIco, readFileSync(faviconIco))
 
-console.log('Exported brand, README, and favicon assets from SVG sources.')
+console.log('Exported brand and favicon assets from SVG sources.')
