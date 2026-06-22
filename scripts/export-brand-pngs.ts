@@ -6,6 +6,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { spawnSync } from 'node:child_process'
 import { Resvg } from '@resvg/resvg-js'
 
 const root = process.cwd()
@@ -42,4 +43,24 @@ renderPng(readmeHeroSvg, 1400, join(publicDir, 'readme-hero.png'))
 renderPng(readmeCandidateSvg, 1400, join(publicDir, 'readme-candidate.png'))
 renderPng(readmeRecruiterSvg, 1400, join(publicDir, 'readme-recruiter.png'))
 
-console.log('Exported brand and README PNG assets from SVG sources.')
+const faviconIco = join(publicDir, 'favicon.ico')
+const appFaviconIco = join(root, 'app', 'favicon.ico')
+
+const magick = spawnSync(
+  'magick',
+  [
+    join(publicDir, 'favicon-16x16.png'),
+    join(publicDir, 'favicon-32x32.png'),
+    join(publicDir, 'favicon-48x48.png'),
+    faviconIco,
+  ],
+  { stdio: 'inherit' }
+)
+
+if (magick.status !== 0) {
+  throw new Error('Failed to generate favicon.ico with ImageMagick')
+}
+
+writeFileSync(appFaviconIco, readFileSync(faviconIco))
+
+console.log('Exported brand, README, and favicon assets from SVG sources.')
