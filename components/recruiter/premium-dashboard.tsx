@@ -114,17 +114,17 @@ export function PremiumRecruiterDashboard({
           </div>
         </motion.div>
 
-        {/* Recent Activity - Obsidian Timeline Style */}
+        {/* Recent activity — resting elevation, supporting context */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-          className="rounded-[2rem] border border-border/40 bg-card p-8 shadow-2xl ring-1 ring-border/50 lg:col-span-2"
+          transition={{ delay: 0.48, duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+          className="rounded-3xl bg-card p-7 shadow-[var(--shadow-sm)] ring-1 ring-border/60 lg:col-span-2"
         >
-          <h3 className="mb-8 text-sm font-bold tracking-widest text-muted-foreground uppercase">
-            Recent activity stream
+          <h3 className="mb-7 text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+            Recent activity
           </h3>
-          <div className="no-scrollbar flex max-h-[300px] flex-col gap-4 overflow-y-auto pr-4">
+          <div className="no-scrollbar flex max-h-[300px] flex-col gap-1 overflow-y-auto pr-1">
             {dashboardSummary?.recentActivity.length ? (
               dashboardSummary.recentActivity
                 .slice(0, 8)
@@ -267,30 +267,27 @@ function QuickActionCard({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.5 }}
-      className="group relative overflow-hidden rounded-[2rem] bg-card p-10 shadow-2xl ring-1 ring-border/50 transition-all duration-300 hover:ring-border"
+      transition={{ delay, duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+      className="group relative overflow-hidden rounded-3xl bg-card p-8 shadow-[var(--shadow-sm)] ring-1 ring-border/60 transition-all duration-200 ease-[var(--ease-out)] hover:shadow-[var(--shadow-md)] hover:ring-border"
     >
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,hsla(0,0%,20%,0.1)_0,transparent_50%)]" />
-      <div className="relative z-10">
-        <div className="mb-6 flex size-14 items-center justify-center rounded-2xl bg-foreground/5 text-foreground/40 transition-all duration-300 group-hover:scale-110 group-hover:bg-foreground/10 group-hover:text-foreground">
-          {icon}
-        </div>
-        <h2 className="mb-3 text-2xl font-semibold tracking-tight text-foreground">
-          {title}
-        </h2>
-        <p className="mb-10 max-w-xs text-sm leading-relaxed text-muted-foreground transition-colors group-hover:text-foreground/70">
-          {description}
-        </p>
-        <Link
-          href={href}
-          className="inline-flex items-center gap-2 text-sm font-bold tracking-widest text-primary uppercase transition-all group-hover:gap-4"
-        >
-          {cta}
-          <IconArrowRight className="size-4" />
-        </Link>
+      <div className="mb-6 flex size-12 items-center justify-center rounded-2xl bg-foreground/[0.04] text-foreground/45 ring-1 ring-border/40 transition-colors duration-200 group-hover:text-foreground/80">
+        {icon}
       </div>
+      <h2 className="mb-2.5 text-xl font-semibold tracking-tight text-foreground">
+        {title}
+      </h2>
+      <p className="mb-8 max-w-xs text-sm leading-relaxed text-muted-foreground">
+        {description}
+      </p>
+      <Link
+        href={href}
+        className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition-all duration-200 group-hover:gap-3"
+      >
+        {cta}
+        <IconArrowRight className="size-4" />
+      </Link>
     </motion.div>
   )
 }
