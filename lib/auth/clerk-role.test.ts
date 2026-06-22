@@ -3,9 +3,8 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import {
-  hasLegacyBothPersona,
-  personaFromSessionClaims,
   preferredWorkspaceFromSessionClaims,
+  resolveRecruiterAccess,
 } from '@/lib/auth/clerk-role'
 
 const fixtures = JSON.parse(
@@ -14,27 +13,33 @@ const fixtures = JSON.parse(
     'utf8'
   )
 ) as {
+  preferredWorkspaceMetadata: Record<string, { preferredWorkspace: string }>
   jwtClaimFixtures: Record<string, Record<string, unknown>>
 }
 
 describe('preferredWorkspaceFromSessionClaims', () => {
-  it('reads candidate from jwt fixtures', () => {
+  it('reads candidate from preferredWorkspace metadata', () => {
+    expect(
+      preferredWorkspaceFromSessionClaims({
+        metadata: fixtures.preferredWorkspaceMetadata.candidate,
+      })
+    ).toBe('candidate')
+  })
+
+  it('reads recruiter from preferredWorkspace metadata', () => {
+    expect(
+      preferredWorkspaceFromSessionClaims({
+        metadata: fixtures.preferredWorkspaceMetadata.recruiter,
+      })
+    ).toBe('recruiter')
+  })
+
+  it('ignores legacy persona-only metadata', () => {
     const claims = fixtures.jwtClaimFixtures.candidateOnly
-    expect(preferredWorkspaceFromSessionClaims(claims)).toBe('candidate')
-  })
-
-  it('reads recruiter from jwt fixtures', () => {
-    const claims = fixtures.jwtClaimFixtures.recruiterAllowed
-    expect(preferredWorkspaceFromSessionClaims(claims)).toBe('recruiter')
-  })
-
-  it('returns null for legacy both persona', () => {
-    const claims = fixtures.jwtClaimFixtures.orgAdmin
     expect(preferredWorkspaceFromSessionClaims(claims)).toBeNull()
-    expect(hasLegacyBothPersona(claims)).toBe(true)
   })
 
-  it('prefers preferredWorkspace over legacy persona', () => {
+  it('prefers preferredWorkspace over other metadata', () => {
     expect(
       preferredWorkspaceFromSessionClaims({
         metadata: {
@@ -46,12 +51,31 @@ describe('preferredWorkspaceFromSessionClaims', () => {
   })
 })
 
-describe('personaFromSessionClaims (legacy)', () => {
-  it('maps preferredWorkspace to persona-compatible values', () => {
+describe('resolveRecruiterAccess', () => {
+  it('denies access without org', () => {
     expect(
-      personaFromSessionClaims({
-        metadata: { preferredWorkspace: 'recruiter' },
+      resolveRecruiterAccess({
+        orgId: null,
+        has: () => true,
       })
-    ).toBe('recruiter')
+    ).toEqual({ canAccessRecruiter: false, isOrgAdmin: false })
+  })
+
+  it('grants admin access via org:admin role', () => {
+    expect(
+      resolveRecruiterAccess({
+        orgId: 'org_1',
+        has: (check) => check.role === 'org:admin',
+      })
+    ).toEqual({ canAccessRecruiter: true, isOrgAdmin: true })
+  })
+
+  it('grants member access via recruiter:access permission', () => {
+    expect(
+      resolveRecruiterAccess({
+        orgId: 'org_1',
+        has: (check) => check.permission === 'org:recruiter:access',
+      })
+    ).toEqual({ canAccessRecruiter: true, isOrgAdmin: false })
   })
 })

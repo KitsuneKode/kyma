@@ -18,7 +18,7 @@ export function WorkspacePromptBanner({ variant }: WorkspacePromptBannerProps) {
           candidate review.
         </p>
         <Link
-          href="/onboarding/recruiter"
+          href="/recruiter/setup"
           className={cn(buttonVariants({ size: 'sm' }), 'mt-3 inline-flex')}
         >
           Set up organization

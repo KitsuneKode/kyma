@@ -3,12 +3,11 @@
 import { auth } from '@clerk/nextjs/server'
 
 import type { PreferredWorkspace } from '@/lib/auth/clerk-role'
-import { RECRUITER_PERMISSION_MAP } from '@/lib/auth/clerk-role'
+import { resolveRecruiterAccess } from '@/lib/auth/clerk-role'
 import {
   getPreferredWorkspaceFromClerk,
   getRedirectPathAfterWorkspaceChoice,
   setPreferredWorkspaceHint,
-  setWorkspaceRoutingCookie,
 } from '@/lib/auth/workspace'
 
 export type SetPreferredWorkspaceResult =
@@ -25,7 +24,6 @@ export async function setPreferredWorkspace(
 
   try {
     await setPreferredWorkspaceHint(userId, workspace)
-    await setWorkspaceRoutingCookie(workspace)
     const confirmed = await getPreferredWorkspaceFromClerk(userId)
     if (confirmed !== workspace) {
       return {
@@ -35,13 +33,7 @@ export async function setPreferredWorkspace(
       }
     }
 
-    const canAccessRecruiter = Boolean(
-      orgId &&
-      (has?.({ role: 'org:admin' }) ||
-        has?.({
-          permission: RECRUITER_PERMISSION_MAP['recruiter:access'],
-        }))
-    )
+    const { canAccessRecruiter } = resolveRecruiterAccess({ orgId, has })
 
     return {
       ok: true,

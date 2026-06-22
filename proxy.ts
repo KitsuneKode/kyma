@@ -2,15 +2,10 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
 import {
-  hasLegacyBothPersona,
-  RECRUITER_PERMISSION_MAP,
+  preferredWorkspaceFromSessionClaims,
+  resolveRecruiterAccess,
 } from '@/lib/auth/clerk-role'
 import { resolveAppRoute } from '@/lib/auth/routing'
-import {
-  resolvePreferredWorkspaceForRouting,
-  shouldClearWorkspaceRoutingCookie,
-  WORKSPACE_ROUTING_COOKIE_NAME,
-} from '@/lib/auth/workspace-routing-cookie'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 const isRecruiterRoute = createRouteMatcher(['/recruiter(.*)', '/admin(.*)'])
@@ -24,6 +19,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/interviews(.*)',
+  '/i(.*)',
   '/api(.*)',
 ])
 const hasClerk = hasClerkServerCredentials()
@@ -36,19 +32,9 @@ export default hasClerk
         | Record<string, unknown>
         | null
         | undefined
-      const routingCookie = req.cookies.get(
-        WORKSPACE_ROUTING_COOKIE_NAME
-      )?.value
-      const preferredWorkspace = resolvePreferredWorkspaceForRouting({
-        sessionClaims: sessionClaimsRecord,
-        routingCookie,
-      })
-      const hasLegacyBoth = hasLegacyBothPersona(sessionClaimsRecord)
-      const canAccessRecruiter = Boolean(
-        orgId &&
-        (has?.({ role: 'org:admin' }) ||
-          has?.({ permission: RECRUITER_PERMISSION_MAP['recruiter:access'] }))
-      )
+      const preferredWorkspace =
+        preferredWorkspaceFromSessionClaims(sessionClaimsRecord)
+      const { canAccessRecruiter } = resolveRecruiterAccess({ orgId, has })
 
       const isProtectedRoute =
         (!isPublicRoute(req) &&
@@ -80,7 +66,6 @@ export default hasClerk
         pathname,
         isSignedIn: true,
         preferredWorkspace,
-        hasLegacyBoth,
         orgId: orgId ?? null,
         canAccessRecruiter,
       })
@@ -92,27 +77,7 @@ export default hasClerk
         isOnboardingRoute(req)
 
       if (shouldResolve && redirectTarget && redirectTarget !== pathname) {
-        const response = NextResponse.redirect(new URL(redirectTarget, req.url))
-        if (
-          shouldClearWorkspaceRoutingCookie({
-            sessionClaims: sessionClaimsRecord,
-            routingCookie,
-          })
-        ) {
-          response.cookies.delete(WORKSPACE_ROUTING_COOKIE_NAME)
-        }
-        return response
-      }
-
-      if (
-        shouldClearWorkspaceRoutingCookie({
-          sessionClaims: sessionClaimsRecord,
-          routingCookie,
-        })
-      ) {
-        const response = NextResponse.next()
-        response.cookies.delete(WORKSPACE_ROUTING_COOKIE_NAME)
-        return response
+        return NextResponse.redirect(new URL(redirectTarget, req.url))
       }
     })
   : function proxy() {

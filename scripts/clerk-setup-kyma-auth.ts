@@ -49,7 +49,6 @@ const CONVEX_TEMPLATE_CLAIMS = {
   org_permissions: '{{org_membership.permissions}}',
   metadata: {
     preferredWorkspace: '{{user.public_metadata.preferredWorkspace}}',
-    persona: '{{user.public_metadata.persona}}',
   },
 }
 
@@ -249,9 +248,11 @@ async function main() {
   console.log(
     '3-segment Clerk keys before Dashboard creation — only access is bootstrapped here.'
   )
-  console.log('Sign out and sign in, then test /onboarding → /candidate.')
   console.log(
-    '\nOptional debug: KYMA_AUTH_DEBUG=1 in .env.local while testing onboarding.'
+    'Sign out and sign in, then test /sign-in/candidate → /candidate.'
+  )
+  console.log(
+    '\nOptional debug: KYMA_AUTH_DEBUG=1 in .env.local while testing auth routing.'
   )
 }
 

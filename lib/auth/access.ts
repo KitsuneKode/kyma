@@ -3,8 +3,9 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 
 import {
-  hasLegacyBothPersona,
-  RECRUITER_PERMISSION_MAP,
+  clerkHasCapability,
+  preferredWorkspaceFromSessionClaims,
+  resolveRecruiterAccess,
   type PreferredWorkspace,
   type RecruiterCapability,
 } from '@/lib/auth/clerk-role'
@@ -13,14 +14,13 @@ import {
   resolveAppRoute,
   type AppRouteContext,
 } from '@/lib/auth/routing'
-import { getPreferredWorkspaceForRouting } from '@/lib/auth/workspace-routing-cookie'
 
 export type UserAppAccess = {
   isSignedIn: boolean
   preferredWorkspace: PreferredWorkspace | 'anonymous' | 'unassigned'
-  hasLegacyBoth: boolean
   orgId: string | null
   canAccessRecruiter: boolean
+  isOrgAdmin: boolean
 }
 
 async function getUserAppAccessUncached(): Promise<UserAppAccess> {
@@ -30,29 +30,28 @@ async function getUserAppAccessUncached(): Promise<UserAppAccess> {
     return {
       isSignedIn: false,
       preferredWorkspace: 'anonymous',
-      hasLegacyBoth: false,
       orgId: null,
       canAccessRecruiter: false,
+      isOrgAdmin: false,
     }
   }
 
-  const preferredWorkspace = await getPreferredWorkspaceForRouting({
-    sessionClaims: sessionClaims as Record<string, unknown> | null | undefined,
+  const preferredWorkspace =
+    preferredWorkspaceFromSessionClaims(
+      sessionClaims as Record<string, unknown> | null | undefined
+    ) ?? 'unassigned'
+
+  const { canAccessRecruiter, isOrgAdmin } = resolveRecruiterAccess({
+    orgId,
+    has,
   })
-  const canAccessRecruiter = Boolean(
-    orgId &&
-    (has?.({ role: 'org:admin' }) ||
-      has?.({ permission: RECRUITER_PERMISSION_MAP['recruiter:access'] }))
-  )
 
   return {
     isSignedIn: true,
-    preferredWorkspace: preferredWorkspace ?? 'unassigned',
-    hasLegacyBoth: hasLegacyBothPersona(
-      sessionClaims as Record<string, unknown> | null | undefined
-    ),
+    preferredWorkspace,
     orgId: orgId ?? null,
     canAccessRecruiter,
+    isOrgAdmin,
   }
 }
 
@@ -70,7 +69,6 @@ function toRouteContext(
       access.preferredWorkspace === 'unassigned'
         ? null
         : access.preferredWorkspace,
-    hasLegacyBoth: access.hasLegacyBoth,
     orgId: access.orgId,
     canAccessRecruiter: access.canAccessRecruiter,
   }
@@ -96,21 +94,25 @@ export async function requireOrgPermission(
     redirect(target)
   }
   const { has } = await auth()
-  const allowed = Boolean(
-    has?.({ role: 'org:admin' }) ||
-    has?.({ permission: RECRUITER_PERMISSION_MAP[capability] })
-  )
-  if (!allowed) {
+  if (!clerkHasCapability(has, capability)) {
     if (!access.orgId) {
-      redirect('/onboarding/recruiter')
+      redirect('/recruiter/setup')
     }
-    redirect('/onboarding/recruiter?setup=jwt')
+    redirect('/candidate')
   }
   return access
 }
 
 export async function requireRecruiterPageAccess() {
   return await requireOrgPermission('recruiter:access')
+}
+
+export async function requireAdminPageAccess() {
+  const access = await requireRecruiterPageAccess()
+  if (!access.isOrgAdmin) {
+    redirect('/recruiter')
+  }
+  return access
 }
 
 export async function requireCandidatePageAccess() {

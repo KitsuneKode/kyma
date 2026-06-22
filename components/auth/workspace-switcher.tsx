@@ -49,7 +49,7 @@ export function WorkspaceSwitcher({
           onClick={() => switchWorkspace('candidate')}
         />
         <Link
-          href="/onboarding/recruiter"
+          href="/recruiter/setup"
           className={cn(
             'rounded-md px-3 py-1.5 transition-colors',
             onRecruiterSurface

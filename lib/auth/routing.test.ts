@@ -12,7 +12,6 @@ function ctx(
   return {
     isSignedIn: true,
     preferredWorkspace: null,
-    hasLegacyBoth: false,
     orgId: null,
     canAccessRecruiter: false,
     ...overrides,
@@ -25,23 +24,21 @@ describe('getPostSignInPathFromContext', () => {
       getPostSignInPathFromContext({
         isSignedIn: true,
         preferredWorkspace: null,
-        hasLegacyBoth: false,
         orgId: null,
         canAccessRecruiter: false,
       })
     ).toBe('/auth/continue')
   })
 
-  it('sends recruiter preference without org to org onboarding', () => {
+  it('sends recruiter preference without org to org setup', () => {
     expect(
       getPostSignInPathFromContext({
         isSignedIn: true,
         preferredWorkspace: 'recruiter',
-        hasLegacyBoth: false,
         orgId: null,
         canAccessRecruiter: false,
       })
-    ).toBe('/onboarding/recruiter')
+    ).toBe('/recruiter/setup')
   })
 
   it('sends recruiter with org access to recruiter home', () => {
@@ -49,7 +46,6 @@ describe('getPostSignInPathFromContext', () => {
       getPostSignInPathFromContext({
         isSignedIn: true,
         preferredWorkspace: 'recruiter',
-        hasLegacyBoth: false,
         orgId: 'org_test',
         canAccessRecruiter: true,
       })
@@ -61,7 +57,6 @@ describe('getPostSignInPathFromContext', () => {
       getPostSignInPathFromContext({
         isSignedIn: true,
         preferredWorkspace: 'candidate',
-        hasLegacyBoth: false,
         orgId: null,
         canAccessRecruiter: false,
       })
@@ -92,7 +87,7 @@ describe('resolveAppRoute', () => {
     ).toBeNull()
   })
 
-  it('redirects recruiter routes without org to org onboarding', () => {
+  it('redirects recruiter routes without org to org setup', () => {
     expect(
       resolveAppRoute(
         ctx({
@@ -100,31 +95,42 @@ describe('resolveAppRoute', () => {
           preferredWorkspace: 'recruiter',
         })
       )
-    ).toBe('/onboarding/recruiter')
+    ).toBe('/recruiter/setup')
   })
 
-  it('redirects recruiter routes without org permission to org onboarding', () => {
+  it('redirects recruiter routes without org permission to org setup', () => {
     expect(
       resolveAppRoute(
         ctx({
-          pathname: '/admin',
+          pathname: '/recruiter',
           preferredWorkspace: 'recruiter',
           orgId: 'org_test',
           canAccessRecruiter: false,
         })
       )
-    ).toBe('/onboarding/recruiter')
+    ).toBe('/recruiter/setup')
   })
 
-  it('auto-redirects completed onboarding away from /onboarding', () => {
+  it('redirects legacy onboarding to auth continue', () => {
     expect(
       resolveAppRoute(
         ctx({
           pathname: '/onboarding',
-          preferredWorkspace: 'candidate',
+          preferredWorkspace: null,
         })
       )
-    ).toBe('/candidate')
+    ).toBe('/auth/continue')
+  })
+
+  it('redirects legacy recruiter onboarding to setup', () => {
+    expect(
+      resolveAppRoute(
+        ctx({
+          pathname: '/onboarding/recruiter',
+          preferredWorkspace: 'recruiter',
+        })
+      )
+    ).toBe('/recruiter/setup')
   })
 
   it('allows auth continue handler to run', () => {
@@ -144,26 +150,6 @@ describe('resolveAppRoute', () => {
         ctx({
           pathname: '/',
           preferredWorkspace: 'candidate',
-        })
-      )
-    ).toBeNull()
-
-    expect(
-      resolveAppRoute(
-        ctx({
-          pathname: '/',
-          preferredWorkspace: null,
-        })
-      )
-    ).toBeNull()
-
-    expect(
-      resolveAppRoute(
-        ctx({
-          pathname: '/',
-          preferredWorkspace: 'recruiter',
-          orgId: 'org_test',
-          canAccessRecruiter: true,
         })
       )
     ).toBeNull()

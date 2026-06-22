@@ -1,8 +1,5 @@
 export type PreferredWorkspace = 'candidate' | 'recruiter'
 
-/** @deprecated Legacy routing hint; do not write `both` for new users. */
-export type PersonaHint = 'candidate' | 'recruiter' | 'both'
-
 export type RecruiterCapability =
   | 'recruiter:access'
   | 'recruiter:candidates:read'
@@ -25,7 +22,21 @@ export const RECRUITER_PERMISSION_MAP: Record<
   'recruiter:billing:write': 'org:recruiter:billing:write',
 }
 
+/** Admin-only capabilities (org:admin bypasses checks). */
+export const ADMIN_CAPABILITIES = new Set<RecruiterCapability>([
+  'recruiter:screenings:write',
+  'recruiter:templates:write',
+  'recruiter:settings:write',
+  'recruiter:billing:write',
+])
+
 type SessionClaims = Record<string, unknown> | null | undefined
+
+type ClerkHasFn = (
+  check:
+    | { role: string; permission?: never }
+    | { permission: string; role?: never }
+) => boolean
 
 function readMetadata(sessionClaims: SessionClaims) {
   const metadata = sessionClaims?.metadata
@@ -51,38 +62,34 @@ export function preferredWorkspaceFromSessionClaims(
 ): PreferredWorkspace | null {
   const metadata = readMetadata(sessionClaims)
   if (!metadata) return null
-
-  const preferred = parsePreferredWorkspaceValue(metadata.preferredWorkspace)
-  if (preferred) return preferred
-
-  const legacyPersona = metadata.persona
-  if (legacyPersona === 'both') {
-    return null
-  }
-  return parsePreferredWorkspaceValue(legacyPersona)
+  return parsePreferredWorkspaceValue(metadata.preferredWorkspace)
 }
 
-/**
- * Legacy persona hint parser. Prefer `preferredWorkspaceFromSessionClaims`.
- */
-export function personaFromSessionClaims(
-  sessionClaims: SessionClaims
-): PersonaHint | null {
-  const metadata = readMetadata(sessionClaims)
-  const raw = metadata?.persona
-  if (raw === 'candidate' || raw === 'recruiter' || raw === 'both') {
-    return raw
+export function resolveRecruiterAccess(args: {
+  orgId: string | null | undefined
+  has?: ClerkHasFn
+}): {
+  canAccessRecruiter: boolean
+  isOrgAdmin: boolean
+} {
+  if (!args.orgId || !args.has) {
+    return { canAccessRecruiter: false, isOrgAdmin: false }
   }
-
-  const preferred = parsePreferredWorkspaceValue(metadata?.preferredWorkspace)
-  if (preferred) {
-    return preferred
+  const isOrgAdmin = args.has({ role: 'org:admin' })
+  const hasMemberAccess = args.has({
+    permission: RECRUITER_PERMISSION_MAP['recruiter:access'],
+  })
+  return {
+    canAccessRecruiter: isOrgAdmin || hasMemberAccess,
+    isOrgAdmin,
   }
-
-  return null
 }
 
-export function hasLegacyBothPersona(sessionClaims: SessionClaims): boolean {
-  const metadata = readMetadata(sessionClaims)
-  return metadata?.persona === 'both'
+export function clerkHasCapability(
+  has: ClerkHasFn | undefined,
+  capability: RecruiterCapability
+): boolean {
+  if (!has) return false
+  if (has({ role: 'org:admin' })) return true
+  return has({ permission: RECRUITER_PERMISSION_MAP[capability] })
 }

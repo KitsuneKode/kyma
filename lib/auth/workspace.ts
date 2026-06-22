@@ -1,13 +1,8 @@
 import 'server-only'
 
 import { clerkClient, type User } from '@clerk/nextjs/server'
-import { cookies } from 'next/headers'
 
 import type { PreferredWorkspace } from '@/lib/auth/clerk-role'
-import {
-  WORKSPACE_ROUTING_COOKIE_MAX_AGE_SECONDS,
-  WORKSPACE_ROUTING_COOKIE_NAME,
-} from '@/lib/auth/workspace-routing-cookie'
 
 function parseWorkspaceFromPublicMetadata(
   metadata: Record<string, unknown> | null | undefined
@@ -17,14 +12,6 @@ function parseWorkspaceFromPublicMetadata(
   const preferred = metadata.preferredWorkspace
   if (preferred === 'candidate' || preferred === 'recruiter') {
     return preferred
-  }
-
-  const legacyPersona = metadata.persona
-  if (legacyPersona === 'both') {
-    return null
-  }
-  if (legacyPersona === 'candidate' || legacyPersona === 'recruiter') {
-    return legacyPersona
   }
 
   return null
@@ -47,17 +34,6 @@ export function preferredWorkspaceFromClerkUser(
   return parseWorkspaceFromPublicMetadata(
     user.publicMetadata as Record<string, unknown>
   )
-}
-
-export async function setWorkspaceRoutingCookie(workspace: PreferredWorkspace) {
-  const cookieStore = await cookies()
-  cookieStore.set(WORKSPACE_ROUTING_COOKIE_NAME, workspace, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: WORKSPACE_ROUTING_COOKIE_MAX_AGE_SECONDS,
-    path: '/',
-  })
 }
 
 export async function setPreferredWorkspaceHint(
@@ -85,7 +61,7 @@ export async function setPreferredWorkspaceHint(
   } catch (error) {
     if (isClerkRateLimitError(error)) {
       console.warn(
-        'Clerk rate limit when saving workspace preference; continuing with routing cookie'
+        'Clerk rate limit when saving workspace preference; continuing without persistence'
       )
       return { persisted: false }
     }
@@ -110,7 +86,7 @@ export function getRedirectPathAfterWorkspaceChoice(args: {
     if (args.orgId && args.canAccessRecruiter) {
       return '/recruiter'
     }
-    return '/onboarding/recruiter'
+    return '/recruiter/setup'
   }
   return '/candidate'
 }

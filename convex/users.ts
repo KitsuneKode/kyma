@@ -1,21 +1,11 @@
 import { ConvexError, v } from 'convex/values'
 
 import { internalMutation, mutation } from './_generated/server'
-import { requireAdmin } from './helpers/auth'
 import {
   clerkIdFromIdentity,
   ensureUserForIdentity,
 } from './helpers/clerkIdentity'
 import { runtimeEnv } from '../lib/env/runtime'
-
-function isBootstrapAdminEmail(email?: string) {
-  if (!email) return false
-  const allowlist =
-    runtimeEnv.KYMA_ADMIN_EMAILS?.split(',')
-      .map((item) => item.trim().toLowerCase())
-      .filter(Boolean) ?? []
-  return allowlist.includes(email.toLowerCase())
-}
 
 /** Ensures a Convex `users` row exists for the signed-in Clerk account (webhook fallback). */
 export const ensureCurrentUser = mutation({
@@ -44,9 +34,7 @@ export const upsertInternal = internalMutation({
       .withIndex('by_clerk_id', (q) => q.eq('clerkId', args.clerkId))
       .unique()
 
-    const defaultRole = isBootstrapAdminEmail(args.email)
-      ? 'admin'
-      : 'candidate'
+    const defaultRole = 'candidate' as const
 
     if (existing) {
       await ctx.db.patch(existing._id, {
@@ -65,29 +53,6 @@ export const upsertInternal = internalMutation({
       createdAt: now,
       updatedAt: now,
     })
-  },
-})
-
-export const setUserRole = mutation({
-  args: {
-    userId: v.id('users'),
-    role: v.union(
-      v.literal('admin'),
-      v.literal('recruiter'),
-      v.literal('candidate')
-    ),
-  },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx)
-    const user = await ctx.db.get(args.userId)
-    if (!user) {
-      throw new ConvexError('User not found.')
-    }
-    await ctx.db.patch(args.userId, {
-      role: args.role,
-      updatedAt: Date.now(),
-    })
-    return args.userId
   },
 })
 
@@ -142,7 +107,7 @@ export const syncFromClerkWebhook = mutation({
       email: args.email,
       name: args.name,
       preferredWorkspace: args.preferredWorkspace,
-      role: isBootstrapAdminEmail(args.email) ? 'admin' : 'candidate',
+      role: 'candidate',
       createdAt: now,
       updatedAt: now,
     })

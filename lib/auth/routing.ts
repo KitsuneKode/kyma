@@ -5,7 +5,6 @@ export type AppRouteContext = {
   pathname: string
   isSignedIn: boolean
   preferredWorkspace: PreferredWorkspace | null
-  hasLegacyBoth: boolean
   orgId: string | null
   canAccessRecruiter: boolean
 }
@@ -39,19 +38,18 @@ function workspaceIntentFromAuthPath(
 }
 
 function isRecruiterPath(pathname: string) {
-  return (
-    pathname === '/recruiter' ||
-    pathname.startsWith('/recruiter/') ||
-    pathname === '/admin' ||
-    pathname.startsWith('/admin/')
-  )
+  return pathname === '/recruiter' || pathname.startsWith('/recruiter/')
 }
 
 function isCandidatePath(pathname: string) {
   return pathname === '/candidate' || pathname.startsWith('/candidate/')
 }
 
-function isOnboardingPath(pathname: string) {
+function isJoinPath(pathname: string) {
+  return pathname.startsWith('/join/')
+}
+
+function isLegacyOnboardingPath(pathname: string) {
   return pathname === '/onboarding' || pathname.startsWith('/onboarding/')
 }
 
@@ -59,7 +57,7 @@ function recruiterHome(ctx: Omit<AppRouteContext, 'pathname'>) {
   if (ctx.orgId && ctx.canAccessRecruiter) {
     return '/recruiter'
   }
-  return '/onboarding/recruiter'
+  return '/recruiter/setup'
 }
 
 export function getPostSignInPathFromContext(
@@ -75,10 +73,6 @@ export function getPostSignInPathFromContext(
 
   if (ctx.preferredWorkspace === 'candidate') {
     return '/candidate'
-  }
-
-  if (ctx.hasLegacyBoth) {
-    return recruiterHome(ctx)
   }
 
   return authContinuePath()
@@ -98,10 +92,21 @@ export function resolveAppRoute(ctx: AppRouteContext): string | null {
     return null
   }
 
-  // Marketing homepage stays public for signed-in users (logo / "home" navigation).
-  // Post-login routing is handled by /auth/continue and sign-in redirects.
   if (pathname === '/') {
     return null
+  }
+
+  if (isLegacyOnboardingPath(pathname)) {
+    if (pathname === '/onboarding/recruiter') {
+      return '/recruiter/setup'
+    }
+    if (ctx.preferredWorkspace === 'candidate') {
+      return '/candidate'
+    }
+    if (ctx.preferredWorkspace === 'recruiter') {
+      return recruiterHome(ctx)
+    }
+    return '/auth/continue'
   }
 
   if (isAuthPath(pathname)) {
@@ -115,8 +120,14 @@ export function resolveAppRoute(ctx: AppRouteContext): string | null {
   }
 
   if (isRecruiterPath(pathname)) {
+    if (pathname === '/recruiter/setup') {
+      if (ctx.orgId && ctx.canAccessRecruiter) {
+        return '/recruiter'
+      }
+      return null
+    }
     if (!ctx.orgId || !ctx.canAccessRecruiter) {
-      return '/onboarding/recruiter'
+      return '/recruiter/setup'
     }
     return null
   }
@@ -125,32 +136,7 @@ export function resolveAppRoute(ctx: AppRouteContext): string | null {
     return null
   }
 
-  if (pathname === '/onboarding') {
-    if (ctx.preferredWorkspace === 'candidate') {
-      return '/candidate'
-    }
-    if (ctx.preferredWorkspace === 'recruiter') {
-      return recruiterHome(ctx)
-    }
-    if (ctx.hasLegacyBoth) {
-      return recruiterHome(ctx)
-    }
-    return null
-  }
-
-  if (pathname === '/onboarding/recruiter') {
-    const wantsRecruiter =
-      ctx.preferredWorkspace === 'recruiter' || ctx.hasLegacyBoth
-    if (!wantsRecruiter) {
-      return '/onboarding'
-    }
-    if (ctx.orgId && ctx.canAccessRecruiter) {
-      return '/recruiter'
-    }
-    return null
-  }
-
-  if (isOnboardingPath(pathname)) {
+  if (isJoinPath(pathname)) {
     return null
   }
 

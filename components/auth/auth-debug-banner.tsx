@@ -1,10 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 
-import {
-  hasLegacyBothPersona,
-  personaFromSessionClaims,
-  preferredWorkspaceFromSessionClaims,
-} from '@/lib/auth/clerk-role'
+import { preferredWorkspaceFromSessionClaims } from '@/lib/auth/clerk-role'
 import { getPreferredWorkspaceFromClerk } from '@/lib/auth/workspace'
 import { serverEnv } from '@/lib/env/server'
 
@@ -24,12 +20,6 @@ export async function AuthDebugBanner() {
   const claimWorkspace = preferredWorkspaceFromSessionClaims(
     sessionClaims as Record<string, unknown> | null | undefined
   )
-  const legacyPersona = personaFromSessionClaims(
-    sessionClaims as Record<string, unknown> | null | undefined
-  )
-  const legacyBoth = hasLegacyBothPersona(
-    sessionClaims as Record<string, unknown> | null | undefined
-  )
 
   const mismatch =
     clerkWorkspace != null &&
@@ -44,16 +34,11 @@ export async function AuthDebugBanner() {
         <li>
           sessionClaims.metadata.preferredWorkspace: {claimWorkspace ?? 'null'}
         </li>
-        <li>
-          sessionClaims.metadata.persona (legacy): {legacyPersona ?? 'null'}
-        </li>
-        <li>legacy both: {legacyBoth ? 'yes' : 'no'}</li>
       </ul>
       {claimWorkspace == null && clerkWorkspace != null ? (
         <p className="mt-2">
-          JWT template likely missing <code>metadata.preferredWorkspace</code>{' '}
-          or <code>metadata.persona</code>. See{' '}
-          <code>.docs/auth-org-rbac-cutover-checklist.md</code>.
+          JWT template likely missing <code>metadata.preferredWorkspace</code>.
+          See <code>.docs/auth-org-rbac-cutover-checklist.md</code>.
         </p>
       ) : null}
       {mismatch ? (

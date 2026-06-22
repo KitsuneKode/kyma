@@ -7,13 +7,12 @@ import {
 } from '@/lib/auth/continue-workspace'
 import {
   preferredWorkspaceFromSessionClaims,
-  RECRUITER_PERMISSION_MAP,
+  resolveRecruiterAccess,
 } from '@/lib/auth/clerk-role'
 import {
   getPreferredWorkspaceFromClerk,
   getRedirectPathAfterWorkspaceChoice,
   setPreferredWorkspaceHint,
-  setWorkspaceRoutingCookie,
 } from '@/lib/auth/workspace'
 import { parseWorkspaceIntent } from '@/lib/auth/workspace-intent'
 
@@ -42,13 +41,7 @@ export default async function AuthContinuePage({ searchParams }: PageProps) {
     await setPreferredWorkspaceHint(userId, workspace, { existing })
   }
 
-  await setWorkspaceRoutingCookie(workspace)
-
-  const canAccessRecruiter = Boolean(
-    orgId &&
-    (has?.({ role: 'org:admin' }) ||
-      has?.({ permission: RECRUITER_PERMISSION_MAP['recruiter:access'] }))
-  )
+  const { canAccessRecruiter } = resolveRecruiterAccess({ orgId, has })
 
   redirect(
     getRedirectPathAfterWorkspaceChoice({

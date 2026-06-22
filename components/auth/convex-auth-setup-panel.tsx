@@ -42,7 +42,7 @@ export function ConvexAuthSetupPanel({
         <Button
           nativeButton={false}
           variant="outline"
-          render={<Link href="/onboarding/recruiter" />}
+          render={<Link href="/recruiter/setup" />}
         >
           Recruiter onboarding
         </Button>

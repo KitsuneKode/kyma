@@ -4,6 +4,8 @@ import type { MutationCtx, QueryCtx } from '../_generated/server'
 import { runtimeEnv } from '../../lib/env/runtime'
 import { getOrgContextFromIdentity } from './orgContext'
 
+const ORG_RECRUITER_ACCESS = 'org:recruiter:access'
+
 function hasRecruiterAuthConfig() {
   return Boolean(
     runtimeEnv.CLERK_SECRET_KEY?.trim() &&
@@ -11,35 +13,6 @@ function hasRecruiterAuthConfig() {
     (runtimeEnv.CLERK_FRONTEND_API_URL?.trim() ||
       runtimeEnv.CLERK_JWT_ISSUER_DOMAIN?.trim())
   )
-}
-
-export async function requireRecruiterIdentity(ctx: QueryCtx | MutationCtx) {
-  const { identity } = await requireOrgPermission(
-    ctx,
-    'org:recruiter:access',
-    'You are not authorized to access recruiter data.'
-  )
-  return identity
-}
-
-export async function getRecruiterActorId(ctx: QueryCtx | MutationCtx) {
-  const identity = await requireRecruiterIdentity(ctx)
-
-  return identity?.tokenIdentifier ?? identity?.subject ?? undefined
-}
-
-export async function requireOrgId(ctx: QueryCtx | MutationCtx) {
-  const { orgId } = await requireOrgPermission(
-    ctx,
-    'org:recruiter:access',
-    'You must select an organization to access recruiter data.'
-  )
-  if (!orgId) {
-    throw new ConvexError(
-      'You must select an organization to access recruiter data.'
-    )
-  }
-  return orgId
 }
 
 function getOrgContext(
@@ -50,16 +23,15 @@ function getOrgContext(
   return getOrgContextFromIdentity(identity as Record<string, unknown>)
 }
 
-function hasOrgAccess(
+function hasOrgPermission(
   orgRole: string | null,
   orgPermissions: string[],
   permission: string
 ) {
-  return (
-    orgRole === 'org:admin' ||
-    orgPermissions.includes(permission) ||
-    orgPermissions.includes('org:recruiter:access')
-  )
+  if (orgRole === 'org:admin') {
+    return true
+  }
+  return orgPermissions.includes(permission)
 }
 
 async function requireOrgPermission(
@@ -75,7 +47,7 @@ async function requireOrgPermission(
   if (!orgId) {
     throw new ConvexError('An active organization is required for this action.')
   }
-  if (!hasOrgAccess(orgRole, orgPermissions, permission)) {
+  if (!hasOrgPermission(orgRole, orgPermissions, permission)) {
     throw new ConvexError(deniedMessage)
   }
   return { identity, orgId, orgRole, orgPermissions }
@@ -92,13 +64,50 @@ async function requireIdentity(ctx: QueryCtx | MutationCtx) {
   return identity
 }
 
+export async function requireRecruiterMember(ctx: QueryCtx | MutationCtx) {
+  const { identity } = await requireOrgPermission(
+    ctx,
+    ORG_RECRUITER_ACCESS,
+    'You are not authorized to access recruiter data.'
+  )
+  return identity
+}
+
+/** @deprecated Use requireRecruiterMember */
+export const requireAdminIdentity = requireRecruiterMember
+
+/** @deprecated Use requireRecruiterMember */
+export const requireRecruiterIdentity = requireRecruiterMember
+
+export async function getRecruiterActorId(ctx: QueryCtx | MutationCtx) {
+  const identity = await requireRecruiterMember(ctx)
+  return identity?.tokenIdentifier ?? identity?.subject ?? undefined
+}
+
+export async function requireOrgId(ctx: QueryCtx | MutationCtx) {
+  const { orgId } = await requireOrgPermission(
+    ctx,
+    ORG_RECRUITER_ACCESS,
+    'You must select an organization to access recruiter data.'
+  )
+  if (!orgId) {
+    throw new ConvexError(
+      'You must select an organization to access recruiter data.'
+    )
+  }
+  return orgId
+}
+
 export async function getRole(ctx: QueryCtx | MutationCtx) {
   const identity = await requireIdentity(ctx)
   if (!identity) {
     return 'candidate' as const
   }
   const { orgId, orgRole, orgPermissions } = getOrgContext(identity)
-  if (orgId && hasOrgAccess(orgRole, orgPermissions, 'org:recruiter:access')) {
+  if (
+    orgId &&
+    hasOrgPermission(orgRole, orgPermissions, ORG_RECRUITER_ACCESS)
+  ) {
     if (orgRole === 'org:admin') {
       return 'admin' as const
     }
@@ -122,7 +131,7 @@ export async function requireRole(
 export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
   const result = await requireOrgPermission(
     ctx,
-    'org:recruiter:access',
+    ORG_RECRUITER_ACCESS,
     'You are not authorized to access admin resources.'
   )
   if (result.orgRole !== 'org:admin') {
@@ -136,13 +145,4 @@ export async function isAdmin(ctx: QueryCtx | MutationCtx) {
   if (!identity) return false
   const { orgRole } = getOrgContext(identity)
   return orgRole === 'org:admin'
-}
-
-export async function requireAdminIdentity(ctx: QueryCtx | MutationCtx) {
-  const { identity } = await requireOrgPermission(
-    ctx,
-    'org:recruiter:access',
-    'You are not authorized to access this resource.'
-  )
-  return identity
 }
