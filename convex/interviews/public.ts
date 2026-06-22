@@ -7,12 +7,14 @@ import {
   deriveAccessState,
   isEnabledDemoInviteToken,
 } from '../helpers/interviewSession'
+import { resolveSessionPurpose } from '../../lib/interview/session-purpose'
 
 export const getPublicInterviewSnapshot = query({
   args: {
     inviteToken: v.string(),
+    nowMs: v.number(),
   },
-  handler: async (ctx, { inviteToken }) => {
+  handler: async (ctx, { inviteToken, nowMs }) => {
     const invite = await ctx.db
       .query('candidateInvites')
       .withIndex('by_invite_token', (q) => q.eq('inviteToken', inviteToken))
@@ -31,8 +33,9 @@ export const getPublicInterviewSnapshot = query({
         accessState: 'available' as const,
         accessMessage: undefined,
         policy: defaultDemoPolicy(
-          new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
+          new Date(nowMs + 1000 * 60 * 60 * 24).toISOString()
         ),
+        sessionPurpose: 'demo' as const,
       }
     }
 
@@ -42,12 +45,14 @@ export const getPublicInterviewSnapshot = query({
       .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
       .first()
     const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite)
+    const sessionPurpose = resolveSessionPurpose(invite.sessionPurpose)
 
     return {
       inviteToken,
       templateName: template?.name ?? 'AI Tutor Screener',
       candidateName: invite.candidateName ?? 'Candidate',
       state: session?.state ?? ('ready' as const),
+      sessionPurpose,
       ...deriveAccessState(invite, session),
       policy,
     }
@@ -57,8 +62,9 @@ export const getPublicInterviewSnapshot = query({
 export const getPublicSessionDetail = query({
   args: {
     inviteToken: v.string(),
+    nowMs: v.number(),
   },
-  handler: async (ctx, { inviteToken }) => {
+  handler: async (ctx, { inviteToken, nowMs }) => {
     const invite = await ctx.db
       .query('candidateInvites')
       .withIndex('by_invite_token', (q) => q.eq('inviteToken', inviteToken))
@@ -78,10 +84,11 @@ export const getPublicSessionDetail = query({
         accessState: 'available' as const,
         accessMessage: undefined,
         policy: defaultDemoPolicy(
-          new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
+          new Date(nowMs + 1000 * 60 * 60 * 24).toISOString()
         ),
         roomName: undefined,
         activeDurationMs: 0,
+        sessionPurpose: 'demo' as const,
         events: [],
         transcript: [],
         recordings: [],
@@ -95,6 +102,9 @@ export const getPublicSessionDetail = query({
       .first()
     const access = deriveAccessState(invite, session)
     const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite)
+    const sessionPurpose = resolveSessionPurpose(
+      session?.sessionPurpose ?? invite.sessionPurpose
+    )
 
     if (!session) {
       return {
@@ -103,6 +113,7 @@ export const getPublicSessionDetail = query({
         candidateName: invite.candidateName ?? 'Candidate',
         templateName: template?.name ?? 'AI Tutor Screener',
         state: 'ready' as const,
+        sessionPurpose,
         ...access,
         policy,
         roomName: undefined,
@@ -120,6 +131,7 @@ export const getPublicSessionDetail = query({
         candidateName: invite.candidateName ?? 'Candidate',
         templateName: template?.name ?? 'AI Tutor Screener',
         state: session.state,
+        sessionPurpose,
         ...access,
         policy,
         roomName: undefined,
@@ -151,6 +163,7 @@ export const getPublicSessionDetail = query({
       candidateName: invite.candidateName ?? 'Candidate',
       templateName: template?.name ?? 'AI Tutor Screener',
       state: session.state,
+      sessionPurpose,
       ...access,
       policy,
       roomName: session.roomName,

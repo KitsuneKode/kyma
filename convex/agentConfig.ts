@@ -8,8 +8,14 @@ import { upsertTranscriptSegmentForSession } from './helpers/transcriptSegments'
 import {
   interviewSessionStateValidator,
   modelOverridesValidator,
+  sessionPurposeValidator,
   workspaceProviderKeyValidator,
 } from './validators'
+import {
+  maxActiveDurationMs,
+  resolveSessionBudget,
+  resolveSessionPurpose,
+} from '../lib/interview/session-purpose'
 
 const rubricConfigValidator = v.object({
   dimensions: v.array(
@@ -33,6 +39,11 @@ const interviewAgentConfigValidator = v.object({
   rubricConfig: v.optional(rubricConfigValidator),
   providerKeys: v.optional(v.array(workspaceProviderKeyValidator)),
   sessionState: interviewSessionStateValidator,
+  sessionPurpose: sessionPurposeValidator,
+  activeDurationMs: v.number(),
+  maxActiveDurationMs: v.number(),
+  maxCandidateTurns: v.number(),
+  maxAgentTurns: v.number(),
 })
 
 export const getInterviewAgentConfig = query({
@@ -62,6 +73,10 @@ export const getInterviewAgentConfig = query({
     }
 
     const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite)
+    const sessionPurpose = resolveSessionPurpose(
+      session.sessionPurpose ?? invite.sessionPurpose
+    )
+    const budget = resolveSessionBudget(sessionPurpose)
     const workspaceSettings = await ctx.db
       .query('workspaceSettings')
       .withIndex('by_org_id', (q) => q.eq('orgId', invite.orgId))
@@ -78,6 +93,11 @@ export const getInterviewAgentConfig = query({
       rubricConfig: template.rubricConfig,
       providerKeys: workspaceSettings?.providerKeys,
       sessionState: session.state,
+      sessionPurpose,
+      activeDurationMs: session.activeDurationMs ?? 0,
+      maxActiveDurationMs: maxActiveDurationMs(sessionPurpose),
+      maxCandidateTurns: budget.maxCandidateTurns,
+      maxAgentTurns: budget.maxAgentTurns,
     }
   },
 })
@@ -145,6 +165,3 @@ export const upsertAgentTranscriptSegment = mutation({
     })
   },
 })
-
-/** @internal Alias for pipeline callers that already use internal naming. */
-export const getAgentSessionConfig = getInterviewAgentConfig

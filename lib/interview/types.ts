@@ -20,6 +20,8 @@ export type InviteAccessState =
 
 export type InterviewDurationMode = 'timed' | 'flexible'
 
+export type SessionPurpose = 'screening' | 'demo' | 'mock'
+
 export type InterviewPolicy = {
   durationMode: InterviewDurationMode
   targetDurationMinutes?: number
@@ -117,6 +119,7 @@ export type InterviewSessionSnapshot = {
   accessMessage?: string
   policy: InterviewPolicy
   roomName?: string
+  sessionPurpose?: SessionPurpose
   activeDurationMs?: number
   events: SessionEvent[]
   preflight: PreflightStep[]

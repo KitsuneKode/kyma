@@ -3,7 +3,9 @@ import { ConvexError } from 'convex/values'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import { transitionSessionSafely } from '../../lib/interview/session-machine'
+import { isSessionStateWriteAllowed } from '../../lib/interview/session-state-ownership'
 import type { InterviewSessionState } from '../../lib/interview/types'
+import type { SessionPurpose } from '../../lib/interview/session-purpose'
 import {
   DEFAULT_INTERVIEW_DURATION_MINUTES,
   type InterviewPolicy,
@@ -18,6 +20,15 @@ export const DEMO_ORG_ID = 'org_demo'
 
 export function isEnabledDemoInviteToken(inviteToken: string) {
   return isEnabledDemoInviteTokenForEnv(inviteToken, runtimeEnv)
+}
+
+export function resolveInviteSessionPurpose(
+  invite: Pick<Doc<'candidateInvites'>, 'sessionPurpose'>
+): SessionPurpose {
+  if (invite.sessionPurpose === 'demo' || invite.sessionPurpose === 'mock') {
+    return invite.sessionPurpose
+  }
+  return 'screening'
 }
 
 export function defaultDemoPolicy(expiresAt: string): InterviewPolicy {
@@ -166,6 +177,7 @@ export async function ensureInvite(
     candidateName: 'Demo Candidate',
     templateId: template._id,
     status: 'created',
+    sessionPurpose: 'demo',
     expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
   })
 
@@ -284,6 +296,10 @@ export async function insertSessionEventWithTransition(
   })
 
   if (state) {
+    if (!isSessionStateWriteAllowed(source, state)) {
+      return eventId
+    }
+
     await applySessionStateTransition(ctx, session, sessionId, state)
   }
 

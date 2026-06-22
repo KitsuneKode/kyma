@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   ConnectionStateToast,
@@ -25,30 +25,41 @@ import {
   type InterviewPolicy,
   type TranscriptSegment,
 } from '@/lib/interview/types'
+import { maxActiveDurationMs } from '@/lib/interview/session-purpose'
+import type { SessionPurpose } from '@/lib/interview/session-purpose'
 
 type MeetingShellProps = {
   agentJoinTimedOut?: boolean
+  activeDurationMs?: number
   connectionError: string | null
   isSubmittingInterview: boolean
   onConnected: () => void
   onDisconnected?: (reason?: DisconnectReason) => void
   onError: (error: Error) => void
+  onDurationCapReached?: () => void
   onRetryAgentConnection?: () => void
   onSubmitInterview: () => void | Promise<void>
   policy?: InterviewPolicy
   preJoinChoices: LocalUserChoices
   room: Room
   session: BootstrappedInterviewSession
+  sessionPurpose?: SessionPurpose
   transcript: TranscriptSegment[]
 }
 
 function InterviewConference({
+  activeDurationMs = 0,
   isSubmitting,
+  maxDurationMs,
+  onDurationCapReached,
   onSubmit,
   templateName,
   transcript,
 }: {
+  activeDurationMs?: number
   isSubmitting: boolean
+  maxDurationMs: number
+  onDurationCapReached?: () => void
   onSubmit: () => void | Promise<void>
   templateName?: string
   transcript: TranscriptSegment[]
@@ -65,7 +76,24 @@ function InterviewConference({
   )
 
   const [isIdle, setIsIdle] = useState(false)
-  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [liveElapsedMs, setLiveElapsedMs] = useState(0)
+  const liveStartedAtRef = useRef(Date.now())
+  const durationCapTriggeredRef = useRef(false)
+
+  useEffect(() => {
+    liveStartedAtRef.current = Date.now()
+    const intervalId = window.setInterval(() => {
+      setLiveElapsedMs(Date.now() - liveStartedAtRef.current)
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [])
+
+  const totalElapsedMs = activeDurationMs + liveElapsedMs
+  const elapsedSeconds = Math.floor(totalElapsedMs / 1000)
+  const maxElapsedSeconds = Math.floor(maxDurationMs / 1000)
+  const isNearDurationCap = totalElapsedMs >= maxDurationMs * 0.85
+  const isOverDurationCap = totalElapsedMs >= maxDurationMs
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
@@ -90,16 +118,23 @@ function InterviewConference({
   }, [])
 
   useEffect(() => {
-    const startedAt = Date.now()
-    const intervalId = window.setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000))
-    }, 1000)
+    if (!isOverDurationCap || durationCapTriggeredRef.current) {
+      return
+    }
 
-    return () => window.clearInterval(intervalId)
-  }, [])
+    durationCapTriggeredRef.current = true
+    onDurationCapReached?.()
+  }, [isOverDurationCap, onDurationCapReached])
 
   const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')
   const seconds = String(elapsedSeconds % 60).padStart(2, '0')
+  const maxMinutes = String(Math.floor(maxElapsedSeconds / 60)).padStart(2, '0')
+  const maxSeconds = String(maxElapsedSeconds % 60).padStart(2, '0')
+  const timerClassName = isOverDurationCap
+    ? 'text-amber-300'
+    : isNearDurationCap
+      ? 'text-amber-200/90'
+      : 'text-white/90'
 
   return (
     <div className="lk-video-conference relative h-[100dvh] w-full overflow-hidden bg-[#0a0a0a]">
@@ -150,9 +185,15 @@ function InterviewConference({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.96 }}
                 transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-                className="pointer-events-none absolute right-5 bottom-5 z-30 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs font-semibold tracking-[0.14em] text-white/90 tabular-nums shadow-[0_8px_22px_-14px_rgba(0,0,0,0.85)]"
+                className="pointer-events-none absolute right-5 bottom-5 z-30 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs font-semibold tracking-[0.14em] tabular-nums shadow-[0_8px_22px_-14px_rgba(0,0,0,0.85)]"
               >
-                {minutes}:{seconds}
+                <span className={timerClassName}>
+                  {minutes}:{seconds}
+                </span>
+                <span className="text-white/45">
+                  {' '}
+                  / {maxMinutes}:{maxSeconds}
+                </span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -189,8 +230,14 @@ function InterviewConference({
                 </Button>
 
                 <div className="mx-1 h-6 w-px bg-white/20" />
-                <div className="rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs font-semibold tracking-[0.14em] text-white/90 tabular-nums shadow-[0_8px_22px_-14px_rgba(0,0,0,0.85)]">
-                  {minutes}:{seconds}
+                <div className="rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs font-semibold tracking-[0.14em] tabular-nums shadow-[0_8px_22px_-14px_rgba(0,0,0,0.85)]">
+                  <span className={timerClassName}>
+                    {minutes}:{seconds}
+                  </span>
+                  <span className="text-white/45">
+                    {' '}
+                    / {maxMinutes}:{maxSeconds}
+                  </span>
                 </div>
               </motion.div>
             )}
@@ -205,18 +252,23 @@ function InterviewConference({
 
 export function MeetingShell({
   agentJoinTimedOut = false,
+  activeDurationMs = 0,
   connectionError,
   isSubmittingInterview,
   onConnected,
   onDisconnected,
   onError,
+  onDurationCapReached,
   onRetryAgentConnection,
   onSubmitInterview,
   preJoinChoices,
   room,
   session,
+  sessionPurpose = 'screening',
   transcript,
 }: MeetingShellProps) {
+  const maxDurationMs = maxActiveDurationMs(sessionPurpose)
+
   return (
     // Intentional dark-locked immersive interview experience.
     <div className="fixed inset-0 z-[100] bg-black">
@@ -246,7 +298,10 @@ export function MeetingShell({
           className="h-full w-full"
         >
           <InterviewConference
+            activeDurationMs={activeDurationMs}
             isSubmitting={isSubmittingInterview}
+            maxDurationMs={maxDurationMs}
+            onDurationCapReached={onDurationCapReached}
             onSubmit={onSubmitInterview}
             templateName={session.templateName}
             transcript={transcript}

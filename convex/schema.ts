@@ -9,6 +9,7 @@ import {
   modelOverridesValidator,
   recommendationValidator,
   scoringDimensionValidator,
+  sessionPurposeValidator,
   workspaceProviderKeyValidator,
 } from './validators'
 
@@ -177,6 +178,7 @@ export default defineSchema({
       v.literal('completed'),
       v.literal('expired')
     ),
+    sessionPurpose: v.optional(sessionPurposeValidator),
     expiresAt: v.string(),
   })
     .index('by_org_id', ['orgId'])
@@ -200,6 +202,7 @@ export default defineSchema({
     endedAt: v.optional(v.string()),
     failureReason: v.optional(v.string()),
     candidateUserId: v.optional(v.id('users')),
+    sessionPurpose: v.optional(sessionPurposeValidator),
   })
     .index('by_org_id', ['orgId'])
     .index('by_invite', ['inviteId'])

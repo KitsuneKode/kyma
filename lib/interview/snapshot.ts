@@ -43,6 +43,8 @@ type PublicSessionDetail = Partial<
     | 'accessMessage'
     | 'policy'
     | 'recordings'
+    | 'sessionPurpose'
+    | 'activeDurationMs'
   >
 > & {
   state?: string
@@ -214,6 +216,8 @@ export function createInitialInterviewSnapshot(
       ...publicSession?.policy,
     },
     roomName: publicSession?.roomName,
+    sessionPurpose: publicSession?.sessionPurpose,
+    activeDurationMs: publicSession?.activeDurationMs ?? 0,
     events,
     preflight: createDefaultPreflightSteps(),
     transcript:
@@ -245,6 +249,8 @@ export function mergeInterviewSnapshot(
       ...publicSession.policy,
     },
     roomName: publicSession.roomName ?? base.roomName,
+    sessionPurpose: publicSession.sessionPurpose ?? base.sessionPurpose,
+    activeDurationMs: publicSession.activeDurationMs ?? base.activeDurationMs,
     events: publicSession.events?.length
       ? publicSession.events.map(normalizeEvent)
       : base.events,

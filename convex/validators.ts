@@ -64,6 +64,12 @@ export const interviewStyleModeValidator = v.union(
   v.literal('intensive')
 )
 
+export const sessionPurposeValidator = v.union(
+  v.literal('screening'),
+  v.literal('demo'),
+  v.literal('mock')
+)
+
 export const interviewPolicySnapshotValidator = v.object({
   targetDurationMinutes: v.number(),
   allowsResume: v.boolean(),

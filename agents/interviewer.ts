@@ -22,6 +22,11 @@ import type { Id } from '@/convex/_generated/dataModel'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
 import { maybeStartRoomRecording } from '@/lib/livekit/recording'
 import { runtimeEnv } from '@/lib/env/runtime'
+import type { SessionPurpose } from '@/lib/interview/session-purpose'
+import {
+  maxActiveDurationMs,
+  resolveSessionBudget,
+} from '@/lib/interview/session-purpose'
 
 const DEFAULT_TARGET_DURATION_MINUTES = 18
 
@@ -87,6 +92,9 @@ type InterviewPhase = 'warmup' | 'screening' | 'simulation' | 'wrapup'
 type InterviewUserData = {
   phase: InterviewPhase
   teachingSimulationStarted: boolean
+  candidateTurnCount: number
+  agentTurnCount: number
+  budgetEnforced: boolean
 }
 
 type CandidateMetadata = {
@@ -342,7 +350,8 @@ function attachTranscriptPersistence(
   session: voice.AgentSession<InterviewUserData>,
   persister: TranscriptPersister,
   logger: ReturnType<typeof createDiagnosticLogger>,
-  sessionId?: string
+  sessionId: string | undefined,
+  onBudgetCheck?: () => void
 ) {
   session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (event) => {
     void persister.upsert({
@@ -355,6 +364,9 @@ function attachTranscriptPersistence(
 
     if (event.isFinal) {
       const userData = session.userData
+      userData.candidateTurnCount += 1
+      onBudgetCheck?.()
+
       if (userData.phase === 'warmup' && /\bready\b/i.test(event.transcript)) {
         userData.phase = 'screening'
       }
@@ -389,6 +401,11 @@ function attachTranscriptPersistence(
 
     if (!speaker) {
       return
+    }
+
+    if (speaker === 'agent') {
+      session.userData.agentTurnCount += 1
+      onBudgetCheck?.()
     }
 
     void persister.upsert({
@@ -589,6 +606,101 @@ function isRedispatchState(state?: string | null) {
   return state ? REDISPATCH_SESSION_STATES.has(state) : false
 }
 
+type SessionBudgetLimits = {
+  sessionPurpose: SessionPurpose
+  maxActiveDurationMs: number
+  maxCandidateTurns: number
+  maxAgentTurns: number
+}
+
+function resolveBudgetLimits(
+  remoteConfig: Awaited<ReturnType<typeof fetchInterviewAgentConfig>> | null
+): SessionBudgetLimits {
+  const sessionPurpose = remoteConfig?.sessionPurpose ?? 'screening'
+  const budget = resolveSessionBudget(sessionPurpose)
+
+  return {
+    sessionPurpose,
+    maxActiveDurationMs:
+      remoteConfig?.maxActiveDurationMs ?? maxActiveDurationMs(sessionPurpose),
+    maxCandidateTurns:
+      remoteConfig?.maxCandidateTurns ?? budget.maxCandidateTurns,
+    maxAgentTurns: remoteConfig?.maxAgentTurns ?? budget.maxAgentTurns,
+  }
+}
+
+function createBudgetEnforcer(args: {
+  session: voice.AgentSession<InterviewUserData>
+  sessionId: string | undefined
+  limits: SessionBudgetLimits
+  logger: ReturnType<typeof createDiagnosticLogger>
+  recorder: SessionEventRecorder
+  getActiveDurationMs: () => Promise<number>
+  completeInterview: () => Promise<void>
+}) {
+  const {
+    session,
+    sessionId,
+    limits,
+    logger,
+    recorder,
+    getActiveDurationMs,
+    completeInterview,
+  } = args
+
+  const checkBudget = async (reason: string) => {
+    if (session.userData.budgetEnforced || !sessionId) {
+      return
+    }
+
+    const activeDurationMs = await getActiveDurationMs()
+    const { candidateTurnCount, agentTurnCount } = session.userData
+    const durationExceeded = activeDurationMs >= limits.maxActiveDurationMs
+    const candidateTurnsExceeded =
+      candidateTurnCount >= limits.maxCandidateTurns
+    const agentTurnsExceeded = agentTurnCount >= limits.maxAgentTurns
+
+    if (!durationExceeded && !candidateTurnsExceeded && !agentTurnsExceeded) {
+      return
+    }
+
+    session.userData.budgetEnforced = true
+
+    const detail = durationExceeded
+      ? `Interview duration cap reached (${limits.maxActiveDurationMs}ms active).`
+      : candidateTurnsExceeded
+        ? `Candidate turn budget reached (${limits.maxCandidateTurns} turns).`
+        : `Agent turn budget reached (${limits.maxAgentTurns} turns).`
+
+    logger.info({
+      event: 'agent.budget.enforced',
+      detail,
+      sessionId,
+      meta: {
+        reason,
+        activeDurationMs,
+        candidateTurnCount,
+        agentTurnCount,
+        sessionPurpose: limits.sessionPurpose,
+      },
+    })
+
+    await recorder.append('session-budget-enforced', `${detail} ${reason}`)
+    await completeInterview()
+  }
+
+  return {
+    checkBudget,
+    startPolling: () => {
+      const intervalId = setInterval(() => {
+        void checkBudget('periodic-duration-check')
+      }, 30_000)
+
+      return () => clearInterval(intervalId)
+    },
+  }
+}
+
 async function runInterviewSession(args: {
   ctx: JobContext
   logger: ReturnType<typeof createDiagnosticLogger>
@@ -643,6 +755,9 @@ async function runInterviewSession(args: {
     userData: {
       phase: 'warmup',
       teachingSimulationStarted: false,
+      candidateTurnCount: 0,
+      agentTurnCount: 0,
+      budgetEnforced: false,
     },
     ...(runtimeModel.mode === 'realtime'
       ? { llm: runtimeModel.llm }
@@ -680,6 +795,60 @@ async function runInterviewSession(args: {
       return 'The interview is complete. Thank the candidate warmly, remind them the team will review the conversation, and let them know the session will finish automatically in a moment.'
     },
   })
+
+  const completeInterviewFromBudget = async () => {
+    if (sessionId) {
+      await fetchMutation(api.agentConfig.requestInterviewProcessing, {
+        processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
+        sessionId: sessionId as Id<'interviewSessions'>,
+        detail:
+          'Interview session budget reached; agent requested post-call processing.',
+      }).catch((error) => {
+        logger.warn({
+          event: 'agent.processing.budget.failed',
+          detail: 'Unable to request processing after budget enforcement.',
+          sessionId,
+          error,
+        })
+      })
+    }
+
+    try {
+      await session.generateReply({
+        instructions:
+          'The interview time budget has been reached. Thank the candidate warmly, explain that the session will wrap up now, and keep it to one or two short sentences.',
+      })
+    } catch {
+      await session.say(
+        'Thanks for your time today. We have reached the end of this session, and your conversation will be submitted for review now.',
+        {
+          addToChatCtx: true,
+          allowInterruptions: false,
+        }
+      )
+    }
+  }
+
+  const budgetLimits = resolveBudgetLimits(remoteConfig)
+  const budgetEnforcer = createBudgetEnforcer({
+    session,
+    sessionId,
+    limits: budgetLimits,
+    logger,
+    recorder,
+    getActiveDurationMs: async () => {
+      if (!sessionId) {
+        return 0
+      }
+
+      const latestConfig = await fetchInterviewAgentConfig(sessionId)
+      return (
+        latestConfig?.activeDurationMs ?? remoteConfig?.activeDurationMs ?? 0
+      )
+    },
+    completeInterview: completeInterviewFromBudget,
+  })
+  const stopBudgetPolling = budgetEnforcer.startPolling()
 
   const wrapUpAgent = new WrapUpInterviewerAgent(
     config.wrapUpInstructions,
@@ -758,7 +927,9 @@ When live video is available, call recordVisualObservation at most once per mean
     },
   })
 
-  attachTranscriptPersistence(session, persister, logger, sessionId)
+  attachTranscriptPersistence(session, persister, logger, sessionId, () => {
+    void budgetEnforcer.checkBudget('turn-budget-check')
+  })
 
   await session.start({
     agent: interviewerAgent,
@@ -793,6 +964,7 @@ When live video is available, call recordVisualObservation at most once per mean
   )
 
   ctx.addShutdownCallback(async () => {
+    stopBudgetPolling()
     logger.info({
       event: 'agent.session.shutdown',
       detail: 'Shutting down interviewer agent session.',

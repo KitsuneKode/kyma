@@ -2,7 +2,11 @@ import { ConvexError, v } from 'convex/values'
 
 import { mutation, query } from '../_generated/server'
 import { resolveInterviewPolicyFromInvite } from '../helpers/interviewPolicy'
-import { ensureInvite, isInviteExpired } from '../helpers/interviewSession'
+import {
+  ensureInvite,
+  isInviteExpired,
+  resolveInviteSessionPurpose,
+} from '../helpers/interviewSession'
 
 export const getInviteBootstrapByokSummary = query({
   args: {
@@ -127,6 +131,7 @@ export const bootstrapPublicSession = mutation({
           sessionId: existingSession._id,
           roomName: reopenedRoomName,
           templateName: template?.name ?? 'AI Tutor Screener',
+          targetDurationMinutes: policy.targetDurationMinutes,
         }
       }
 
@@ -135,6 +140,7 @@ export const bootstrapPublicSession = mutation({
         sessionId: existingSession._id,
         roomName: existingSession.roomName,
         templateName: template?.name ?? 'AI Tutor Screener',
+        targetDurationMinutes: policy.targetDurationMinutes,
       }
     }
 
@@ -147,6 +153,7 @@ export const bootstrapPublicSession = mutation({
 
     const roomName = `interview-${inviteToken}-${Date.now()}`
     const startedAt = new Date().toISOString()
+    const sessionPurpose = resolveInviteSessionPurpose(invite)
 
     const sessionId = await ctx.db.insert('interviewSessions', {
       orgId: invite.orgId,
@@ -158,6 +165,8 @@ export const bootstrapPublicSession = mutation({
       startedAt,
       reconnectCount: 0,
       activeDurationMs: 0,
+      sessionPurpose,
+      candidateUserId: invite.userId,
     })
 
     await ctx.db.patch(invite._id, {
@@ -188,6 +197,7 @@ export const bootstrapPublicSession = mutation({
       sessionId,
       roomName,
       templateName: template?.name ?? 'AI Tutor Screener',
+      targetDurationMinutes: policy.targetDurationMinutes,
     }
   },
 })
