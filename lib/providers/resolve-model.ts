@@ -1,13 +1,14 @@
-import { serverEnv } from '@/lib/env/server'
+import { runtimeEnv } from '@/lib/env/runtime'
 import { createDecipheriv } from 'node:crypto'
 
-export type ModelKind = 'stt' | 'llm' | 'tts' | 'reviewChat'
+export type ModelKind = 'stt' | 'llm' | 'tts' | 'reviewChat' | 'scoring'
 
 const DEFAULT_MODELS: Record<ModelKind, string> = {
   stt: 'deepgram/nova-3',
   llm: 'openai/gpt-4.1-mini',
   tts: 'cartesia/sonic',
   reviewChat: 'openai/gpt-4.1-mini',
+  scoring: 'openai/gpt-4.1-mini',
 }
 
 type WorkspaceModelOverrides = Partial<Record<ModelKind, string | undefined>>
@@ -35,10 +36,11 @@ export function resolveModelId(
   templateOverrides?: WorkspaceModelOverrides
 ) {
   const envFallbacks: WorkspaceModelOverrides = {
-    stt: serverEnv.LIVEKIT_AGENT_STT_MODEL,
-    llm: serverEnv.LIVEKIT_AGENT_LLM_MODEL,
-    tts: serverEnv.LIVEKIT_AGENT_TTS_MODEL,
-    reviewChat: serverEnv.KYMA_REVIEW_CHAT_MODEL,
+    stt: runtimeEnv.LIVEKIT_AGENT_STT_MODEL,
+    llm: runtimeEnv.LIVEKIT_AGENT_LLM_MODEL,
+    tts: runtimeEnv.LIVEKIT_AGENT_TTS_MODEL,
+    reviewChat: runtimeEnv.KYMA_REVIEW_CHAT_MODEL,
+    scoring: runtimeEnv.KYMA_SCORING_MODEL,
   }
   return (
     templateOverrides?.[kind]?.trim() ||
@@ -55,15 +57,28 @@ export function resolveReviewChatModelId(
   return resolveModelId('reviewChat', workspaceDefaults, templateOverrides)
 }
 
-export function decodeWorkspaceKey(encryptedKey: string) {
-  // BYOK keys are stored server-side and should never be sent to clients.
-  // This function centralizes runtime decode/decrypt behavior.
-  if (!serverEnv.KYMA_ENCRYPTION_KEY?.trim()) {
-    throw new Error(
-      'KYMA_ENCRYPTION_KEY is required for provider key resolution.'
-    )
+export function resolveScoringModelId(
+  workspaceDefaults?: WorkspaceModelOverrides,
+  templateOverrides?: WorkspaceModelOverrides
+): string {
+  const scoringModel = resolveModelId(
+    'scoring',
+    workspaceDefaults,
+    templateOverrides
+  )
+  if (scoringModel) {
+    return scoringModel
   }
-  return encryptedKey
+
+  const reviewChatFallback = resolveReviewChatModelId(
+    workspaceDefaults,
+    templateOverrides
+  )
+  if (reviewChatFallback?.trim()) {
+    return reviewChatFallback
+  }
+
+  return DEFAULT_MODELS.scoring
 }
 
 function parseHexKeyBytes(hex: string) {
@@ -79,7 +94,7 @@ export function decryptWorkspaceKey(args: {
   encryptedKey: string
   iv: string
 }) {
-  const key = serverEnv.KYMA_ENCRYPTION_KEY?.trim()
+  const key = runtimeEnv.KYMA_ENCRYPTION_KEY?.trim()
   if (!key) {
     throw new Error(
       'KYMA_ENCRYPTION_KEY is required for provider key resolution.'
@@ -128,6 +143,54 @@ function latestProviderKey(
   return candidates.toSorted((a, b) => b.addedAt - a.addedAt)[0]
 }
 
+export function resolveWorkspaceApiKeys(
+  providerKeys?: WorkspaceProviderKey[]
+): {
+  openai?: string
+  google?: string
+} {
+  const openaiRecord = latestProviderKey(providerKeys, 'openai')
+  const googleRecord = latestProviderKey(providerKeys, 'google')
+
+  return {
+    openai: openaiRecord
+      ? decryptWorkspaceKey({
+          encryptedKey: openaiRecord.encryptedKey,
+          iv: openaiRecord.iv,
+        }).trim()
+      : undefined,
+    google: googleRecord
+      ? decryptWorkspaceKey({
+          encryptedKey: googleRecord.encryptedKey,
+          iv: googleRecord.iv,
+        }).trim()
+      : undefined,
+  }
+}
+
+export function tryResolveWorkspaceApiKeys(
+  providerKeys?: WorkspaceProviderKey[]
+): {
+  apiKeys: { openai?: string; google?: string }
+  error?: string
+} {
+  if (!providerKeys?.length) {
+    return { apiKeys: {} }
+  }
+
+  try {
+    return { apiKeys: resolveWorkspaceApiKeys(providerKeys) }
+  } catch (error) {
+    return {
+      apiKeys: {},
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unable to decrypt workspace provider keys.',
+    }
+  }
+}
+
 export function buildGatewayByokOptions(args: {
   modelId?: string
   providerKeys?: WorkspaceProviderKey[]
@@ -162,7 +225,15 @@ export function buildGatewayByokOptions(args: {
     }
   }
 
-  // Gemini model IDs use `google/*`. Keep support for model routing,
-  // while request-scoped BYOK remains provider-specific (e.g. Vertex creds).
+  if (provider === 'google') {
+    return {
+      gateway: {
+        byok: {
+          google: [{ apiKey }],
+        },
+      },
+    }
+  }
+
   return undefined
 }

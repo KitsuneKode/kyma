@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 
 import { mutation } from './_generated/server'
+import { finalizeInterviewForProcessing } from './helpers/finalizeInterviewProcessing'
 import { transitionSessionSafely } from '../lib/interview/session-machine'
 import type { InterviewSessionState } from '../lib/interview/types'
 import { isDevelopmentMode } from '../lib/runtime-mode'
@@ -157,7 +158,10 @@ export const ingestWebhookEvent = mutation({
     if (
       (args.event === 'participant_left' ||
         args.event === 'participant_connection_aborted') &&
-      !['processing', 'completed', 'failed'].includes(session.state)
+      !['processing', 'completed', 'failed', 'reconnecting'].includes(
+        session.state
+      ) &&
+      args.participantIdentity?.startsWith('candidate-')
     ) {
       const nextState = transitionSessionSafely(
         session.state as InterviewSessionState,
@@ -165,6 +169,20 @@ export const ingestWebhookEvent = mutation({
       )
       await ctx.db.patch(session._id, {
         state: nextState,
+      })
+    }
+
+    if (
+      args.event === 'room_finished' &&
+      session.startedAt &&
+      ['live', 'reconnecting', 'interrupted'].includes(session.state)
+    ) {
+      await finalizeInterviewForProcessing(ctx, session, {
+        detail:
+          'Interview finalized automatically after the LiveKit room ended.',
+        source: 'livekit-webhook',
+        dedupeKey: `room-finished-finalize:${session._id}`,
+        allowedStates: ['live', 'reconnecting', 'interrupted'],
       })
     }
 

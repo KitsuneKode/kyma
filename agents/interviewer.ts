@@ -5,8 +5,17 @@ import {
   voice,
   type JobContext,
 } from '@livekit/agents'
-import { fetchMutation } from 'convex/nextjs'
+import { fetchMutation, fetchQuery } from 'convex/nextjs'
+import { z } from 'zod'
 
+import {
+  resolveModelId,
+  tryResolveWorkspaceApiKeys,
+} from '@/lib/providers/resolve-model'
+import {
+  resolveRuntimeModel,
+  resolveRealtimeProvider,
+} from '@/lib/agent/resolve-runtime-model'
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
@@ -69,7 +78,15 @@ Your goals are:
 - do not introduce a new long evaluation section
 - do not reveal scores or recommendations
 - remind the candidate that the team will review the conversation and follow up
+- when the wrap-up is complete, call the completeInterview tool so the session can move to processing
 `.trim()
+
+type InterviewPhase = 'warmup' | 'screening' | 'simulation' | 'wrapup'
+
+type InterviewUserData = {
+  phase: InterviewPhase
+  teachingSimulationStarted: boolean
+}
 
 type CandidateMetadata = {
   inviteToken?: string
@@ -77,11 +94,70 @@ type CandidateMetadata = {
   participantName?: string
 }
 
-type SessionEventRecorder = {
-  append: (type: string, detail: string) => Promise<void>
+type AgentTemplateConfig = {
+  templateName: string
+  targetDurationMinutes: number
+  interviewerInstructions: string
+  childInstructions: string
+  wrapUpInstructions: string
+  cascade: {
+    stt: string
+    llm: string
+    tts: string
+    childTts: string
+    wrapUpTts: string
+  }
 }
 
-function getAgentConfig() {
+type SessionEventRecorder = {
+  append: (type: string, detail: string, state?: 'processing') => Promise<void>
+}
+
+type TranscriptPersister = {
+  upsert: (segment: {
+    segmentId: string
+    speaker: 'agent' | 'candidate' | 'system'
+    text: string
+    status: 'partial' | 'final'
+    startedAt: string
+    endedAt?: string
+  }) => Promise<void>
+}
+
+type VisualObservationPersister = {
+  record: (observation: string) => Promise<void>
+}
+
+function isAgentVideoInputEnabled() {
+  return (
+    runtimeEnv.KYMA_AGENT_VIDEO_INPUT === '1' &&
+    resolveRealtimeProvider() === 'gemini'
+  )
+}
+
+const DEFAULT_TURN_HANDLING = {
+  turnDetection: undefined,
+  interruption: {
+    enabled: true,
+  },
+  endpointing: {},
+  preemptiveGeneration: {},
+}
+
+const CHILD_TURN_HANDLING = {
+  turnDetection: undefined,
+  interruption: {
+    enabled: true,
+    mode: 'adaptive' as const,
+    resumeFalseInterruption: true,
+  },
+  endpointing: {
+    minDelay: 650,
+  },
+  preemptiveGeneration: {},
+}
+
+function getEnvAgentConfig() {
   return {
     stt: runtimeEnv.LIVEKIT_AGENT_STT_MODEL ?? 'deepgram/nova-3',
     llm: runtimeEnv.LIVEKIT_AGENT_LLM_MODEL ?? 'openai/gpt-4.1-mini',
@@ -102,6 +178,45 @@ function getAgentConfig() {
       runtimeEnv.LIVEKIT_AGENT_WRAP_UP_INSTRUCTIONS ??
       DEFAULT_WRAP_UP_INSTRUCTIONS,
   }
+}
+
+function buildAgentTemplateConfig(
+  remoteConfig: Awaited<ReturnType<typeof fetchInterviewAgentConfig>> | null
+): AgentTemplateConfig {
+  const envConfig = getEnvAgentConfig()
+  const modelOverrides = remoteConfig?.modelOverrides
+
+  return {
+    templateName: remoteConfig?.templateName ?? 'AI Tutor Screener',
+    targetDurationMinutes:
+      remoteConfig?.targetDurationMinutes ?? DEFAULT_TARGET_DURATION_MINUTES,
+    interviewerInstructions:
+      remoteConfig?.systemPrompt?.trim() || envConfig.interviewerInstructions,
+    childInstructions:
+      remoteConfig?.childPersonaPrompt?.trim() || envConfig.childInstructions,
+    wrapUpInstructions:
+      remoteConfig?.wrapUpPrompt?.trim() || envConfig.wrapUpInstructions,
+    cascade: {
+      stt: resolveModelId('stt', undefined, modelOverrides),
+      llm: resolveModelId('llm', undefined, modelOverrides),
+      tts: resolveModelId('tts', undefined, modelOverrides),
+      childTts:
+        modelOverrides?.tts?.trim() ||
+        envConfig.childTts ||
+        resolveModelId('tts', undefined, modelOverrides),
+      wrapUpTts:
+        modelOverrides?.tts?.trim() ||
+        envConfig.wrapUpTts ||
+        resolveModelId('tts', undefined, modelOverrides),
+    },
+  }
+}
+
+async function fetchInterviewAgentConfig(sessionId: string) {
+  return await fetchQuery(api.agentConfig.getInterviewAgentConfig, {
+    sessionId: sessionId as Id<'interviewSessions'>,
+    processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
+  }).catch(() => null)
 }
 
 function parseCandidateMetadata(rawMetadata?: string): CandidateMetadata {
@@ -132,7 +247,7 @@ function createSessionEventRecorder(
   sessionId?: string
 ): SessionEventRecorder {
   return {
-    append: async (type, detail) => {
+    append: async (type, detail, state) => {
       if (!sessionId) {
         return
       }
@@ -144,6 +259,7 @@ function createSessionEventRecorder(
         detail,
         source: 'livekit-agent',
         dedupeKey: `${type}:${sessionId}:${detail.slice(0, 64)}`,
+        state,
       }).catch((error) => {
         logger.warn({
           event: 'agent.session-event.persist.failed',
@@ -156,7 +272,134 @@ function createSessionEventRecorder(
   }
 }
 
-class TeachingChildAgent extends voice.Agent {
+function createTranscriptPersister(
+  logger: ReturnType<typeof createDiagnosticLogger>,
+  sessionId?: string
+): TranscriptPersister {
+  return {
+    upsert: async (segment) => {
+      if (!sessionId || !segment.text.trim()) {
+        return
+      }
+
+      await fetchMutation(api.agentConfig.upsertAgentTranscriptSegment, {
+        processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
+        sessionId: sessionId as Id<'interviewSessions'>,
+        segmentId: segment.segmentId,
+        speaker: segment.speaker,
+        text: segment.text,
+        status: segment.status,
+        startedAt: segment.startedAt,
+        endedAt: segment.endedAt,
+      }).catch((error) => {
+        logger.warn({
+          event: 'agent.transcript.persist.failed',
+          detail: 'Unable to persist transcript segment from agent session.',
+          sessionId,
+          error,
+        })
+      })
+    },
+  }
+}
+
+function createVisualObservationPersister(
+  logger: ReturnType<typeof createDiagnosticLogger>,
+  sessionId?: string
+): VisualObservationPersister {
+  return {
+    record: async (observation) => {
+      if (!sessionId) {
+        return
+      }
+
+      const trimmed = observation.trim()
+      if (!trimmed) {
+        return
+      }
+
+      await fetchMutation(api.visualObservations.recordVisualObservation, {
+        processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
+        sessionId: sessionId as Id<'interviewSessions'>,
+        observation: trimmed,
+        observedAt: new Date().toISOString(),
+        source: 'agent',
+      }).catch((error) => {
+        logger.warn({
+          event: 'agent.visual-observation.persist.failed',
+          detail: 'Unable to persist visual observation from agent session.',
+          sessionId,
+          error,
+        })
+      })
+    },
+  }
+}
+
+function attachTranscriptPersistence(
+  session: voice.AgentSession<InterviewUserData>,
+  persister: TranscriptPersister,
+  logger: ReturnType<typeof createDiagnosticLogger>,
+  sessionId?: string
+) {
+  session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (event) => {
+    void persister.upsert({
+      segmentId: `candidate:${event.createdAt}`,
+      speaker: 'candidate',
+      text: event.transcript,
+      status: event.isFinal ? 'final' : 'partial',
+      startedAt: new Date(event.createdAt).toISOString(),
+    })
+
+    if (event.isFinal) {
+      const userData = session.userData
+      if (userData.phase === 'warmup' && /\bready\b/i.test(event.transcript)) {
+        userData.phase = 'screening'
+      }
+
+      logger.debug({
+        event: 'agent.user.transcribed',
+        detail: 'Captured final user transcript in agent session.',
+        sessionId,
+        meta: {
+          transcript: event.transcript,
+        },
+      })
+    }
+  })
+
+  session.on(voice.AgentSessionEventTypes.ConversationItemAdded, (event) => {
+    if (event.item.type !== 'message') {
+      return
+    }
+
+    const text = event.item.textContent?.trim()
+    if (!text) {
+      return
+    }
+
+    const speaker =
+      event.item.role === 'user'
+        ? 'candidate'
+        : event.item.role === 'assistant'
+          ? 'agent'
+          : null
+
+    if (!speaker) {
+      return
+    }
+
+    void persister.upsert({
+      segmentId: event.item.id,
+      speaker,
+      text,
+      status: 'final',
+      startedAt: new Date(event.item.createdAt).toISOString(),
+    })
+  })
+}
+
+class TeachingChildAgent extends voice.Agent<InterviewUserData> {
   constructor(
     instructions: string,
     private readonly recorder: SessionEventRecorder,
@@ -168,10 +411,15 @@ class TeachingChildAgent extends voice.Agent {
       instructions,
       tools,
       tts,
+      turnHandling: CHILD_TURN_HANDLING,
     })
   }
 
   override async onEnter() {
+    const userData = this.session.userData
+    userData.phase = 'simulation'
+    userData.teachingSimulationStarted = true
+
     await this.recorder.append(
       'teaching-simulation-started',
       'Interviewer switched into the child-teaching simulation.'
@@ -187,19 +435,24 @@ class TeachingChildAgent extends voice.Agent {
   }
 }
 
-class WrapUpInterviewerAgent extends voice.Agent {
+class WrapUpInterviewerAgent extends voice.Agent<InterviewUserData> {
   constructor(
     instructions: string,
     private readonly recorder: SessionEventRecorder,
+    tools: llm.ToolContext,
     tts: string
   ) {
     super({
       instructions,
+      tools,
       tts,
     })
   }
 
   override async onEnter() {
+    const userData = this.session.userData
+    userData.phase = 'wrapup'
+
     await this.recorder.append(
       'teaching-simulation-completed',
       'Teaching simulation completed and the interviewer resumed the wrap-up.'
@@ -216,24 +469,17 @@ class WrapUpInterviewerAgent extends voice.Agent {
 }
 
 async function startSession(ctx: JobContext) {
-  const config = getAgentConfig()
   const logger = createDiagnosticLogger('interviewer-agent', {
     actor: 'agent',
     roomName: ctx.room.name,
   })
-  logger.info({
-    event: 'agent.session.bootstrap',
-    detail: 'Starting interviewer agent session.',
-    meta: {
-      stt: config.stt,
-      llm: config.llm,
-      tts: config.tts,
-      childTts: config.childTts,
-      wrapUpTts: config.wrapUpTts,
-    },
-  })
 
-  await ctx.connect(undefined, AutoSubscribe.AUDIO_ONLY)
+  await ctx.connect(
+    undefined,
+    isAgentVideoInputEnabled()
+      ? AutoSubscribe.SUBSCRIBE_ALL
+      : AutoSubscribe.AUDIO_ONLY
+  )
   logger.info({
     event: 'agent.room.connected',
     detail: 'Agent connected to LiveKit room.',
@@ -255,7 +501,17 @@ async function startSession(ctx: JobContext) {
   const participant = await ctx.waitForParticipant()
   const participantMetadata = parseCandidateMetadata(participant.metadata)
   const sessionId = participantMetadata.sessionId
+  const remoteConfig = sessionId
+    ? await fetchInterviewAgentConfig(sessionId)
+    : null
+  const config = buildAgentTemplateConfig(remoteConfig)
   const recorder = createSessionEventRecorder(logger, sessionId)
+  const persister = createTranscriptPersister(logger, sessionId)
+  const visualObservationPersister = createVisualObservationPersister(
+    logger,
+    sessionId
+  )
+  const videoInputEnabled = isAgentVideoInputEnabled()
   const candidateName =
     participant.name ||
     participantMetadata.participantName ||
@@ -263,28 +519,93 @@ async function startSession(ctx: JobContext) {
     'there'
 
   logger.info({
-    event: 'agent.participant.detected',
-    detail: 'Candidate participant detected in room.',
+    event: 'agent.session.bootstrap',
+    detail: 'Starting interviewer agent session.',
     participantIdentity: participant.identity,
     sessionId,
-  })
-
-  const session = new voice.AgentSession({
-    stt: config.stt,
-    llm: config.llm,
-    tts: config.tts,
-    turnHandling: {
-      interruption: {
-        enabled: true,
-      },
+    meta: {
+      templateName: config.templateName,
+      targetDurationMinutes: config.targetDurationMinutes,
+      stt: config.cascade.stt,
+      llm: config.cascade.llm,
+      tts: config.cascade.tts,
+      childTts: config.cascade.childTts,
+      wrapUpTts: config.cascade.wrapUpTts,
     },
   })
-  let teachingSimulationStarted = false
+
+  const runtimeModel = resolveRuntimeModel({
+    cascade: {
+      stt: config.cascade.stt,
+      llm: config.cascade.llm,
+      tts: config.cascade.tts,
+    },
+    apiKeys: (() => {
+      const resolved = tryResolveWorkspaceApiKeys(remoteConfig?.providerKeys)
+      if (resolved.error) {
+        logger.error({
+          event: 'agent.byok.resolve.failed',
+          detail: resolved.error,
+          sessionId,
+        })
+        void recorder.append(
+          'agent-session-failed',
+          `Workspace provider keys could not be decrypted: ${resolved.error}`
+        )
+      }
+      return resolved.apiKeys
+    })(),
+  })
+
+  const session = new voice.AgentSession<InterviewUserData>({
+    userData: {
+      phase: 'warmup',
+      teachingSimulationStarted: false,
+    },
+    ...(runtimeModel.mode === 'realtime'
+      ? { llm: runtimeModel.llm }
+      : {
+          stt: runtimeModel.stt,
+          llm: runtimeModel.llm,
+          tts: runtimeModel.tts,
+        }),
+    turnHandling: DEFAULT_TURN_HANDLING,
+  })
+
+  const completeInterviewTool = llm.tool({
+    description:
+      'Call when the interview wrap-up is complete and the candidate should submit the session for review.',
+    execute: async () => {
+      const userData = session.userData
+      userData.phase = 'wrapup'
+
+      if (sessionId) {
+        await fetchMutation(api.agentConfig.requestInterviewProcessing, {
+          processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
+          sessionId: sessionId as Id<'interviewSessions'>,
+          detail:
+            'Agent completed the interview and requested post-call processing.',
+        }).catch((error) => {
+          logger.warn({
+            event: 'agent.processing.request.failed',
+            detail: 'Unable to request interview processing from agent tool.',
+            sessionId,
+            error,
+          })
+        })
+      }
+
+      return 'The interview is complete. Thank the candidate warmly, remind them the team will review the conversation, and let them know the session will finish automatically in a moment.'
+    },
+  })
 
   const wrapUpAgent = new WrapUpInterviewerAgent(
     config.wrapUpInstructions,
     recorder,
-    config.wrapUpTts
+    {
+      completeInterview: completeInterviewTool,
+    },
+    config.cascade.wrapUpTts
   )
 
   const childAgent = new TeachingChildAgent(
@@ -304,21 +625,46 @@ async function startSession(ctx: JobContext) {
         },
       }),
     },
-    config.childTts
+    config.cascade.childTts
   )
 
-  const interviewerAgent = new voice.Agent({
-    instructions: config.interviewerInstructions,
+  const recordVisualObservationTool = llm.tool({
+    description:
+      'Log one concrete one-sentence visual observation about the candidate when you notice a meaningful change on camera. For recruiter review only — never used in scoring.',
+    parameters: z.object({
+      observation: z
+        .string()
+        .describe(
+          'One sentence describing a concrete visual observation about the candidate.'
+        ),
+    }),
+    execute: async ({ observation }) => {
+      await visualObservationPersister.record(observation)
+      return 'Visual observation saved for recruiter review.'
+    },
+  })
+
+  const interviewerAgent = new voice.Agent<InterviewUserData>({
+    instructions: videoInputEnabled
+      ? `${config.interviewerInstructions}
+
+When live video is available, call recordVisualObservation at most once per meaningful visual change with a single concrete sentence. These notes are for recruiter review only and must never influence what you say about hiring outcomes.`
+      : config.interviewerInstructions,
     tools: {
+      ...(videoInputEnabled
+        ? { recordVisualObservation: recordVisualObservationTool }
+        : {}),
       startTeachingSimulation: llm.tool({
         description:
           'Use this after the candidate has answered two or three substantive screening questions and you are ready to test how they teach a mildly confused child.',
         execute: async () => {
-          if (teachingSimulationStarted) {
+          const userData = session.userData
+          if (userData.teachingSimulationStarted) {
             return 'The teaching simulation is already in progress or has already happened.'
           }
 
-          teachingSimulationStarted = true
+          userData.phase = 'simulation'
+          userData.teachingSimulationStarted = true
 
           return llm.handoff({
             agent: childAgent,
@@ -330,34 +676,35 @@ async function startSession(ctx: JobContext) {
     },
   })
 
+  attachTranscriptPersistence(session, persister, logger, sessionId)
+
   await session.start({
     agent: interviewerAgent,
     room: ctx.room,
+    ...(videoInputEnabled
+      ? {
+          inputOptions: {
+            videoEnabled: true,
+          },
+        }
+      : {}),
   })
   logger.info({
     event: 'agent.session.started',
     detail: 'Voice agent session started.',
     sessionId,
+    meta: {
+      runtimeMode: runtimeModel.mode,
+      realtimeProvider:
+        runtimeModel.mode === 'realtime' ? runtimeModel.provider : undefined,
+      videoInputEnabled,
+    },
   })
 
   await recorder.append(
     'agent-session-started',
     'Interviewer agent joined the room and started the voice session.'
   )
-
-  session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (event) => {
-    if (!event.isFinal) {
-      return
-    }
-    logger.debug({
-      event: 'agent.user.transcribed',
-      detail: 'Captured final user transcript in agent session.',
-      sessionId,
-      meta: {
-        transcript: event.transcript,
-      },
-    })
-  })
 
   ctx.addShutdownCallback(async () => {
     logger.info({
@@ -368,13 +715,35 @@ async function startSession(ctx: JobContext) {
     await session.close()
   })
 
-  await session.say(
-    `Hi ${candidateName}, welcome. I am your interviewer for this tutor screening conversation. This should take about ${DEFAULT_TARGET_DURATION_MINUTES} minutes, and it will focus on how you teach, explain, and communicate. Please take a moment to settle in, and whenever you are ready, just tell me you are ready to begin.`,
-    {
-      addToChatCtx: true,
-      allowInterruptions: true,
-    }
-  )
+  const welcomeInstructions = `
+Greet ${candidateName} warmly as the interviewer for the ${config.templateName} tutor screening conversation.
+Explain this should take about ${config.targetDurationMinutes} minutes and focuses on how they teach, explain, and communicate.
+Ask them to settle in and tell you when they are ready to begin.
+Stay in the warm-up phase until they clearly say they are ready.
+`.trim()
+
+  try {
+    await session.generateReply({
+      instructions: welcomeInstructions,
+    })
+  } catch (error) {
+    logger.warn({
+      event: 'agent.ready-check.generate-reply.failed',
+      detail: 'Falling back to scripted welcome prompt.',
+      sessionId,
+      error,
+    })
+
+    await session.say(
+      `Hi ${candidateName}, welcome. I am your interviewer for this tutor screening conversation. This should take about ${config.targetDurationMinutes} minutes, and it will focus on how you teach, explain, and communicate. Please take a moment to settle in, and whenever you are ready, just tell me you are ready to begin.`,
+      {
+        addToChatCtx: true,
+        allowInterruptions: true,
+      }
+    )
+  }
+
+  session.userData.phase = 'warmup'
 
   await recorder.append(
     'agent-ready-check-sent',
