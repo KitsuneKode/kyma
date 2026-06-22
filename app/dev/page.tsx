@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { connection } from 'next/server'
 
 import { DevSetupHub } from '@/components/dev/dev-setup-hub'
+import { isProductionDeployment } from '@/lib/env/deployment-mode'
+import { serverEnv } from '@/lib/env/server'
 
 export const metadata = {
   title: 'Dev setup hub',
@@ -11,7 +13,12 @@ export const metadata = {
 export default async function DevSetupPage() {
   await connection()
 
-  if (process.env.NODE_ENV === 'production') {
+  if (
+    isProductionDeployment({
+      deploymentEnv: serverEnv.KYMA_DEPLOYMENT_ENV,
+      nodeEnv: serverEnv.NODE_ENV,
+    })
+  ) {
     notFound()
   }
 

@@ -5,8 +5,32 @@
 - Shared schema definitions: `lib/env/shared.ts`
 - Next.js server env: `lib/env/server.ts`
 - Next.js client env: `lib/env/client.ts`
-- Standalone runtime env for Convex, agents, and scripts: `lib/env/runtime.ts`
+- Standalone runtime env for agents and scripts: `lib/env/runtime.ts`
+- Convex deployment subset: `lib/env/convex.ts`
+- Provider key resolution: `lib/env/providers.ts`
+- NODE_ENV adapter for middleware/client diagnostics: `lib/env/node-env.ts`
 - Prefer importing the boundary-specific module directly from the runtime that owns the code.
+
+## Deployment matrix
+
+| Runtime                              | Module                | Owns                                                                       |
+| ------------------------------------ | --------------------- | -------------------------------------------------------------------------- |
+| Next.js server (RSC, route handlers) | `lib/env/server.ts`   | Clerk secrets, LiveKit server keys, Inngest, provider keys, processing key |
+| Next.js client                       | `lib/env/client.ts`   | `NEXT_PUBLIC_*` only                                                       |
+| Convex functions                     | `lib/env/convex.ts`   | Processing key, encryption, admin emails, Clerk subset, deployment mode    |
+| Agent worker / scripts               | `lib/env/runtime.ts`  | Full standalone stack including agent tuning and provider keys             |
+| Middleware / client diagnostics      | `lib/env/node-env.ts` | Narrow `NODE_ENV` adapter when t3-env modules are unavailable              |
+
+Templates:
+
+- App env: `.env.example` (copy to `.env.local`)
+- Convex env: `convex/.env.example` (sync with `scripts/convex-local-setup.sh`)
+
+Platform-injected keys documented as exceptions (not product config):
+
+- `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_SITE_URL` (Convex bootstrap)
+- `VERCEL_URL` (Vercel deployment host)
+- `npm_package_version` (agent worker metadata)
 
 ## Boundary rules
 
@@ -120,4 +144,5 @@ errors.
 - Any new env key must be added to:
   1. `lib/env/shared.ts`
   2. `lib/env/client.ts` if it is `NEXT_PUBLIC_*`
-  3. documentation in this file when behavior is non-obvious
+  3. `.env.example` and, when Convex needs it, `convex/.env.example`
+  4. documentation in this file when behavior is non-obvious

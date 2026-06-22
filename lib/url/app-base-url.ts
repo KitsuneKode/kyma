@@ -1,15 +1,18 @@
 import { headers } from 'next/headers'
 
+import { clientEnv } from '@/lib/env/client'
+import { serverEnv } from '@/lib/env/server'
+
 /**
  * Best-effort absolute origin for invite links and Clerk redirect URLs.
  */
 export async function getAppBaseUrl(): Promise<string> {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim()
+  const configured = clientEnv.NEXT_PUBLIC_APP_URL?.trim()
   if (configured) {
     return configured.replace(/\/$/, '')
   }
 
-  const vercel = process.env.VERCEL_URL?.trim()
+  const vercel = serverEnv.VERCEL_URL?.trim()
   if (vercel) {
     return `https://${vercel}`
   }
