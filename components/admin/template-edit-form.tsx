@@ -7,8 +7,13 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/convex/_generated/api'
 import type { Doc, Id } from '@/convex/_generated/dataModel'
 import { ModelStageForm } from '@/components/providers/model-stage-form'
+import { RubricConfigEditor } from '@/components/admin/rubric-config-editor'
 import { Button } from '@/components/ui/button'
 import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
+import {
+  buildDefaultRubricConfig,
+  type TemplateRubricConfig,
+} from '@/lib/templates/default-assessment-content'
 
 function toModelOverrides(template: Doc<'assessmentTemplates'>) {
   return {
@@ -18,6 +23,12 @@ function toModelOverrides(template: Doc<'assessmentTemplates'>) {
     reviewChat: template.modelOverrides?.reviewChat ?? '',
     scoring: template.modelOverrides?.scoring ?? '',
   }
+}
+
+function toRubricConfig(
+  template: Doc<'assessmentTemplates'>
+): TemplateRubricConfig {
+  return template.rubricConfig ?? buildDefaultRubricConfig()
 }
 
 export function TemplateEditForm({
@@ -40,6 +51,7 @@ export function TemplateEditForm({
   const [modelOverrides, setModelOverrides] = useState(
     toModelOverrides(template)
   )
+  const [rubricConfig, setRubricConfig] = useState(toRubricConfig(template))
   const [saving, setSaving] = useState(false)
   const [saveState, setSaveState] = useState<string | null>(null)
 
@@ -61,6 +73,7 @@ export function TemplateEditForm({
           reviewChat: modelOverrides.reviewChat.trim() || undefined,
           scoring: modelOverrides.scoring.trim() || undefined,
         },
+        rubricConfig,
       })
       setSaveState('Saved')
       router.refresh()
@@ -133,6 +146,17 @@ export function TemplateEditForm({
             className="w-full rounded-xl border border-border/60 bg-background px-3 py-2"
           />
         </label>
+      </div>
+
+      <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+        <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+          Rubric dimensions
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Tune scoring weights, hard gates, and keyword hints used by the
+          assessment pipeline for this template.
+        </p>
+        <RubricConfigEditor value={rubricConfig} onChange={setRubricConfig} />
       </div>
 
       <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">

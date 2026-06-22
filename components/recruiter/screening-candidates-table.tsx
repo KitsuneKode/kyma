@@ -1,8 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { IconCheck, IconCopy } from '@tabler/icons-react'
 
 import { DataTable, type ColumnDef } from '@/components/ui/data-table'
+import { Button } from '@/components/ui/button'
 import { formatStatusLabel } from '@/lib/recruiter/format'
 
 type ScreeningCandidateRow = {
@@ -14,6 +16,49 @@ type ScreeningCandidateRow = {
   attemptCount: number
   allowedAttempts: number
   inviteToken?: string
+}
+
+function buildInviteUrl(token: string) {
+  if (typeof window === 'undefined') {
+    return `/i/${token}`
+  }
+  return `${window.location.origin}/i/${token}`
+}
+
+function CopyInviteButton({ inviteUrl }: { inviteUrl: string }) {
+  const [copied, setCopied] = useState(false)
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(inviteUrl)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="shrink-0"
+      onClick={() => void handleCopy()}
+    >
+      {copied ? (
+        <>
+          <IconCheck className="size-3.5" />
+          Copied
+        </>
+      ) : (
+        <>
+          <IconCopy className="size-3.5" />
+          Copy link
+        </>
+      )}
+    </Button>
+  )
 }
 
 export function ScreeningCandidatesTable({
@@ -58,25 +103,23 @@ export function ScreeningCandidatesTable({
       },
       {
         accessorKey: 'inviteToken',
-        header: 'Invite path',
+        header: 'Invite link',
         cell: ({ row }) => {
           if (!row.original.inviteToken) {
             return <span className="text-muted-foreground">Pending</span>
           }
-          const inviteUrl = `/interviews/${row.original.inviteToken}`
+          const inviteUrl = buildInviteUrl(row.original.inviteToken)
           return (
-            <div className="flex items-center gap-2">
+            <div className="flex max-w-md flex-col gap-2 sm:flex-row sm:items-center">
               <a
                 href={inviteUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="group flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-primary transition-colors hover:bg-primary/20"
+                className="truncate font-mono text-xs text-primary underline-offset-4 hover:underline"
               >
-                <span>{row.original.inviteToken}</span>
-                <span className="opacity-0 transition-opacity group-hover:opacity-100">
-                  →
-                </span>
+                {inviteUrl}
               </a>
+              <CopyInviteButton inviteUrl={inviteUrl} />
             </div>
           )
         },

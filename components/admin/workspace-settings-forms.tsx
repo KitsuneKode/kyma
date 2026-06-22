@@ -45,6 +45,11 @@ function toModelState(settings: WorkspaceSettings) {
   }
 }
 
+type MutationFeedback = {
+  tone: 'success' | 'error'
+  message: string
+} | null
+
 export function WorkspaceSettingsForms({
   settings,
 }: {
@@ -64,6 +69,12 @@ export function WorkspaceSettingsForms({
   const [releaseMode, setReleaseMode] = useState<'auto' | 'manual'>(
     settings.candidateReleaseMode ?? 'auto'
   )
+  const [addKeyFeedback, setAddKeyFeedback] = useState<MutationFeedback>(null)
+  const [testFeedback, setTestFeedback] = useState<MutationFeedback>(null)
+  const [removeFeedback, setRemoveFeedback] = useState<MutationFeedback>(null)
+  const [modelsFeedback, setModelsFeedback] = useState<MutationFeedback>(null)
+  const [releaseFeedback, setReleaseFeedback] = useState<MutationFeedback>(null)
+  const [busyAction, setBusyAction] = useState<string | null>(null)
 
   const effectiveModels = resolveStageModels({
     workspaceDefaults: {
@@ -74,6 +85,28 @@ export function WorkspaceSettingsForms({
       scoring: models.scoring || undefined,
     },
   })
+
+  async function runMutation(
+    actionId: string,
+    run: () => Promise<void>,
+    setFeedback: (value: MutationFeedback) => void,
+    successMessage: string
+  ) {
+    setBusyAction(actionId)
+    setFeedback(null)
+    try {
+      await run()
+      setFeedback({ tone: 'success', message: successMessage })
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message:
+          error instanceof Error ? error.message : 'Unable to save changes.',
+      })
+    } finally {
+      setBusyAction(null)
+    }
+  }
 
   return (
     <>
@@ -98,53 +131,119 @@ export function WorkspaceSettingsForms({
             className="font-mono"
           />
         </div>
-        <div className="mt-3 flex gap-3">
+        <div className="mt-3 flex flex-wrap gap-3">
           <Button
             type="button"
-            onClick={() => {
-              void addProviderKey({
-                provider,
-                key,
-                label: label || undefined,
-              }).then(() => setKey(''))
-            }}
+            disabled={busyAction !== null || !key.trim()}
+            onClick={() =>
+              void runMutation(
+                'add-key',
+                async () => {
+                  await addProviderKey({
+                    provider,
+                    key,
+                    label: label || undefined,
+                  })
+                  setKey('')
+                },
+                setAddKeyFeedback,
+                'Provider key added.'
+              )
+            }
           >
-            Add key
+            {busyAction === 'add-key' ? 'Adding…' : 'Add key'}
           </Button>
           <Button
             type="button"
             variant="outline"
-            onClick={() => void testProviderConnection({ provider })}
+            disabled={busyAction !== null}
+            onClick={() =>
+              void runMutation(
+                'test-provider',
+                async () => {
+                  await testProviderConnection({ provider })
+                },
+                setTestFeedback,
+                'Provider connection succeeded.'
+              )
+            }
           >
-            Test provider
+            {busyAction === 'test-provider' ? 'Testing…' : 'Test provider'}
           </Button>
         </div>
+        {addKeyFeedback ? (
+          <p
+            className={
+              addKeyFeedback.tone === 'success'
+                ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
+                : 'mt-3 text-sm text-destructive'
+            }
+          >
+            {addKeyFeedback.message}
+          </p>
+        ) : null}
+        {testFeedback ? (
+          <p
+            className={
+              testFeedback.tone === 'success'
+                ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
+                : 'mt-3 text-sm text-destructive'
+            }
+          >
+            {testFeedback.message}
+          </p>
+        ) : null}
         <div className="mt-4 space-y-2">
-          {settings.providerKeys?.map((item) => (
-            <div
-              key={item.keyId}
-              className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/20 p-3"
-            >
-              <p className="font-mono text-sm">
-                {item.provider} {item.label ? `(${item.label})` : ''} - ****
-                {item.maskedKeyTail ?? '****'}
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  void removeProviderKey({
-                    provider: item.provider,
-                    keyId: item.keyId,
-                  })
-                }
+          {settings.providerKeys?.length ? (
+            settings.providerKeys.map((item) => (
+              <div
+                key={item.keyId}
+                className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/20 p-3"
               >
-                Remove
-              </Button>
-            </div>
-          ))}
+                <p className="font-mono text-sm">
+                  {item.provider} {item.label ? `(${item.label})` : ''} - ****
+                  {item.maskedKeyTail ?? '****'}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={busyAction !== null}
+                  onClick={() =>
+                    void runMutation(
+                      `remove-${item.keyId}`,
+                      async () => {
+                        await removeProviderKey({
+                          provider: item.provider,
+                          keyId: item.keyId,
+                        })
+                      },
+                      setRemoveFeedback,
+                      'Provider key removed.'
+                    )
+                  }
+                >
+                  Remove
+                </Button>
+              </div>
+            ))
+          ) : (
+            <p className="rounded-lg border border-dashed border-border/60 bg-muted/10 p-4 text-sm text-muted-foreground">
+              No provider keys yet. Add a key to enable BYOK model routing.
+            </p>
+          )}
         </div>
+        {removeFeedback ? (
+          <p
+            className={
+              removeFeedback.tone === 'success'
+                ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
+                : 'mt-3 text-sm text-destructive'
+            }
+          >
+            {removeFeedback.message}
+          </p>
+        ) : null}
       </WorkspaceSurface>
 
       <WorkspaceSurface className="p-6">
@@ -180,20 +279,39 @@ export function WorkspaceSettingsForms({
         <Button
           type="button"
           className="mt-4"
+          disabled={busyAction !== null}
           onClick={() =>
-            void updateDefaultModels({
-              models: {
-                stt: models.stt || undefined,
-                llm: models.llm || undefined,
-                tts: models.tts || undefined,
-                reviewChat: models.reviewChat || undefined,
-                scoring: models.scoring || undefined,
+            void runMutation(
+              'save-models',
+              async () => {
+                await updateDefaultModels({
+                  models: {
+                    stt: models.stt || undefined,
+                    llm: models.llm || undefined,
+                    tts: models.tts || undefined,
+                    reviewChat: models.reviewChat || undefined,
+                    scoring: models.scoring || undefined,
+                  },
+                })
               },
-            })
+              setModelsFeedback,
+              'Default models saved.'
+            )
           }
         >
-          Save model defaults
+          {busyAction === 'save-models' ? 'Saving…' : 'Save model defaults'}
         </Button>
+        {modelsFeedback ? (
+          <p
+            className={
+              modelsFeedback.tone === 'success'
+                ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
+                : 'mt-3 text-sm text-destructive'
+            }
+          >
+            {modelsFeedback.message}
+          </p>
+        ) : null}
       </WorkspaceSurface>
 
       <WorkspaceSurface className="p-6">
@@ -223,10 +341,31 @@ export function WorkspaceSettingsForms({
         <Button
           type="button"
           className="mt-4"
-          onClick={() => void updateCandidateReleaseMode({ mode: releaseMode })}
+          disabled={busyAction !== null}
+          onClick={() =>
+            void runMutation(
+              'save-release',
+              async () => {
+                await updateCandidateReleaseMode({ mode: releaseMode })
+              },
+              setReleaseFeedback,
+              'Release policy saved.'
+            )
+          }
         >
-          Save release policy
+          {busyAction === 'save-release' ? 'Saving…' : 'Save release policy'}
         </Button>
+        {releaseFeedback ? (
+          <p
+            className={
+              releaseFeedback.tone === 'success'
+                ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
+                : 'mt-3 text-sm text-destructive'
+            }
+          >
+            {releaseFeedback.message}
+          </p>
+        ) : null}
       </WorkspaceSurface>
     </>
   )

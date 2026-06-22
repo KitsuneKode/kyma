@@ -14,6 +14,7 @@ import { ensureDefaultTemplate } from './helpers/templates'
 import { decryptProviderKey, encryptProviderKey } from './helpers/encryption'
 import { runtimeEnv } from '../lib/env/runtime'
 import { modelOverridesValidator } from './validators'
+import { DEFAULT_TEMPLATE_STARTER_CONTENT } from '../lib/templates/default-assessment-content'
 import { slugify } from '../lib/format/slug'
 import {
   latestProviderKey,
@@ -69,6 +70,10 @@ export const createAssessmentTemplate = recruiterMutation({
       targetDurationMinutes: args.targetDurationMinutes,
       allowsResume: args.allowsResume ?? true,
       interviewStyleMode: args.interviewStyleMode ?? 'standard',
+      systemPrompt: DEFAULT_TEMPLATE_STARTER_CONTENT.systemPrompt,
+      childPersonaPrompt: DEFAULT_TEMPLATE_STARTER_CONTENT.childPersonaPrompt,
+      wrapUpPrompt: DEFAULT_TEMPLATE_STARTER_CONTENT.wrapUpPrompt,
+      rubricConfig: DEFAULT_TEMPLATE_STARTER_CONTENT.rubricConfig,
     })
 
     await logAuditEvent(ctx, {
@@ -225,7 +230,7 @@ export const createScreeningBatch = recruiterMutation({
     candidates: v.array(
       v.object({
         candidateName: v.string(),
-        candidateEmail: v.optional(v.string()),
+        candidateEmail: v.string(),
       })
     ),
   },
@@ -262,11 +267,18 @@ export const createScreeningBatch = recruiterMutation({
     })
 
     for (const candidate of args.candidates) {
+      const candidateEmail = candidate.candidateEmail.trim().toLowerCase()
+      if (!candidateEmail || !candidateEmail.includes('@')) {
+        throw new ConvexError(
+          'Each candidate must include a valid email address for invite delivery and account linking.'
+        )
+      }
+
       const inviteId = await ctx.db.insert('candidateInvites', {
         orgId,
         inviteToken: buildInviteToken(candidate.candidateName),
         candidateName: candidate.candidateName,
-        candidateEmail: candidate.candidateEmail,
+        candidateEmail,
         templateId: template._id,
         batchId,
         status: 'created',
@@ -280,7 +292,7 @@ export const createScreeningBatch = recruiterMutation({
         batchId,
         inviteId,
         candidateName: candidate.candidateName,
-        candidateEmail: candidate.candidateEmail,
+        candidateEmail,
         allowedAttempts: args.allowedAttempts,
         attemptCount: 0,
         status: 'invited',

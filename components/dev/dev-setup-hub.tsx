@@ -25,14 +25,14 @@ type SeedResult = {
 
 const SCREEN_LINKS = [
   { href: '/recruiter', label: 'Recruiter dashboard' },
-  { href: '/admin/settings', label: 'Workspace settings' },
-  { href: '/admin/screenings', label: 'Screenings list' },
-  { href: '/admin/screenings/new', label: 'Create screening' },
-  { href: '/admin/candidates', label: 'Candidates queue' },
-  { href: '/admin/templates', label: 'Assessment templates' },
+  { href: '/recruiter/settings', label: 'Workspace settings' },
+  { href: '/recruiter/screenings', label: 'Screenings list' },
+  { href: '/recruiter/screenings/new', label: 'Create screening' },
+  { href: '/recruiter/candidates', label: 'Candidates queue' },
+  { href: '/recruiter/templates', label: 'Assessment templates' },
   { href: '/candidate', label: 'Candidate portal home' },
   { href: '/candidate/interviews', label: 'Candidate interviews' },
-  { href: '/onboarding/recruiter', label: 'Recruiter org onboarding' },
+  { href: '/recruiter/setup', label: 'Recruiter org setup' },
   { href: '/interviews/demo-invite', label: 'Public demo invite' },
 ] as const
 

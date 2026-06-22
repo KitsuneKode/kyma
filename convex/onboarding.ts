@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 
+import type { MutationCtx, QueryCtx } from './_generated/server'
 import { recruiterMutation, recruiterQuery } from './lib/customFunctions'
 import { getRecruiterActorId } from './helpers/auth'
 
@@ -16,6 +17,68 @@ const ALL_ONBOARDING_STEPS = [
   'invite_preview',
   'example_report',
 ] as const
+
+type OnboardingStep = (typeof ALL_ONBOARDING_STEPS)[number]
+
+async function detectCompletedSteps(
+  ctx: QueryCtx | MutationCtx,
+  orgId: string
+): Promise<OnboardingStep[]> {
+  const detected: OnboardingStep[] = []
+
+  const templates = await ctx.db
+    .query('assessmentTemplates')
+    .withIndex('by_org_id_and_status', (q) =>
+      q.eq('orgId', orgId).eq('status', 'active')
+    )
+    .collect()
+  if (templates.length > 0) {
+    detected.push('template')
+  }
+
+  const batches = await ctx.db
+    .query('screeningBatches')
+    .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+    .collect()
+  if (batches.length > 0) {
+    detected.push('batch')
+  }
+
+  const activeBatch = batches.find((batch) => batch.status === 'active')
+  if (activeBatch) {
+    const eligibility = await ctx.db
+      .query('candidateEligibility')
+      .withIndex('by_batch', (q) => q.eq('batchId', activeBatch._id))
+      .collect()
+
+    for (const item of eligibility) {
+      const invite = await ctx.db.get(item.inviteId)
+      if (invite?.inviteToken) {
+        detected.push('invite_preview')
+        break
+      }
+    }
+  }
+
+  const exampleReport = await ctx.db
+    .query('assessmentReports')
+    .withIndex('by_org_id_and_status', (q) =>
+      q.eq('orgId', orgId).eq('status', 'completed')
+    )
+    .first()
+  if (exampleReport) {
+    detected.push('example_report')
+  }
+
+  return detected
+}
+
+function mergeCompletedSteps(
+  storedSteps: OnboardingStep[],
+  detectedSteps: OnboardingStep[]
+) {
+  return [...new Set([...storedSteps, ...detectedSteps])]
+}
 
 export const getRecruiterOnboardingStatus = recruiterQuery({
   args: {},
@@ -34,7 +97,9 @@ export const getRecruiterOnboardingStatus = recruiterQuery({
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
       .first()
 
-    const completedSteps = settings?.recruiterOnboarding?.steps ?? []
+    const storedSteps = settings?.recruiterOnboarding?.steps ?? []
+    const detectedSteps = await detectCompletedSteps(ctx, orgId)
+    const completedSteps = mergeCompletedSteps(storedSteps, detectedSteps)
     const isComplete =
       Boolean(settings?.recruiterOnboarding?.completedAt) ||
       ALL_ONBOARDING_STEPS.every((step) => completedSteps.includes(step))
@@ -91,7 +156,9 @@ export const completeRecruiterOnboarding = recruiterMutation({
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
       .first()
 
-    const existingSteps = settings?.recruiterOnboarding?.steps ?? []
+    const storedSteps = settings?.recruiterOnboarding?.steps ?? []
+    const detectedSteps = await detectCompletedSteps(ctx, orgId)
+    const existingSteps = mergeCompletedSteps(storedSteps, detectedSteps)
     const nextSteps = args.markAllComplete
       ? [...ALL_ONBOARDING_STEPS]
       : args.step && !existingSteps.includes(args.step)

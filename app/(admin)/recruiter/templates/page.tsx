@@ -84,7 +84,7 @@ export default async function TemplatesPage() {
           action={
             <Button
               nativeButton={false}
-              render={<Link href="/onboarding/recruiter" />}
+              render={<Link href="/recruiter/setup" />}
             >
               Review organization setup
             </Button>

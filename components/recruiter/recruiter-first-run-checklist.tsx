@@ -28,7 +28,7 @@ const STEPS: Array<{
       'Confirm rubric dimensions, prompts, and model defaults before inviting candidates.',
     href: ({ templateId }) =>
       templateId
-        ? `/recruiter/templates?highlight=${templateId}`
+        ? `/recruiter/templates/${templateId}/edit`
         : '/recruiter/templates',
   },
   {
@@ -122,7 +122,8 @@ export function RecruiterFirstRunChecklist({
         </h2>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Complete these four steps to publish screenings, send invites, and
-          review evidence-backed candidate reports.
+          review evidence-backed candidate reports. Steps mark complete
+          automatically as your workspace data fills in.
         </p>
       </div>
 

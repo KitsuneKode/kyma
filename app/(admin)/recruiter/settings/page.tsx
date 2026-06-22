@@ -7,6 +7,7 @@ import {
   settingsFormKey,
   WorkspaceSettingsForms,
 } from '@/components/admin/workspace-settings-forms'
+import { TeamInviteForm } from '@/components/admin/team-invite-form'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
 
@@ -86,6 +87,7 @@ export default function SettingsPage() {
         description="Manage BYOK provider keys, default models, and candidate release policy."
       />
 
+      <TeamInviteForm />
       <WorkspaceSettingsForms
         key={settingsFormKey(settings)}
         settings={settings}
