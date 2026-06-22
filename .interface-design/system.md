@@ -19,7 +19,29 @@ Screening batches, invite tokens, session lifecycle, evidence-backed rubrics, re
 
 ## Depth
 
-Ring-1 + tinted shadow from CSS tokens (`--shadow-sm`, `--shadow-md`). No hardcoded rgba shadow strings in workspace pages.
+ONE strategy, committed: `ring-1` border + token shadow. No `shadow-2xl`, no hardcoded rgba shadow strings, no decorative gradients on workspace surfaces.
+
+### Elevation ladder (workspace, light + dark)
+
+- **Level 0 — canvas**: `bg-muted/10`, no shadow (the `WorkspaceShell` background).
+- **Level 1 — resting card**: `bg-card` + `ring-1 ring-border/60` + `shadow-[var(--shadow-sm)]`. Default for metrics, lists, tables, supporting panels. This is what `AdminSurface`/`WorkspaceSurface` and `Surface elevation="default"` render.
+- **Level 2 — focal card**: `shadow-[var(--shadow-md)]`. Exactly ONE per view — the thing the user came to act on (recruiter: "Needs attention"; review: the sticky command header). `Surface elevation="raised"`.
+- **Level 3 — overlays**: drawers, command palette, popovers may use `--shadow-lg`/`--shadow-xl` or `shadow-2xl` (off-canvas only).
+- **Charcoal lobby exception**: interview lobby/meeting panels on near-black use `ring-1 ring-white/10` (+ optional `--shadow-lg`); token shadows are invisible on black.
+
+Shadow color is charcoal (`#2e2e2e`/black via tokens), never slate (`rgba(15,23,42,…)` was wrong and is removed).
+
+### Radius
+
+One workspace-card radius: `rounded-3xl` (24px). Inner sub-cards inside a form may step down to `rounded-2xl` (16px); inputs/buttons/badges keep their smaller radii. Do not use `rounded-[2rem]`/`rounded-[28px]` ad hoc.
+
+### Decoration rule
+
+No unmotivated decoration. Removed: fake sparklines, off-palette accent colors (e.g. blue `#60a5fa`), always-on `IconTrendingUp` "trend" pulses, radial-gradient card backgrounds. A metric shows the number honestly; color (amber/emerald/red) only appears when it carries meaning (attention, score band, released). Zero-value metrics dim to `text-muted-foreground/45` instead of shouting.
+
+### Status + score color (light-safe)
+
+Status pills and score chips must read on parchment: use `text-{color}-700 dark:text-{color}-300`, never dark-only `text-{color}-300`. Always reuse `StatusBadge` and `lib/ui/score-format` helpers — do not re-derive local pill color maps.
 
 ## Typography
 

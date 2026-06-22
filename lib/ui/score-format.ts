@@ -23,10 +23,11 @@ export function scoreColor(
   }
 
   if (score === undefined) return 'bg-muted/30 text-muted-foreground'
-  if (score <= 2.0) return 'bg-red-500/15 text-red-300'
-  if (score <= 3.0) return 'bg-amber-500/15 text-amber-300'
-  if (score <= 4.0) return 'bg-emerald-500/10 text-emerald-300'
-  return 'bg-emerald-500/20 text-emerald-300 font-bold'
+  if (score <= 2.0) return 'bg-red-500/15 text-red-700 dark:text-red-300'
+  if (score <= 3.0) return 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+  if (score <= 4.0)
+    return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+  return 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold'
 }
 
 export function scoreTextColor(score: number): string {

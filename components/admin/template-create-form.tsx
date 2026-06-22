@@ -44,7 +44,7 @@ export function TemplateCreateForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]"
+      className="space-y-4 rounded-2xl bg-card p-6 shadow-[var(--shadow-sm)] ring-1 ring-border/60"
     >
       <label className="block space-y-2 text-sm">
         <span>Template name</span>

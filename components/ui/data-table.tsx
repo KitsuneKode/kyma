@@ -53,7 +53,7 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div className="overflow-hidden rounded-[2rem] bg-card shadow-2xl ring-1 ring-border/20">
+    <div className="overflow-hidden rounded-3xl bg-card shadow-[var(--shadow-sm)] ring-1 ring-border/60">
       {searchKey ? (
         <div className="border-b border-border/10 bg-transparent px-6 py-5">
           <div className="relative max-w-sm">

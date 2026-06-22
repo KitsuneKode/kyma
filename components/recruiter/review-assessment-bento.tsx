@@ -71,7 +71,7 @@ export function ReviewAssessmentBento({
               </span>
             </div>
             {report.hardGateTriggered ? (
-              <p className="mt-2 text-xs font-medium text-red-400">
+              <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">
                 Hard gate triggered on a core dimension
               </p>
             ) : null}

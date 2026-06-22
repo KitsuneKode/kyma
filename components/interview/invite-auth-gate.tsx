@@ -102,7 +102,7 @@ export function InviteAuthGate({
   if (!isSignedIn) {
     return (
       <div className="mx-auto grid min-h-[100dvh] w-full max-w-[1400px] items-center gap-10 px-6 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-10">
-        <section className="rounded-[2rem] bg-card/80 p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_20px_60px_rgba(0,0,0,0.35)]">
+        <section className="rounded-3xl bg-card/80 p-8 shadow-[var(--shadow-lg)] ring-1 ring-white/10">
           <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
             Screening invite
           </p>
@@ -117,7 +117,7 @@ export function InviteAuthGate({
           </p>
         </section>
 
-        <section className="rounded-[2rem] bg-card/90 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_20px_60px_rgba(0,0,0,0.35)] sm:p-8">
+        <section className="rounded-3xl bg-card/90 p-6 shadow-[var(--shadow-lg)] ring-1 ring-white/10 sm:p-8">
           <div className="mb-4 flex gap-2">
             <Button
               type="button"

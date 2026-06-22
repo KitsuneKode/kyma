@@ -88,7 +88,7 @@ export function ReviewCommandHeader({
       transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
       style={{ ['--review-header-height' as string]: '5.5rem' }}
       className={cn(
-        'sticky top-0 z-20 rounded-[28px] bg-card/95 px-5 py-4 shadow-md ring-1 ring-border/40 backdrop-blur-sm',
+        'sticky top-0 z-20 rounded-3xl bg-card/95 px-5 py-4 shadow-[var(--shadow-md)] ring-1 ring-border/50 backdrop-blur-sm',
         className
       )}
     >

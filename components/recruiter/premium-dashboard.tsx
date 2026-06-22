@@ -16,6 +16,7 @@ import { BillboardMetric } from '@/components/admin/billboard-metric'
 import { WorkspacePageHeader } from '@/components/workspace/page-header'
 import { formatStatusLabel, formatDateTime } from '@/lib/recruiter/format'
 import type { DashboardSummary } from '@/lib/recruiter/types'
+import { cn } from '@/lib/utils'
 
 export function PremiumRecruiterDashboard({
   sessionsToday,
@@ -171,7 +172,7 @@ function ActivityStreamRow({
   index: number
 }) {
   const rowClassName =
-    'group flex items-center justify-between gap-6 rounded-xl border-b border-border/30 px-2 py-3 transition-colors last:border-0 hover:bg-muted/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+    'group -mx-2 flex items-center justify-between gap-6 rounded-xl px-3 py-2.5 transition-colors duration-150 hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40'
   const reviewHref = event.sessionId
     ? `/recruiter/candidates/${event.sessionId}`
     : null
@@ -235,7 +236,7 @@ function NeedsAttentionRow({
   return (
     <Link
       href={href}
-      className="group flex items-center justify-between gap-4 rounded-xl px-2 py-1 transition-colors hover:bg-amber-500/5"
+      className="group -mx-2 flex items-center justify-between gap-4 rounded-xl px-3 py-2.5 transition-colors duration-150 hover:bg-amber-500/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500/40"
     >
       <div className="flex items-center gap-3">
         {icon}
@@ -243,7 +244,14 @@ function NeedsAttentionRow({
           {label}
         </span>
       </div>
-      <span className="font-mono text-lg font-bold text-foreground/90 tabular-nums transition-colors group-hover:text-amber-500">
+      <span
+        className={cn(
+          'font-mono text-lg font-semibold tabular-nums transition-colors',
+          count > 0
+            ? 'text-amber-600 dark:text-amber-400'
+            : 'text-muted-foreground/40'
+        )}
+      >
         {count}
       </span>
     </Link>

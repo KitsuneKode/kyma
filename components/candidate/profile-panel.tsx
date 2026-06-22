@@ -67,7 +67,7 @@ export function CandidateProfilePanel({
         </p>
       </div>
 
-      <article className="rounded-2xl bg-card p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+      <article className="rounded-2xl bg-card p-5 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
         <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
           Identity
         </h2>
@@ -75,7 +75,7 @@ export function CandidateProfilePanel({
         <p className="text-sm text-muted-foreground">{identity.email}</p>
       </article>
 
-      <article className="space-y-4 rounded-2xl bg-card p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+      <article className="space-y-4 rounded-2xl bg-card p-5 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
         <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
           Interview preferences
         </h2>

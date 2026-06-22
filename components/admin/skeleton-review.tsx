@@ -9,7 +9,7 @@ function Pulse({ className }: { className?: string }) {
 export function SkeletonReview() {
   return (
     <div className="flex w-full flex-col gap-8">
-      <div className="sticky top-0 z-20 rounded-[28px] bg-card/95 px-5 py-4 ring-1 ring-border/40">
+      <div className="sticky top-0 z-20 rounded-3xl bg-card/95 px-5 py-4 ring-1 ring-border/40">
         <div className="flex flex-col gap-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
@@ -43,22 +43,22 @@ export function SkeletonReview() {
             <Pulse className="h-7 w-28 rounded-md" />
             <Pulse className="h-7 w-24 rounded-md" />
           </div>
-          <Pulse className="min-h-[420px] rounded-[28px]" />
-          <Pulse className="h-24 rounded-[28px]" />
+          <Pulse className="min-h-[420px] rounded-3xl" />
+          <Pulse className="h-24 rounded-3xl" />
         </div>
 
         <div className="flex flex-col gap-4">
-          <Pulse className="h-[520px] rounded-[28px]" />
+          <Pulse className="h-[520px] rounded-3xl" />
         </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Pulse key={index} className="h-48 rounded-[28px]" />
+          <Pulse key={index} className="h-48 rounded-3xl" />
         ))}
       </section>
 
-      <div className="rounded-[28px] ring-1 ring-border/40">
+      <div className="rounded-3xl ring-1 ring-border/40">
         <div className="flex gap-2 border-b border-border/50 px-4 pt-4">
           {Array.from({ length: 5 }).map((_, index) => (
             <Pulse key={index} className="h-8 w-20 rounded-t-xl" />

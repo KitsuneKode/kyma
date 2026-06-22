@@ -98,7 +98,7 @@ export function TemplateEditForm({
 
   return (
     <form onSubmit={handleSave} className="space-y-4">
-      <div className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+      <div className="rounded-2xl bg-card p-6 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
         <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           Template details
         </p>
@@ -115,7 +115,7 @@ export function TemplateEditForm({
         </p>
       </div>
 
-      <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+      <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
         <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           Interview prompts
         </p>
@@ -148,7 +148,7 @@ export function TemplateEditForm({
         </label>
       </div>
 
-      <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+      <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
         <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           Rubric dimensions
         </p>
@@ -159,7 +159,7 @@ export function TemplateEditForm({
         <RubricConfigEditor value={rubricConfig} onChange={setRubricConfig} />
       </div>
 
-      <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+      <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
         <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           Model overrides
         </p>

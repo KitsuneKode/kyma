@@ -226,7 +226,7 @@ export function ScreeningCreationForm() {
 
         <motion.form
           onSubmit={handleSubmit}
-          className="rounded-[2rem] bg-card p-8 shadow-2xl ring-1 ring-border/20 md:p-10"
+          className="rounded-3xl bg-card p-8 shadow-[var(--shadow-md)] ring-1 ring-border/60 md:p-10"
           initial="hidden"
           animate="visible"
           variants={{

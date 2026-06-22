@@ -6,6 +6,7 @@ import { IconEye } from '@tabler/icons-react'
 
 import { Button } from '@/components/ui/button'
 import { DataTable, type ColumnDef } from '@/components/ui/data-table'
+import { StatusBadge } from '@/components/workspace/status-badge'
 import {
   formatConfidenceLabel,
   formatDateTime,
@@ -37,20 +38,6 @@ const RECOMMENDATION_FILTERS = [
   'mixed',
   'no',
 ] as const
-
-function statusPillColor(status: string) {
-  switch (status) {
-    case 'completed':
-      return 'bg-emerald-500/10 text-emerald-300'
-    case 'manual_review':
-      return 'bg-amber-500/15 text-amber-300'
-    case 'pending':
-    case 'in_progress':
-      return 'bg-muted/30 text-muted-foreground'
-    default:
-      return 'bg-muted/30 text-muted-foreground'
-  }
-}
 
 export function CandidatesTable({ data }: { data: CandidateRow[] }) {
   const router = useRouter()
@@ -86,20 +73,17 @@ export function CandidatesTable({ data }: { data: CandidateRow[] }) {
         accessorKey: 'recommendation',
         header: 'Recommendation',
         cell: ({ row }) => (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col items-start gap-1.5">
             <p className="font-medium">
               {formatRecommendationLabel(row.original.recommendation)}
             </p>
-            <span
-              className={cn(
-                'inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                statusPillColor(
-                  row.original.latestDecision ?? row.original.reportStatus
-                )
+            <StatusBadge
+              status={row.original.latestDecision ?? row.original.reportStatus}
+              label={formatStatusLabel(
+                row.original.latestDecision ?? 'pending'
               )}
-            >
-              {formatStatusLabel(row.original.latestDecision ?? 'pending')}
-            </span>
+              className="px-2 py-0.5 text-[10px]"
+            />
           </div>
         ),
       },

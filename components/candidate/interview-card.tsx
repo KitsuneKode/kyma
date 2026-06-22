@@ -29,17 +29,23 @@ export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
   const isProcessing = normalizedStatus.includes('processing')
 
   return (
-    <Surface elevation="raised" interactive padding="lg">
-      <h3 className="text-base font-semibold">{props.templateName}</h3>
-      <div className="mt-3">
+    <Surface
+      elevation="default"
+      padding="lg"
+      className={isActive ? 'ring-primary/30' : undefined}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-base font-semibold tracking-tight">
+          {props.templateName}
+        </h3>
         <StatusBadge status={props.status} />
       </div>
       {props.startedAt ? (
-        <p className="mt-3 text-sm text-muted-foreground tabular-nums">
-          Started: {formatDateTime(props.startedAt)}
+        <p className="mt-3 font-mono text-xs text-muted-foreground tabular-nums">
+          Started {formatDateTime(props.startedAt)}
         </p>
       ) : null}
-      <div className="mt-4 flex gap-3">
+      <div className="mt-5 flex gap-3">
         {isActive && props.inviteToken ? (
           <Button
             nativeButton={false}
