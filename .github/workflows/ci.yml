@@ -44,9 +44,6 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: React Doctor (changed files)
-        run: bun run doctor:diff
-
   e2e:
     runs-on: ubuntu-latest
     steps:

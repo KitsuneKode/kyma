@@ -14,6 +14,7 @@ import {
   resolveAppRoute,
   type AppRouteContext,
 } from '@/lib/auth/routing'
+import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 export type UserAppAccess = {
   isSignedIn: boolean
@@ -24,6 +25,16 @@ export type UserAppAccess = {
 }
 
 async function getUserAppAccessUncached(): Promise<UserAppAccess> {
+  if (!hasClerkServerCredentials()) {
+    return {
+      isSignedIn: false,
+      preferredWorkspace: 'anonymous',
+      orgId: null,
+      canAccessRecruiter: false,
+      isOrgAdmin: false,
+    }
+  }
+
   const { userId, sessionClaims, has, orgId } = await auth()
 
   if (!userId) {

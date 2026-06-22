@@ -16,7 +16,9 @@ export default defineConfig({
   webServer: runtimeEnv.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined
     : {
-        command: 'bun run dev:web',
+        // Public smoke tests intentionally run without production CI env so
+        // Clerk and provider integrations stay disabled unless explicitly set.
+        command: 'env -u CI bun run dev:web',
         url: baseURL,
         timeout: 120_000,
         reuseExistingServer: !runtimeEnv.CI,
