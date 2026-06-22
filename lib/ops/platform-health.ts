@@ -1,0 +1,226 @@
+import 'server-only'
+
+import { serverEnv } from '@/lib/env/server'
+import { clientEnv } from '@/lib/env/client'
+import { hasLivekitRecordingConfig } from '@/lib/livekit/recording'
+import { providerFromModelId } from '@/lib/providers/resolve-model'
+
+export type HealthCheckStatus = 'ok' | 'warn' | 'error' | 'unknown'
+
+export type HealthCheck = {
+  id: string
+  label: string
+  status: HealthCheckStatus
+  detail: string
+}
+
+function isSet(value: string | undefined) {
+  return Boolean(value?.trim())
+}
+
+function processingKeyStatus(): HealthCheck {
+  const key = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+  const isProd = serverEnv.NODE_ENV === 'production'
+
+  if (!key) {
+    return {
+      id: 'processing-key',
+      label: 'Processing write key',
+      status: isProd ? 'error' : 'warn',
+      detail: isProd
+        ? 'KYMA_PROCESSING_WRITE_KEY is required in production.'
+        : 'Not set — dev bypass active. Set before production deploy.',
+    }
+  }
+
+  if (key === '__dev_preview__') {
+    return {
+      id: 'processing-key',
+      label: 'Processing write key',
+      status: isProd ? 'error' : 'warn',
+      detail: 'Using dev placeholder key — not safe for production.',
+    }
+  }
+
+  return {
+    id: 'processing-key',
+    label: 'Processing write key',
+    status: 'ok',
+    detail: 'Configured.',
+  }
+}
+
+function scoringCredentialsStatus(): HealthCheck {
+  const scoringModel =
+    serverEnv.KYMA_SCORING_MODEL?.trim() || 'openai/gpt-4.1-mini'
+  const provider = providerFromModelId(scoringModel)
+  const isProd = serverEnv.NODE_ENV === 'production'
+
+  if (!provider) {
+    return {
+      id: 'scoring-credentials',
+      label: 'Scoring credentials',
+      status: isProd ? 'warn' : 'ok',
+      detail: `Scoring model ${scoringModel} does not map to a known BYOK provider. Ensure gateway credentials are configured.`,
+    }
+  }
+
+  const hasPlatformKey =
+    provider === 'openai'
+      ? Boolean(process.env.OPENAI_API_KEY?.trim())
+      : provider === 'google'
+        ? Boolean(
+            process.env.GOOGLE_API_KEY?.trim() ||
+            process.env.GEMINI_API_KEY?.trim()
+          )
+        : provider === 'anthropic'
+          ? Boolean(process.env.ANTHROPIC_API_KEY?.trim())
+          : false
+
+  return {
+    id: 'scoring-credentials',
+    label: 'Scoring credentials',
+    status: hasPlatformKey || !isProd ? 'ok' : 'warn',
+    detail: hasPlatformKey
+      ? `Platform key available for ${provider} scoring (${scoringModel}).`
+      : `No platform ${provider} key detected — scoring needs org BYOK or ${provider.toUpperCase()}_API_KEY in production.`,
+  }
+}
+
+export function collectPlatformHealthChecks(): HealthCheck[] {
+  const isProd = serverEnv.NODE_ENV === 'production'
+  const clerkConfigured =
+    isSet(serverEnv.CLERK_SECRET_KEY) &&
+    isSet(clientEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
+  const clerkJwtConfigured =
+    isSet(serverEnv.CLERK_FRONTEND_API_URL) ||
+    isSet(serverEnv.CLERK_JWT_ISSUER_DOMAIN)
+
+  return [
+    {
+      id: 'convex',
+      label: 'Convex',
+      status: isSet(clientEnv.NEXT_PUBLIC_CONVEX_URL) ? 'ok' : 'error',
+      detail: isSet(clientEnv.NEXT_PUBLIC_CONVEX_URL)
+        ? 'NEXT_PUBLIC_CONVEX_URL is set.'
+        : 'Missing NEXT_PUBLIC_CONVEX_URL — run bun run convex:once.',
+    },
+    {
+      id: 'clerk',
+      label: 'Clerk auth',
+      status: clerkConfigured ? 'ok' : isProd ? 'error' : 'warn',
+      detail: clerkConfigured
+        ? 'Clerk keys configured.'
+        : 'Clerk keys missing — recruiter auth disabled.',
+    },
+    {
+      id: 'clerk-jwt',
+      label: 'Clerk convex JWT template',
+      status: clerkJwtConfigured ? 'ok' : clerkConfigured ? 'warn' : 'unknown',
+      detail: clerkJwtConfigured
+        ? 'JWT issuer configured for Convex.'
+        : 'Set CLERK_FRONTEND_API_URL or CLERK_JWT_ISSUER_DOMAIN. Run bun run clerk:setup-auth.',
+    },
+    {
+      id: 'livekit',
+      label: 'LiveKit',
+      status:
+        isSet(clientEnv.NEXT_PUBLIC_LIVEKIT_URL) &&
+        isSet(serverEnv.LIVEKIT_API_KEY) &&
+        isSet(serverEnv.LIVEKIT_API_SECRET)
+          ? 'ok'
+          : 'warn',
+      detail:
+        isSet(clientEnv.NEXT_PUBLIC_LIVEKIT_URL) &&
+        isSet(serverEnv.LIVEKIT_API_KEY) &&
+        isSet(serverEnv.LIVEKIT_API_SECRET)
+          ? `Agent dispatch: ${isSet(serverEnv.LIVEKIT_AGENT_NAME) ? serverEnv.LIVEKIT_AGENT_NAME : 'not set (auto dispatch)'}`
+          : 'LiveKit env incomplete — interviews will not connect.',
+    },
+    {
+      id: 'livekit-webhook',
+      label: 'LiveKit webhooks',
+      status:
+        isSet(serverEnv.LIVEKIT_WEBHOOK_API_KEY) ||
+        isSet(serverEnv.LIVEKIT_API_KEY)
+          ? 'ok'
+          : 'warn',
+      detail:
+        'Webhook signing uses LIVEKIT_WEBHOOK_* or falls back to LIVEKIT_API_*.',
+    },
+    {
+      id: 'inngest',
+      label: 'Inngest',
+      status:
+        isProd && !isSet(serverEnv.INNGEST_EVENT_KEY)
+          ? 'warn'
+          : serverEnv.NODE_ENV !== 'production'
+            ? 'ok'
+            : isSet(serverEnv.INNGEST_EVENT_KEY)
+              ? 'ok'
+              : 'warn',
+      detail:
+        serverEnv.NODE_ENV !== 'production'
+          ? 'Dev mode — inline processing fallback available.'
+          : isSet(serverEnv.INNGEST_EVENT_KEY)
+            ? 'Cloud event key configured.'
+            : 'INNGEST_EVENT_KEY missing — processing uses inline fallback.',
+    },
+    processingKeyStatus(),
+    {
+      id: 'encryption',
+      label: 'BYOK encryption',
+      status: isSet(serverEnv.KYMA_ENCRYPTION_KEY) ? 'ok' : 'warn',
+      detail: isSet(serverEnv.KYMA_ENCRYPTION_KEY)
+        ? 'KYMA_ENCRYPTION_KEY configured for provider keys.'
+        : 'Required before storing org provider keys.',
+    },
+    {
+      id: 'agent-models',
+      label: 'Agent models',
+      status:
+        isSet(serverEnv.LIVEKIT_AGENT_LLM_MODEL) ||
+        isSet(serverEnv.LIVEKIT_AGENT_STT_MODEL)
+          ? 'ok'
+          : 'warn',
+      detail: `STT: ${serverEnv.LIVEKIT_AGENT_STT_MODEL ?? 'deepgram/nova-3 (default)'} · LLM: ${serverEnv.LIVEKIT_AGENT_LLM_MODEL ?? 'openai/gpt-4.1-mini (default)'} · Realtime: ${serverEnv.KYMA_AGENT_REALTIME_PROVIDER ?? 'cascade'}`,
+    },
+    {
+      id: 'agent-dispatch',
+      label: 'Agent dispatch',
+      status: isSet(serverEnv.LIVEKIT_AGENT_NAME) ? 'ok' : 'warn',
+      detail: isSet(serverEnv.LIVEKIT_AGENT_NAME)
+        ? `Dispatching agent "${serverEnv.LIVEKIT_AGENT_NAME}". Run bun run agent:start in production.`
+        : 'LIVEKIT_AGENT_NAME not set — token dispatch may not start the interviewer worker.',
+    },
+    {
+      id: 'recording-playback',
+      label: 'Recording playback',
+      status: hasLivekitRecordingConfig() ? 'ok' : 'warn',
+      detail: hasLivekitRecordingConfig()
+        ? 'S3 recording storage configured for recruiter playback presigning.'
+        : 'Recording env incomplete — review audio playback may be unavailable.',
+    },
+    scoringCredentialsStatus(),
+    {
+      id: 'demo-invite',
+      label: 'Demo invite',
+      status:
+        serverEnv.KYMA_ENABLE_DEMO_INVITE === '1'
+          ? isProd
+            ? 'warn'
+            : 'ok'
+          : 'ok',
+      detail:
+        serverEnv.KYMA_ENABLE_DEMO_INVITE === '1'
+          ? 'demo-invite token enabled.'
+          : 'demo-invite disabled (default).',
+    },
+  ]
+}
+
+export function summarizeHealth(checks: HealthCheck[]) {
+  const errors = checks.filter((c) => c.status === 'error').length
+  const warnings = checks.filter((c) => c.status === 'warn').length
+  return { errors, warnings, ready: errors === 0 }
+}
