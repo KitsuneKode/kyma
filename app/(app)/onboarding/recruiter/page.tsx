@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 
 import { AuthDebugBanner } from '@/components/auth/auth-debug-banner'
+import { ClerkJwtSetupCard } from '@/components/auth/clerk-jwt-setup-card'
 import { RecruiterOrgOnboarding } from '@/components/auth/recruiter-org-onboarding'
 import {
   hasLegacyBothPersona,
@@ -57,23 +58,9 @@ export default async function RecruiterOrgOnboardingPage({
       <section className="w-full rounded-3xl bg-card p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
         <AuthDebugBanner />
         {showJwtSetupHint ? (
-          <aside className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
-            <p className="font-medium">
-              Organization selected, but recruiter access is not in your session
-              yet
-            </p>
-            <p className="mt-1 text-muted-foreground">
-              In Clerk Dashboard → Sessions → Customize session token, include{' '}
-              <code className="text-xs">org_id</code>,{' '}
-              <code className="text-xs">org_role</code>, and{' '}
-              <code className="text-xs">org_permissions</code> (see{' '}
-              <code className="text-xs">
-                .docs/auth-org-rbac-cutover-checklist.md
-              </code>
-              ). Then sign out and sign in again, or run{' '}
-              <code className="text-xs">bun run clerk:setup-auth</code>.
-            </p>
-          </aside>
+          <div className="mb-6">
+            <ClerkJwtSetupCard compact />
+          </div>
         ) : null}
         <h1 className="text-2xl font-semibold tracking-tight">
           Set up recruiter organization
