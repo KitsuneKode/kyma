@@ -122,7 +122,7 @@ export const listReviewCandidates = candidateReadQuery({
       (right.startedAt ?? '').localeCompare(left.startedAt ?? '')
     )
 
-    return await Promise.all(
+    const sessionRows = await Promise.all(
       sortedSessions.map(async (session) => {
         const [invite, report, latestDecision] = await Promise.all([
           ctx.db.get(session.inviteId),
@@ -133,30 +133,50 @@ export const listReviewCandidates = candidateReadQuery({
           getLatestReviewDecision(ctx, session._id),
         ])
 
-        const template = invite ? await ctx.db.get(invite.templateId) : null
-
-        return {
-          sessionId: session._id,
-          inviteToken: invite?.inviteToken,
-          candidateName: invite?.candidateName ?? 'Candidate',
-          candidateEmail: invite?.candidateEmail,
-          templateName: template?.name ?? 'AI Tutor Screener',
-          inviteStatus: invite?.status ?? 'created',
-          sessionState: session.state,
-          startedAt: session.startedAt,
-          endedAt: session.endedAt,
-          reportStatus: report?.status ?? 'pending',
-          recommendation: report?.overallRecommendation,
-          confidence: report?.confidence,
-          weightedScore: report?.weightedScore,
-          hardGateTriggered: report?.hardGateTriggered ?? false,
-          topStrengths: report?.topStrengths ?? [],
-          topConcerns: report?.topConcerns ?? [],
-          latestDecision: latestDecision?.decision,
-          latestDecisionAt: latestDecision?.createdAt,
-        }
+        return { session, invite, report, latestDecision }
       })
     )
+
+    const templateIds = [
+      ...new Set(
+        sessionRows
+          .map((row) => row.invite?.templateId)
+          .filter((templateId): templateId is Id<'assessmentTemplates'> =>
+            Boolean(templateId)
+          )
+      ),
+    ]
+    const templates = await Promise.all(
+      templateIds.map((templateId) => ctx.db.get(templateId))
+    )
+    const templateById = new Map(
+      templates
+        .filter((template) => template !== null)
+        .map((template) => [template._id, template])
+    )
+
+    return sessionRows.map(({ session, invite, report, latestDecision }) => ({
+      sessionId: session._id,
+      inviteToken: invite?.inviteToken,
+      candidateName: invite?.candidateName ?? 'Candidate',
+      candidateEmail: invite?.candidateEmail,
+      templateName:
+        (invite ? templateById.get(invite.templateId)?.name : undefined) ??
+        'AI Tutor Screener',
+      inviteStatus: invite?.status ?? 'created',
+      sessionState: session.state,
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      reportStatus: report?.status ?? 'pending',
+      recommendation: report?.overallRecommendation,
+      confidence: report?.confidence,
+      weightedScore: report?.weightedScore,
+      hardGateTriggered: report?.hardGateTriggered ?? false,
+      topStrengths: report?.topStrengths ?? [],
+      topConcerns: report?.topConcerns ?? [],
+      latestDecision: latestDecision?.decision,
+      latestDecisionAt: latestDecision?.createdAt,
+    }))
   },
 })
 

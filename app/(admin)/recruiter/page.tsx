@@ -17,7 +17,9 @@ export default async function AdminPage() {
       ? await Promise.all([
           serverConvexQuery(api.recruiter.listReviewCandidates, {}),
           serverConvexQuery(api.admin.listScreeningBatches, {}),
-          serverConvexQuery(api.admin.getDashboardSummary, {}),
+          serverConvexQuery(api.admin.getDashboardSummary, {
+            nowMs: Date.now(),
+          }),
           serverConvexQuery(api.onboarding.getRecruiterOnboardingStatus, {}),
         ])
       : [

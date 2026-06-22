@@ -393,14 +393,31 @@ export const addReportChatMessage = candidateWriteMutation({
 })
 
 export const getDashboardSummary = recruiterQuery({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    nowMs: v.number(),
+  },
+  handler: async (ctx, { nowMs }) => {
     const { orgId } = ctx
+    const ACTIVE_SESSION_STATES = [
+      'connecting',
+      'live',
+      'reconnecting',
+    ] as const
+    const DASHBOARD_SESSION_SAMPLE = 300
+    const DASHBOARD_INVITE_SAMPLE = 500
+    const MAX_MANUAL_REVIEW_CANDIDATES = 20
+    const MAX_ATTENTION_ITEMS = 10
+
+    const in24h = nowMs + 24 * 60 * 60 * 1000
+    const oneHourAgo = nowMs - 60 * 60 * 1000
+    const todayDateString = new Date(nowMs).toDateString()
+
     const [
       manualReviewReports,
       pendingReports,
-      sessions,
-      invites,
+      activeSessionGroups,
+      recentSessions,
+      invitesSample,
       recentEvents,
     ] = await Promise.all([
       ctx.db
@@ -415,14 +432,25 @@ export const getDashboardSummary = recruiterQuery({
           q.eq('orgId', orgId).eq('status', 'pending')
         )
         .collect(),
+      Promise.all(
+        ACTIVE_SESSION_STATES.map((state) =>
+          ctx.db
+            .query('interviewSessions')
+            .withIndex('by_org_id_and_state', (q) =>
+              q.eq('orgId', orgId).eq('state', state)
+            )
+            .collect()
+        )
+      ),
       ctx.db
         .query('interviewSessions')
         .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-        .collect(),
+        .order('desc')
+        .take(DASHBOARD_SESSION_SAMPLE),
       ctx.db
         .query('candidateInvites')
         .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-        .collect(),
+        .take(DASHBOARD_INVITE_SAMPLE),
       ctx.db
         .query('sessionEvents')
         .withIndex('by_org_id_and_created_at', (q) => q.eq('orgId', orgId))
@@ -431,41 +459,60 @@ export const getDashboardSummary = recruiterQuery({
     ])
 
     const reports = [...manualReviewReports, ...pendingReports]
-
-    const now = Date.now()
-    const in24h = now + 24 * 60 * 60 * 1000
-    const oneHourAgo = now - 60 * 60 * 1000
+    const sessions = recentSessions
+    const invites = invitesSample
+    const activeSessions = activeSessionGroups.flat().length
 
     const pendingReviews = reports.length
-    const activeSessions = sessions.filter((s) =>
-      ['connecting', 'live', 'reconnecting'].includes(s.state)
-    ).length
     const expiringInvites = invites.filter((invite) => {
       const expiry = Date.parse(invite.expiresAt)
-      return Number.isFinite(expiry) && expiry > now && expiry <= in24h
+      return Number.isFinite(expiry) && expiry > nowMs && expiry <= in24h
     }).length
     const sessionsToday = sessions.filter((session) => {
       if (!session.startedAt) return false
-      return (
-        new Date(session.startedAt).toDateString() === new Date().toDateString()
-      )
+      return new Date(session.startedAt).toDateString() === todayDateString
     }).length
 
     const reportBySession = new Map(
       reports.map((report) => [`${report.sessionId}`, report])
     )
 
-    const manualReviewCandidates = await Promise.all(
-      manualReviewReports.map(async (report) => {
-        const session = await ctx.db.get(report.sessionId)
-        const invite = session ? await ctx.db.get(session.inviteId) : null
-        return {
-          reportId: report._id,
-          sessionId: report.sessionId,
-          candidateName: invite?.candidateName ?? 'Candidate',
-        }
-      })
+    const manualReviewSlice = manualReviewReports.slice(
+      0,
+      MAX_MANUAL_REVIEW_CANDIDATES
     )
+    const sessionIds = [
+      ...new Set(manualReviewSlice.map((report) => report.sessionId)),
+    ]
+    const sessionsForReports = await Promise.all(
+      sessionIds.map((sessionId) => ctx.db.get(sessionId))
+    )
+    const sessionById = new Map(
+      sessionsForReports
+        .filter((session) => session !== null)
+        .map((session) => [session._id, session])
+    )
+    const inviteIds = [
+      ...new Set([...sessionById.values()].map((session) => session.inviteId)),
+    ]
+    const invitesForReports = await Promise.all(
+      inviteIds.map((inviteId) => ctx.db.get(inviteId))
+    )
+    const inviteById = new Map(
+      invitesForReports
+        .filter((invite) => invite !== null)
+        .map((invite) => [invite._id, invite])
+    )
+
+    const manualReviewCandidates = manualReviewSlice.map((report) => {
+      const session = sessionById.get(report.sessionId)
+      const invite = session ? inviteById.get(session.inviteId) : undefined
+      return {
+        reportId: report._id,
+        sessionId: report.sessionId,
+        candidateName: invite?.candidateName ?? 'Candidate',
+      }
+    })
 
     return {
       counts: {
@@ -479,8 +526,9 @@ export const getDashboardSummary = recruiterQuery({
         invitesExpiringSoon: invites
           .filter((invite) => {
             const expiry = Date.parse(invite.expiresAt)
-            return Number.isFinite(expiry) && expiry > now && expiry <= in24h
+            return Number.isFinite(expiry) && expiry > nowMs && expiry <= in24h
           })
+          .slice(0, MAX_ATTENTION_ITEMS)
           .map((invite) => ({
             inviteId: invite._id,
             inviteToken: invite.inviteToken,
@@ -493,6 +541,7 @@ export const getDashboardSummary = recruiterQuery({
             if (reportBySession.has(`${session._id}`)) return false
             return Date.parse(session.startedAt) < oneHourAgo
           })
+          .slice(0, MAX_ATTENTION_ITEMS)
           .map((session) => ({
             sessionId: session._id,
             startedAt: session.startedAt,
