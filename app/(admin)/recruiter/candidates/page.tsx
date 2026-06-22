@@ -5,15 +5,19 @@ import { MetricCard } from '@/components/admin/metric-card'
 import { PageHeader } from '@/components/admin/page-header'
 import { WorkspaceEmptyState } from '@/components/workspace/empty-state'
 import { Button } from '@/components/ui/button'
-import { CandidatesTable } from '@/components/recruiter/candidates-table'
+import { CandidateReviewQueue } from '@/components/recruiter/candidate-review-queue'
 import { serverConvexQuery } from '@/lib/convex/server-query'
 import { signInPath } from '@/lib/auth/workspace-intent'
 
+const QUEUE_PAGE_SIZE = 25
+
 export default async function AdminCandidatesPage() {
-  const candidatesResult = await serverConvexQuery(
-    api.recruiter.listReviewCandidates,
-    {}
-  )
+  const [candidatesResult, statsResult] = await Promise.all([
+    serverConvexQuery(api.recruiter.candidates.listReviewCandidates, {
+      paginationOpts: { numItems: QUEUE_PAGE_SIZE, cursor: null },
+    }),
+    serverConvexQuery(api.recruiter.candidates.getCandidateQueueStats, {}),
+  ])
 
   if (!candidatesResult.ok) {
     return (
@@ -52,7 +56,8 @@ export default async function AdminCandidatesPage() {
     )
   }
 
-  const candidates = candidatesResult.data
+  const initialCandidates = candidatesResult.data.page
+  const stats = statsResult.ok ? statsResult.data : null
 
   return (
     <div className="flex w-full flex-col gap-8">
@@ -74,42 +79,28 @@ export default async function AdminCandidatesPage() {
       <section className="grid gap-4 md:grid-cols-4">
         <MetricCard
           label="Sessions"
-          value={String(candidates.length)}
+          value={String(stats?.totalSessions ?? 0)}
           detail="Total sessions captured so far."
         />
         <MetricCard
           label="Reports Ready"
-          value={String(
-            candidates.filter(
-              (candidate) => candidate.reportStatus === 'completed'
-            ).length
-          )}
+          value={String(stats?.reportsReady ?? 0)}
           detail="Completed assessment reports."
         />
         <MetricCard
           label="Manual Review"
-          value={String(
-            candidates.filter(
-              (candidate) =>
-                candidate.reportStatus === 'manual_review' ||
-                candidate.latestDecision === 'manual_review'
-            ).length
-          )}
+          value={String(stats?.manualReview ?? 0)}
           detail="Candidates needing a human call."
         />
         <MetricCard
           label="Strong Signals"
-          value={String(
-            candidates.filter(
-              (candidate) => candidate.recommendation === 'strong_yes'
-            ).length
-          )}
+          value={String(stats?.strongSignals ?? 0)}
           detail="Candidates currently standing out."
         />
       </section>
 
       <section className="space-y-4">
-        <CandidatesTable data={candidates} />
+        <CandidateReviewQueue initialCandidates={initialCandidates} />
       </section>
     </div>
   )

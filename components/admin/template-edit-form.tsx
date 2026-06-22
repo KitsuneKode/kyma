@@ -37,9 +37,11 @@ export function TemplateEditForm({
   template: Doc<'assessmentTemplates'>
 }) {
   const router = useRouter()
-  const updateTemplate = useMutation(api.admin.updateAssessmentTemplate)
+  const updateTemplate = useMutation(
+    api.recruiter.templates.updateAssessmentTemplate
+  )
   const { data: workspaceSettings } = useAuthenticatedQuery(
-    api.admin.getWorkspaceSettings,
+    api.recruiter.workspace.getWorkspaceSettings,
     {}
   )
   const [name, setName] = useState(template.name)

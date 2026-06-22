@@ -51,8 +51,10 @@ export function ScreeningCreationForm() {
     data: templates,
     authLoading,
     isAuthenticated,
-  } = useAuthenticatedQuery(api.admin.listActiveTemplates, {})
-  const createScreeningBatch = useMutation(api.admin.createScreeningBatch)
+  } = useAuthenticatedQuery(api.recruiter.templates.listActiveTemplates, {})
+  const createScreeningBatch = useMutation(
+    api.recruiter.screenings.createScreeningBatch
+  )
   const [batchName, setBatchName] = useState('Primary tutor screening')
   const [expiryDays, setExpiryDays] = useState('7')
   const [allowedAttempts, setAllowedAttempts] = useState('1')

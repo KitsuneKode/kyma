@@ -9,7 +9,9 @@ import { Button } from '@/components/ui/button'
 
 export function TemplateCreateForm() {
   const router = useRouter()
-  const createTemplate = useMutation(api.admin.createAssessmentTemplate)
+  const createTemplate = useMutation(
+    api.recruiter.templates.createAssessmentTemplate
+  )
   const [name, setName] = useState('')
   const [role, setRole] = useState('teacher')
   const [duration, setDuration] = useState(20)

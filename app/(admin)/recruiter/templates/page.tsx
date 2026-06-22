@@ -17,7 +17,7 @@ type TemplatesLoadResult =
 
 async function loadTemplates() {
   const bootstrapResult = await serverConvexMutation(
-    api.admin.bootstrapOrgTemplates,
+    api.recruiter.templates.bootstrapOrgTemplates,
     {}
   )
   if (!bootstrapResult.ok) {
@@ -27,7 +27,7 @@ async function loadTemplates() {
   }
 
   const templatesResult = await serverConvexQuery(
-    api.admin.listActiveTemplates,
+    api.recruiter.templates.listActiveTemplates,
     {}
   )
   if (!templatesResult.ok) {

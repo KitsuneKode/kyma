@@ -1,0 +1,288 @@
+import { ConvexError, v } from 'convex/values'
+
+import { api } from '../_generated/api'
+import { action, query } from '../_generated/server'
+import { orgAdminMutation, recruiterQuery } from '../lib/customFunctions'
+import { requireAdmin, requireOrgId } from '../helpers/auth'
+import { decryptProviderKey, encryptProviderKey } from '../helpers/encryption'
+import { convexEnv } from '../../lib/env/convex'
+import { modelOverridesValidator } from '../validators'
+import {
+  latestProviderKey,
+  normalizeProvider,
+} from '../../lib/providers/provider-id'
+
+export const getWorkspaceSettings = recruiterQuery({
+  args: {},
+  handler: async (ctx) => {
+    const { orgId } = ctx
+    const settings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
+    if (!settings) return null
+    return {
+      id: settings._id,
+      defaultModels: settings.defaultModels,
+      candidateReleaseMode: settings.candidateReleaseMode ?? 'auto',
+      providerKeys:
+        settings.providerKeys?.map((item) => ({
+          keyId: item.keyId,
+          provider: item.provider,
+          label: item.label,
+          addedAt: item.addedAt,
+          addedBy: item.addedBy,
+          maskedKeyTail: item.maskedKeyTail,
+        })) ?? [],
+      updatedAt: settings.updatedAt,
+      updatedBy: settings.updatedBy,
+    }
+  },
+})
+
+export const addProviderKey = orgAdminMutation({
+  args: {
+    provider: v.string(),
+    key: v.string(),
+    label: v.optional(v.string()),
+  },
+  returns: v.id('workspaceSettings'),
+  handler: async (ctx, args) => {
+    const { orgId, actor } = ctx
+    const now = Date.now()
+    const keyId =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${now}`
+    const maskedKeyTail = args.key.slice(-4)
+    const settings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
+    const encrypted = await encryptProviderKey(args.key)
+    const entry = {
+      keyId,
+      provider: normalizeProvider(args.provider),
+      encryptedKey: encrypted.encryptedKey,
+      iv: encrypted.iv,
+      label: args.label,
+      addedAt: now,
+      addedBy: actor,
+      maskedKeyTail,
+    }
+    if (!settings) {
+      return await ctx.db.insert('workspaceSettings', {
+        orgId,
+        providerKeys: [entry],
+        updatedAt: now,
+        updatedBy: actor,
+      })
+    }
+    await ctx.db.patch(settings._id, {
+      providerKeys: [...(settings.providerKeys ?? []), entry],
+      updatedAt: now,
+      updatedBy: actor,
+    })
+    return settings._id
+  },
+})
+
+export const removeProviderKey = orgAdminMutation({
+  args: {
+    provider: v.string(),
+    keyId: v.string(),
+  },
+  returns: v.union(v.id('workspaceSettings'), v.null()),
+  handler: async (ctx, args) => {
+    const { orgId, actor } = ctx
+    const settings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
+    if (!settings) return null
+    await ctx.db.patch(settings._id, {
+      providerKeys: (settings.providerKeys ?? []).filter(
+        (item) =>
+          !(item.provider === args.provider && item.keyId === args.keyId)
+      ),
+      updatedAt: Date.now(),
+      updatedBy: actor,
+    })
+    return settings._id
+  },
+})
+
+export const updateDefaultModels = orgAdminMutation({
+  args: {
+    models: modelOverridesValidator,
+  },
+  returns: v.id('workspaceSettings'),
+  handler: async (ctx, args) => {
+    const { orgId, actor } = ctx
+    const now = Date.now()
+    const settings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
+    if (!settings) {
+      return await ctx.db.insert('workspaceSettings', {
+        orgId,
+        defaultModels: args.models,
+        updatedAt: now,
+        updatedBy: actor,
+      })
+    }
+    await ctx.db.patch(settings._id, {
+      defaultModels: args.models,
+      updatedAt: now,
+      updatedBy: actor,
+    })
+    return settings._id
+  },
+})
+
+export const updateCandidateReleaseMode = orgAdminMutation({
+  args: {
+    mode: v.union(v.literal('auto'), v.literal('manual')),
+  },
+  returns: v.id('workspaceSettings'),
+  handler: async (ctx, args) => {
+    const { orgId, actor } = ctx
+    const now = Date.now()
+    const settings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
+    if (!settings) {
+      return await ctx.db.insert('workspaceSettings', {
+        orgId,
+        candidateReleaseMode: args.mode,
+        updatedAt: now,
+        updatedBy: actor,
+      })
+    }
+    await ctx.db.patch(settings._id, {
+      candidateReleaseMode: args.mode,
+      updatedAt: now,
+      updatedBy: actor,
+    })
+    return settings._id
+  },
+})
+
+export const assertAdminForAction = query({
+  args: {},
+  returns: v.object({ orgId: v.string() }),
+  handler: async (ctx) => {
+    await requireAdmin(ctx)
+    const orgId = await requireOrgId(ctx)
+    return { orgId }
+  },
+})
+
+export const getWorkspaceSettingsRaw = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx)
+    const orgId = await requireOrgId(ctx)
+    return await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
+  },
+})
+
+export const testProviderConnection = action({
+  args: {
+    provider: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.runQuery(api.recruiter.workspace.assertAdminForAction, {})
+    if (!convexEnv.KYMA_ENCRYPTION_KEY?.trim()) {
+      throw new ConvexError(
+        'KYMA_ENCRYPTION_KEY is required to test provider keys.'
+      )
+    }
+    const normalizedProvider = normalizeProvider(args.provider)
+    const settings = await ctx.runQuery(
+      api.recruiter.workspace.getWorkspaceSettingsRaw,
+      {}
+    )
+    const candidate = latestProviderKey(settings?.providerKeys, args.provider)
+    if (!candidate) {
+      throw new ConvexError(
+        `No key configured for provider "${args.provider}".`
+      )
+    }
+    const apiKey = await decryptProviderKey({
+      encryptedKey: candidate.encryptedKey,
+      iv: candidate.iv,
+    })
+    if (!apiKey?.trim()) {
+      throw new ConvexError(
+        `Configured key for provider "${args.provider}" is empty after decrypt.`
+      )
+    }
+
+    if (normalizedProvider === 'openai') {
+      const response = await fetch('https://api.openai.com/v1/models', {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      })
+      if (!response.ok) {
+        throw new ConvexError(
+          `OpenAI connection failed (${response.status}): ${await response.text()}`
+        )
+      }
+      return { ok: true, provider: 'openai' as const }
+    }
+
+    if (normalizedProvider === 'anthropic') {
+      const response = await fetch('https://api.anthropic.com/v1/models', {
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+      })
+      if (!response.ok) {
+        throw new ConvexError(
+          `Anthropic connection failed (${response.status}): ${await response.text()}`
+        )
+      }
+      return { ok: true, provider: 'anthropic' as const }
+    }
+
+    if (normalizedProvider === 'google') {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`
+      )
+      if (!response.ok) {
+        throw new ConvexError(
+          `Google connection failed (${response.status}): ${await response.text()}`
+        )
+      }
+      return {
+        ok: true,
+        provider:
+          args.provider.toLowerCase() === 'gemini'
+            ? ('gemini' as const)
+            : ('google' as const),
+      }
+    }
+
+    if (normalizedProvider === 'deepgram') {
+      const response = await fetch('https://api.deepgram.com/v1/projects', {
+        headers: { Authorization: `Token ${apiKey}` },
+      })
+      if (!response.ok) {
+        throw new ConvexError(
+          `Deepgram connection failed (${response.status}): ${await response.text()}`
+        )
+      }
+      return { ok: true, provider: 'deepgram' as const }
+    }
+
+    throw new ConvexError(
+      `Provider "${args.provider}" is not supported in testProviderConnection yet.`
+    )
+  },
+})

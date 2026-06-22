@@ -53,8 +53,10 @@ export function ReviewActions({
   compact = false,
 }: ReviewActionsProps) {
   const router = useRouter()
-  const submitReviewDecision = useMutation(api.recruiter.submitReviewDecision)
-  const releaseReport = useMutation(api.recruiter.releaseReport)
+  const submitReviewDecision = useMutation(
+    api.recruiter.reviews.submitReviewDecision
+  )
+  const releaseReport = useMutation(api.recruiter.reviews.releaseReport)
   const [rationale, setRationale] = useState('')
   const [selectedDecision, setSelectedDecision] =
     useState<ReviewDecision>('advance')

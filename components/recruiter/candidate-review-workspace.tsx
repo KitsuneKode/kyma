@@ -13,7 +13,7 @@ import { getPrimaryRecording } from '@/lib/recruiter/recording-playback'
 import { summarizeTeachingSimulation } from '@/lib/recruiter/teaching-simulation'
 
 export type CandidateReviewDetail = NonNullable<
-  FunctionReturnType<typeof api.recruiter.getCandidateReviewDetail>
+  FunctionReturnType<typeof api.recruiter.reviews.getCandidateReviewDetail>
 >
 
 type CandidateReviewWorkspaceProps = {

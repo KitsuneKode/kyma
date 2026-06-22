@@ -27,7 +27,7 @@ export default async function DevReviewPage({ params }: DevReviewPageProps) {
   const { sessionId } = await params
   const detailResult = hasConvexDeployment()
     ? await serverConvexQuery(
-        api.recruiter.getCandidateReviewDetail,
+        api.recruiter.reviews.getCandidateReviewDetail,
         {
           sessionId: sessionId as Id<'interviewSessions'>,
           processingKey:

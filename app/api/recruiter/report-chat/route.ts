@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     const [detail, workspaceSettings] = await Promise.all([
       fetchQuery(
-        api.recruiter.getReportChatGrounding,
+        api.recruiter.reviews.getReportChatGrounding,
         {
           sessionId,
         },
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         }
       ),
       fetchQuery(
-        api.admin.getWorkspaceSettingsRaw,
+        api.recruiter.workspace.getWorkspaceSettingsRaw,
         {},
         {
           token: token ?? undefined,
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     await fetchMutation(
-      api.admin.addReportChatMessage,
+      api.recruiter.reviews.addReportChatMessage,
       {
         sessionId,
         reportId,
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     })
 
     await fetchMutation(
-      api.admin.addReportChatMessage,
+      api.recruiter.reviews.addReportChatMessage,
       {
         sessionId,
         reportId,

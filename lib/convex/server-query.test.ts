@@ -37,7 +37,7 @@ describe('serverConvexQuery', () => {
     mockClientEnv.NEXT_PUBLIC_CONVEX_URL = undefined
 
     const result = await serverConvexQueryWithFallback(
-      api.recruiter.listReviewCandidates,
+      api.recruiter.screenings.listScreeningBatches,
       {},
       []
     )
@@ -60,7 +60,7 @@ describe('serverConvexQuery', () => {
     mockAuth.token = null
 
     const result = await serverConvexQueryWithFallback(
-      api.recruiter.listReviewCandidates,
+      api.recruiter.screenings.listScreeningBatches,
       {},
       []
     )
@@ -78,7 +78,7 @@ describe('serverConvexQuery', () => {
     const { serverConvexQuery } = await import('./server-query')
     const { api } = await import('@/convex/_generated/api')
 
-    await serverConvexQuery(api.recruiter.listReviewCandidates, {})
+    await serverConvexQuery(api.recruiter.screenings.listScreeningBatches, {})
 
     expect(connection).toHaveBeenCalled()
     expect(fetchQuery).toHaveBeenCalled()

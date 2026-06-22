@@ -16,16 +16,16 @@ export default async function AdminPage() {
   await connection()
   const nowMs = Date.now()
 
-  const [candidatesResult, batchesResult, dashboardResult, onboardingResult] =
+  const [batchesResult, dashboardResult, onboardingResult] =
     hasConvexDeployment()
       ? await Promise.all([
-          serverConvexQuery(api.recruiter.listReviewCandidates, {}),
-          serverConvexQuery(api.admin.listScreeningBatches, {}),
-          serverConvexQuery(api.admin.getDashboardSummary, { nowMs }),
+          serverConvexQuery(api.recruiter.screenings.listScreeningBatches, {}),
+          serverConvexQuery(api.recruiter.dashboard.getDashboardSummary, {
+            nowMs,
+          }),
           serverConvexQuery(api.onboarding.getRecruiterOnboardingStatus, {}),
         ])
       : [
-          { ok: true as const, data: [] },
           { ok: true as const, data: [] },
           { ok: true as const, data: null },
           {
@@ -40,12 +40,9 @@ export default async function AdminPage() {
           },
         ]
 
-  const failedResult = [
-    candidatesResult,
-    batchesResult,
-    dashboardResult,
-    onboardingResult,
-  ].find((result) => !result.ok)
+  const failedResult = [batchesResult, dashboardResult, onboardingResult].find(
+    (result) => !result.ok
+  )
 
   if (failedResult && !failedResult.ok) {
     return (
@@ -82,23 +79,16 @@ export default async function AdminPage() {
     )
   }
 
-  const candidates = candidatesResult.ok ? candidatesResult.data : []
   const batches = batchesResult.ok ? batchesResult.data : []
   const dashboardSummary = dashboardResult.ok ? dashboardResult.data : null
   const onboarding = onboardingResult.ok ? onboardingResult.data : null
 
   const sessionsToday = dashboardSummary?.counts.sessionsToday ?? 0
-  const reportsPending =
-    dashboardSummary?.counts.pendingReviews ??
-    candidates.filter((candidate) => candidate.reportStatus !== 'completed')
-      .length
+  const reportsPending = dashboardSummary?.counts.pendingReviews ?? 0
   const activeBatches = batches.filter(
     (batch) => batch.status === 'active'
   ).length
-  const pendingReviews = candidates.filter(
-    (c) =>
-      c.reportStatus === 'manual_review' || c.latestDecision === 'manual_review'
-  ).length
+  const pendingReviews = dashboardSummary?.counts.manualReviews ?? 0
 
   return (
     <div className="flex w-full flex-col gap-8">

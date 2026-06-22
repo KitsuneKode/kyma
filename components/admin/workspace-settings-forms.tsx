@@ -20,7 +20,7 @@ import {
 import { resolveStageModels } from '@/lib/providers/resolve-model'
 
 export type WorkspaceSettings = NonNullable<
-  FunctionReturnType<typeof api.admin.getWorkspaceSettings>
+  FunctionReturnType<typeof api.recruiter.workspace.getWorkspaceSettings>
 >
 
 export function settingsFormKey(settings: WorkspaceSettings) {
@@ -55,13 +55,19 @@ export function WorkspaceSettingsForms({
 }: {
   settings: WorkspaceSettings
 }) {
-  const addProviderKey = useMutation(api.admin.addProviderKey)
-  const removeProviderKey = useMutation(api.admin.removeProviderKey)
-  const updateDefaultModels = useMutation(api.admin.updateDefaultModels)
-  const updateCandidateReleaseMode = useMutation(
-    api.admin.updateCandidateReleaseMode
+  const addProviderKey = useMutation(api.recruiter.workspace.addProviderKey)
+  const removeProviderKey = useMutation(
+    api.recruiter.workspace.removeProviderKey
   )
-  const testProviderConnection = useAction(api.admin.testProviderConnection)
+  const updateDefaultModels = useMutation(
+    api.recruiter.workspace.updateDefaultModels
+  )
+  const updateCandidateReleaseMode = useMutation(
+    api.recruiter.workspace.updateCandidateReleaseMode
+  )
+  const testProviderConnection = useAction(
+    api.recruiter.workspace.testProviderConnection
+  )
   const [provider, setProvider] = useState('openai')
   const [key, setKey] = useState('')
   const [label, setLabel] = useState('')

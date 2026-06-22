@@ -16,7 +16,7 @@ export default function SettingsPage() {
     data: settings,
     authLoading,
     isAuthenticated,
-  } = useAuthenticatedQuery(api.admin.getWorkspaceSettings, {})
+  } = useAuthenticatedQuery(api.recruiter.workspace.getWorkspaceSettings, {})
 
   if (authLoading) {
     return (

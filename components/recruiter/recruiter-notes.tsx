@@ -27,7 +27,7 @@ export function RecruiterNotes({
   notes: RecruiterNote[]
 }) {
   const router = useRouter()
-  const addRecruiterNote = useMutation(api.admin.addRecruiterNote)
+  const addRecruiterNote = useMutation(api.recruiter.reviews.addRecruiterNote)
   const [value, setValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

@@ -19,6 +19,7 @@ export type DashboardNeedsAttention = {
 export type DashboardSummary = {
   counts: {
     pendingReviews: number
+    manualReviews: number
     activeSessions: number
     expiringInvites: number
     sessionsToday: number

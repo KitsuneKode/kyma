@@ -9,7 +9,7 @@ import { serverConvexQuery } from '@/lib/convex/server-query'
 
 export default async function AdminScreeningsPage() {
   const batchesResult = await serverConvexQuery(
-    api.admin.listScreeningBatches,
+    api.recruiter.screenings.listScreeningBatches,
     {}
   )
   const batches = batchesResult.ok ? batchesResult.data : []

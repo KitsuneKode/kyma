@@ -25,9 +25,12 @@ export default async function ScreeningDetailPage({
 }: ScreeningDetailPageProps) {
   const { batchId } = await params
   const detailResult = hasConvexDeployment()
-    ? await serverConvexQuery(api.admin.getScreeningBatchDetail, {
-        batchId: batchId as Id<'screeningBatches'>,
-      })
+    ? await serverConvexQuery(
+        api.recruiter.screenings.getScreeningBatchDetail,
+        {
+          batchId: batchId as Id<'screeningBatches'>,
+        }
+      )
     : { ok: false as const, kind: 'not_found' as const }
   const detail = detailResult.ok ? detailResult.data : null
 

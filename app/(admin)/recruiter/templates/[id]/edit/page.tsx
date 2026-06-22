@@ -27,7 +27,7 @@ export default async function TemplateEditPage({
   ])
   const templateResult =
     hasConvexDeployment() && token
-      ? await serverConvexQuery(api.admin.getTemplateById, {
+      ? await serverConvexQuery(api.recruiter.templates.getTemplateById, {
           templateId: id as Id<'assessmentTemplates'>,
         })
       : { ok: false as const, kind: 'not_found' as const }

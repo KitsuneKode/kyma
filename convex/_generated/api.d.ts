@@ -8,9 +8,9 @@
  * @module
  */
 
-import type * as admin from "../admin.js";
 import type * as agentConfig from "../agentConfig.js";
 import type * as agentWorker from "../agentWorker.js";
+import type * as crons from "../crons.js";
 import type * as devSeed from "../devSeed.js";
 import type * as devSeedMutations from "../devSeedMutations.js";
 import type * as helpers_audit from "../helpers/audit.js";
@@ -25,6 +25,7 @@ import type * as helpers_orgAccess from "../helpers/orgAccess.js";
 import type * as helpers_orgContext from "../helpers/orgContext.js";
 import type * as helpers_processingAuth from "../helpers/processingAuth.js";
 import type * as helpers_releasePolicy from "../helpers/releasePolicy.js";
+import type * as helpers_sessionReview from "../helpers/sessionReview.js";
 import type * as helpers_systemTemplates from "../helpers/systemTemplates.js";
 import type * as helpers_templates from "../helpers/templates.js";
 import type * as helpers_transcriptSegments from "../helpers/transcriptSegments.js";
@@ -35,15 +36,22 @@ import type * as interviews_public from "../interviews/public.js";
 import type * as interviews_sessionEvents from "../interviews/sessionEvents.js";
 import type * as interviews_transcript from "../interviews/transcript.js";
 import type * as lib_customFunctions from "../lib/customFunctions.js";
+import type * as lib_pipelineFunctions from "../lib/pipelineFunctions.js";
+import type * as lib_testSeed from "../lib/testSeed.js";
 import type * as livekit from "../livekit.js";
 import type * as onboarding from "../onboarding.js";
 import type * as orgs from "../orgs.js";
-import type * as processing from "../processing.js";
 import type * as processingPipeline from "../processingPipeline.js";
+import type * as processingReaper from "../processingReaper.js";
 import type * as profile from "../profile.js";
 import type * as rateLimiter from "../rateLimiter.js";
 import type * as readiness from "../readiness.js";
-import type * as recruiter from "../recruiter.js";
+import type * as recruiter_candidates from "../recruiter/candidates.js";
+import type * as recruiter_dashboard from "../recruiter/dashboard.js";
+import type * as recruiter_reviews from "../recruiter/reviews.js";
+import type * as recruiter_screenings from "../recruiter/screenings.js";
+import type * as recruiter_templates from "../recruiter/templates.js";
+import type * as recruiter_workspace from "../recruiter/workspace.js";
 import type * as users from "../users.js";
 import type * as validators from "../validators.js";
 import type * as visualObservations from "../visualObservations.js";
@@ -56,9 +64,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  admin: typeof admin;
   agentConfig: typeof agentConfig;
   agentWorker: typeof agentWorker;
+  crons: typeof crons;
   devSeed: typeof devSeed;
   devSeedMutations: typeof devSeedMutations;
   "helpers/audit": typeof helpers_audit;
@@ -73,6 +81,7 @@ declare const fullApi: ApiFromModules<{
   "helpers/orgContext": typeof helpers_orgContext;
   "helpers/processingAuth": typeof helpers_processingAuth;
   "helpers/releasePolicy": typeof helpers_releasePolicy;
+  "helpers/sessionReview": typeof helpers_sessionReview;
   "helpers/systemTemplates": typeof helpers_systemTemplates;
   "helpers/templates": typeof helpers_templates;
   "helpers/transcriptSegments": typeof helpers_transcriptSegments;
@@ -83,15 +92,22 @@ declare const fullApi: ApiFromModules<{
   "interviews/sessionEvents": typeof interviews_sessionEvents;
   "interviews/transcript": typeof interviews_transcript;
   "lib/customFunctions": typeof lib_customFunctions;
+  "lib/pipelineFunctions": typeof lib_pipelineFunctions;
+  "lib/testSeed": typeof lib_testSeed;
   livekit: typeof livekit;
   onboarding: typeof onboarding;
   orgs: typeof orgs;
-  processing: typeof processing;
   processingPipeline: typeof processingPipeline;
+  processingReaper: typeof processingReaper;
   profile: typeof profile;
   rateLimiter: typeof rateLimiter;
   readiness: typeof readiness;
-  recruiter: typeof recruiter;
+  "recruiter/candidates": typeof recruiter_candidates;
+  "recruiter/dashboard": typeof recruiter_dashboard;
+  "recruiter/reviews": typeof recruiter_reviews;
+  "recruiter/screenings": typeof recruiter_screenings;
+  "recruiter/templates": typeof recruiter_templates;
+  "recruiter/workspace": typeof recruiter_workspace;
   users: typeof users;
   validators: typeof validators;
   visualObservations: typeof visualObservations;

@@ -1,6 +1,12 @@
 'use client'
 
-import { useConvexAuth, useQuery } from 'convex/react'
+import {
+  useConvexAuth,
+  usePaginatedQuery,
+  useQuery,
+  type PaginatedQueryArgs,
+  type PaginatedQueryReference,
+} from 'convex/react'
 import type { FunctionReference } from 'convex/server'
 
 type PublicQuery = FunctionReference<'query', 'public'>
@@ -25,4 +31,17 @@ export function useAuthenticatedQuery<Query extends PublicQuery>(
     authLoading,
     isAuthenticated,
   }
+}
+
+export function useAuthenticatedPaginatedQuery<
+  Query extends PaginatedQueryReference,
+>(query: Query, args: PaginatedQueryArgs<Query>, initialNumItems: number) {
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
+  const skipped = authLoading || !isAuthenticated
+
+  const pagination = usePaginatedQuery(query, skipped ? 'skip' : args, {
+    initialNumItems,
+  })
+
+  return { ...pagination, authLoading, isAuthenticated }
 }

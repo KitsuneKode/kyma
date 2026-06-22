@@ -1,182 +1,129 @@
 import { ConvexError, v } from 'convex/values'
 
-import type { Id } from './_generated/dataModel'
-import { mutation, query, type QueryCtx } from './_generated/server'
+import { mutation, query } from '../_generated/server'
 import {
   candidateReadQuery,
   candidateWriteMutation,
-} from './lib/customFunctions'
+} from '../lib/customFunctions'
 import {
   getRecruiterActorId,
-  requireRecruiterCapability,
   requireOrgId,
-} from './helpers/auth'
-import { logAuditEvent } from './helpers/audit'
-import { resolveInterviewPolicyFromInvite } from './helpers/interviewPolicy'
+  requireRecruiterCapability,
+} from '../helpers/auth'
+import { logAuditEvent } from '../helpers/audit'
+import { resolveInterviewPolicyFromInvite } from '../helpers/interviewPolicy'
 import {
   assertOrgOwnsReport,
   assertOrgOwnsSession,
   assertReportBelongsToSession,
-} from './helpers/orgAccess'
+} from '../helpers/orgAccess'
 import {
   releaseReportToCandidate,
   resolveReleaseMode,
   shouldAutoRelease,
-} from './helpers/releasePolicy'
+} from '../helpers/releasePolicy'
 import {
   hasTrustedProcessingKey,
   resolveOrgIdForPipelineWrite,
-} from './helpers/processingAuth'
-import { isConvexDevelopmentMode } from '../lib/env/convex-deployment-mode'
-import { convexEnv } from '../lib/env/convex'
-import { rateLimiter } from './rateLimiter'
+} from '../helpers/processingAuth'
+import {
+  loadSessionReviewBase,
+  loadSessionReviewSlices,
+  resolveTemplateName,
+  sortByIsoAsc,
+} from '../helpers/sessionReview'
+import { isConvexDevelopmentMode } from '../../lib/env/convex-deployment-mode'
+import { convexEnv } from '../../lib/env/convex'
+import { rateLimiter } from '../rateLimiter'
 import {
   confidenceValidator,
   interviewPolicySnapshotValidator,
   recommendationValidator,
   reviewDecisionValidator,
   scoringDimensionValidator,
-} from './validators'
+} from '../validators'
 
 function countWords(text: string) {
   return text.trim().split(/\s+/).filter(Boolean).length
 }
 
-function sortByIsoAsc<T extends { createdAt?: string; startedAt?: string }>(
-  items: T[]
-) {
-  return [...items].toSorted((left, right) =>
-    (left.createdAt ?? left.startedAt ?? '').localeCompare(
-      right.createdAt ?? right.startedAt ?? ''
-    )
-  )
-}
+export const addRecruiterNote = candidateWriteMutation({
+  args: {
+    sessionId: v.id('interviewSessions'),
+    reportId: v.optional(v.id('assessmentReports')),
+    authorId: v.optional(v.string()),
+    body: v.string(),
+  },
+  returns: v.id('recruiterNotes'),
+  handler: async (ctx, args) => {
+    const { orgId } = ctx
+    const authorId = await getRecruiterActorId(ctx)
 
-async function getLatestReviewDecision(
-  ctx: QueryCtx,
-  sessionId: Id<'interviewSessions'>
-) {
-  return await ctx.db
-    .query('reviewDecisions')
-    .withIndex('by_session_and_created_at', (q) => q.eq('sessionId', sessionId))
-    .order('desc')
-    .first()
-}
+    await assertOrgOwnsSession(ctx, orgId, args.sessionId)
+    if (args.reportId) {
+      const report = await assertOrgOwnsReport(ctx, orgId, args.reportId)
+      if (report.sessionId !== args.sessionId) {
+        throw new ConvexError(
+          'Assessment report does not belong to this session.'
+        )
+      }
+    }
 
-/**
- * Resolves the caller's org scope for review/processing reads. Trusted pipeline
- * callers (with a valid processing key) resolve the org from the session; human
- * recruiters fall back to authenticated admin identity + org membership.
- */
-async function resolveReviewScopeOrgId(
-  ctx: QueryCtx,
-  sessionId: Id<'interviewSessions'>,
-  processingKey?: string
-) {
-  if (hasTrustedProcessingKey(processingKey)) {
-    return await resolveOrgIdForPipelineWrite(ctx, sessionId, processingKey)
-  }
-  await requireRecruiterCapability(ctx, 'recruiter:candidates:read')
-  return await requireOrgId(ctx)
-}
+    const noteId = await ctx.db.insert('recruiterNotes', {
+      orgId,
+      ...args,
+      authorId: authorId ?? args.authorId,
+      createdAt: new Date().toISOString(),
+    })
 
-/**
- * Shared base loader for the session processing + recruiter review detail
- * queries. Centralizes auth scoping, the org-ownership guard, and the common
- * session/invite/template/report fetch so both read paths stay in sync. Returns
- * null when the session is missing or not owned by the caller's org.
- */
-async function loadSessionReviewBase(
-  ctx: QueryCtx,
-  sessionId: Id<'interviewSessions'>,
-  processingKey?: string
-) {
-  const orgId = await resolveReviewScopeOrgId(ctx, sessionId, processingKey)
+    await logAuditEvent(ctx, {
+      orgId,
+      actorId: authorId ?? args.authorId ?? undefined,
+      action: 'recruiter_note.created',
+      resource: `session:${args.sessionId}`,
+      metadata: { noteId },
+    })
 
-  const session = await ctx.db.get(sessionId)
-  if (!session || session.orgId !== orgId) {
-    return null
-  }
+    return noteId
+  },
+})
 
-  const invite = await ctx.db.get(session.inviteId)
-  const template = invite ? await ctx.db.get(invite.templateId) : null
-  const report = await ctx.db
-    .query('assessmentReports')
-    .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-    .first()
-
-  return { orgId, session, invite, template, report }
-}
-
-export const listReviewCandidates = candidateReadQuery({
-  args: {},
-  handler: async (ctx) => {
+export const addReportChatMessage = candidateWriteMutation({
+  args: {
+    sessionId: v.id('interviewSessions'),
+    reportId: v.optional(v.id('assessmentReports')),
+    role: v.union(
+      v.literal('user'),
+      v.literal('assistant'),
+      v.literal('system')
+    ),
+    content: v.string(),
+    answerSource: v.optional(
+      v.union(v.literal('fallback'), v.literal('model'))
+    ),
+    modelId: v.optional(v.string()),
+    citationsJson: v.optional(v.string()),
+    groundingVersion: v.optional(v.string()),
+  },
+  returns: v.id('reportChatMessages'),
+  handler: async (ctx, args) => {
     const { orgId } = ctx
 
-    // Bounded for dashboard load; use paginated list queries when the queue grows.
-    const sessions = await ctx.db
-      .query('interviewSessions')
-      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-      .take(100)
-    const sortedSessions = [...sessions].toSorted((left, right) =>
-      (right.startedAt ?? '').localeCompare(left.startedAt ?? '')
-    )
+    await assertOrgOwnsSession(ctx, orgId, args.sessionId)
+    if (args.reportId) {
+      const report = await assertOrgOwnsReport(ctx, orgId, args.reportId)
+      if (report.sessionId !== args.sessionId) {
+        throw new ConvexError(
+          'Assessment report does not belong to this session.'
+        )
+      }
+    }
 
-    const sessionRows = await Promise.all(
-      sortedSessions.map(async (session) => {
-        const [invite, report, latestDecision] = await Promise.all([
-          ctx.db.get(session.inviteId),
-          ctx.db
-            .query('assessmentReports')
-            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-            .first(),
-          getLatestReviewDecision(ctx, session._id),
-        ])
-
-        return { session, invite, report, latestDecision }
-      })
-    )
-
-    const templateIds = [
-      ...new Set(
-        sessionRows
-          .map((row) => row.invite?.templateId)
-          .filter((templateId): templateId is Id<'assessmentTemplates'> =>
-            Boolean(templateId)
-          )
-      ),
-    ]
-    const templates = await Promise.all(
-      templateIds.map((templateId) => ctx.db.get(templateId))
-    )
-    const templateById = new Map(
-      templates
-        .filter((template) => template !== null)
-        .map((template) => [template._id, template])
-    )
-
-    return sessionRows.map(({ session, invite, report, latestDecision }) => ({
-      sessionId: session._id,
-      inviteToken: invite?.inviteToken,
-      candidateName: invite?.candidateName ?? 'Candidate',
-      candidateEmail: invite?.candidateEmail,
-      templateName:
-        (invite ? templateById.get(invite.templateId)?.name : undefined) ??
-        'AI Tutor Screener',
-      inviteStatus: invite?.status ?? 'created',
-      sessionState: session.state,
-      startedAt: session.startedAt,
-      endedAt: session.endedAt,
-      reportStatus: report?.status ?? 'pending',
-      recommendation: report?.overallRecommendation,
-      confidence: report?.confidence,
-      weightedScore: report?.weightedScore,
-      hardGateTriggered: report?.hardGateTriggered ?? false,
-      topStrengths: report?.topStrengths ?? [],
-      topConcerns: report?.topConcerns ?? [],
-      latestDecision: latestDecision?.decision,
-      latestDecisionAt: latestDecision?.createdAt,
-    }))
+    return await ctx.db.insert('reportChatMessages', {
+      orgId,
+      ...args,
+      createdAt: new Date().toISOString(),
+    })
   },
 })
 
@@ -203,16 +150,7 @@ export const getSessionProcessingDetail = query({
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
       .first()
 
-    const [transcript, events] = await Promise.all([
-      ctx.db
-        .query('transcriptSegments')
-        .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-        .collect(),
-      ctx.db
-        .query('sessionEvents')
-        .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-        .collect(),
-    ])
+    const { transcript, events } = await loadSessionReviewSlices(ctx, sessionId)
 
     return {
       sessionId: session._id,
@@ -220,7 +158,7 @@ export const getSessionProcessingDetail = query({
         name: invite.candidateName ?? 'Candidate',
       },
       template: {
-        name: template?.name ?? 'AI Tutor Screener',
+        name: resolveTemplateName(template?.name),
         rubricConfig: template?.rubricConfig ?? undefined,
         modelOverrides: template?.modelOverrides ?? undefined,
       },
@@ -237,14 +175,14 @@ export const getSessionProcessingDetail = query({
             status: report.status,
           }
         : null,
-      transcript: sortByIsoAsc(transcript).map((segment) => ({
+      transcript: transcript.map((segment) => ({
         speaker: segment.speaker,
         text: segment.text,
         status: segment.status,
         startedAt: segment.startedAt,
         endedAt: segment.endedAt,
       })),
-      events: sortByIsoAsc(events).map((event) => ({
+      events: events.map((event) => ({
         type: event.type,
         detail: event.detail,
         createdAt: event.createdAt,
@@ -266,20 +204,13 @@ export const getReportChatGrounding = candidateReadQuery({
 
     const { invite, template, report } = base
 
-    const [transcript, evidence] = await Promise.all([
-      ctx.db
-        .query('transcriptSegments')
-        .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-        .collect(),
-      report
-        ? ctx.db
-            .query('dimensionEvidence')
-            .withIndex('by_report', (q) => q.eq('reportId', report._id))
-            .collect()
-        : Promise.resolve([]),
-    ])
+    const { transcript, evidence } = await loadSessionReviewSlices(
+      ctx,
+      sessionId,
+      report?._id
+    )
 
-    const finalTranscript = sortByIsoAsc(transcript).filter(
+    const finalTranscript = transcript.filter(
       (segment) => segment.status === 'final'
     )
 
@@ -288,7 +219,7 @@ export const getReportChatGrounding = candidateReadQuery({
         name: invite.candidateName ?? 'Candidate',
       },
       template: {
-        name: template?.name ?? 'AI Tutor Screener',
+        name: resolveTemplateName(template?.name),
         modelOverrides: template?.modelOverrides,
       },
       report: report
@@ -306,13 +237,11 @@ export const getReportChatGrounding = candidateReadQuery({
         text: segment.text,
         startedAt: segment.startedAt,
       })),
-      evidence: sortByIsoAsc(evidence)
-        .slice(0, 8)
-        .map((item) => ({
-          dimension: item.dimension,
-          snippet: item.snippet,
-          rationale: item.rationale,
-        })),
+      evidence: evidence.slice(0, 8).map((item) => ({
+        dimension: item.dimension,
+        snippet: item.snippet,
+        rationale: item.rationale,
+      })),
     }
   },
 })
@@ -331,52 +260,34 @@ export const getCandidateReviewDetail = query({
 
     const { session, invite, template, report } = base
 
-    const [
-      transcript,
-      events,
-      evidence,
-      decisions,
-      recordings,
-      notes,
-      chatMessages,
-    ] = await Promise.all([
-      ctx.db
-        .query('transcriptSegments')
-        .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-        .collect(),
-      ctx.db
-        .query('sessionEvents')
-        .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-        .collect(),
-      report
-        ? ctx.db
-            .query('dimensionEvidence')
-            .withIndex('by_report', (q) => q.eq('reportId', report._id))
-            .collect()
-        : [],
-      ctx.db
-        .query('reviewDecisions')
-        .withIndex('by_session_and_created_at', (q) =>
-          q.eq('sessionId', sessionId)
-        )
-        .collect(),
-      ctx.db
-        .query('recordingArtifacts')
-        .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-        .collect(),
-      ctx.db
-        .query('recruiterNotes')
-        .withIndex('by_session_and_created_at', (q) =>
-          q.eq('sessionId', sessionId)
-        )
-        .collect(),
-      ctx.db
-        .query('reportChatMessages')
-        .withIndex('by_session_and_created_at', (q) =>
-          q.eq('sessionId', sessionId)
-        )
-        .collect(),
-    ])
+    const [slices, decisions, recordings, notes, chatMessages] =
+      await Promise.all([
+        loadSessionReviewSlices(ctx, sessionId, report?._id),
+        ctx.db
+          .query('reviewDecisions')
+          .withIndex('by_session_and_created_at', (q) =>
+            q.eq('sessionId', sessionId)
+          )
+          .collect(),
+        ctx.db
+          .query('recordingArtifacts')
+          .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+          .collect(),
+        ctx.db
+          .query('recruiterNotes')
+          .withIndex('by_session_and_created_at', (q) =>
+            q.eq('sessionId', sessionId)
+          )
+          .collect(),
+        ctx.db
+          .query('reportChatMessages')
+          .withIndex('by_session_and_created_at', (q) =>
+            q.eq('sessionId', sessionId)
+          )
+          .collect(),
+      ])
+
+    const { transcript, events, evidence } = slices
 
     const finalTranscript = transcript.filter(
       (segment) => segment.status === 'final'
@@ -407,7 +318,7 @@ export const getCandidateReviewDetail = query({
       },
       template: {
         id: template?._id,
-        name: template?.name ?? 'AI Tutor Screener',
+        name: resolveTemplateName(template?.name),
         role: template?.role ?? 'teacher',
         rubricVersion: template?.rubricVersion ?? 'v1',
         modelOverrides: template?.modelOverrides ?? undefined,
@@ -447,7 +358,7 @@ export const getCandidateReviewDetail = query({
           0
         ),
       },
-      transcript: sortByIsoAsc(transcript).map((segment) => ({
+      transcript: transcript.map((segment) => ({
         id: `${segment._id}`,
         speaker: segment.speaker,
         text: segment.text,
@@ -455,13 +366,13 @@ export const getCandidateReviewDetail = query({
         startedAt: segment.startedAt,
         endedAt: segment.endedAt,
       })),
-      events: sortByIsoAsc(events).map((event) => ({
+      events: events.map((event) => ({
         id: `${event._id}`,
         type: event.type,
         detail: event.detail,
         createdAt: event.createdAt,
       })),
-      evidence: sortByIsoAsc(evidence).map((item) => ({
+      evidence: evidence.map((item) => ({
         id: `${item._id}`,
         dimension: item.dimension,
         snippet: item.snippet,

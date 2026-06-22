@@ -23,7 +23,7 @@ export default async function CandidateReviewPage({
   const { sessionId } = await params
   const [detailResult, observationsResult] = hasConvexDeployment()
     ? await Promise.all([
-        serverConvexQuery(api.recruiter.getCandidateReviewDetail, {
+        serverConvexQuery(api.recruiter.reviews.getCandidateReviewDetail, {
           sessionId: sessionId as Id<'interviewSessions'>,
         }),
         serverConvexQuery(api.visualObservations.listForSession, {
