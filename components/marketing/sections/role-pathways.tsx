@@ -107,14 +107,12 @@ export function MarketingRolePathways() {
               id={pathway.id}
               variants={STAGGER_VARIANTS}
               className={cn(
-                'group relative flex scroll-mt-28 flex-col overflow-hidden rounded-[2rem] bg-card p-10 shadow-2xl ring-1 transition-[box-shadow,transform] duration-300 md:scroll-mt-32',
+                'group relative flex scroll-mt-28 flex-col overflow-hidden rounded-[2rem] bg-card p-10 shadow-[var(--shadow-lg)] ring-1 transition-[box-shadow] duration-300 md:scroll-mt-32',
                 pathway.featured
-                  ? 'ring-primary/30 hover:ring-primary/50'
-                  : 'ring-border/50 hover:ring-border'
+                  ? 'ring-primary/30 hover:shadow-[var(--shadow-xl)] hover:ring-primary/50'
+                  : 'ring-border/50 hover:shadow-[var(--shadow-xl)] hover:ring-border'
               )}
             >
-              <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,hsla(0,0%,20%,0.2)_0,transparent_50%)]" />
-
               <div className="flex size-14 items-center justify-center rounded-2xl bg-foreground/5 transition-[background-color,transform] duration-300 group-hover:scale-110 group-hover:bg-foreground/10">
                 <pathway.icon className="size-7 text-foreground" stroke={1.5} />
               </div>
@@ -135,7 +133,7 @@ export function MarketingRolePathways() {
                   </li>
                 ))}
               </ul>
-              <div className="mt-10 mt-auto flex flex-col gap-3 border-t border-border/50 pt-8">
+              <div className="mt-auto flex flex-col gap-3 border-t border-border/50 pt-8">
                 <Button
                   className="min-h-[44px] min-w-[44px] rounded-xl bg-primary px-6 text-primary-foreground transition-[transform,background-color] duration-150 ease-out active:scale-[0.96]"
                   render={<Link href={pathway.primaryCta.href} />}

@@ -21,7 +21,7 @@ export function MarketingDualPathwayCards({
         className
       )}
     >
-      <div className="flex h-full flex-col rounded-2xl border border-primary/30 bg-card/80 p-6 shadow-[0_0_0_1px_rgba(232,255,71,0.08)] ring-1 ring-primary/20">
+      <div className="flex h-full flex-col rounded-2xl border border-primary/30 bg-card/80 p-6 shadow-[var(--shadow-sm)] ring-1 ring-primary/20">
         <p className="text-xs font-semibold tracking-[0.14em] text-foreground/80 uppercase">
           For hiring teams
         </p>

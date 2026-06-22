@@ -81,7 +81,7 @@ function HeroImageMockup() {
         className="pointer-events-none absolute -inset-x-8 -top-10 bottom-0 -z-10"
       >
         <div className="absolute inset-0 rounded-[3rem] bg-[radial-gradient(60%_60%_at_50%_0%,rgba(232,255,71,0.10),transparent_70%)]" />
-        <div className="absolute inset-x-10 top-6 bottom-0 rounded-[2.5rem] border border-border/30 bg-muted/[0.06] shadow-2xl" />
+        <div className="absolute inset-x-10 top-6 bottom-0 rounded-[2rem] border border-border/30 bg-muted/[0.06] shadow-[var(--shadow-lg)]" />
       </div>
 
       <motion.div
@@ -103,7 +103,7 @@ function HeroImageMockup() {
           clipPath: 'inset(0 0 0 0)',
         }}
         transition={{ duration: 0.8, ease: [0.77, 0, 0.175, 1], delay: 0.4 }}
-        className="relative overflow-hidden rounded-[1.75rem] border border-border/40 bg-muted/10 p-1.5 shadow-[0_40px_120px_-20px_rgba(0,0,0,0.55)] ring-1 ring-border/40 backdrop-blur-xl"
+        className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-muted/10 p-1.5 shadow-[var(--shadow-xl)] ring-1 ring-border/40 backdrop-blur-xl"
       >
         {/* Top edge highlight */}
         <div

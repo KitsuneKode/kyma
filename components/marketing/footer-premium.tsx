@@ -122,11 +122,9 @@ export function PremiumFooter() {
           <p className="text-sm text-muted-foreground">
             © <CopyrightYear /> Kyma. All rights reserved.
           </p>
-          <div className="flex gap-4">
-            <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground opacity-50" />
-            <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground opacity-50" />
-            <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground opacity-50" />
-          </div>
+          <p className="text-xs tracking-wide text-muted-foreground/70">
+            Live tutor screening · evidence-backed review
+          </p>
         </div>
       </div>
     </footer>

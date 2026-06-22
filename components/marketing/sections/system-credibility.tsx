@@ -68,7 +68,7 @@ export function MarketingSystemCredibility() {
           <p className="mb-4 text-sm font-semibold tracking-widest text-primary uppercase">
             Trust &amp; control
           </p>
-          <h2 className="text-[3rem] leading-[0.95] font-semibold tracking-tighter text-balance text-foreground sm:text-[4rem]">
+          <h2 className="font-serif text-[3rem] leading-[0.95] font-medium tracking-tighter text-balance text-foreground sm:text-[4rem]">
             Serious enough to hire on
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-pretty text-muted-foreground">
@@ -88,7 +88,7 @@ export function MarketingSystemCredibility() {
             <motion.div
               key={feature.title}
               variants={staggerItem}
-              className="group rounded-[1.5rem] bg-foreground/5 p-8 shadow-2xl ring-1 ring-border/50 transition-colors duration-300 hover:bg-foreground/10"
+              className="group rounded-[2rem] bg-foreground/5 p-8 shadow-[var(--shadow-md)] ring-1 ring-border/50 transition-colors duration-300 hover:bg-foreground/10"
             >
               <div className="flex size-12 items-center justify-center rounded-xl bg-foreground/10 transition-transform duration-300 group-hover:scale-110">
                 <feature.icon className="size-6 text-foreground" stroke={1.5} />

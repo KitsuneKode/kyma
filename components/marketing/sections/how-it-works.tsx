@@ -212,11 +212,8 @@ export function MarketingHowItWorks() {
           {/* Step 1 - Full width hero card */}
           <motion.div
             variants={itemVariants}
-            className="group relative overflow-hidden rounded-[2.5rem] bg-card p-8 shadow-2xl ring-1 ring-border/50 lg:col-span-2 lg:p-12"
+            className="group relative overflow-hidden rounded-[2rem] bg-card p-8 shadow-[var(--shadow-lg)] ring-1 ring-border/50 transition-shadow duration-300 hover:shadow-[var(--shadow-xl)] lg:col-span-2 lg:p-12"
           >
-            {/* Gradient orb */}
-            <div className="absolute -top-32 -right-32 size-64 rounded-full bg-primary/10 blur-[80px] transition-all duration-700 group-hover:bg-primary/15" />
-
             <div className="relative grid gap-8 lg:grid-cols-2 lg:gap-12">
               <div>
                 <div className="mb-6 flex items-center gap-4">
@@ -232,20 +229,15 @@ export function MarketingHowItWorks() {
                   single link—no scheduling, no stale invites.
                 </p>
               </div>
-              <div className="relative">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-foreground/5 to-transparent opacity-50" />
-                <BatchCreationMock />
-              </div>
+              <BatchCreationMock />
             </div>
           </motion.div>
 
           {/* Step 2 - Interview card */}
           <motion.div
             variants={itemVariants}
-            className="group relative overflow-hidden rounded-[2rem] bg-card p-8 shadow-2xl ring-1 ring-border/50"
+            className="group relative overflow-hidden rounded-[2rem] bg-card p-8 shadow-[var(--shadow-lg)] ring-1 ring-border/50 transition-shadow duration-300 hover:shadow-[var(--shadow-xl)]"
           >
-            <div className="absolute -right-16 -bottom-16 size-32 rounded-full bg-primary/10 blur-[60px] transition-all duration-700 group-hover:bg-primary/15" />
-
             <div className="relative">
               <div className="mb-6 flex items-center gap-4">
                 <StepIcon icon={IconMicrophone} />
@@ -265,10 +257,8 @@ export function MarketingHowItWorks() {
           {/* Step 3 - Review card */}
           <motion.div
             variants={itemVariants}
-            className="group relative overflow-hidden rounded-[2rem] bg-card p-8 shadow-2xl ring-1 ring-border/50"
+            className="group relative overflow-hidden rounded-[2rem] bg-card p-8 shadow-[var(--shadow-lg)] ring-1 ring-border/50 transition-shadow duration-300 hover:shadow-[var(--shadow-xl)]"
           >
-            <div className="absolute -bottom-16 -left-16 size-32 rounded-full bg-primary/10 blur-[60px] transition-all duration-700 group-hover:bg-primary/15" />
-
             <div className="relative">
               <div className="mb-6 flex items-center gap-4">
                 <StepIcon icon={IconReportAnalytics} />

@@ -46,8 +46,8 @@ export function PremiumFaq() {
     <section className="bg-muted/10 py-24 md:py-32">
       <div className="mx-auto max-w-4xl px-6">
         <div className="mb-16 text-center">
-          <h2 className="text-4xl font-semibold tracking-tight text-balance md:text-5xl">
-            Frequently Asked Questions
+          <h2 className="font-serif text-4xl font-medium tracking-tight text-balance md:text-5xl">
+            Frequently asked questions
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
             Practical answers for teams moving from inconsistent first-round
@@ -61,7 +61,7 @@ export function PremiumFaq() {
               <AccordionItem
                 key={faq.id}
                 value={faq.id}
-                className="rounded-2xl border border-border/40 bg-card/80 px-5 py-2 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
+                className="rounded-2xl border border-border/40 bg-card/80 px-5 py-2 shadow-[var(--shadow-xs)]"
               >
                 <AccordionTrigger className="text-left text-lg font-medium transition-colors hover:text-primary hover:no-underline">
                   {faq.question}
