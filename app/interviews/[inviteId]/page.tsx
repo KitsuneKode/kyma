@@ -21,7 +21,7 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
   const { inviteId } = await params
   const nowMs = Date.now()
   const publicSnapshotResult = await serverConvexQuery(
-    api.interviews.public.getPublicSessionDetail,
+    api.interviews.public.getPublicInterviewSnapshot,
     {
       inviteToken: inviteId,
       nowMs,

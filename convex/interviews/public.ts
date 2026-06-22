@@ -53,7 +53,7 @@ export const getPublicInterviewSnapshot = query({
       candidateName: invite.candidateName ?? 'Candidate',
       state: session?.state ?? ('ready' as const),
       sessionPurpose,
-      ...deriveAccessState(invite, session),
+      ...deriveAccessState(invite, session, nowMs),
       policy,
     }
   },
@@ -100,7 +100,7 @@ export const getPublicSessionDetail = query({
       .query('interviewSessions')
       .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
       .first()
-    const access = deriveAccessState(invite, session)
+    const access = deriveAccessState(invite, session, nowMs)
     const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite)
     const sessionPurpose = resolveSessionPurpose(
       session?.sessionPurpose ?? invite.sessionPurpose

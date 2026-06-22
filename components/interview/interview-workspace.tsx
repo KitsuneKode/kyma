@@ -166,6 +166,12 @@ export function InterviewWorkspace({
   )
   const participantNameRef = useRef(participantName)
   const [queryNowMs] = useState(() => Date.now())
+  const shouldSubscribeToPersistedSession =
+    view === 'meeting' ||
+    view === 'processing' ||
+    ['reconnecting', 'processing', 'completed', 'failed'].includes(
+      session.state
+    )
   const appendSessionEvent = useMutation(
     api.interviews.sessionEvents.appendSessionEvent
   )
@@ -174,10 +180,12 @@ export function InterviewWorkspace({
   )
   const persistedSession = useQuery(
     api.interviews.public.getPublicSessionDetail,
-    {
-      inviteToken: initialSnapshot.inviteId,
-      nowMs: queryNowMs,
-    }
+    shouldSubscribeToPersistedSession
+      ? {
+          inviteToken: initialSnapshot.inviteId,
+          nowMs: queryNowMs,
+        }
+      : 'skip'
   )
 
   const logger = useMemo(
