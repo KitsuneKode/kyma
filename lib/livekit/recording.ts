@@ -7,7 +7,7 @@ import {
 } from 'livekit-server-sdk'
 
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
-import { getLivekitEnv } from '@/lib/livekit/config'
+import { getLivekitServerEnv } from '@/lib/livekit/config'
 
 function getLivekitApiBaseUrl(wsUrl: string) {
   if (wsUrl.startsWith('wss://')) {
@@ -22,7 +22,7 @@ function getLivekitApiBaseUrl(wsUrl: string) {
 }
 
 export function hasLivekitRecordingConfig() {
-  const env = getLivekitEnv()
+  const env = getLivekitServerEnv()
 
   return Boolean(
     env.LIVEKIT_RECORDING_ENABLED === '1' &&
@@ -37,7 +37,7 @@ export function hasLivekitRecordingConfig() {
 }
 
 export async function maybeStartRoomRecording(roomName: string) {
-  const env = getLivekitEnv()
+  const env = getLivekitServerEnv()
   const logger = createDiagnosticLogger('livekit-recording', {
     actor: 'agent',
     roomName,

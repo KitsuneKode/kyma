@@ -4,7 +4,7 @@ import { AccessToken } from 'livekit-server-sdk'
 import { DEFAULT_INTERVIEW_POLICY } from '@/lib/interview/policy'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
 import { resolveLivekitAgentName } from '@/lib/livekit/agent-name'
-import { getLivekitEnv } from '@/lib/livekit/config'
+import { getLivekitServerEnv } from '@/lib/livekit/config'
 
 const TOKEN_DURATION_BUFFER_MINUTES = 15
 
@@ -48,7 +48,7 @@ export async function createParticipantToken({
     roomName,
     participantIdentity: identity,
   })
-  const env = getLivekitEnv()
+  const env = getLivekitServerEnv()
   const agentName = resolveLivekitAgentName(env.LIVEKIT_AGENT_NAME)
   const ttl = formatTokenTtl(tokenTtlMinutes ?? computeLivekitTokenTtlMinutes())
 
