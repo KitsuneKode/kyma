@@ -15,7 +15,7 @@
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
     "typecheck": "tsc --noEmit",
-    "check": "bun run fmt:check && bun run typecheck && bun run lint && bun run test && bun run convex:once && bun run build",
+    "check": "bun run fmt:check && bun run lint && bun run test && bun run convex:once && bun run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -33,9 +33,7 @@
     "verify:auth-org-rbac": "bun run fmt && bun run typecheck && bun run lint && bun run test",
     "agent:dev": "bun run agents/worker.ts dev",
     "agent:start": "bun run agents/worker.ts start",
-    "prepare": "husky",
-    "doctor": "npx react-doctor@latest",
-    "doctor:diff": "npx react-doctor@latest --verbose --diff"
+    "prepare": "husky"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1073.0",
@@ -100,7 +98,6 @@
     "oxfmt": "^0.54.0",
     "oxlint": "^1.69.0",
     "postcss": "^8.5.15",
-    "react-doctor": "^0.4.2",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"

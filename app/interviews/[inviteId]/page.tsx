@@ -1,3 +1,5 @@
+import { connection } from 'next/server'
+
 import { api } from '@/convex/_generated/api'
 import { RenderErrorBoundary } from '@/components/errors/render-error-boundary'
 import { InterviewWorkspace } from '@/components/interview/interview-workspace'
@@ -18,6 +20,7 @@ function isEnabledDemoInviteToken(inviteId: string) {
 }
 
 export default async function InterviewPage({ params }: InterviewPageProps) {
+  await connection()
   const { inviteId } = await params
   const nowMs = Date.now()
   const publicSnapshotResult = await serverConvexQuery(

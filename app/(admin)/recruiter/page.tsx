@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { connection } from 'next/server'
 
 import { api } from '@/convex/_generated/api'
 import { RecruiterDashboard } from '@/components/recruiter/recruiter-dashboard'
@@ -12,14 +13,15 @@ import {
 import { signInPath } from '@/lib/auth/workspace-intent'
 
 export default async function AdminPage() {
+  await connection()
+  const nowMs = Date.now()
+
   const [candidatesResult, batchesResult, dashboardResult, onboardingResult] =
     hasConvexDeployment()
       ? await Promise.all([
           serverConvexQuery(api.recruiter.listReviewCandidates, {}),
           serverConvexQuery(api.admin.listScreeningBatches, {}),
-          serverConvexQuery(api.admin.getDashboardSummary, {
-            nowMs: Date.now(),
-          }),
+          serverConvexQuery(api.admin.getDashboardSummary, { nowMs }),
           serverConvexQuery(api.onboarding.getRecruiterOnboardingStatus, {}),
         ])
       : [
@@ -85,12 +87,7 @@ export default async function AdminPage() {
   const dashboardSummary = dashboardResult.ok ? dashboardResult.data : null
   const onboarding = onboardingResult.ok ? onboardingResult.data : null
 
-  const sessionsToday = candidates.filter((candidate) => {
-    if (!candidate.startedAt) return false
-    const started = new Date(candidate.startedAt)
-    const now = new Date()
-    return started.toDateString() === now.toDateString()
-  }).length
+  const sessionsToday = dashboardSummary?.counts.sessionsToday ?? 0
   const reportsPending =
     dashboardSummary?.counts.pendingReviews ??
     candidates.filter((candidate) => candidate.reportStatus !== 'completed')

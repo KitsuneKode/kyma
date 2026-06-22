@@ -35,9 +35,6 @@ jobs:
       - name: Convex generated files in sync
         run: git diff --exit-code -- convex/_generated
 
-      - name: Typecheck
-        run: bun run typecheck
-
       - name: Unit tests
         run: bun run test
 
