@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { fetchQuery } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
-import { PremiumRecruiterDashboard } from '@/components/recruiter/premium-dashboard'
+import { RecruiterDashboard } from '@/components/recruiter/recruiter-dashboard'
 import { RecruiterFirstRunChecklist } from '@/components/recruiter/recruiter-first-run-checklist'
 import { WorkspaceEmptyState } from '@/components/workspace/empty-state'
 import { Button } from '@/components/ui/button'
@@ -136,7 +136,7 @@ export default async function AdminPage() {
           exampleReportSessionId={onboarding.exampleReportSessionId}
         />
       ) : null}
-      <PremiumRecruiterDashboard
+      <RecruiterDashboard
         sessionsToday={sessionsToday}
         reportsPending={reportsPending}
         activeBatches={activeBatches}

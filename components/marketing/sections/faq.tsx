@@ -41,7 +41,7 @@ const faqs = [
   },
 ]
 
-export function PremiumFaq() {
+export function MarketingFaq() {
   return (
     <section className="bg-muted/10 py-24 md:py-32">
       <div className="mx-auto max-w-4xl px-6">

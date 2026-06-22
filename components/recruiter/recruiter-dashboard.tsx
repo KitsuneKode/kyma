@@ -12,13 +12,13 @@ import {
   IconArrowRight,
 } from '@tabler/icons-react'
 
-import { BillboardMetric } from '@/components/admin/billboard-metric'
+import { MetricCard } from '@/components/admin/metric-card'
 import { WorkspacePageHeader } from '@/components/workspace/page-header'
 import { formatStatusLabel, formatDateTime } from '@/lib/recruiter/format'
 import type { DashboardSummary } from '@/lib/recruiter/types'
 import { cn } from '@/lib/utils'
 
-export function PremiumRecruiterDashboard({
+export function RecruiterDashboard({
   sessionsToday,
   reportsPending,
   activeBatches,
@@ -40,28 +40,28 @@ export function PremiumRecruiterDashboard({
       />
 
       <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <BillboardMetric
+        <MetricCard
           label="Sessions today"
           value={String(sessionsToday)}
           detail="Live interview sessions started in the last 24h cycle."
           delay={0.1}
           icon="dashboard"
         />
-        <BillboardMetric
+        <MetricCard
           label="Reports pending"
           value={String(reportsPending)}
           detail="Sessions processing through the AI assessment pipeline."
           delay={0.15}
           icon="users"
         />
-        <BillboardMetric
+        <MetricCard
           label="Active batches"
           value={String(activeBatches)}
           detail="Screening batches currently accepting candidate attempts."
           delay={0.2}
           icon="folder"
         />
-        <BillboardMetric
+        <MetricCard
           label="Pending reviews"
           value={String(pendingReviews)}
           detail="Candidates awaiting final human-verified decision."

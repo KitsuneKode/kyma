@@ -1,11 +1,11 @@
-import { PremiumHero } from '@/components/marketing/hero-premium'
+import { MarketingHero } from '@/components/marketing/sections/hero'
 import { MarketingHowItWorks } from '@/components/marketing/sections/how-it-works'
 import { MarketingRolePathways } from '@/components/marketing/sections/role-pathways'
 import { MarketingSystemCredibility } from '@/components/marketing/sections/system-credibility'
-import { PremiumFaq } from '@/components/marketing/faq-premium'
+import { MarketingFaq } from '@/components/marketing/sections/faq'
 import { MarketingFinalCta } from '@/components/marketing/sections/final-cta'
-import { PremiumFooter } from '@/components/marketing/footer-premium'
-import { HeroHeader } from '@/components/marketing/header'
+import { MarketingFooter } from '@/components/marketing/footer'
+import { MarketingHeader } from '@/components/marketing/header'
 import { MobileCtaDock } from '@/components/marketing/mobile-cta-dock'
 import { cacheLife, cacheTag } from 'next/cache'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
@@ -18,17 +18,17 @@ export default async function Page() {
 
   return (
     <>
-      <HeroHeader clerkEnabled={clerkEnabled} />
+      <MarketingHeader clerkEnabled={clerkEnabled} />
       <main className="overflow-hidden bg-background">
-        <PremiumHero />
+        <MarketingHero />
         <MarketingHowItWorks />
         <MarketingRolePathways />
         <MarketingSystemCredibility />
-        <PremiumFaq />
+        <MarketingFaq />
         <MarketingFinalCta />
       </main>
       <MobileCtaDock />
-      <PremiumFooter />
+      <MarketingFooter />
     </>
   )
 }

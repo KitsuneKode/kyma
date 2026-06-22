@@ -116,7 +116,7 @@ function HeroImageMockup() {
   )
 }
 
-export function PremiumHero() {
+export function MarketingHero() {
   return (
     <section className="relative overflow-hidden bg-background pt-24 md:pt-36">
       <div

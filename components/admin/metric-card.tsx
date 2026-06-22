@@ -1,8 +1,9 @@
 'use client'
 
 import { motion } from 'motion/react'
-
 import { IconLayoutDashboard, IconUsers, IconFolder } from '@tabler/icons-react'
+
+import { cn } from '@/lib/utils'
 
 const ICON_MAP = {
   dashboard: IconLayoutDashboard,
@@ -16,44 +17,57 @@ export function MetricCard({
   detail,
   delay = 0,
   icon,
+  emphasis = false,
 }: {
   label: string
   value: string
   detail?: string
   delay?: number
   icon?: keyof typeof ICON_MAP
+  emphasis?: boolean
 }) {
   const Icon = icon ? ICON_MAP[icon] : null
+  const isZero = value.trim() === '0'
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay, ease: [0.23, 1, 0.32, 1] }}
-      className="group relative overflow-hidden rounded-2xl bg-card p-5 ring-1 ring-border/40 transition-shadow duration-200 hover:shadow-md"
+      transition={{ duration: 0.4, delay, ease: [0.23, 1, 0.32, 1] }}
+      className="metric-card group"
     >
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-          {label}
-        </p>
-        {Icon && (
-          <div className="rounded-lg bg-primary/5 p-1.5 text-primary/60 transition-colors group-hover:text-primary">
-            <Icon className="size-4" />
-          </div>
-        )}
-      </div>
-      <div className="mt-3">
-        <p className="text-3xl font-bold tracking-tighter text-foreground tabular-nums">
-          {value}
-        </p>
-      </div>
-      {detail ? (
-        <div className="mt-3 border-t border-border/30 pt-3">
-          <p className="text-xs leading-relaxed text-pretty text-muted-foreground">
-            {detail}
-          </p>
+      <div className="flex h-full flex-col gap-7">
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+            {label}
+          </span>
+          {Icon ? (
+            <div className="flex size-8 items-center justify-center rounded-xl bg-foreground/[0.04] text-muted-foreground/70 ring-1 ring-border/40 transition-colors group-hover:text-foreground/80">
+              <Icon className="size-4" />
+            </div>
+          ) : null}
         </div>
-      ) : null}
+
+        <div className="mt-auto">
+          <p
+            className={cn(
+              'metric-value',
+              isZero
+                ? 'text-muted-foreground/45'
+                : emphasis
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : undefined
+            )}
+          >
+            {value}
+          </p>
+          {detail ? (
+            <p className="mt-3 max-w-[14rem] text-xs leading-relaxed text-muted-foreground">
+              {detail}
+            </p>
+          ) : null}
+        </div>
+      </div>
     </motion.div>
   )
 }

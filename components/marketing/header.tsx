@@ -45,7 +45,11 @@ function getServerScrollSnapshot() {
   return false
 }
 
-export const HeroHeader = ({ clerkEnabled }: { clerkEnabled: boolean }) => {
+export const MarketingHeader = ({
+  clerkEnabled,
+}: {
+  clerkEnabled: boolean
+}) => {
   const [menuState, setMenuState] = useState(false)
   const isScrolled = useSyncExternalStore(
     subscribeToScroll,

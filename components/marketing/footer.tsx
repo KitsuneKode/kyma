@@ -3,7 +3,7 @@ import { Logo } from '@/components/marketing/logo'
 import { CopyrightYear } from '@/components/marketing/copyright-year'
 import { signInPath } from '@/lib/auth/workspace-intent'
 
-export function PremiumFooter() {
+export function MarketingFooter() {
   return (
     <footer className="border-t border-border/20 bg-background pt-24 pb-12">
       <div className="mx-auto max-w-7xl px-6">
