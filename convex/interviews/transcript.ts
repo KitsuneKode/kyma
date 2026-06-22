@@ -1,4 +1,4 @@
-import { v } from 'convex/values'
+import { ConvexError, v } from 'convex/values'
 
 import { internalMutation, mutation } from '../_generated/server'
 import { upsertTranscriptSegmentForSession } from '../helpers/transcriptSegments'
@@ -22,15 +22,9 @@ export const upsertTranscriptSegment = mutation({
   handler: async (ctx, args) => {
     await requireInviteSessionWriteAccess(ctx, args.sessionId, args.inviteToken)
 
-    return await upsertTranscriptSegmentForSession(ctx, {
-      sessionId: args.sessionId,
-      segmentId: args.segmentId,
-      speaker: args.speaker,
-      text: args.text,
-      status: args.status,
-      startedAt: args.startedAt,
-      endedAt: args.endedAt,
-    })
+    throw new ConvexError(
+      'Transcript persistence is owned by the interview agent.'
+    )
   },
 })
 

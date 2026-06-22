@@ -18,6 +18,7 @@ import { type StoreApi } from 'zustand/vanilla'
 import { useShallow } from 'zustand/react/shallow'
 
 import { api } from '@/convex/_generated/api'
+import { InviteAuthGate } from '@/components/interview/invite-auth-gate'
 import { InviteLobby } from '@/components/interview/invite-lobby'
 import { InviteAccessScreen } from '@/components/interview/invite-access-screen'
 import { MeetingShell } from '@/components/interview/meeting-shell'
@@ -69,10 +70,12 @@ const InterviewProcessingSuccess = dynamic(
 
 type InterviewWorkspaceProps = {
   initialSnapshot: InterviewSessionSnapshot
+  skipInviteAuth?: boolean
 }
 
 export function InterviewWorkspace({
   initialSnapshot,
+  skipInviteAuth = false,
 }: InterviewWorkspaceProps) {
   const [requestId] = useState(() => createRequestId('client'))
   const storeRef = useRef<StoreApi<WorkspaceStore>>(null)
@@ -162,16 +165,18 @@ export function InterviewWorkspace({
     initialSnapshot.state
   )
   const participantNameRef = useRef(participantName)
+  const [queryNowMs] = useState(() => Date.now())
   const appendSessionEvent = useMutation(
     api.interviews.sessionEvents.appendSessionEvent
   )
-  const upsertTranscriptSegment = useMutation(
-    api.interviews.transcript.upsertTranscriptSegment
+  const submitInterviewForProcessing = useMutation(
+    api.interviews.processing.submitInterviewForProcessing
   )
   const persistedSession = useQuery(
     api.interviews.public.getPublicSessionDetail,
     {
       inviteToken: initialSnapshot.inviteId,
+      nowMs: queryNowMs,
     }
   )
 
@@ -253,7 +258,6 @@ export function InterviewWorkspace({
     inviteToken: initialSnapshot.inviteId,
     logger,
     appendSessionEvent,
-    upsertTranscriptSegment,
     sessionIdRef,
     roomNameRef,
     sessionStateRef,
@@ -392,8 +396,7 @@ export function InterviewWorkspace({
     }))
     await persistSessionEvent(
       'participant-joined',
-      `Connected to room ${roomNameRef.current ?? bootstrappedSession?.roomName ?? 'interview room'}.`,
-      'live'
+      `Connected to room ${roomNameRef.current ?? bootstrappedSession?.roomName ?? 'interview room'}.`
     )
   }
 
@@ -434,6 +437,16 @@ export function InterviewWorkspace({
     })
 
     try {
+      if (!sessionIdRef.current) {
+        throw new Error('Interview session is not ready to submit.')
+      }
+
+      await submitInterviewForProcessing({
+        inviteToken: initialSnapshot.inviteId,
+        sessionId: sessionIdRef.current as never,
+        detail: 'Interview submitted for post-call processing.',
+      })
+
       setSession((current) => ({
         ...current,
         state: 'processing',
@@ -445,33 +458,6 @@ export function InterviewWorkspace({
           ),
         ],
       }))
-      await persistSessionEvent(
-        'processing-started',
-        'Interview submitted for post-call processing.',
-        'processing'
-      )
-      if (sessionIdRef.current) {
-        const response = await fetch('/api/interviews/process', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            sessionId: sessionIdRef.current,
-            inviteToken: initialSnapshot.inviteId,
-          }),
-        })
-
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as {
-            error?: string
-          } | null
-          throw new Error(
-            payload?.error ??
-              'Unable to start interview processing for this session.'
-          )
-        }
-      }
       await room.disconnect(true)
       setBootstrappedSession(null)
       setView('processing')
@@ -513,11 +499,13 @@ export function InterviewWorkspace({
     <div className="h-full w-full">
       {view === 'meeting' && bootstrappedSession && preJoinChoices ? (
         <MeetingShell
+          activeDurationMs={hydratedSession.activeDurationMs ?? 0}
           agentJoinTimedOut={agentJoinTimedOut}
           connectionError={connectionError}
           isSubmittingInterview={isSubmittingInterview}
           onConnected={handleRoomConnected}
           onDisconnected={handleRoomDisconnected}
+          onDurationCapReached={() => void handleSubmitInterview()}
           onError={handleRoomError}
           onRetryAgentConnection={() => void handleRetryAgentConnection()}
           onSubmitInterview={handleSubmitInterview}
@@ -525,12 +513,14 @@ export function InterviewWorkspace({
           preJoinChoices={preJoinChoices}
           room={room}
           session={bootstrappedSession}
+          sessionPurpose={hydratedSession.sessionPurpose}
           transcript={hydratedSession.transcript}
         />
       ) : view === 'processing' ? (
         <InterviewProcessingSuccess
           connectionError={connectionError}
           onRetrySubmission={handleSubmitInterview}
+          sessionId={sessionIdRef.current ?? hydratedSession.sessionId ?? null}
         />
       ) : hydratedSession.accessState !== 'available' ? (
         <InviteAccessScreen
@@ -539,15 +529,21 @@ export function InterviewWorkspace({
           inviteId={hydratedSession.inviteId}
         />
       ) : (
-        <div className="mx-auto w-full max-w-[1400px]">
-          <InviteLobby
-            candidateName={participantName}
-            connectionError={connectionError}
-            initialSnapshot={hydratedSession}
-            isBootstrapping={isBootstrapping}
-            onSubmit={handlePreJoinSubmit}
-          />
-        </div>
+        <InviteAuthGate
+          inviteToken={hydratedSession.inviteId}
+          candidateName={hydratedSession.candidateName}
+          disabled={skipInviteAuth}
+        >
+          <div className="mx-auto w-full max-w-[1400px]">
+            <InviteLobby
+              candidateName={participantName}
+              connectionError={connectionError}
+              initialSnapshot={hydratedSession}
+              isBootstrapping={isBootstrapping}
+              onSubmit={handlePreJoinSubmit}
+            />
+          </div>
+        </InviteAuthGate>
       )}
     </div>
   )

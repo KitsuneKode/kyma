@@ -1,8 +1,22 @@
 import { RoomAgentDispatch, RoomConfiguration } from '@livekit/protocol'
 import { AccessToken } from 'livekit-server-sdk'
 
+import { DEFAULT_INTERVIEW_POLICY } from '@/lib/interview/policy'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
+import { resolveLivekitAgentName } from '@/lib/livekit/agent-name'
 import { getLivekitEnv } from '@/lib/livekit/config'
+
+const TOKEN_DURATION_BUFFER_MINUTES = 15
+
+export function computeLivekitTokenTtlMinutes(
+  targetDurationMinutes = DEFAULT_INTERVIEW_POLICY.targetDurationMinutes ?? 18
+) {
+  return targetDurationMinutes + TOKEN_DURATION_BUFFER_MINUTES
+}
+
+function formatTokenTtl(minutes: number) {
+  return `${Math.max(minutes, 5)}m`
+}
 
 type CreateParticipantTokenInput = {
   roomName: string
@@ -13,6 +27,7 @@ type CreateParticipantTokenInput = {
   canSubscribe?: boolean
   agentMetadata?: string
   requestId?: string
+  tokenTtlMinutes?: number
 }
 
 export async function createParticipantToken({
@@ -24,6 +39,7 @@ export async function createParticipantToken({
   canSubscribe = true,
   agentMetadata,
   requestId,
+  tokenTtlMinutes,
 }: CreateParticipantTokenInput) {
   const identity = participantIdentity ?? participantName
   const logger = createDiagnosticLogger('livekit-token', {
@@ -33,6 +49,8 @@ export async function createParticipantToken({
     participantIdentity: identity,
   })
   const env = getLivekitEnv()
+  const agentName = resolveLivekitAgentName(env.LIVEKIT_AGENT_NAME)
+  const ttl = formatTokenTtl(tokenTtlMinutes ?? computeLivekitTokenTtlMinutes())
 
   if (
     !env.NEXT_PUBLIC_LIVEKIT_URL ||
@@ -53,7 +71,7 @@ export async function createParticipantToken({
       identity,
       name: participantName,
       metadata,
-      ttl: '15m',
+      ttl,
     }
   )
 
@@ -72,23 +90,22 @@ export async function createParticipantToken({
     },
   })
 
-  if (env.LIVEKIT_AGENT_NAME) {
-    accessToken.roomConfig = new RoomConfiguration({
-      agents: [
-        new RoomAgentDispatch({
-          agentName: env.LIVEKIT_AGENT_NAME,
-          metadata: agentMetadata,
-        }),
-      ],
-    })
-    logger.info({
-      event: 'livekit.agent.dispatch.included',
-      detail: 'Agent dispatch configuration attached to token.',
-      meta: {
-        agentName: env.LIVEKIT_AGENT_NAME,
-      },
-    })
-  }
+  accessToken.roomConfig = new RoomConfiguration({
+    agents: [
+      new RoomAgentDispatch({
+        agentName,
+        metadata: agentMetadata,
+      }),
+    ],
+  })
+  logger.info({
+    event: 'livekit.agent.dispatch.included',
+    detail: 'Agent dispatch configuration attached to token.',
+    meta: {
+      agentName,
+      tokenTtlMinutes: tokenTtlMinutes ?? computeLivekitTokenTtlMinutes(),
+    },
+  })
 
   const token = await accessToken.toJwt()
   logger.info({

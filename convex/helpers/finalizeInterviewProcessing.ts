@@ -83,13 +83,9 @@ export async function finalizeInterviewForProcessing(
     createdAt: now,
   })
 
-  await ctx.scheduler.runAfter(
-    0,
-    internal.processing.enqueueInterviewProcessing,
-    {
-      sessionId: session._id,
-    }
-  )
+  await ctx.scheduler.runAfter(0, internal.processingPipeline.run, {
+    sessionId: session._id,
+  })
 
   return { queued: true, transitioned: true }
 }

@@ -40,23 +40,11 @@ type AppendSessionEvent = (args: {
   state?: InterviewSessionSnapshot['state']
 }) => Promise<unknown>
 
-type UpsertTranscriptSegment = (args: {
-  inviteToken: string
-  sessionId: never
-  segmentId: string
-  speaker: InterviewSessionSnapshot['transcript'][number]['speaker']
-  text: string
-  status: InterviewSessionSnapshot['transcript'][number]['status']
-  startedAt: string
-  endedAt?: string
-}) => Promise<unknown>
-
 type UseInterviewRoomEventsArgs = {
   room: Room
   inviteToken: string
   logger: DiagnosticLogger
   appendSessionEvent: AppendSessionEvent
-  upsertTranscriptSegment: UpsertTranscriptSegment
   sessionIdRef: MutableRefObject<string | null>
   roomNameRef: MutableRefObject<string | null>
   sessionStateRef: MutableRefObject<InterviewSessionSnapshot['state']>
@@ -78,7 +66,6 @@ export function useInterviewRoomEvents({
   inviteToken,
   logger,
   appendSessionEvent,
-  upsertTranscriptSegment,
   sessionIdRef,
   roomNameRef,
   sessionStateRef,
@@ -176,7 +163,7 @@ export function useInterviewRoomEvents({
           createLocalEvent('candidate-screen-share-started', detail),
         ],
       }))
-      void persistEffectEvent('candidate-screen-share-started', detail, 'live')
+      void persistEffectEvent('candidate-screen-share-started', detail)
     }
 
     function handleLocalTrackUnpublished(publication: TrackPublication) {
@@ -199,7 +186,7 @@ export function useInterviewRoomEvents({
           createLocalEvent('candidate-screen-share-stopped', detail),
         ],
       }))
-      void persistEffectEvent('candidate-screen-share-stopped', detail, 'live')
+      void persistEffectEvent('candidate-screen-share-stopped', detail)
     }
 
     function handleReconnecting() {
@@ -219,11 +206,7 @@ export function useInterviewRoomEvents({
           createLocalEvent('reconnect-started', 'Room reconnect started.'),
         ],
       }))
-      void persistEffectEvent(
-        'reconnect-started',
-        'Room reconnect started.',
-        'reconnecting'
-      )
+      void persistEffectEvent('reconnect-started', 'Room reconnect started.')
     }
 
     function handleReconnected() {
@@ -245,8 +228,7 @@ export function useInterviewRoomEvents({
       }))
       void persistEffectEvent(
         'reconnect-succeeded',
-        'Room reconnect succeeded.',
-        'live'
+        'Room reconnect succeeded.'
       )
     }
 
@@ -272,7 +254,7 @@ export function useInterviewRoomEvents({
           createLocalEvent('reconnect-failed', message),
         ],
       }))
-      void persistEffectEvent('reconnect-failed', message, 'interrupted')
+      void persistEffectEvent('reconnect-failed', message)
     }
 
     function handleDisconnected() {
@@ -319,11 +301,7 @@ export function useInterviewRoomEvents({
           createLocalEvent('participant-left', 'Room disconnected.'),
         ],
       }))
-      void persistEffectEvent(
-        'participant-left',
-        'Room disconnected.',
-        'interrupted'
-      )
+      void persistEffectEvent('participant-left', 'Room disconnected.')
     }
 
     function handleTranscriptionReceived(
@@ -364,31 +342,6 @@ export function useInterviewRoomEvents({
             endedAt,
           }),
         }))
-
-        void upsertTranscriptSegment({
-          inviteToken,
-          sessionId: sessionIdRef.current as never,
-          segmentId: segment.id,
-          speaker,
-          text: segment.text,
-          status,
-          startedAt,
-          endedAt,
-        }).catch((error) => {
-          logger.error({
-            event: 'transcription.persist.failed',
-            detail: 'Unable to persist transcription segment.',
-            sessionId: sessionIdRef.current ?? undefined,
-            roomName: roomNameRef.current ?? undefined,
-            participantIdentity,
-            error,
-            meta: {
-              speaker,
-              segmentId: segment.id,
-              status,
-            },
-          })
-        })
 
         if (status === 'final' && segment.text.trim()) {
           const endedAtMs = segment.endTime || null
@@ -444,6 +397,5 @@ export function useInterviewRoomEvents({
     setConnectionError,
     setSession,
     setView,
-    upsertTranscriptSegment,
   ])
 }

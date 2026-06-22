@@ -7,7 +7,10 @@ import {
   createRequestId,
 } from '@/lib/interview/diagnostics'
 import { assertServerRateLimit } from '@/lib/http/server-rate-limit'
-import { createParticipantToken } from '@/lib/livekit/token'
+import {
+  createParticipantToken,
+  computeLivekitTokenTtlMinutes,
+} from '@/lib/livekit/token'
 import { validateProviderKeysForBootstrap } from '@/lib/agent/validate-provider-keys'
 import { bootstrapBodySchema } from '@/lib/validation/interview-api'
 import { serverEnv } from '@/lib/env/server'
@@ -113,6 +116,9 @@ export async function POST(request: NextRequest) {
         sessionId: session.sessionId,
         participantName,
       }),
+      tokenTtlMinutes: computeLivekitTokenTtlMinutes(
+        session.targetDurationMinutes
+      ),
       requestId,
     })
     logger.info({

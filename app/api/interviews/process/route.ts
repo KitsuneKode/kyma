@@ -5,19 +5,10 @@ import { fetchQuery } from 'convex/nextjs'
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import {
-  markAssessmentFailed,
-  markAssessmentProcessing,
-  processInterviewAssessment,
-} from '@/lib/assessment/process-session'
-import {
   createDiagnosticLogger,
   createRequestId,
 } from '@/lib/interview/diagnostics'
-import { inngest } from '@/inngest/client'
-import {
-  INTERVIEW_PROCESSING_REQUESTED_EVENT,
-  interviewProcessingEventId,
-} from '@/lib/inngest/events'
+import { runInterviewProcessingPipeline } from '@/lib/processing/run-interview-processing-pipeline'
 
 const bodySchema = z.object({
   sessionId: z.string(),
@@ -51,61 +42,39 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    await markAssessmentProcessing(typedSessionId)
+    const result = await runInterviewProcessingPipeline(typedSessionId)
 
-    try {
-      const result = await inngest.send({
-        id: interviewProcessingEventId(sessionId),
-        name: INTERVIEW_PROCESSING_REQUESTED_EVENT,
-        data: { sessionId },
-      })
+    logger.info({
+      event: result.fallback
+        ? 'processing.inline.completed'
+        : 'processing.enqueued',
+      detail: result.fallback
+        ? 'Interview processing completed inline after enqueue was unavailable.'
+        : 'Interview processing was queued in Inngest.',
+      sessionId,
+      meta: {
+        eventIds: result.eventIds,
+      },
+    })
 
-      logger.info({
-        event: 'processing.enqueued',
-        detail: 'Interview processing was queued in Inngest.',
-        sessionId,
-        meta: {
-          eventIds: result.ids,
-        },
-      })
-
-      return NextResponse.json({
-        ok: true,
-        queued: true,
-        eventIds: result.ids,
-      })
-    } catch (enqueueError) {
-      logger.warn({
-        event: 'processing.enqueue.failed',
-        detail:
-          'Unable to enqueue interview processing in Inngest. Falling back to inline processing.',
-        sessionId,
-        error: enqueueError,
-      })
-
-      const report = await processInterviewAssessment(typedSessionId, 'inline')
-
-      return NextResponse.json({
-        ok: true,
-        queued: false,
-        fallback: true,
-        skipped: report === null,
-        recommendation: report?.overallRecommendation,
-        confidence: report?.confidence,
-      })
-    }
+    return NextResponse.json({
+      ok: true,
+      queued: result.queued,
+      fallback: result.fallback,
+      eventIds: result.eventIds,
+    })
   } catch (error) {
     const message =
       error instanceof Error
         ? error.message
         : 'Unable to start interview processing.'
 
-    if (sessionIdForFailure) {
-      await markAssessmentFailed(
-        sessionIdForFailure as Id<'interviewSessions'>,
-        `Assessment processing could not be started: ${message}`
-      ).catch(() => null)
-    }
+    logger.error({
+      event: 'processing.failed',
+      detail: message,
+      sessionId: sessionIdForFailure,
+      error,
+    })
 
     return NextResponse.json({ error: message }, { status: 400 })
   }

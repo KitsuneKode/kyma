@@ -6,6 +6,7 @@ import { fetchMutation } from 'convex/nextjs'
 import { api } from '@/convex/_generated/api'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
 import type { DiagnosticLogger } from '@/lib/interview/diagnostics'
+import { resolveLivekitAgentName } from '@/lib/livekit/agent-name'
 import { runtimeEnv } from '@/lib/env/runtime'
 import { WORKER_HEARTBEAT_INTERVAL_MS } from '@/lib/agent/worker-liveness'
 
@@ -27,7 +28,7 @@ function createWorkerId() {
  */
 function startWorkerHeartbeat(logger: DiagnosticLogger) {
   const workerId = createWorkerId()
-  const agentName = runtimeEnv.LIVEKIT_AGENT_NAME ?? 'tutor-screener'
+  const agentName = resolveLivekitAgentName(runtimeEnv.LIVEKIT_AGENT_NAME)
   const version = process.env.npm_package_version
   let stopped = false
 
@@ -76,7 +77,7 @@ function createServerOptions() {
     event: 'worker.options.created',
     detail: 'Preparing LiveKit worker server options.',
     meta: {
-      agentName: runtimeEnv.LIVEKIT_AGENT_NAME ?? 'tutor-screener',
+      agentName: resolveLivekitAgentName(runtimeEnv.LIVEKIT_AGENT_NAME),
       wsUrlConfigured: Boolean(runtimeEnv.NEXT_PUBLIC_LIVEKIT_URL),
       apiKeyConfigured: Boolean(runtimeEnv.LIVEKIT_API_KEY),
       apiSecretConfigured: Boolean(runtimeEnv.LIVEKIT_API_SECRET),
@@ -84,7 +85,7 @@ function createServerOptions() {
   })
   return new ServerOptions({
     agent: agentFile,
-    agentName: runtimeEnv.LIVEKIT_AGENT_NAME ?? 'tutor-screener',
+    agentName: resolveLivekitAgentName(runtimeEnv.LIVEKIT_AGENT_NAME),
     wsURL: runtimeEnv.NEXT_PUBLIC_LIVEKIT_URL,
     apiKey: runtimeEnv.LIVEKIT_API_KEY,
     apiSecret: runtimeEnv.LIVEKIT_API_SECRET,
