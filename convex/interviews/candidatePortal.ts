@@ -2,6 +2,8 @@ import { ConvexError, v } from 'convex/values'
 
 import { mutation, query } from '../_generated/server'
 import { findUserByIdentity } from '../helpers/clerkIdentity'
+import { ensureSystemJsJuniorTemplate } from '../helpers/systemTemplates'
+import { SYSTEM_ORG_ID } from '../../lib/interview/session-purpose'
 
 export const claimCandidateInviteByToken = mutation({
   args: {
@@ -60,6 +62,70 @@ export const claimCandidateInviteByToken = mutation({
   },
 })
 
+export const createMockInterview = mutation({
+  args: {},
+  returns: v.object({
+    inviteToken: v.string(),
+  }),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new ConvexError('Sign in to try a mock interview.')
+    }
+
+    const user = await findUserByIdentity(ctx, identity)
+    if (!user) {
+      throw new ConvexError('User profile not found.')
+    }
+
+    const activeSessions = await ctx.db
+      .query('interviewSessions')
+      .withIndex('by_candidate_user', (q) => q.eq('candidateUserId', user._id))
+      .collect()
+
+    for (const session of activeSessions) {
+      if (
+        session.sessionPurpose !== 'mock' ||
+        ['processing', 'completed', 'failed'].includes(session.state)
+      ) {
+        continue
+      }
+
+      const invite = await ctx.db.get(session.inviteId)
+      if (
+        invite &&
+        invite.status !== 'completed' &&
+        invite.status !== 'expired'
+      ) {
+        return { inviteToken: invite.inviteToken }
+      }
+    }
+
+    const template = await ensureSystemJsJuniorTemplate(ctx)
+    const inviteToken = `mock-${user._id}-${Date.now().toString(36)}`
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
+
+    const inviteId = await ctx.db.insert('candidateInvites', {
+      orgId: SYSTEM_ORG_ID,
+      inviteToken,
+      sessionPurpose: 'mock',
+      candidateName: user.name ?? identity.name ?? 'Candidate',
+      candidateEmail: identity.email,
+      userId: user._id,
+      templateId: template._id,
+      status: 'created',
+      expiresAt,
+    })
+
+    const invite = await ctx.db.get(inviteId)
+    if (!invite) {
+      throw new ConvexError('Unable to create mock interview invite.')
+    }
+
+    return { inviteToken: invite.inviteToken }
+  },
+})
+
 export const linkCandidateInviteByEmail = mutation({
   args: {},
   handler: async (ctx) => {
@@ -71,10 +137,11 @@ export const linkCandidateInviteByEmail = mutation({
     if (!user) {
       return null
     }
+    const normalizedEmail = identity.email.trim().toLowerCase()
     const invites = await ctx.db
       .query('candidateInvites')
       .withIndex('by_candidate_email', (q) =>
-        q.eq('candidateEmail', identity.email)
+        q.eq('candidateEmail', normalizedEmail)
       )
       .collect()
     await Promise.all(
@@ -123,6 +190,7 @@ export const listCandidateInterviews = query({
         return {
           sessionId: session._id,
           inviteToken: invite?.inviteToken,
+          sessionPurpose: session.sessionPurpose ?? invite?.sessionPurpose,
           candidateName: invite?.candidateName,
           templateName: template?.name ?? 'Interview',
           status: session.state,

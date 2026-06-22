@@ -1,12 +1,13 @@
 import Link from 'next/link'
 
+import { CandidateMockInterviewButton } from '@/components/candidate/candidate-mock-interview-button'
 import { buttonVariants } from '@/components/ui/button'
 import { WorkspaceEmptyState } from '@/components/workspace/empty-state'
 import { cn } from '@/lib/utils'
 
 export function CandidateEmptyState({
-  title = 'No interviews linked yet',
-  description = 'If your recruiter sent an invite, open that link while signed in with the same email. Kyma will attach the interview to this dashboard automatically.',
+  title = 'No interviews yet',
+  description = 'Your recruiter will send a personal screening link. Open that invite while signed in with the invited email — Kyma links the interview here automatically once you start.',
 }: {
   title?: string
   description?: string
@@ -27,12 +28,7 @@ export function CandidateEmptyState({
           >
             Profile settings
           </Link>
-          <Link
-            href="/interviews/demo-invite"
-            className={cn(buttonVariants({ variant: 'ghost' }))}
-          >
-            Try demo interview
-          </Link>
+          <CandidateMockInterviewButton />
         </>
       }
     />
