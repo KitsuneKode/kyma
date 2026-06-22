@@ -13,4 +13,9 @@ export const convexEnv = createEnv({
   client: convexClientSchema,
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
+  // This shim is only ever imported by Convex backend functions, which always
+  // run server-side. Pin `isServer` so server vars resolve under runtimes whose
+  // global scope (e.g. the edge-runtime test VM) confuses t3-env's `window`
+  // heuristic.
+  isServer: true,
 })
