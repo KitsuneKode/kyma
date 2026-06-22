@@ -13,7 +13,7 @@ import {
 } from '@tabler/icons-react'
 
 import { BillboardMetric } from '@/components/admin/billboard-metric'
-import { PageHeader } from '@/components/admin/page-header'
+import { WorkspacePageHeader } from '@/components/workspace/page-header'
 import { formatStatusLabel, formatDateTime } from '@/lib/recruiter/format'
 import type { DashboardSummary } from '@/lib/recruiter/types'
 
@@ -32,10 +32,10 @@ export function PremiumRecruiterDashboard({
 }) {
   return (
     <div className="flex w-full flex-col gap-12 py-6">
-      <PageHeader
-        eyebrow="Recruiter Operations"
-        title="Command Center"
-        description="High-fidelity overview of active screening batches and human-in-the-loop decisions."
+      <WorkspacePageHeader
+        eyebrow="Recruiter operations"
+        title="Command center"
+        description="Active batches, pending reviews, and sessions that need your attention."
       />
 
       <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -75,7 +75,7 @@ export function PremiumRecruiterDashboard({
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4, duration: 0.5 }}
-          className="rounded-[2rem] border border-amber-500/10 bg-amber-500/[0.03] p-8 shadow-2xl ring-1 ring-amber-500/5 backdrop-blur-xl"
+          className="rounded-[2rem] border border-amber-500/10 bg-amber-500/[0.03] p-8 shadow-[var(--shadow-md)] ring-1 ring-amber-500/5"
         >
           <div className="mb-8 flex items-center gap-3">
             <div className="flex size-8 items-center justify-center rounded-full bg-amber-500/10">

@@ -46,7 +46,28 @@ Use `components/workspace/` primitives:
 - Recruiter: sidebar + sticky org header (`app/(admin)/layout.tsx`)
 - Candidate: sidebar + sticky portal header (`app/(app)/candidate/layout.tsx`)
 
-## Candidate review page
+## Flow foundation (2026-06)
+
+### Recruiter intent
+
+Calm triage console — dense when reviewing, spacious on dashboard. Primary actions: review pending candidates, share invites, configure agents.
+
+### Candidate intent
+
+Reassuring portal — timeline rail shows progress without jargon. Invite lobby is cinematic (charcoal shell) but instructions stay plain.
+
+### Onboarding surfaces
+
+- `/recruiter/setup` — single card, no sidebar, no JWT/debug cards
+- `/auth/continue` — invisible redirect only
+
+### Elevation tokens
+
+Use `shadow-[var(--shadow-sm)]` / `shadow-[var(--shadow-md)]` on workspace cards. Interview lobby may use ring-1 `ring-white/10` on charcoal panels.
+
+### Motion
+
+Dashboard metrics: staggered fade-in (`delay` 0.1 steps). Avoid bounce on operational UI.
 
 Route: `/recruiter/candidates/[sessionId]` via `CandidateReviewWorkspace`.
 
