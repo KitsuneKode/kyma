@@ -1,56 +1,42 @@
 import Link from 'next/link'
 import { cacheLife } from 'next/cache'
+import { IconArrowLeft, IconLayoutDashboard } from '@tabler/icons-react'
+
 import { Button } from '@/components/ui/button'
-import { Logo } from '@/components/marketing/logo'
-import { IconSearch } from '@tabler/icons-react'
+import { ErrorScreen } from '@/components/errors/error-screen'
 
 export default async function NotFound() {
   'use cache'
   cacheLife('hours')
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-background">
-      <div className="pointer-events-none absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl" />
-      <header className="flex h-20 items-center px-6 md:px-12">
-        <Link href="/" className="transition-opacity hover:opacity-80">
-          <Logo className="h-6 w-auto" />
-        </Link>
-      </header>
-
-      <main className="relative z-10 flex flex-1 flex-col items-center justify-center p-6 text-center">
-        <div className="flex h-20 w-20 animate-in items-center justify-center rounded-3xl bg-muted/30 shadow-lg ring-1 ring-border/50 duration-300 fade-in-0 zoom-in-95">
-          <IconSearch className="h-8 w-8 text-muted-foreground" />
-        </div>
-
-        <h1 className="mt-8 animate-in text-5xl font-semibold tracking-tight text-balance duration-300 fade-in-0 slide-in-from-bottom-2 md:text-6xl lg:text-7xl">
-          Page not found
-        </h1>
-
-        <p className="mt-6 max-w-md animate-in text-lg leading-relaxed text-pretty text-muted-foreground duration-300 fade-in-0 slide-in-from-bottom-2">
-          The page you are looking for doesn't exist or has been moved. Check
-          the URL or return home.
-        </p>
-
-        <div className="mt-10 flex animate-in flex-wrap items-center justify-center gap-4 duration-300 fade-in-0 slide-in-from-bottom-2">
+    <ErrorScreen
+      code="Error 404"
+      title="Page not found"
+      description="The page you are looking for doesn't exist or has been moved. Check the URL, or head back to a place you know."
+      actions={
+        <>
           <Button
             size="lg"
-            className="rounded-full px-8 text-base shadow-sm transition-transform"
+            className="h-11 rounded-full px-7 text-base shadow-sm"
             render={<Link href="/" />}
             nativeButton={false}
           >
-            Return to homepage
+            <IconArrowLeft />
+            Return home
           </Button>
           <Button
             variant="outline"
             size="lg"
-            className="rounded-full px-8 text-base ring-1 ring-border/40 transition-transform hover:bg-muted/30"
+            className="h-11 rounded-full px-7 text-base ring-1 ring-border/40"
             render={<Link href="/recruiter" />}
             nativeButton={false}
           >
-            Go to Recruiter Hub
+            <IconLayoutDashboard />
+            Recruiter hub
           </Button>
-        </div>
-      </main>
-    </div>
+        </>
+      }
+    />
   )
 }
