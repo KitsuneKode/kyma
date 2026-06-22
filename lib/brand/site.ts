@@ -1,14 +1,4 @@
-const DEFAULT_SITE_URL = 'https://kyma.kitsunelabs.xyz'
-
-export function getSiteUrl(): string {
-  const fromEnv =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '')}`
-      : undefined)
-
-  return fromEnv ?? DEFAULT_SITE_URL
-}
+export { getSiteUrl } from '@/lib/brand/site-url'
 
 export const brand = {
   name: 'Kyma',
