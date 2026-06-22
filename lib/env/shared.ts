@@ -36,7 +36,6 @@ export const serverSchema = {
   LIVEKIT_RECORDING_STORAGE_REGION: z.string().min(1).optional(),
   LIVEKIT_RECORDING_STORAGE_ACCESS_KEY: z.string().min(1).optional(),
   LIVEKIT_RECORDING_STORAGE_SECRET_KEY: z.string().min(1).optional(),
-  KYMA_ENABLE_DEMO_INVITE: z.enum(['0', '1']).optional(),
   KYMA_REVIEW_CHAT_MODEL: z.string().min(1).optional(),
   KYMA_SCORING_MODEL: z.string().min(1).optional(),
   KYMA_PROCESSING_WRITE_KEY: z.string().min(1).optional(),
@@ -50,6 +49,10 @@ export const serverSchema = {
   INNGEST_APP_ID: z.string().min(1).optional(),
   INNGEST_EVENT_KEY: z.string().min(1).optional(),
   INNGEST_SIGNING_KEY: z.string().min(1).optional(),
+  // Inngest event ingestion base URL. Defaults to the cloud endpoint
+  // (https://inn.gs); override for the local dev server (http://localhost:8288)
+  // when enqueueing from the Convex runtime, which cannot bundle the SDK.
+  INNGEST_EVENT_API_BASE_URL: z.url().optional(),
   PLAYWRIGHT_BASE_URL: z.url().optional(),
   PLAYWRIGHT_SKIP_WEBSERVER: z.string().min(1).optional(),
   CI: z.string().min(1).optional(),
@@ -70,10 +73,13 @@ export const convexServerSchema = {
   KYMA_PROCESSING_WRITE_KEY: serverSchema.KYMA_PROCESSING_WRITE_KEY,
   KYMA_ENCRYPTION_KEY: serverSchema.KYMA_ENCRYPTION_KEY,
   KYMA_ADMIN_EMAILS: serverSchema.KYMA_ADMIN_EMAILS,
-  KYMA_ENABLE_DEMO_INVITE: serverSchema.KYMA_ENABLE_DEMO_INVITE,
   CLERK_SECRET_KEY: serverSchema.CLERK_SECRET_KEY,
   CLERK_FRONTEND_API_URL: serverSchema.CLERK_FRONTEND_API_URL,
   CLERK_JWT_ISSUER_DOMAIN: serverSchema.CLERK_JWT_ISSUER_DOMAIN,
+  // Post-call processing is owned by Inngest; the Convex finalize path enqueues
+  // via the Inngest event API since the SDK cannot run in the Convex runtime.
+  INNGEST_EVENT_KEY: serverSchema.INNGEST_EVENT_KEY,
+  INNGEST_EVENT_API_BASE_URL: serverSchema.INNGEST_EVENT_API_BASE_URL,
 } as const
 
 export const convexClientSchema = {

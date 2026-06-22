@@ -52,8 +52,9 @@ Public persona pages for programmatic SEO and audience-specific positioning:
 ## Demo and access
 
 - Public site: [https://kyma.kitsunelabs.xyz](https://kyma.kitsunelabs.xyz)
-- Local test route: `/interviews/demo-invite`
-- In production, `demo-invite` is disabled by default unless `KYMA_ENABLE_DEMO_INVITE=1`.
+- Candidates start an auth-gated mock interview from the candidate portal
+  (`/candidate`), which provisions an invite via `createMockInterview`. There is
+  no unauthenticated public demo token.
 
 ### Product walkthrough media
 
@@ -144,7 +145,6 @@ Set these in `.env.local`:
 
 Optional/advanced:
 
-- `KYMA_ENABLE_DEMO_INVITE` (`1` to allow `demo-invite` in production)
 - `LIVEKIT_AGENT_NAME`
 - `LIVEKIT_AGENT_STT_MODEL`
 - `LIVEKIT_AGENT_LLM_MODEL`
