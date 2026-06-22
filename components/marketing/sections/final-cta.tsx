@@ -9,11 +9,11 @@ export function MarketingFinalCta() {
       />
       <div className="mx-auto max-w-5xl px-6 text-center">
         <h2 className="font-serif text-4xl font-medium tracking-tight text-balance sm:text-5xl md:text-6xl">
-          Ready to screen with evidence?
+          Screen your next tutor with evidence
         </h2>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-pretty text-muted-foreground">
-          Start in the recruiter workspace, or preview the candidate interview
-          path your hires will experience.
+          Start in the recruiter workspace, or walk the live interview your
+          tutor candidates will experience.
         </p>
 
         <MarketingDualPathwayCards className="mt-10" />

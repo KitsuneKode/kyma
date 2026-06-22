@@ -13,17 +13,17 @@ const pathways = [
     id: 'for-recruiters',
     icon: IconBriefcase,
     featured: true,
-    title: 'For recruiters & hiring teams',
+    title: 'For recruiting & talent teams',
     description:
-      'Run structured screenings at scale. Review candidates with transcript-backed evidence instead of impressions, with queue clarity and policy controls built in.',
+      'Screen tutors at scale and decide from evidence, not impressions. Every candidate arrives with a scored teaching rubric and transcript citations you can audit.',
     points: [
-      'Screening batches with explicit invite and retry policy',
-      'Reusable templates for consistent assessment structure',
-      'Needs-attention-first recruiter home',
-      'Evidence-linked recommendations and reviewer notes',
+      'Tutor rubric: clarity, simplification, patience, warmth, and more',
+      'Transcript-cited evidence behind every recommendation',
+      'Needs-attention-first queue with manual review and overrides',
+      'Reusable templates and invite policy per hiring cohort',
     ],
     primaryCta: {
-      label: 'Get started as recruiter',
+      label: 'Open recruiter workspace',
       href: signUpPath('recruiter'),
     },
     secondaryCta: {
@@ -36,17 +36,17 @@ const pathways = [
     id: 'for-candidates',
     icon: IconUser,
     featured: false,
-    title: 'For candidates',
+    title: 'For tutor candidates',
     description:
-      'A focused, respectful interview experience. Candidates join from any device via invite link and complete a guided live session with clear expectations.',
+      'A focused, respectful screening. Tutors join from any device via invite link and walk through a guided live interview, including a short teaching simulation.',
     points: [
-      'Invite-link entry with clear access state',
-      'Device check before joining the interview',
-      'Structured interview flow with transparent expectations',
+      'Invite-link entry with a clear access state',
+      'Device and audio check before the interview starts',
+      'A guided conversation, then a real teaching simulation',
       'Reliable transcript capture throughout the session',
     ],
     primaryCta: {
-      label: 'Try demo interview',
+      label: 'Try the candidate flow',
       href: '/interviews/demo-invite',
     },
     secondaryCta: {
@@ -72,7 +72,7 @@ const STAGGER_VARIANTS = {
 export function MarketingRolePathways() {
   return (
     <section
-      id="role-pathways"
+      id="what-you-review"
       className="relative isolate scroll-mt-24 overflow-hidden bg-background pt-14 pb-24 md:scroll-mt-28 md:pt-16 md:pb-32"
     >
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_100%,hsla(0,0%,15%,0.3)_0,transparent_60%)]" />
@@ -80,14 +80,15 @@ export function MarketingRolePathways() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center">
           <p className="mb-4 text-sm font-semibold tracking-widest text-primary uppercase">
-            Role Pathways
+            Two roles, one workflow
           </p>
           <h2 className="font-serif text-[3rem] leading-[0.95] font-medium tracking-tighter text-balance text-foreground sm:text-[4rem]">
-            One platform, two clear paths
+            Built for recruiters, kind to candidates
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-pretty text-muted-foreground">
-            Recruitment teams operate the workspace. Candidates get a polished
-            interview experience through your invite links.
+            Your hiring team runs structured screenings and reviews the
+            evidence. Tutors get a calm, respectful interview through your
+            invite links.
           </p>
         </div>
 

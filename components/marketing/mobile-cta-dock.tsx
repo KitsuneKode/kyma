@@ -15,7 +15,7 @@ export function MobileCtaDock() {
             render={<Link href={signUpPath('recruiter')} />}
             nativeButton={false}
           >
-            Get started
+            Start screening
           </Button>
           <Button
             variant="outline"
@@ -23,7 +23,7 @@ export function MobileCtaDock() {
             render={<Link href="/interviews/demo-invite" />}
             nativeButton={false}
           >
-            Demo interview
+            Candidate flow
           </Button>
         </div>
       </div>

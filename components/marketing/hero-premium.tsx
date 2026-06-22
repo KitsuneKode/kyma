@@ -1,14 +1,14 @@
 'use client'
 
 import React, { useEffect } from 'react'
-import Image from 'next/image'
 import {
   IconMicrophone,
-  IconShieldCheck,
-  IconBrain,
+  IconClipboardCheck,
+  IconMessageHeart,
   IconClockPlay,
 } from '@tabler/icons-react'
 import { MarketingCtaRow } from '@/components/marketing/marketing-cta-row'
+import { ProductPreview } from '@/components/marketing/product-preview'
 import {
   motion,
   useMotionValue,
@@ -96,24 +96,7 @@ function HeroImageMockup() {
         transition={{ duration: 0.8, ease: [0.77, 0, 0.175, 1], delay: 0.4 }}
         className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-muted/10 p-2 shadow-2xl ring-1 ring-border/40 backdrop-blur-xl"
       >
-        <div className="relative overflow-hidden rounded-2xl ring-1 ring-border/20">
-          <Image
-            className="relative hidden w-full rounded-xl border border-border/40 object-cover dark:block"
-            src="/mockups/hero.png"
-            alt="Kyma recruiter dashboard showing candidate analysis"
-            width={2400}
-            height={1350}
-            priority
-          />
-          <Image
-            className="relative w-full rounded-xl border border-border/40 object-cover dark:hidden"
-            src="/mockups/hero.png"
-            alt="Kyma recruiter dashboard showing candidate analysis"
-            width={2400}
-            height={1350}
-            priority
-          />
-        </div>
+        <ProductPreview />
       </motion.div>
     </div>
   )
@@ -149,7 +132,7 @@ export function PremiumHero() {
           >
             <div className="group mx-auto flex w-fit cursor-default items-center gap-4 rounded-full border border-border/50 bg-muted/20 p-1 pl-4 shadow-sm backdrop-blur-md transition-colors duration-[200ms] ease-out hover:bg-muted/40">
               <span className="text-sm font-medium tracking-wide text-foreground uppercase">
-                AI interview screening for hiring teams
+                Live tutor screening for education teams
               </span>
               <span className="block h-4 w-px bg-border"></span>
 
@@ -172,7 +155,7 @@ export function PremiumHero() {
             as="h1"
             className="mx-auto mt-8 max-w-5xl text-[5rem] leading-[0.95] font-semibold tracking-tighter text-balance antialiased md:text-[6rem] lg:mt-12 xl:text-[7rem]"
           >
-            Hire with live interview evidence, not resume guesswork
+            Screen tutors on real teaching, not resumes
           </TextEffect>
           <TextEffect
             per="line"
@@ -182,9 +165,9 @@ export function PremiumHero() {
             as="p"
             className="mx-auto mt-8 max-w-3xl text-lg leading-relaxed text-pretty text-muted-foreground"
           >
-            Launch structured voice screenings, review transcript-backed
-            rubrics, and move candidates to decision faster—built for
-            recruitment teams running high-volume interviews.
+            Kyma runs a live, AI-led tutor interview and returns a structured,
+            evidence-backed review packet—so recruiting teams judge clarity,
+            patience, and teaching ability consistently, and decide faster.
           </TextEffect>
 
           <motion.div
@@ -204,31 +187,37 @@ export function PremiumHero() {
 
       <div className="mx-auto mt-24 max-w-7xl px-6 pb-24 md:mt-32 md:pb-32">
         <p className="mb-12 text-center text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-          Built for high-signal hiring decisions
+          What every screening captures
         </p>
         <div className="grid grid-cols-2 items-center justify-items-center gap-8 opacity-70 transition-[opacity] duration-200 ease-out hover:opacity-100 md:grid-cols-4">
           <div className="flex flex-col items-center gap-3 text-center">
-            <IconShieldCheck className="h-8 w-8 text-foreground" stroke={1.5} />
+            <IconMicrophone className="h-8 w-8 text-foreground" stroke={1.5} />
             <span className="text-sm font-medium text-balance">
-              Policy-controlled invites
+              Live teaching simulation
             </span>
           </div>
           <div className="flex flex-col items-center gap-3 text-center">
-            <IconBrain className="h-8 w-8 text-foreground" stroke={1.5} />
+            <IconClipboardCheck
+              className="h-8 w-8 text-foreground"
+              stroke={1.5}
+            />
             <span className="text-sm font-medium text-balance">
-              Structured rubrics
+              Tutor-specific rubric
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <IconMessageHeart
+              className="h-8 w-8 text-foreground"
+              stroke={1.5}
+            />
+            <span className="text-sm font-medium text-balance">
+              Transcript-cited evidence
             </span>
           </div>
           <div className="flex flex-col items-center gap-3 text-center">
             <IconClockPlay className="h-8 w-8 text-foreground" stroke={1.5} />
             <span className="text-sm font-medium text-balance">
-              Faster recruiter triage
-            </span>
-          </div>
-          <div className="flex flex-col items-center gap-3 text-center">
-            <IconMicrophone className="h-8 w-8 text-foreground" stroke={1.5} />
-            <span className="text-sm font-medium text-balance">
-              Transcript-backed review
+              Faster, defensible decisions
             </span>
           </div>
         </div>

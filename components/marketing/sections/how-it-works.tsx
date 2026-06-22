@@ -128,9 +128,9 @@ function ReviewMock() {
   return (
     <div className="mt-8 space-y-3">
       {[
-        { score: 4.5, label: 'Communication', color: 'bg-emerald-400' },
-        { score: 4.0, label: 'Problem Solving', color: 'bg-emerald-400' },
-        { score: 3.5, label: 'Concept Clarity', color: 'bg-amber-400' },
+        { score: 4.5, label: 'Clarity', color: 'bg-emerald-400' },
+        { score: 4.0, label: 'Patience', color: 'bg-emerald-400' },
+        { score: 3.5, label: 'Simplification', color: 'bg-amber-400' },
       ].map((item, i) => (
         <motion.div
           key={item.label}
@@ -193,11 +193,11 @@ export function MarketingHowItWorks() {
             The Workflow
           </p>
           <h2 className="font-serif text-[3rem] leading-[0.95] font-medium tracking-tighter text-balance sm:text-[4rem]">
-            How it works
+            Invite, screen, decide
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-pretty text-muted-foreground">
-            A recruiter-ready flow from screening setup to evidence-backed
-            decisions.
+            Three steps from sending an invite to an evidence-backed tutor
+            decision—no scheduling, no inconsistent first-round calls.
           </p>
         </motion.div>
 
@@ -224,12 +224,12 @@ export function MarketingHowItWorks() {
                   <StepBadge number={1} />
                 </div>
                 <h3 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                  Create a screening batch
+                  Invite tutors to a screening
                 </h3>
                 <p className="mt-4 text-lg text-pretty text-muted-foreground">
-                  Recruiters launch an invite-only screening batch with
-                  template, expiry, and attempt policy set up front. No
-                  unbounded retries, no stale links.
+                  Launch an invite-only screening from a reusable template, with
+                  expiry and attempt policy set up front. Send candidates a
+                  single link—no scheduling, no stale invites.
                 </p>
               </div>
               <div className="relative">
@@ -252,11 +252,11 @@ export function MarketingHowItWorks() {
                 <StepBadge number={2} />
               </div>
               <h3 className="text-2xl font-semibold tracking-tight text-foreground">
-                Live interview capture
+                Live tutor interview
               </h3>
               <p className="mt-3 text-pretty text-muted-foreground">
-                Candidates join from their invite link and complete a structured
-                real-time voice interview.
+                Tutors complete a structured, AI-led voice interview—including a
+                short teaching simulation that surfaces real teaching ability.
               </p>
               <InterviewMock />
             </div>
@@ -275,11 +275,11 @@ export function MarketingHowItWorks() {
                 <StepBadge number={3} />
               </div>
               <h3 className="text-2xl font-semibold tracking-tight text-foreground">
-                Review and decide
+                Review the evidence
               </h3>
               <p className="mt-3 text-pretty text-muted-foreground">
-                Recruiters triage sessions using rubric scores and transcript
-                evidence.
+                Triage each tutor with rubric scores and the transcript quotes
+                behind them, then confirm or override the recommendation.
               </p>
               <ReviewMock />
             </div>

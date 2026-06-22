@@ -55,7 +55,7 @@ export function MarketingCtaRow({
           render={<Link href={signUpPath('recruiter')} />}
           nativeButton={false}
         >
-          <span className="text-nowrap">Get started as recruiter</span>
+          <span className="text-nowrap">Start screening tutors</span>
         </Button>
       </div>
       <Button
@@ -68,7 +68,7 @@ export function MarketingCtaRow({
         render={<Link href="/interviews/demo-invite" />}
         nativeButton={false}
       >
-        <span className="text-nowrap">Try demo interview</span>
+        <span className="text-nowrap">Try the candidate flow</span>
       </Button>
 
       {isHero ? (

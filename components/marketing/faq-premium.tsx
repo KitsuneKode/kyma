@@ -10,28 +10,34 @@ import {
 
 const faqs = [
   {
-    id: 'session-look',
-    question: 'What does a typical screening session look like?',
+    id: 'replace-recruiters',
+    question: 'Does Kyma replace recruiters?',
     answer:
-      'Most sessions run around 15 to 20 minutes. Candidates complete a prejoin device check, join the live interviewer, and are evaluated against a structured rubric your team defines.',
+      'No. Kyma runs a consistent first-round screening and surfaces evidence, but the hire/no-hire decision always stays with your team. Borderline tutors are flagged for manual review, and recruiters can override any recommendation.',
   },
   {
-    id: 'invite-retries',
-    question: 'How do invite links and retries work?',
+    id: 'what-signals',
+    question: 'What does Kyma evaluate in a tutor?',
     answer:
-      'Recruiters control this through screening batch policy. You can set expiry windows and attempt limits, and optionally allow resume behavior for disconnects before final submission.',
+      'Each session scores tutor-specific teaching signals—clarity, simplification, patience, warmth, listening, fluency, adaptability, engagement, and accuracy—using a live conversation and a short teaching simulation rather than a resume.',
   },
   {
     id: 'trust-recommendation',
     question: 'How do recruiters trust the recommendation?',
     answer:
-      'Recommendations are grounded in transcript evidence and rubric dimensions. Reviewers can inspect session details, notes, and citations before taking the final decision.',
+      'Every rubric score is grounded in transcript quotes with timestamps. Reviewers can read the evidence, the rationale, and the full session before confirming or overriding the recommendation.',
   },
   {
-    id: 'standardize-roles',
-    question: 'Can we standardize different role types or cohorts?',
+    id: 'candidate-experience',
+    question: 'What does the candidate experience feel like?',
     answer:
-      'Yes. Screening Templates define repeatable interview structures, while Screening Batches let you apply policy and candidate lists per hiring cohort.',
+      'Tutors join from any device via a single invite link, pass a quick device check, and complete a calm, guided live interview in about 15 to 20 minutes—no scheduling back-and-forth.',
+  },
+  {
+    id: 'invite-retries',
+    question: 'How do invites and access control work?',
+    answer:
+      'Recruiters control this through screening policy: invite-only access, expiry windows, and attempt limits, with optional resume on disconnect before final submission. Access is scoped to your organization.',
   },
 ]
 
@@ -44,8 +50,8 @@ export function PremiumFaq() {
             Frequently Asked Questions
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Practical answers for teams moving from manual calls to structured
-            screening.
+            Practical answers for teams moving from inconsistent first-round
+            calls to structured tutor screening.
           </p>
         </div>
 

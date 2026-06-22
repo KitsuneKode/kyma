@@ -26,8 +26,8 @@ export function MarketingDualPathwayCards({
           For hiring teams
         </p>
         <p className="mt-2 flex-1 text-sm text-pretty text-muted-foreground">
-          Screening batches, review queue, templates, and evidence-backed
-          decisions in one workspace.
+          Screenings, review queue, tutor rubric, and evidence-backed decisions
+          in one workspace.
         </p>
         <div className="mt-6">
           <Button
@@ -36,7 +36,7 @@ export function MarketingDualPathwayCards({
             render={<Link href={signUpPath('recruiter')} />}
             nativeButton={false}
           >
-            Get started as recruiter
+            Start screening tutors
           </Button>
         </div>
         <p className="mt-4 border-t border-border/40 pt-4 text-sm text-muted-foreground">
@@ -54,8 +54,8 @@ export function MarketingDualPathwayCards({
           Candidate experience
         </p>
         <p className="mt-2 flex-1 text-sm text-pretty text-muted-foreground">
-          See the live interview flow exactly as candidates do before you send
-          invites.
+          Walk the live interview exactly as a tutor would, before you send a
+          single invite.
         </p>
         <div className="mt-6">
           <Button
@@ -68,7 +68,7 @@ export function MarketingDualPathwayCards({
             render={<Link href="/interviews/demo-invite" />}
             nativeButton={false}
           >
-            Try demo interview
+            Try the candidate flow
           </Button>
         </div>
         <p className="mt-4 border-t border-border/40 pt-4 text-sm text-muted-foreground">

@@ -15,12 +15,8 @@ import { cn } from '@/lib/utils'
 
 const menuItems = [
   { id: 'how-it-works', name: 'How it works', href: '#how-it-works' },
-  { id: 'for-recruiters', name: 'For recruiters', href: '#for-recruiters' },
-  {
-    id: 'for-candidates',
-    name: 'Candidate experience',
-    href: '#for-candidates',
-  },
+  { id: 'what-you-review', name: 'What you review', href: '#what-you-review' },
+  { id: 'trust', name: 'Trust & control', href: '#trust' },
 ] as const
 
 function subscribeToHash(onStoreChange: () => void) {
@@ -162,7 +158,7 @@ export const HeroHeader = ({ clerkEnabled }: { clerkEnabled: boolean }) => {
                         render={<Link href={signUpPath('recruiter')} />}
                         nativeButton={false}
                       >
-                        <span>Get started</span>
+                        <span>Start screening</span>
                       </Button>
                     </Show>
                     <Show when="signed-in">

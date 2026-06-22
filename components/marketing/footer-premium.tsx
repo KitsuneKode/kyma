@@ -16,8 +16,8 @@ export function PremiumFooter() {
               <Logo className="h-8 w-auto" />
             </Link>
             <p className="mt-6 max-w-xs text-sm leading-relaxed text-pretty text-muted-foreground">
-              Structured live interviews and evidence-backed review for
-              recruitment teams. Hire with confidence, not guesswork.
+              Live tutor screening and evidence-backed review for education
+              teams. Hire on real teaching ability, not guesswork.
             </p>
           </div>
 
@@ -31,15 +31,23 @@ export function PremiumFooter() {
                   href="#how-it-works"
                   className="transition-colors hover:text-foreground"
                 >
-                  Features
+                  How it works
                 </Link>
               </li>
               <li>
                 <Link
-                  href="#how-it-works"
+                  href="#what-you-review"
                   className="transition-colors hover:text-foreground"
                 >
-                  How it Works
+                  What you review
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="#trust"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Trust &amp; control
                 </Link>
               </li>
               <li>

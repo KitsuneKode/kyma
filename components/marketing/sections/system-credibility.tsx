@@ -10,28 +10,28 @@ import {
 
 const features = [
   {
-    icon: IconShieldCheck,
-    title: 'Invite-gated access',
-    description:
-      'Single-use invite flows and explicit access states reduce accidental exposure and keep interview entry controlled.',
-  },
-  {
     icon: IconListDetails,
-    title: 'Reviewable scoring',
+    title: 'Evidence, not a black box',
     description:
-      'Structured rubric outcomes are tied back to transcript context so teams can audit how each recommendation was formed.',
-  },
-  {
-    icon: IconDatabase,
-    title: 'Durable realtime records',
-    description:
-      'Session events and transcript artifacts persist across reconnects, so recruiter review is never blocked by transient call issues.',
+      'Every rubric score links back to transcript quotes and timestamps, so your team can audit exactly how each recommendation was formed.',
   },
   {
     icon: IconUserScan,
-    title: 'Human decision authority',
+    title: 'Recruiters stay in control',
     description:
-      'AI assists triage speed, but recruiter decisions stay in the loop with notes, overrides, and full context.',
+      'Kyma accelerates the first round and flags borderline tutors for manual review. The final hire/no-hire decision always stays with your team.',
+  },
+  {
+    icon: IconShieldCheck,
+    title: 'Invite-gated access',
+    description:
+      'Single-use invite flows and explicit access states keep interview entry controlled and candidate data scoped to your organization.',
+  },
+  {
+    icon: IconDatabase,
+    title: 'Durable session records',
+    description:
+      'Transcript and session artifacts persist across reconnects and drops, so review and replay are never blocked by a flaky call.',
   },
 ]
 
@@ -59,14 +59,21 @@ const staggerItem = {
 
 export function MarketingSystemCredibility() {
   return (
-    <section className="relative isolate bg-background py-24">
+    <section
+      id="trust"
+      className="relative isolate scroll-mt-24 bg-background py-24 md:scroll-mt-28"
+    >
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center">
+          <p className="mb-4 text-sm font-semibold tracking-widest text-primary uppercase">
+            Trust &amp; control
+          </p>
           <h2 className="text-[3rem] leading-[0.95] font-semibold tracking-tighter text-balance text-foreground sm:text-[4rem]">
-            Built for hiring reliability
+            Serious enough to hire on
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-pretty text-muted-foreground">
-            Premium candidate experience, with operator-grade review controls.
+            A premium candidate experience, with the auditability and human
+            oversight a hiring decision demands.
           </p>
         </div>
 
