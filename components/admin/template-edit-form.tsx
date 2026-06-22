@@ -6,7 +6,19 @@ import { useRouter } from 'next/navigation'
 
 import { api } from '@/convex/_generated/api'
 import type { Doc, Id } from '@/convex/_generated/dataModel'
+import { ModelStageForm } from '@/components/providers/model-stage-form'
 import { Button } from '@/components/ui/button'
+import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
+
+function toModelOverrides(template: Doc<'assessmentTemplates'>) {
+  return {
+    stt: template.modelOverrides?.stt ?? '',
+    llm: template.modelOverrides?.llm ?? '',
+    tts: template.modelOverrides?.tts ?? '',
+    reviewChat: template.modelOverrides?.reviewChat ?? '',
+    scoring: template.modelOverrides?.scoring ?? '',
+  }
+}
 
 export function TemplateEditForm({
   template,
@@ -15,12 +27,19 @@ export function TemplateEditForm({
 }) {
   const router = useRouter()
   const updateTemplate = useMutation(api.admin.updateAssessmentTemplate)
+  const { data: workspaceSettings } = useAuthenticatedQuery(
+    api.admin.getWorkspaceSettings,
+    {}
+  )
   const [name, setName] = useState(template.name)
   const [systemPrompt, setSystemPrompt] = useState(template.systemPrompt ?? '')
   const [childPersonaPrompt, setChildPersonaPrompt] = useState(
     template.childPersonaPrompt ?? ''
   )
   const [wrapUpPrompt, setWrapUpPrompt] = useState(template.wrapUpPrompt ?? '')
+  const [modelOverrides, setModelOverrides] = useState(
+    toModelOverrides(template)
+  )
   const [saving, setSaving] = useState(false)
   const [saveState, setSaveState] = useState<string | null>(null)
 
@@ -35,6 +54,13 @@ export function TemplateEditForm({
         systemPrompt: systemPrompt.trim() || undefined,
         childPersonaPrompt: childPersonaPrompt.trim() || undefined,
         wrapUpPrompt: wrapUpPrompt.trim() || undefined,
+        modelOverrides: {
+          stt: modelOverrides.stt.trim() || undefined,
+          llm: modelOverrides.llm.trim() || undefined,
+          tts: modelOverrides.tts.trim() || undefined,
+          reviewChat: modelOverrides.reviewChat.trim() || undefined,
+          scoring: modelOverrides.scoring.trim() || undefined,
+        },
       })
       setSaveState('Saved')
       router.refresh()
@@ -46,6 +72,16 @@ export function TemplateEditForm({
       setSaving(false)
     }
   }
+
+  const workspaceDefaults = workspaceSettings?.defaultModels
+    ? {
+        stt: workspaceSettings.defaultModels.stt ?? '',
+        llm: workspaceSettings.defaultModels.llm ?? '',
+        tts: workspaceSettings.defaultModels.tts ?? '',
+        reviewChat: workspaceSettings.defaultModels.reviewChat ?? '',
+        scoring: workspaceSettings.defaultModels.scoring ?? '',
+      }
+    : undefined
 
   return (
     <form onSubmit={handleSave} className="space-y-4">
@@ -97,6 +133,33 @@ export function TemplateEditForm({
             className="w-full rounded-xl border border-border/60 bg-background px-3 py-2"
           />
         </label>
+      </div>
+
+      <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+        <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+          Model overrides
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Leave a stage on inherit to use workspace defaults. Overrides apply to
+          live interviews, scoring, and recruiter review chat for sessions using
+          this template.
+        </p>
+        <ModelStageForm
+          values={modelOverrides}
+          onChange={(next) =>
+            setModelOverrides({
+              stt: next.stt ?? '',
+              llm: next.llm ?? '',
+              tts: next.tts ?? '',
+              reviewChat: next.reviewChat ?? '',
+              scoring: next.scoring ?? '',
+            })
+          }
+          providerKeys={workspaceSettings?.providerKeys}
+          inheritLabel="Inherit workspace default"
+          showEffectiveSummary
+          workspaceDefaults={workspaceDefaults}
+        />
       </div>
 
       <div className="flex items-center gap-3">
