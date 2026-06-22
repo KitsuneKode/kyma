@@ -6,7 +6,10 @@ import { api } from '@/convex/_generated/api'
 import { serverEnv } from '@/lib/env/server'
 import { clientEnv } from '@/lib/env/client'
 import { hasLivekitRecordingConfig } from '@/lib/livekit/recording'
-import { providerFromModelId } from '@/lib/providers/resolve-model'
+import {
+  providerFromModelId,
+  resolveStageModels,
+} from '@/lib/providers/resolve-model'
 import { classifyWorkerLiveness } from '@/lib/agent/worker-liveness'
 
 export type HealthCheckStatus = 'ok' | 'warn' | 'error' | 'unknown'
@@ -225,16 +228,19 @@ export async function collectPlatformHealthChecks(): Promise<HealthCheck[]> {
         ? 'KYMA_ENCRYPTION_KEY configured for provider keys.'
         : 'Required before storing org provider keys.',
     },
-    {
-      id: 'agent-models',
-      label: 'Agent models',
-      status:
-        isSet(serverEnv.LIVEKIT_AGENT_LLM_MODEL) ||
-        isSet(serverEnv.LIVEKIT_AGENT_STT_MODEL)
-          ? 'ok'
-          : 'warn',
-      detail: `STT: ${serverEnv.LIVEKIT_AGENT_STT_MODEL ?? 'deepgram/nova-3 (default)'} · LLM: ${serverEnv.LIVEKIT_AGENT_LLM_MODEL ?? 'openai/gpt-4.1-mini (default)'} · Realtime: ${serverEnv.KYMA_AGENT_REALTIME_PROVIDER ?? 'cascade'}`,
-    },
+    (() => {
+      const resolved = resolveStageModels({})
+      return {
+        id: 'agent-models',
+        label: 'Agent models',
+        status:
+          isSet(serverEnv.LIVEKIT_AGENT_LLM_MODEL) ||
+          isSet(serverEnv.LIVEKIT_AGENT_STT_MODEL)
+            ? 'ok'
+            : 'warn',
+        detail: `STT: ${resolved.stt} · LLM: ${resolved.llm} · TTS: ${resolved.tts} · Scoring: ${resolved.scoring} · Review: ${resolved.reviewChat} · Realtime: ${serverEnv.KYMA_AGENT_REALTIME_PROVIDER ?? 'cascade'}`,
+      }
+    })(),
     {
       id: 'agent-dispatch',
       label: 'Agent dispatch',
