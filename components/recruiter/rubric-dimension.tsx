@@ -4,15 +4,10 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { IconChevronDown } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
+import { formatTime } from '@/lib/format/time'
 import { formatDimensionLabel } from '@/lib/recruiter/format'
+import { scoreColor } from '@/lib/ui/score-format'
 import { EvidenceCard } from './evidence-card'
-
-function scoreColor(score: number) {
-  if (score <= 2.0) return 'bg-red-500/15 text-red-300'
-  if (score <= 3.0) return 'bg-amber-500/15 text-amber-300'
-  if (score <= 4.0) return 'bg-emerald-500/10 text-emerald-300'
-  return 'bg-emerald-500/20 text-emerald-300 font-bold'
-}
 
 type DimensionEvidence = {
   id: string
@@ -31,13 +26,6 @@ type RubricDimensionProps = {
   onSelect: () => void
   onJumpToTime?: (sec: number) => void
   variant?: 'card' | 'flat'
-}
-
-function formatTime(seconds: number) {
-  if (!Number.isFinite(seconds) || seconds < 0) return '00:00'
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
 export function RubricDimension({

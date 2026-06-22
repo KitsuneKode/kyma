@@ -57,6 +57,12 @@ const NAV_ITEMS = [
     icon: IconSettings,
     exact: false,
   },
+  {
+    title: 'Platform health',
+    url: '/recruiter/health',
+    icon: IconSettings,
+    exact: true,
+  },
 ]
 
 export function AppSidebar({

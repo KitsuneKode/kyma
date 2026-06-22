@@ -12,6 +12,7 @@ import {
   formatRecommendationLabel,
   formatStatusLabel,
 } from '@/lib/recruiter/format'
+import { scoreColor } from '@/lib/ui/score-format'
 import { cn } from '@/lib/utils'
 
 type CandidateRow = {
@@ -36,14 +37,6 @@ const RECOMMENDATION_FILTERS = [
   'mixed',
   'no',
 ] as const
-
-function scoreChipColor(score?: number) {
-  if (score === undefined) return 'bg-muted/30 text-muted-foreground'
-  if (score <= 2.0) return 'bg-red-500/15 text-red-300'
-  if (score <= 3.0) return 'bg-amber-500/15 text-amber-300'
-  if (score <= 4.0) return 'bg-emerald-500/10 text-emerald-300'
-  return 'bg-emerald-500/20 text-emerald-300 font-bold'
-}
 
 function statusPillColor(status: string) {
   switch (status) {
@@ -117,7 +110,7 @@ export function CandidatesTable({ data }: { data: CandidateRow[] }) {
           <span
             className={cn(
               'rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums',
-              scoreChipColor(row.original.weightedScore)
+              scoreColor(row.original.weightedScore)
             )}
           >
             {typeof row.original.weightedScore === 'number'

@@ -1,14 +1,4 @@
-const DIMENSION_LABELS: Record<string, string> = {
-  clarity: 'Clarity',
-  simplification: 'Simplification',
-  patience: 'Patience',
-  warmth: 'Warmth',
-  listening: 'Listening',
-  fluency: 'Fluency',
-  adaptability: 'Adaptability',
-  engagement: 'Engagement',
-  accuracy: 'Accuracy',
-}
+import { DIMENSION_LABELS, type RubricDimension } from '@/lib/rubric/constants'
 
 const RECOMMENDATION_LABELS: Record<string, string> = {
   strong_yes: 'Strong yes',
@@ -42,7 +32,11 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 export function formatDimensionLabel(dimension: string) {
-  return DIMENSION_LABELS[dimension] ?? humanizeToken(dimension)
+  if (dimension in DIMENSION_LABELS) {
+    return DIMENSION_LABELS[dimension as RubricDimension]
+  }
+
+  return humanizeToken(dimension)
 }
 
 export function formatRecommendationLabel(recommendation?: string | null) {

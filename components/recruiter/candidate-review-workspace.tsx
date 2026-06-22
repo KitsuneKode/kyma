@@ -7,7 +7,9 @@ import { ReviewCommandHeader } from '@/components/recruiter/decision-bar'
 import { ReviewConsole } from '@/components/recruiter/review-console'
 import { ReviewAssessmentBento } from '@/components/recruiter/review-assessment-bento'
 import { ReviewDetailTabs } from '@/components/recruiter/review-detail-tabs'
+import { VideoEvidencePanel } from '@/components/recruiter/video-evidence-panel'
 import { formatStatusLabel } from '@/lib/recruiter/format'
+import { getPrimaryRecording } from '@/lib/recruiter/recording-playback'
 import { summarizeTeachingSimulation } from '@/lib/recruiter/teaching-simulation'
 
 export type CandidateReviewDetail = NonNullable<
@@ -18,24 +20,19 @@ type CandidateReviewWorkspaceProps = {
   detail: CandidateReviewDetail
   readOnly?: boolean
   backHref?: string
-}
-
-function getPrimaryRecording(detail: CandidateReviewDetail) {
-  return detail.recordings.find(
-    (recording) =>
-      recording.location &&
-      (recording.artifactType === 'audio' ||
-        recording.artifactType === 'composite')
-  )
+  audioPlaybackUrl?: string | null
 }
 
 export function CandidateReviewWorkspace({
   detail,
   readOnly = false,
   backHref = '/recruiter/candidates',
+  audioPlaybackUrl,
 }: CandidateReviewWorkspaceProps) {
   const teachingSimulation = summarizeTeachingSimulation(detail.events)
   const primaryRecording = getPrimaryRecording(detail)
+  const resolvedAudioUrl =
+    audioPlaybackUrl ?? primaryRecording?.location ?? undefined
 
   return (
     <div className="flex w-full flex-col gap-8">
@@ -76,7 +73,7 @@ export function CandidateReviewWorkspace({
           transcript={detail.transcript}
           evidence={detail.evidence}
           dimensionScores={detail.report?.dimensionScores ?? []}
-          audioUrl={primaryRecording?.location}
+          audioUrl={resolvedAudioUrl}
           recordingStartTime={primaryRecording?.startedAt}
         />
       </RenderErrorBoundary>
@@ -85,6 +82,10 @@ export function CandidateReviewWorkspace({
         report={detail.report}
         teachingSimulation={teachingSimulation}
       />
+
+      <RenderErrorBoundary title="Video evidence">
+        <VideoEvidencePanel sessionId={detail.session.id} />
+      </RenderErrorBoundary>
 
       <ReviewDetailTabs
         sessionId={detail.session.id}

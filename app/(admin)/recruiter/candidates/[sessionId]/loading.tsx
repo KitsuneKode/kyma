@@ -1,1 +1,5 @@
-export { default } from '../../../admin/candidates/[sessionId]/loading'
+import { SkeletonReview } from '@/components/admin/skeleton-review'
+
+export default function Loading() {
+  return <SkeletonReview />
+}

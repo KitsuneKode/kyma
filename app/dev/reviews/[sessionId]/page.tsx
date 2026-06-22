@@ -8,6 +8,8 @@ import { AdminStatePanel } from '@/components/admin/admin-state-panel'
 import { CandidateReviewWorkspace } from '@/components/recruiter/candidate-review-workspace'
 import { clientEnv } from '@/lib/env/client'
 import { serverEnv } from '@/lib/env/server'
+import { createRecordingPlaybackUrl } from '@/lib/livekit/recording-playback'
+import { getPrimaryRecording } from '@/lib/recruiter/recording-playback'
 
 type DevReviewPageProps = {
   params: Promise<{ sessionId: string }>
@@ -46,6 +48,14 @@ export default async function DevReviewPage({ params }: DevReviewPageProps) {
     )
   }
 
+  const primaryRecording = getPrimaryRecording(detail)
+  const audioPlaybackUrl = primaryRecording
+    ? await createRecordingPlaybackUrl(
+        primaryRecording.location,
+        primaryRecording.filename
+      )
+    : null
+
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-7xl flex-col gap-6 bg-background px-6 py-8">
       <AdminStatePanel
@@ -54,7 +64,11 @@ export default async function DevReviewPage({ params }: DevReviewPageProps) {
         description="Read-only local view for validating loaded review data without a Clerk session. Production uses the protected recruiter route."
       />
 
-      <CandidateReviewWorkspace detail={detail} readOnly />
+      <CandidateReviewWorkspace
+        detail={detail}
+        readOnly
+        audioPlaybackUrl={audioPlaybackUrl}
+      />
     </main>
   )
 }
