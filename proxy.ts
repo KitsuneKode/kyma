@@ -10,6 +10,7 @@ import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { allowDevPreviewRoutes } from '@/lib/env/node-env'
 
 const isRecruiterRoute = createRouteMatcher(['/recruiter(.*)', '/admin(.*)'])
+const isRecruiterSetupRoute = createRouteMatcher(['/recruiter/setup(.*)'])
 const isCandidateRoute = createRouteMatcher(['/candidate(.*)'])
 const isOnboardingRoute = createRouteMatcher(['/onboarding(.*)'])
 const isAppShellRoute = createRouteMatcher(['/write-up(.*)', '/settings(.*)'])
@@ -60,6 +61,12 @@ export default hasClerk
             ? '/recruiter'
             : `/recruiter${pathname.slice('/admin'.length)}`
         return NextResponse.redirect(new URL(recruiterPath, req.url))
+      }
+
+      if (isRecruiterRoute(req) && !isRecruiterSetupRoute(req)) {
+        if (!orgId || !canAccessRecruiter) {
+          return NextResponse.redirect(new URL('/recruiter/setup', req.url))
+        }
       }
 
       const redirectTarget = resolveAppRoute({

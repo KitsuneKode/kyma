@@ -11,6 +11,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { CandidateInviteLinkBanner } from '@/components/candidate/candidate-invite-link-banner'
 import { CandidateInviteLinkError } from '@/components/candidate/candidate-invite-link-error'
+import { AppAuthGate } from '@/components/auth/app-auth-gate'
 import { WorkspacePromptBanner } from '@/components/auth/workspace-prompt-banner'
 import { WorkspaceShell } from '@/components/workspace/workspace-shell'
 import { requireCandidatePageAccess } from '@/lib/auth/access'
@@ -20,6 +21,7 @@ import {
   serverConvexMutation,
 } from '@/lib/convex/server-query'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
+import { getClerkSetupStatus } from '@/lib/clerk/setup-status'
 
 export default async function CandidateLayout({
   children,
@@ -32,6 +34,7 @@ export default async function CandidateLayout({
     getServerConvexAuthToken(),
   ])
   const clerkEnabled = hasClerkServerCredentials()
+  const setupStatus = getClerkSetupStatus()
 
   let linkError: string | null = null
 
@@ -61,12 +64,20 @@ export default async function CandidateLayout({
           </div>
         </header>
         <WorkspaceShell>
-          {access.preferredWorkspace === 'unassigned' ? (
-            <WorkspacePromptBanner variant="candidate-default" />
-          ) : null}
-          {linkError ? <CandidateInviteLinkError message={linkError} /> : null}
-          <CandidateInviteLinkBanner />
-          {children}
+          <AppAuthGate
+            clerkEnabled={clerkEnabled}
+            setupStatus={setupStatus}
+            signInHref="/sign-in/candidate"
+          >
+            {access.preferredWorkspace === 'unassigned' ? (
+              <WorkspacePromptBanner variant="candidate-default" />
+            ) : null}
+            {linkError ? (
+              <CandidateInviteLinkError message={linkError} />
+            ) : null}
+            <CandidateInviteLinkBanner />
+            {children}
+          </AppAuthGate>
         </WorkspaceShell>
       </SidebarInset>
     </SidebarProvider>

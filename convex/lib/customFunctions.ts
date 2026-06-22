@@ -7,8 +7,32 @@ import { mutation, query } from '../_generated/server'
 import {
   requireAdmin,
   requireOrgId,
+  requireRecruiterContext,
+  type RecruiterCapability,
   requireRecruiterMember,
 } from '../helpers/auth'
+
+export function recruiterQueryWithCapability(capability: RecruiterCapability) {
+  return customQuery(query, {
+    args: {},
+    input: async (ctx, args) => {
+      const { orgId } = await requireRecruiterContext(ctx, capability)
+      return { ctx: { ...ctx, orgId }, args }
+    },
+  })
+}
+
+export function recruiterMutationWithCapability(
+  capability: RecruiterCapability
+) {
+  return customMutation(mutation, {
+    args: {},
+    input: async (ctx, args) => {
+      const { orgId } = await requireRecruiterContext(ctx, capability)
+      return { ctx: { ...ctx, orgId }, args }
+    },
+  })
+}
 
 export const recruiterQuery = customQuery(query, {
   args: {},
@@ -18,6 +42,26 @@ export const recruiterQuery = customQuery(query, {
     return { ctx: { ...ctx, orgId }, args }
   },
 })
+
+export const candidateReadQuery = recruiterQueryWithCapability(
+  'recruiter:candidates:read'
+)
+
+export const candidateWriteMutation = recruiterMutationWithCapability(
+  'recruiter:candidates:write'
+)
+
+export const screeningWriteMutation = recruiterMutationWithCapability(
+  'recruiter:screenings:write'
+)
+
+export const templateWriteMutation = recruiterMutationWithCapability(
+  'recruiter:templates:write'
+)
+
+export const settingsWriteMutation = recruiterMutationWithCapability(
+  'recruiter:settings:write'
+)
 
 export const recruiterMutation = customMutation(mutation, {
   args: {},

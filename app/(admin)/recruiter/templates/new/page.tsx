@@ -3,8 +3,11 @@ import Link from 'next/link'
 import { TemplateCreateForm } from '@/components/admin/template-create-form'
 import { PageHeader } from '@/components/admin/page-header'
 import { Button } from '@/components/ui/button'
+import { requireOrgPermission } from '@/lib/auth/access'
 
-export default function TemplateCreatePage() {
+export default async function TemplateCreatePage() {
+  await requireOrgPermission('recruiter:templates:write')
+
   return (
     <div className="flex w-full max-w-xl flex-col gap-8">
       <PageHeader

@@ -10,6 +10,7 @@ import {
   serverConvexQuery,
 } from '@/lib/convex/server-query'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
+import { requireOrgPermission } from '@/lib/auth/access'
 
 type TemplateEditPageProps = {
   params: Promise<{ id: string }>
@@ -18,6 +19,8 @@ type TemplateEditPageProps = {
 export default async function TemplateEditPage({
   params,
 }: TemplateEditPageProps) {
+  await requireOrgPermission('recruiter:templates:write')
+
   const [{ id }, token] = await Promise.all([
     params,
     getServerConvexAuthToken(),

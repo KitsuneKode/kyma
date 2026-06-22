@@ -14,13 +14,24 @@ import {
   getRedirectPathAfterWorkspaceChoice,
   setPreferredWorkspaceHint,
 } from '@/lib/auth/workspace'
-import { parseWorkspaceIntent } from '@/lib/auth/workspace-intent'
+import {
+  parseRedirectUrl,
+  parseWorkspaceIntent,
+} from '@/lib/auth/workspace-intent'
+import { hasClerkServerCredentials } from '@/lib/clerk/config'
 
 type PageProps = {
-  searchParams: Promise<{ workspace?: string | string[] }>
+  searchParams: Promise<{
+    workspace?: string | string[]
+    redirect_url?: string | string[]
+  }>
 }
 
 export default async function AuthContinuePage({ searchParams }: PageProps) {
+  if (!hasClerkServerCredentials()) {
+    redirect('/sign-in')
+  }
+
   const { userId, orgId, has, sessionClaims } = await auth()
   if (!userId) {
     redirect('/sign-in')
@@ -28,6 +39,7 @@ export default async function AuthContinuePage({ searchParams }: PageProps) {
 
   const params = await searchParams
   const explicitIntent = parseWorkspaceIntent(params.workspace)
+  const redirectUrl = parseRedirectUrl(params.redirect_url)
   const sessionWorkspace = preferredWorkspaceFromSessionClaims(
     sessionClaims as Record<string, unknown> | null | undefined
   )
@@ -42,6 +54,10 @@ export default async function AuthContinuePage({ searchParams }: PageProps) {
   }
 
   const { canAccessRecruiter } = resolveRecruiterAccess({ orgId, has })
+
+  if (redirectUrl) {
+    redirect(redirectUrl)
+  }
 
   redirect(
     getRedirectPathAfterWorkspaceChoice({

@@ -1,5 +1,10 @@
 import { renderIntentAuthPage } from '@/lib/auth/intent-auth-page'
 
-export default function SignUpCandidatePage() {
-  return renderIntentAuthPage('sign-up', 'candidate')
+type PageProps = {
+  searchParams: Promise<{ redirect_url?: string | string[] }>
+}
+
+export default async function SignUpCandidatePage({ searchParams }: PageProps) {
+  const params = await searchParams
+  return renderIntentAuthPage('sign-up', 'candidate', params)
 }

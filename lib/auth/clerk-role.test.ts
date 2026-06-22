@@ -3,6 +3,8 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import {
+  RECRUITER_PERMISSION_MAP,
+  clerkHasCapability,
   preferredWorkspaceFromSessionClaims,
   resolveRecruiterAccess,
 } from '@/lib/auth/clerk-role'
@@ -77,5 +79,43 @@ describe('resolveRecruiterAccess', () => {
         has: (check) => check.permission === 'org:recruiter:access',
       })
     ).toEqual({ canAccessRecruiter: true, isOrgAdmin: false })
+  })
+})
+
+describe('clerkHasCapability', () => {
+  it('grants every recruiter capability to org admins', () => {
+    expect(
+      clerkHasCapability(
+        (check) => check.role === 'org:admin',
+        'recruiter:templates:write'
+      )
+    ).toBe(true)
+  })
+
+  it('requires exact custom permission for non-admin users', () => {
+    expect(
+      clerkHasCapability(
+        (check) => check.permission === 'org:recruiter:candidates:write',
+        'recruiter:candidates:write'
+      )
+    ).toBe(true)
+    expect(
+      clerkHasCapability(
+        (check) => check.permission === 'org:recruiter:candidates:read',
+        'recruiter:candidates:write'
+      )
+    ).toBe(false)
+  })
+
+  it('keeps the permission map aligned with Clerk custom permission names', () => {
+    expect(RECRUITER_PERMISSION_MAP).toMatchObject({
+      'recruiter:access': 'org:recruiter:access',
+      'recruiter:candidates:read': 'org:recruiter:candidates:read',
+      'recruiter:candidates:write': 'org:recruiter:candidates:write',
+      'recruiter:screenings:write': 'org:recruiter:screenings:write',
+      'recruiter:templates:write': 'org:recruiter:templates:write',
+      'recruiter:settings:write': 'org:recruiter:settings:write',
+      'recruiter:billing:write': 'org:recruiter:billing:write',
+    })
   })
 })

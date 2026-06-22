@@ -4,8 +4,11 @@ import { PageHeader } from '@/components/admin/page-header'
 import { ScreeningCreationForm } from '@/components/admin/screening-creation-form'
 import { Button } from '@/components/ui/button'
 import { AdminSurface } from '@/components/admin/admin-surface'
+import { requireOrgPermission } from '@/lib/auth/access'
 
-export default function NewScreeningPage() {
+export default async function NewScreeningPage() {
+  await requireOrgPermission('recruiter:screenings:write')
+
   return (
     <main className="mx-auto flex min-h-[calc(100svh-65px)] w-full max-w-5xl flex-col gap-6 px-6 py-10">
       <PageHeader

@@ -1,9 +1,9 @@
-import { notFound } from 'next/navigation'
-import { connection } from 'next/server'
-
 import { DevSetupHub } from '@/components/dev/dev-setup-hub'
+import { getClerkSetupStatus } from '@/lib/clerk/setup-status'
 import { isProductionDeployment } from '@/lib/env/deployment-mode'
 import { serverEnv } from '@/lib/env/server'
+import { notFound } from 'next/navigation'
+import { connection } from 'next/server'
 
 export const metadata = {
   title: 'Dev setup hub',
@@ -22,5 +22,7 @@ export default async function DevSetupPage() {
     notFound()
   }
 
-  return <DevSetupHub />
+  const setupStatus = getClerkSetupStatus()
+
+  return <DevSetupHub setupStatus={setupStatus} />
 }

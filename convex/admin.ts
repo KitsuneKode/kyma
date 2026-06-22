@@ -3,9 +3,13 @@ import { ConvexError, v } from 'convex/values'
 import { api } from './_generated/api'
 import { action, query } from './_generated/server'
 import {
+  candidateReadQuery,
+  candidateWriteMutation,
   orgAdminMutation,
   recruiterMutation,
   recruiterQuery,
+  screeningWriteMutation,
+  templateWriteMutation,
 } from './lib/customFunctions'
 import { getRecruiterActorId, requireAdmin, requireOrgId } from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
@@ -41,7 +45,7 @@ export const bootstrapOrgTemplates = recruiterMutation({
   },
 })
 
-export const createAssessmentTemplate = recruiterMutation({
+export const createAssessmentTemplate = templateWriteMutation({
   args: {
     name: v.string(),
     role: v.optional(v.string()),
@@ -215,7 +219,7 @@ export const getScreeningBatchDetail = recruiterQuery({
   },
 })
 
-export const createScreeningBatch = recruiterMutation({
+export const createScreeningBatch = screeningWriteMutation({
   args: {
     name: v.string(),
     createdBy: v.optional(v.string()),
@@ -308,7 +312,7 @@ export const createScreeningBatch = recruiterMutation({
   },
 })
 
-export const addRecruiterNote = recruiterMutation({
+export const addRecruiterNote = candidateWriteMutation({
   args: {
     sessionId: v.id('interviewSessions'),
     reportId: v.optional(v.id('assessmentReports')),
@@ -349,7 +353,7 @@ export const addRecruiterNote = recruiterMutation({
   },
 })
 
-export const addReportChatMessage = recruiterMutation({
+export const addReportChatMessage = candidateWriteMutation({
   args: {
     sessionId: v.id('interviewSessions'),
     reportId: v.optional(v.id('assessmentReports')),
@@ -791,7 +795,7 @@ export const getTemplateById = recruiterQuery({
   },
 })
 
-export const updateAssessmentTemplate = recruiterMutation({
+export const updateAssessmentTemplate = templateWriteMutation({
   args: {
     templateId: v.id('assessmentTemplates'),
     name: v.optional(v.string()),
@@ -879,7 +883,7 @@ export const listTemplateVersions = recruiterQuery({
   },
 })
 
-export const searchCandidates = recruiterQuery({
+export const searchCandidates = candidateReadQuery({
   args: {
     query: v.string(),
   },

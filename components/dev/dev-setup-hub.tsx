@@ -5,8 +5,10 @@ import { useAuth, useOrganization } from '@clerk/nextjs'
 import { useAction, useConvexAuth, useMutation } from 'convex/react'
 import { useMemo, useState } from 'react'
 
-import { api } from '@/convex/_generated/api'
+import type { ClerkSetupStatus } from '@/lib/clerk/setup-status'
+import { AuthSetupRequired } from '@/components/auth/auth-setup-required'
 import { ClerkJwtSetupCard } from '@/components/auth/clerk-jwt-setup-card'
+import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 
@@ -36,7 +38,42 @@ const SCREEN_LINKS = [
   { href: '/interviews/demo-invite', label: 'Public demo invite' },
 ] as const
 
-export function DevSetupHub() {
+function DevSetupHubHeader() {
+  return (
+    <header className="space-y-2">
+      <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+        Development
+      </p>
+      <h1 className="text-3xl font-semibold tracking-tight">Local setup hub</h1>
+      <p className="text-sm text-muted-foreground">
+        Fix Clerk ↔ Convex auth, seed data into your active organization, and
+        jump to every major screen for QA.
+      </p>
+    </header>
+  )
+}
+
+function DevScreenLinks() {
+  return (
+    <WorkspaceSurface className="space-y-4 p-6">
+      <h2 className="text-lg font-semibold">Screen coverage map</h2>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {SCREEN_LINKS.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className="text-sm text-primary underline-offset-4 hover:underline"
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </WorkspaceSurface>
+  )
+}
+
+function DevSetupHubTools() {
   const { isSignedIn, userId } = useAuth()
   const { organization } = useOrganization()
   const { isAuthenticated, isLoading } = useConvexAuth()
@@ -75,20 +112,7 @@ export function DevSetupHub() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-10">
-      <header className="space-y-2">
-        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-          Development
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Local setup hub
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Fix Clerk ↔ Convex auth, seed data into your active organization, and
-          jump to every major screen for QA.
-        </p>
-      </header>
-
+    <>
       <WorkspaceSurface className="space-y-4 p-6">
         <h2 className="text-lg font-semibold">Auth status</h2>
         <dl className="grid gap-2 text-sm">
@@ -216,22 +240,29 @@ export function DevSetupHub() {
           (uses fixed org_seed — prefer the button above for your Clerk org).
         </p>
       </WorkspaceSurface>
+    </>
+  )
+}
 
-      <WorkspaceSurface className="space-y-4 p-6">
-        <h2 className="text-lg font-semibold">Screen coverage map</h2>
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {SCREEN_LINKS.map((link) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                className="text-sm text-primary underline-offset-4 hover:underline"
-              >
-                {link.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </WorkspaceSurface>
+export function DevSetupHub({
+  setupStatus,
+}: {
+  setupStatus: ClerkSetupStatus
+}) {
+  return (
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-10">
+      <DevSetupHubHeader />
+
+      {!setupStatus.ready ? (
+        <AuthSetupRequired
+          missing={setupStatus.missing}
+          derivedIssuerDomain={setupStatus.derivedIssuerDomain}
+        />
+      ) : (
+        <DevSetupHubTools />
+      )}
+
+      <DevScreenLinks />
     </div>
   )
 }

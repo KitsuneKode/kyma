@@ -6,6 +6,28 @@ import { getOrgContextFromIdentity } from './orgContext'
 
 const ORG_RECRUITER_ACCESS = 'org:recruiter:access'
 
+export type RecruiterCapability =
+  | 'recruiter:access'
+  | 'recruiter:candidates:read'
+  | 'recruiter:candidates:write'
+  | 'recruiter:screenings:write'
+  | 'recruiter:templates:write'
+  | 'recruiter:settings:write'
+  | 'recruiter:billing:write'
+
+export const RECRUITER_PERMISSION_MAP: Record<
+  RecruiterCapability,
+  `org:${string}`
+> = {
+  'recruiter:access': ORG_RECRUITER_ACCESS,
+  'recruiter:candidates:read': 'org:recruiter:candidates:read',
+  'recruiter:candidates:write': 'org:recruiter:candidates:write',
+  'recruiter:screenings:write': 'org:recruiter:screenings:write',
+  'recruiter:templates:write': 'org:recruiter:templates:write',
+  'recruiter:settings:write': 'org:recruiter:settings:write',
+  'recruiter:billing:write': 'org:recruiter:billing:write',
+}
+
 function hasRecruiterAuthConfig() {
   return Boolean(
     convexEnv.CLERK_SECRET_KEY?.trim() &&
@@ -53,6 +75,25 @@ async function requireOrgPermission(
   return { identity, orgId, orgRole, orgPermissions }
 }
 
+export async function requireRecruiterContext(
+  ctx: QueryCtx | MutationCtx,
+  capability: RecruiterCapability = 'recruiter:access'
+) {
+  return await requireOrgPermission(
+    ctx,
+    RECRUITER_PERMISSION_MAP[capability],
+    'You are not authorized to access this recruiter resource.'
+  )
+}
+
+export async function requireRecruiterCapability(
+  ctx: QueryCtx | MutationCtx,
+  capability: RecruiterCapability
+) {
+  const { identity } = await requireRecruiterContext(ctx, capability)
+  return identity
+}
+
 async function requireIdentity(ctx: QueryCtx | MutationCtx) {
   if (!hasRecruiterAuthConfig()) {
     return null
@@ -65,11 +106,7 @@ async function requireIdentity(ctx: QueryCtx | MutationCtx) {
 }
 
 export async function requireRecruiterMember(ctx: QueryCtx | MutationCtx) {
-  const { identity } = await requireOrgPermission(
-    ctx,
-    ORG_RECRUITER_ACCESS,
-    'You are not authorized to access recruiter data.'
-  )
+  const { identity } = await requireRecruiterContext(ctx, 'recruiter:access')
   return identity
 }
 

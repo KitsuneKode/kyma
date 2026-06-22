@@ -2,10 +2,13 @@ import { ConvexError, v } from 'convex/values'
 
 import type { Id } from './_generated/dataModel'
 import { mutation, query, type QueryCtx } from './_generated/server'
-import { recruiterMutation, recruiterQuery } from './lib/customFunctions'
+import {
+  candidateReadQuery,
+  candidateWriteMutation,
+} from './lib/customFunctions'
 import {
   getRecruiterActorId,
-  requireAdminIdentity,
+  requireRecruiterCapability,
   requireOrgId,
 } from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
@@ -53,14 +56,11 @@ async function getLatestReviewDecision(
   ctx: QueryCtx,
   sessionId: Id<'interviewSessions'>
 ) {
-  const decisions = await ctx.db
+  return await ctx.db
     .query('reviewDecisions')
     .withIndex('by_session_and_created_at', (q) => q.eq('sessionId', sessionId))
-    .collect()
-
-  return decisions.toSorted((left, right) =>
-    right.createdAt.localeCompare(left.createdAt)
-  )[0]
+    .order('desc')
+    .first()
 }
 
 /**
@@ -76,7 +76,7 @@ async function resolveReviewScopeOrgId(
   if (hasTrustedProcessingKey(processingKey)) {
     return await resolveOrgIdForPipelineWrite(ctx, sessionId, processingKey)
   }
-  await requireAdminIdentity(ctx)
+  await requireRecruiterCapability(ctx, 'recruiter:candidates:read')
   return await requireOrgId(ctx)
 }
 
@@ -108,7 +108,7 @@ async function loadSessionReviewBase(
   return { orgId, session, invite, template, report }
 }
 
-export const listReviewCandidates = recruiterQuery({
+export const listReviewCandidates = candidateReadQuery({
   args: {},
   handler: async (ctx) => {
     const { orgId } = ctx
@@ -497,7 +497,7 @@ export const saveAssessmentReport = mutation({
         'Assessment reports must be written via the processing pipeline in production.'
       )
     } else {
-      await requireAdminIdentity(ctx)
+      await requireRecruiterCapability(ctx, 'recruiter:candidates:write')
       orgId = await requireOrgId(ctx)
       await assertOrgOwnsSession(ctx, orgId, args.sessionId)
     }
@@ -575,7 +575,7 @@ export const saveAssessmentReport = mutation({
   },
 })
 
-export const submitReviewDecision = recruiterMutation({
+export const submitReviewDecision = candidateWriteMutation({
   args: {
     reportId: v.id('assessmentReports'),
     sessionId: v.id('interviewSessions'),
@@ -627,7 +627,7 @@ export const submitReviewDecision = recruiterMutation({
   },
 })
 
-export const releaseReport = recruiterMutation({
+export const releaseReport = candidateWriteMutation({
   args: {
     reportId: v.id('assessmentReports'),
     sessionId: v.id('interviewSessions'),

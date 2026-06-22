@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { kymaClerkAppearance } from '@/lib/clerk/appearance'
 import type { WorkspaceIntent } from '@/lib/auth/workspace-intent'
 import {
-  authContinuePath,
+  postAuthRedirectPath,
   signInPath,
   signUpPath,
 } from '@/lib/auth/workspace-intent'
@@ -12,6 +12,7 @@ import {
 type ClerkAuthPanelProps = {
   mode: 'sign-in' | 'sign-up'
   intent?: WorkspaceIntent | null
+  redirectUrl?: string | null
 }
 
 const INTENT_COPY: Record<
@@ -30,8 +31,12 @@ const INTENT_COPY: Record<
   },
 }
 
-export function ClerkAuthPanel({ mode, intent }: ClerkAuthPanelProps) {
-  const continueUrl = authContinuePath(intent)
+export function ClerkAuthPanel({
+  mode,
+  intent,
+  redirectUrl,
+}: ClerkAuthPanelProps) {
+  const continueUrl = postAuthRedirectPath(intent, redirectUrl)
   const copy = intent ? INTENT_COPY[intent] : null
 
   const signInUrl = signInPath(intent)

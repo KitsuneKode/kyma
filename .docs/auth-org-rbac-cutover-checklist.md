@@ -18,7 +18,26 @@ Use one of these paths exactly. The dev path is destructive to dev data.
 
 ### Dev (fastest, explicit, safe for local/dev only)
 
-1. Run automated Clerk bootstrap (permissions, convex JWT template):
+1. Ensure `.env.local` has required local auth keys:
+
+```bash
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+CLERK_FRONTEND_API_URL=https://...
+KYMA_PROCESSING_WRITE_KEY=<long-random-string>
+```
+
+If `CLERK_FRONTEND_API_URL` is omitted, `bun run convex:sync-env` can derive it from a valid Clerk publishable key.
+
+2. Sync Clerk auth env into the active Convex deployment:
+
+```bash
+bun run convex:sync-env
+```
+
+This step fails if the Clerk publishable key, secret key, or issuer cannot be resolved.
+
+3. Run automated Clerk bootstrap (permissions, convex JWT template):
 
 ```bash
 bun run clerk:setup-auth
@@ -26,9 +45,8 @@ bun run clerk:setup-auth
 
 Then complete the printed **Sessions → Customize session token** JSON paste (one-time).
 
-2. Configure any remaining Clerk items (webhooks, membership optional) from this doc.
-3. Ensure `.env.local` has required keys (`Clerk + KYMA_PROCESSING_WRITE_KEY`).
-4. Run:
+4. Configure any remaining Clerk items (webhooks, membership optional) from this doc.
+5. Run:
 
 ```bash
 bun install
@@ -38,7 +56,11 @@ bun run verify:auth-org-rbac
 bun run dev:stack
 ```
 
-5. Verify routes manually:
+6. Sign out and sign in once after changing JWT/session token settings.
+7. Verify `/dev`:
+   - Clerk signed in: `yes`
+   - Convex authenticated: `yes`
+8. Verify routes manually:
    - `/candidate`
    - `/recruiter/setup`
    - `/recruiter`
@@ -72,14 +94,15 @@ Production guardrail:
 
 Symptom: recruiter sign-in does not reach `/recruiter`, or workspace preference does not persist.
 
-1. Open Clerk Dashboard → **Users** → your user → **Public metadata**. You should see `preferredWorkspace` (`candidate` | `recruiter`).
-2. Open **JWT Templates** → **Session token** (default). Claims must include:
+1. Visit `/dev`. If Clerk is signed in but Convex is not authenticated, run `bun run convex:sync-env`, confirm the `convex` JWT template, then sign out/in.
+2. Open Clerk Dashboard → **Users** → your user → **Public metadata**. You should see `preferredWorkspace` (`candidate` | `recruiter`).
+3. Open **JWT Templates** → **Session token** (default). Claims must include:
    - `metadata.preferredWorkspace` from `{{user.public_metadata.preferredWorkspace}}`
    - `org_id`, `org_role`, `org_permissions` for recruiter routes
-3. Open **JWT Templates** → **convex** (application ID `convex`). Same org claims as above.
-4. **Organizations** enabled; membership mode **optional** (candidate + recruiter on one login).
-5. Sign out and sign in once after changing the JWT template (forces a fresh session).
-6. Local debug: set `KYMA_AUTH_DEBUG=1` in `.env.local` and reload a signed-in page to compare API metadata vs session claims.
+4. Open **JWT Templates** → **convex** (application ID `convex`). Same org claims as above.
+5. **Organizations** enabled; membership mode **optional** (candidate + recruiter on one login).
+6. Sign out and sign in once after changing the JWT template (forces a fresh session).
+7. Local debug: set `KYMA_AUTH_DEBUG=1` in `.env.local` and reload a signed-in page to compare API metadata vs session claims.
 
 Example session-token claims JSON (adjust to your Clerk UI):
 
@@ -102,7 +125,7 @@ Example session-token claims JSON (adjust to your Clerk UI):
   - `org:admin`
 - Permission baseline:
   - `org:recruiter:access`
-- Optional staged permissions:
+- Required granular permissions:
   - `org:recruiter:candidates:read`
   - `org:recruiter:candidates:write`
   - `org:recruiter:screenings:write`

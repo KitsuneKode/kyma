@@ -29,6 +29,7 @@
 
 - [`proxy.ts`](../proxy.ts) delegates redirects to `resolveAppRoute` in [`lib/auth/routing.ts`](../lib/auth/routing.ts).
 - Protect recruiter, candidate, onboarding, and app-shell routes when Clerk credentials are present.
+- Recruiter workspace routes except `/recruiter/setup` require an active org with `org:recruiter:access` or `org:admin` before the page resolves.
 - Redirect signed-in users away from auth pages via workspace routing.
 - Public at middleware: `/`, `/i/*`, `/interviews/*`, `/api/*`.
 - Legacy `/admin/*` redirects to `/recruiter/*`.
@@ -44,7 +45,8 @@
 ## Recruiter access (authorization)
 
 - Resolved via `resolveRecruiterAccess({ orgId, has })` in [`lib/auth/clerk-role.ts`](../lib/auth/clerk-role.ts).
-- Convex uses `requireRecruiterMember` / `requireAdmin` in [`convex/helpers/auth.ts`](../convex/helpers/auth.ts).
+- Convex uses `requireRecruiterMember`, `requireRecruiterCapability`, and `requireAdmin` in [`convex/helpers/auth.ts`](../convex/helpers/auth.ts).
+- Feature writes should use exact capabilities (`recruiter:candidates:write`, `recruiter:screenings:write`, `recruiter:templates:write`, `recruiter:settings:write`) rather than broad workspace access.
 
 ## Candidate portal boundary
 
@@ -60,4 +62,12 @@
 
 ## Local troubleshooting
 
-See **Stuck after signup** in [`.docs/auth-org-rbac-cutover-checklist.md`](auth-org-rbac-cutover-checklist.md). Set `KYMA_AUTH_DEBUG=1` for an on-page claim comparison banner (dev only).
+See **Stuck after signup** in [`.docs/auth-org-rbac-cutover-checklist.md`](auth-org-rbac-cutover-checklist.md). The shortest local recovery path is:
+
+```bash
+bun run convex:sync-env
+bun run clerk:setup-auth
+bun run dev:stack
+```
+
+Then sign out and sign in once, and verify `/dev` shows both Clerk and Convex authenticated. Set `KYMA_AUTH_DEBUG=1` for an on-page claim comparison banner (dev only).

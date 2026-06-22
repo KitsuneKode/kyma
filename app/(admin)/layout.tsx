@@ -11,7 +11,9 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
+import { AppAuthGate } from '@/components/auth/app-auth-gate'
 import { requireRecruiterPageAccess } from '@/lib/auth/access'
+import { getClerkSetupStatus } from '@/lib/clerk/setup-status'
 
 export default async function AdminLayout({
   children,
@@ -21,6 +23,7 @@ export default async function AdminLayout({
   await connection()
   await requireRecruiterPageAccess()
   const clerkEnabled = hasClerkServerCredentials()
+  const setupStatus = getClerkSetupStatus()
 
   return (
     <SidebarProvider>
@@ -42,7 +45,15 @@ export default async function AdminLayout({
           </div>
         </header>
         <main className="flex-1 overflow-y-auto bg-muted/10">
-          <div className="mx-auto w-full max-w-7xl p-8">{children}</div>
+          <div className="mx-auto w-full max-w-7xl p-8">
+            <AppAuthGate
+              clerkEnabled={clerkEnabled}
+              setupStatus={setupStatus}
+              signInHref="/sign-in/recruiter"
+            >
+              {children}
+            </AppAuthGate>
+          </div>
         </main>
         <CommandPalette />
       </SidebarInset>
