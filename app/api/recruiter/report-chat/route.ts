@@ -15,6 +15,7 @@ import {
 import { requireOrgEntitlement } from '@/lib/auth/entitlements'
 import { assertServerRateLimit } from '@/lib/http/server-rate-limit'
 import { reportChatBodySchema } from '@/lib/validation/interview-api'
+import { serverEnv } from '@/lib/env/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,11 +76,15 @@ export async function POST(request: NextRequest) {
 
     const reviewChatModelId = resolveReviewChatModelId(
       workspaceSettings?.defaultModels,
-      detail.template.modelOverrides
+      detail.template.modelOverrides,
+      {
+        reviewChat: serverEnv.KYMA_REVIEW_CHAT_MODEL,
+      }
     )
     const providerOptions = buildGatewayByokOptions({
       modelId: reviewChatModelId,
       providerKeys: workspaceSettings?.providerKeys,
+      encryptionKey: serverEnv.KYMA_ENCRYPTION_KEY,
     })
 
     const answer = await answerRecruiterQuestion(body.question, detail, {

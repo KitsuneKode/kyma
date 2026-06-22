@@ -1,4 +1,3 @@
-import { runtimeEnv } from '@/lib/env/runtime'
 import { createDecipheriv } from 'node:crypto'
 
 import {
@@ -24,11 +23,17 @@ const MODEL_KINDS: ModelKind[] = ['stt', 'llm', 'tts', 'reviewChat', 'scoring']
 export function resolveStageModels(args: {
   workspaceDefaults?: WorkspaceModelOverrides
   templateOverrides?: WorkspaceModelOverrides
+  envFallbacks?: WorkspaceModelOverrides
 }): Record<ModelKind, string> {
   return Object.fromEntries(
     MODEL_KINDS.map((kind) => [
       kind,
-      resolveModelId(kind, args.workspaceDefaults, args.templateOverrides),
+      resolveModelId(
+        kind,
+        args.workspaceDefaults,
+        args.templateOverrides,
+        args.envFallbacks
+      ),
     ])
   ) as Record<ModelKind, string>
 }
@@ -36,15 +41,9 @@ export function resolveStageModels(args: {
 export function resolveModelId(
   kind: ModelKind,
   workspaceDefaults?: WorkspaceModelOverrides,
-  templateOverrides?: WorkspaceModelOverrides
+  templateOverrides?: WorkspaceModelOverrides,
+  envFallbacks: WorkspaceModelOverrides = {}
 ) {
-  const envFallbacks: WorkspaceModelOverrides = {
-    stt: runtimeEnv.LIVEKIT_AGENT_STT_MODEL,
-    llm: runtimeEnv.LIVEKIT_AGENT_LLM_MODEL,
-    tts: runtimeEnv.LIVEKIT_AGENT_TTS_MODEL,
-    reviewChat: runtimeEnv.KYMA_REVIEW_CHAT_MODEL,
-    scoring: runtimeEnv.KYMA_SCORING_MODEL,
-  }
   return (
     templateOverrides?.[kind]?.trim() ||
     workspaceDefaults?.[kind]?.trim() ||
@@ -55,26 +54,34 @@ export function resolveModelId(
 
 export function resolveReviewChatModelId(
   workspaceDefaults?: WorkspaceModelOverrides,
-  templateOverrides?: WorkspaceModelOverrides
+  templateOverrides?: WorkspaceModelOverrides,
+  envFallbacks?: WorkspaceModelOverrides
 ): string | undefined {
-  return resolveModelId('reviewChat', workspaceDefaults, templateOverrides)
+  return resolveModelId(
+    'reviewChat',
+    workspaceDefaults,
+    templateOverrides,
+    envFallbacks
+  )
 }
 
 export function resolveScoringModelId(
   workspaceDefaults?: WorkspaceModelOverrides,
-  templateOverrides?: WorkspaceModelOverrides
+  templateOverrides?: WorkspaceModelOverrides,
+  envFallbacks: WorkspaceModelOverrides = {}
 ): string {
   const explicitScoring =
     templateOverrides?.scoring?.trim() ||
     workspaceDefaults?.scoring?.trim() ||
-    runtimeEnv.KYMA_SCORING_MODEL?.trim()
+    envFallbacks.scoring?.trim()
   if (explicitScoring) {
     return explicitScoring
   }
 
   const reviewChatFallback = resolveReviewChatModelId(
     workspaceDefaults,
-    templateOverrides
+    templateOverrides,
+    envFallbacks
   )
   if (reviewChatFallback?.trim()) {
     return reviewChatFallback
@@ -95,8 +102,9 @@ function parseHexKeyBytes(hex: string) {
 export function decryptWorkspaceKey(args: {
   encryptedKey: string
   iv: string
+  encryptionKey?: string
 }) {
-  const key = runtimeEnv.KYMA_ENCRYPTION_KEY?.trim()
+  const key = args.encryptionKey?.trim()
   if (!key) {
     throw new Error(
       'KYMA_ENCRYPTION_KEY is required for provider key resolution.'
@@ -120,7 +128,8 @@ export function decryptWorkspaceKey(args: {
 }
 
 export function resolveWorkspaceApiKeys(
-  providerKeys?: WorkspaceProviderKey[]
+  providerKeys?: WorkspaceProviderKey[],
+  encryptionKey?: string
 ): {
   openai?: string
   google?: string
@@ -133,19 +142,22 @@ export function resolveWorkspaceApiKeys(
       ? decryptWorkspaceKey({
           encryptedKey: openaiRecord.encryptedKey,
           iv: openaiRecord.iv,
+          encryptionKey,
         }).trim()
       : undefined,
     google: googleRecord
       ? decryptWorkspaceKey({
           encryptedKey: googleRecord.encryptedKey,
           iv: googleRecord.iv,
+          encryptionKey,
         }).trim()
       : undefined,
   }
 }
 
 export function tryResolveWorkspaceApiKeys(
-  providerKeys?: WorkspaceProviderKey[]
+  providerKeys?: WorkspaceProviderKey[],
+  encryptionKey?: string
 ): {
   apiKeys: { openai?: string; google?: string }
   error?: string
@@ -155,7 +167,7 @@ export function tryResolveWorkspaceApiKeys(
   }
 
   try {
-    return { apiKeys: resolveWorkspaceApiKeys(providerKeys) }
+    return { apiKeys: resolveWorkspaceApiKeys(providerKeys, encryptionKey) }
   } catch (error) {
     return {
       apiKeys: {},
@@ -170,6 +182,7 @@ export function tryResolveWorkspaceApiKeys(
 export function buildGatewayByokOptions(args: {
   modelId?: string
   providerKeys?: WorkspaceProviderKey[]
+  encryptionKey?: string
 }) {
   const provider = providerFromModelId(args.modelId)
   if (!provider) return undefined
@@ -178,6 +191,7 @@ export function buildGatewayByokOptions(args: {
   const apiKey = decryptWorkspaceKey({
     encryptedKey: keyRecord.encryptedKey,
     iv: keyRecord.iv,
+    encryptionKey: args.encryptionKey,
   }).trim()
   if (!apiKey) return undefined
 

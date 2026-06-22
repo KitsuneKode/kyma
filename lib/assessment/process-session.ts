@@ -102,11 +102,16 @@ export async function processInterviewAssessment(
 
   const scoringModelId = resolveScoringModelId(
     detail.workspace?.defaultModels,
-    detail.template.modelOverrides
+    detail.template.modelOverrides,
+    {
+      scoring: serverEnv.KYMA_SCORING_MODEL,
+      reviewChat: serverEnv.KYMA_REVIEW_CHAT_MODEL,
+    }
   )
   const providerOptions = buildGatewayByokOptions({
     modelId: scoringModelId,
     providerKeys: detail.workspace?.providerKeys,
+    encryptionKey: serverEnv.KYMA_ENCRYPTION_KEY,
   })
 
   let report: AssessmentComputation

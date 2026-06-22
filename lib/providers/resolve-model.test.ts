@@ -1,19 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { DEFAULT_MODELS } from '@/lib/providers/provider-id'
-
-const mockRuntimeEnv = vi.hoisted(() => ({
-  LIVEKIT_AGENT_STT_MODEL: undefined as string | undefined,
-  LIVEKIT_AGENT_LLM_MODEL: undefined as string | undefined,
-  LIVEKIT_AGENT_TTS_MODEL: undefined as string | undefined,
-  KYMA_REVIEW_CHAT_MODEL: undefined as string | undefined,
-  KYMA_SCORING_MODEL: undefined as string | undefined,
-}))
-
-vi.mock('@/lib/env/runtime', () => ({
-  runtimeEnv: mockRuntimeEnv,
-}))
-
 import {
   resolveModelId,
   resolveScoringModelId,
@@ -21,28 +8,26 @@ import {
 } from '@/lib/providers/resolve-model'
 
 describe('resolveModelId precedence', () => {
-  beforeEach(() => {
-    mockRuntimeEnv.LIVEKIT_AGENT_STT_MODEL = undefined
-    mockRuntimeEnv.LIVEKIT_AGENT_LLM_MODEL = undefined
-    mockRuntimeEnv.LIVEKIT_AGENT_TTS_MODEL = undefined
-    mockRuntimeEnv.KYMA_REVIEW_CHAT_MODEL = undefined
-    mockRuntimeEnv.KYMA_SCORING_MODEL = undefined
-  })
-
   it('prefers template over workspace over env over default', () => {
-    mockRuntimeEnv.LIVEKIT_AGENT_LLM_MODEL = 'env/llm'
-
     expect(
-      resolveModelId('llm', { llm: 'workspace/llm' }, { llm: 'template/llm' })
+      resolveModelId(
+        'llm',
+        { llm: 'workspace/llm' },
+        { llm: 'template/llm' },
+        { llm: 'env/llm' }
+      )
     ).toBe('template/llm')
 
-    expect(resolveModelId('llm', { llm: 'workspace/llm' })).toBe(
-      'workspace/llm'
-    )
+    expect(
+      resolveModelId('llm', { llm: 'workspace/llm' }, undefined, {
+        llm: 'env/llm',
+      })
+    ).toBe('workspace/llm')
 
-    expect(resolveModelId('llm')).toBe('env/llm')
+    expect(
+      resolveModelId('llm', undefined, undefined, { llm: 'env/llm' })
+    ).toBe('env/llm')
 
-    mockRuntimeEnv.LIVEKIT_AGENT_LLM_MODEL = undefined
     expect(resolveModelId('llm')).toBe(DEFAULT_MODELS.llm)
   })
 
@@ -54,18 +39,17 @@ describe('resolveModelId precedence', () => {
 })
 
 describe('resolveStageModels', () => {
-  beforeEach(() => {
-    mockRuntimeEnv.LIVEKIT_AGENT_STT_MODEL = 'env/stt'
-    mockRuntimeEnv.LIVEKIT_AGENT_LLM_MODEL = 'env/llm'
-    mockRuntimeEnv.LIVEKIT_AGENT_TTS_MODEL = 'env/tts'
-    mockRuntimeEnv.KYMA_REVIEW_CHAT_MODEL = 'env/review'
-    mockRuntimeEnv.KYMA_SCORING_MODEL = 'env/scoring'
-  })
-
   it('returns all five model kinds', () => {
     const resolved = resolveStageModels({
       workspaceDefaults: { llm: 'workspace/llm' },
       templateOverrides: { scoring: 'template/scoring' },
+      envFallbacks: {
+        stt: 'env/stt',
+        llm: 'env/llm',
+        tts: 'env/tts',
+        reviewChat: 'env/review',
+        scoring: 'env/scoring',
+      },
     })
 
     expect(resolved).toEqual({
@@ -79,11 +63,6 @@ describe('resolveStageModels', () => {
 })
 
 describe('resolveScoringModelId', () => {
-  beforeEach(() => {
-    mockRuntimeEnv.KYMA_SCORING_MODEL = undefined
-    mockRuntimeEnv.KYMA_REVIEW_CHAT_MODEL = undefined
-  })
-
   it('falls back to review chat model when scoring is unset', () => {
     expect(
       resolveScoringModelId(

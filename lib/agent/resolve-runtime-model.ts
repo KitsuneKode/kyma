@@ -3,6 +3,7 @@ import * as google from '@livekit/agents-plugin-google'
 import * as openai from '@livekit/agents-plugin-openai'
 
 import { runtimeEnv } from '@/lib/env/runtime'
+import { getGoogleProviderKey } from '@/lib/env/providers'
 import { providerFromModelId } from '@/lib/providers/provider-id'
 
 export type RealtimeProvider = 'gemini' | 'openai' | 'cascade'
@@ -63,7 +64,7 @@ export function resolveRuntimeModel(options: {
       provider: 'openai',
       llm: new openai.realtime.RealtimeModel({
         model: OPENAI_REALTIME_MODEL,
-        apiKey: options.apiKeys?.openai ?? process.env.OPENAI_API_KEY,
+        apiKey: options.apiKeys?.openai ?? runtimeEnv.OPENAI_API_KEY,
       }),
     }
   }
@@ -75,10 +76,7 @@ export function resolveRuntimeModel(options: {
       llm: new google.beta.realtime.RealtimeModel({
         model: GEMINI_REALTIME_MODEL,
         enableAffectiveDialog: true,
-        apiKey:
-          options.apiKeys?.google ??
-          process.env.GOOGLE_API_KEY ??
-          process.env.GEMINI_API_KEY,
+        apiKey: options.apiKeys?.google ?? getGoogleProviderKey(runtimeEnv),
       }),
     }
   }
@@ -111,7 +109,7 @@ function resolveCascadeLlm(
   apiKeys?: { openai?: string; google?: string }
 ): { llm: string | llm.LLM; llmUsesExplicitKey: boolean } {
   const provider = providerFromModelId(llmModelId)
-  const openaiKey = apiKeys?.openai ?? process.env.OPENAI_API_KEY
+  const openaiKey = apiKeys?.openai ?? runtimeEnv.OPENAI_API_KEY
 
   if (provider === 'openai' && openaiKey) {
     return {

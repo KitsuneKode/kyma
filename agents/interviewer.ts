@@ -195,6 +195,13 @@ function buildAgentTemplateConfig(
   const envConfig = getEnvAgentConfig()
   const modelOverrides = remoteConfig?.modelOverrides
   const defaultModels = remoteConfig?.defaultModels
+  const envModelFallbacks = {
+    stt: runtimeEnv.LIVEKIT_AGENT_STT_MODEL,
+    llm: runtimeEnv.LIVEKIT_AGENT_LLM_MODEL,
+    tts: runtimeEnv.LIVEKIT_AGENT_TTS_MODEL,
+    reviewChat: runtimeEnv.KYMA_REVIEW_CHAT_MODEL,
+    scoring: runtimeEnv.KYMA_SCORING_MODEL,
+  }
 
   return {
     templateName: remoteConfig?.templateName ?? 'AI Tutor Screener',
@@ -207,17 +214,32 @@ function buildAgentTemplateConfig(
     wrapUpInstructions:
       remoteConfig?.wrapUpPrompt?.trim() || envConfig.wrapUpInstructions,
     cascade: {
-      stt: resolveModelId('stt', defaultModels, modelOverrides),
-      llm: resolveModelId('llm', defaultModels, modelOverrides),
-      tts: resolveModelId('tts', defaultModels, modelOverrides),
+      stt: resolveModelId(
+        'stt',
+        defaultModels,
+        modelOverrides,
+        envModelFallbacks
+      ),
+      llm: resolveModelId(
+        'llm',
+        defaultModels,
+        modelOverrides,
+        envModelFallbacks
+      ),
+      tts: resolveModelId(
+        'tts',
+        defaultModels,
+        modelOverrides,
+        envModelFallbacks
+      ),
       childTts:
         modelOverrides?.tts?.trim() ||
         envConfig.childTts ||
-        resolveModelId('tts', defaultModels, modelOverrides),
+        resolveModelId('tts', defaultModels, modelOverrides, envModelFallbacks),
       wrapUpTts:
         modelOverrides?.tts?.trim() ||
         envConfig.wrapUpTts ||
-        resolveModelId('tts', defaultModels, modelOverrides),
+        resolveModelId('tts', defaultModels, modelOverrides, envModelFallbacks),
     },
   }
 }
@@ -735,7 +757,10 @@ async function runInterviewSession(args: {
       tts: config.cascade.tts,
     },
     apiKeys: (() => {
-      const resolved = tryResolveWorkspaceApiKeys(remoteConfig?.providerKeys)
+      const resolved = tryResolveWorkspaceApiKeys(
+        remoteConfig?.providerKeys,
+        runtimeEnv.KYMA_ENCRYPTION_KEY
+      )
       if (resolved.error) {
         logger.error({
           event: 'agent.byok.resolve.failed',
