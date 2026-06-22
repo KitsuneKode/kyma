@@ -20,16 +20,19 @@ type SessionId = Id<'interviewSessions'>
 const PROCESSING_WRITE_KEY = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
 
 export async function markAssessmentProcessing(sessionId: SessionId) {
-  const detail = await fetchQuery(api.recruiter.getSessionProcessingDetail, {
-    sessionId,
-    processingKey: PROCESSING_WRITE_KEY,
-  })
+  const detail = await fetchQuery(
+    api.recruiter.reviews.getSessionProcessingDetail,
+    {
+      sessionId,
+      processingKey: PROCESSING_WRITE_KEY,
+    }
+  )
 
   if (detail?.report?.status === 'completed') {
     return
   }
 
-  await fetchMutation(api.recruiter.saveAssessmentReport, {
+  await fetchMutation(api.recruiter.reviews.saveAssessmentReport, {
     sessionId,
     processingKey: PROCESSING_WRITE_KEY,
     status: 'processing',
@@ -41,7 +44,7 @@ export async function markAssessmentFailed(
   sessionId: SessionId,
   reason: string
 ) {
-  await fetchMutation(api.recruiter.saveAssessmentReport, {
+  await fetchMutation(api.recruiter.reviews.saveAssessmentReport, {
     sessionId,
     processingKey: PROCESSING_WRITE_KEY,
     status: 'failed',
@@ -75,10 +78,13 @@ export async function processInterviewAssessment(
     detail: 'Starting structured assessment generation.',
   })
 
-  const detail = await fetchQuery(api.recruiter.getSessionProcessingDetail, {
-    sessionId,
-    processingKey: PROCESSING_WRITE_KEY,
-  })
+  const detail = await fetchQuery(
+    api.recruiter.reviews.getSessionProcessingDetail,
+    {
+      sessionId,
+      processingKey: PROCESSING_WRITE_KEY,
+    }
+  )
 
   if (!detail) {
     throw new Error('Session detail is unavailable for assessment processing.')
@@ -164,7 +170,7 @@ export async function processInterviewAssessment(
     scoringSource = 'deterministic'
   }
 
-  await fetchMutation(api.recruiter.saveAssessmentReport, {
+  await fetchMutation(api.recruiter.reviews.saveAssessmentReport, {
     sessionId,
     processingKey: PROCESSING_WRITE_KEY,
     status: report.status,

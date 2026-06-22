@@ -1,8 +1,8 @@
 import type { Doc, Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import { internal } from '../_generated/api'
-import { transitionSessionSafely } from '../../lib/interview/session-machine'
 import type { InterviewSessionState } from '../../lib/interview/types'
+import { applySessionStateTransition } from './interviewSession'
 
 type FinalizeInterviewOptions = {
   detail: string
@@ -39,28 +39,10 @@ export async function finalizeInterviewForProcessing(
     return { queued: false, transitioned: false }
   }
 
-  const nextState = transitionSessionSafely(
-    session.state as InterviewSessionState,
-    'processing'
-  )
-
-  await ctx.db.patch(session._id, {
-    state: nextState,
-    endedAt: session.endedAt ?? now,
-  })
-
-  const invite = await ctx.db.get(session.inviteId)
-  if (invite && invite.status !== 'completed') {
-    await ctx.db.patch(session.inviteId, {
-      status: 'completed',
-    })
-
-    if (invite.eligibilityId) {
-      await ctx.db.patch(invite.eligibilityId, {
-        status: 'submitted',
-      })
-    }
-  }
+  // Reuse the shared transition so duration accounting, endedAt, and invite/
+  // eligibility completion stay on one path with the candidate and webhook
+  // session-event writes.
+  await applySessionStateTransition(ctx, session, session._id, 'processing')
 
   const existingFinalize = await ctx.db
     .query('sessionEvents')

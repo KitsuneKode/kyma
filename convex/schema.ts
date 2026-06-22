@@ -206,6 +206,7 @@ export default defineSchema({
   })
     .index('by_org_id', ['orgId'])
     .index('by_org_id_and_state', ['orgId', 'state'])
+    .index('by_state', ['state'])
     .index('by_invite', ['inviteId'])
     .index('by_room_name', ['roomName'])
     .index('by_candidate_user', ['candidateUserId']),
