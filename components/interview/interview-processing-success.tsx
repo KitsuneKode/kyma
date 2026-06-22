@@ -8,13 +8,18 @@ import { Button } from '@/components/ui/button'
 type InterviewProcessingSuccessProps = {
   connectionError: string | null
   onRetrySubmission: () => void
+  sessionId?: string | null
 }
 
 export function InterviewProcessingSuccess({
   connectionError,
   onRetrySubmission,
+  sessionId,
 }: InterviewProcessingSuccessProps) {
   const router = useRouter()
+  const candidatePortalPath = sessionId
+    ? `/candidate/interviews/${sessionId}`
+    : '/candidate'
 
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden bg-[#0a0a0a] p-4">
@@ -84,9 +89,9 @@ export function InterviewProcessingSuccess({
           }}
         >
           <p className="mx-auto mt-6 max-w-sm text-base leading-relaxed text-pretty text-muted-foreground">
-            Your interview has been submitted. The team will review the
-            conversation details and follow up with you shortly. You can close
-            this window now.
+            Your interview has been submitted and linked to your candidate
+            portal. Track processing status and view your outcome when it is
+            released.
           </p>
         </motion.div>
 
@@ -103,9 +108,9 @@ export function InterviewProcessingSuccess({
           <Button
             type="button"
             className="rounded-full bg-primary px-8 py-6 font-medium text-primary-foreground shadow-[0_0_0_1px_rgba(232,255,71,0.45),0_10px_30px_rgba(0,0,0,0.35)] transition-colors hover:bg-primary/90"
-            onClick={() => router.push('/')}
+            onClick={() => router.push(candidatePortalPath)}
           >
-            Return Home
+            Go to candidate portal
           </Button>
         </motion.div>
 

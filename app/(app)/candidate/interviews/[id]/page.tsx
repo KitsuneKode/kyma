@@ -10,6 +10,8 @@ import {
   formatDateTime,
   formatRecommendationLabel,
 } from '@/lib/recruiter/format'
+import { scoreColor } from '@/lib/ui/score-format'
+import { cn } from '@/lib/utils'
 import { WorkspacePageHeader } from '@/components/workspace/page-header'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 import { runConvexFetch } from '@/lib/convex/server-fetch'
@@ -93,6 +95,16 @@ export default async function CandidateInterviewResultPage({
           <p className="mt-2 text-lg font-semibold">
             {formatRecommendationLabel(result.report.recommendation)}
           </p>
+          {typeof result.report.weightedScore === 'number' ? (
+            <p
+              className={cn(
+                'mt-3 inline-flex rounded-full px-3 py-1 text-sm font-medium tabular-nums',
+                scoreColor(result.report.weightedScore)
+              )}
+            >
+              Weighted score {result.report.weightedScore.toFixed(1)} / 5
+            </p>
+          ) : null}
           {result.report.summary ? (
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
               {result.report.summary}

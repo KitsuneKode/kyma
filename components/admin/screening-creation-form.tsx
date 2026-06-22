@@ -95,19 +95,19 @@ export function ScreeningCreationForm() {
   const parsedCandidates = useMemo(() => {
     const next: Array<{
       candidateName: string
-      candidateEmail?: string
+      candidateEmail: string
     }> = []
 
     for (const candidate of candidates) {
       const candidateName = candidate.name.trim()
+      const candidateEmail = candidate.email.trim().toLowerCase()
       if (candidateName.length === 0) {
         continue
       }
 
-      const candidateEmail = candidate.email.trim()
       next.push({
         candidateName,
-        candidateEmail: candidateEmail.length > 0 ? candidateEmail : undefined,
+        candidateEmail,
       })
     }
 
@@ -146,6 +146,18 @@ export function ScreeningCreationForm() {
     if (parsedCandidates.length === 0) {
       setError(
         'Add at least one eligible candidate before creating a screening.'
+      )
+      return
+    }
+
+    const missingEmail = parsedCandidates.find(
+      (candidate) =>
+        candidate.candidateEmail.length === 0 ||
+        !candidate.candidateEmail.includes('@')
+    )
+    if (missingEmail) {
+      setError(
+        `Enter a valid email for ${missingEmail.candidateName || 'each candidate'}. Invites are email-bound for account linking.`
       )
       return
     }

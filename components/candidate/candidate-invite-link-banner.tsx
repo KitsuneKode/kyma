@@ -8,18 +8,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 
-type CandidateInviteLinkBannerProps = {
-  initialError?: string | null
-}
-
-export function CandidateInviteLinkBanner({
-  initialError,
-}: CandidateInviteLinkBannerProps) {
+export function CandidateInviteLinkBanner() {
   const claimInvite = useMutation(
     api.interviews.candidatePortal.claimCandidateInviteByToken
   )
+  const [open, setOpen] = useState(false)
   const [inviteToken, setInviteToken] = useState('')
-  const [status, setStatus] = useState<string | null>(initialError ?? null)
+  const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   async function handleClaim() {
@@ -48,35 +43,55 @@ export function CandidateInviteLinkBanner({
   }
 
   return (
-    <WorkspaceSurface className="mb-6 space-y-3 p-4">
-      <div>
-        <p className="text-sm font-medium">Link a screening invite</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          If your interview does not appear, paste the token from your invite
-          URL (the part after{' '}
-          <code className="rounded bg-muted px-1">/interviews/</code>
-          ). Your Clerk email must match the invite email.
-        </p>
-      </div>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Input
-          value={inviteToken}
-          onChange={(event) => setInviteToken(event.target.value)}
-          placeholder="invite-token"
-          className="font-mono text-sm"
-        />
-        <Button
-          type="button"
-          disabled={busy}
-          onClick={() => void handleClaim()}
-        >
-          {busy ? 'Linking…' : 'Link invite'}
-        </Button>
-      </div>
-      {status ? (
-        <p className="text-sm text-muted-foreground" role="status">
-          {status}
-        </p>
+    <WorkspaceSurface className="mb-6 p-4">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-3 text-left"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+      >
+        <div>
+          <p className="text-sm font-medium">Missing an interview?</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Recovery only — open your invite link while signed in first.
+          </p>
+        </div>
+        <span className="text-xs font-medium text-muted-foreground">
+          {open ? 'Hide' : 'Show'}
+        </span>
+      </button>
+
+      {open ? (
+        <div className="mt-4 space-y-3 border-t border-border/40 pt-4">
+          <p className="text-sm text-muted-foreground">
+            If a screening still does not appear, paste the token from your
+            invite URL (the part after{' '}
+            <code className="rounded bg-muted px-1">/i/</code> or{' '}
+            <code className="rounded bg-muted px-1">/interviews/</code>
+            ). Your sign-in email must match the invite email.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={inviteToken}
+              onChange={(event) => setInviteToken(event.target.value)}
+              placeholder="invite-token"
+              className="font-mono text-sm"
+            />
+            <Button
+              type="button"
+              disabled={busy}
+              variant="outline"
+              onClick={() => void handleClaim()}
+            >
+              {busy ? 'Linking…' : 'Link invite manually'}
+            </Button>
+          </div>
+          {status ? (
+            <p className="text-sm text-muted-foreground" role="status">
+              {status}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </WorkspaceSurface>
   )
