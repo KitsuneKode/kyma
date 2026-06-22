@@ -4,13 +4,16 @@ import {
   markAssessmentProcessing,
   processInterviewAssessment,
 } from '../assessment/process-session'
-import { inngest } from '../../inngest/client'
-import {
-  INTERVIEW_PROCESSING_REQUESTED_EVENT,
-  interviewProcessingEventId,
-} from '../inngest/events'
-import { runtimeEnv } from '../env/runtime'
 import { isDevelopmentMode } from '../runtime-mode'
+
+type ProcessingPipelineEnv = {
+  INNGEST_EVENT_KEY?: string
+  NODE_ENV?: string
+}
+
+type ProcessingEnqueue = (
+  sessionId: Id<'interviewSessions'>
+) => Promise<{ ids: string[] }>
 
 export type InterviewProcessingPipelineResult = {
   queued: boolean
@@ -19,18 +22,16 @@ export type InterviewProcessingPipelineResult = {
 }
 
 export async function runInterviewProcessingPipeline(
-  sessionId: Id<'interviewSessions'>
+  sessionId: Id<'interviewSessions'>,
+  env: ProcessingPipelineEnv = {},
+  enqueue?: ProcessingEnqueue
 ): Promise<InterviewProcessingPipelineResult> {
   await markAssessmentProcessing(sessionId)
 
-  const eventKey = runtimeEnv.INNGEST_EVENT_KEY?.trim()
-  if (eventKey) {
+  const eventKey = env.INNGEST_EVENT_KEY?.trim()
+  if (eventKey && enqueue) {
     try {
-      const result = await inngest.send({
-        id: interviewProcessingEventId(sessionId),
-        name: INTERVIEW_PROCESSING_REQUESTED_EVENT,
-        data: { sessionId },
-      })
+      const result = await enqueue(sessionId)
 
       return {
         queued: true,
@@ -38,14 +39,14 @@ export async function runInterviewProcessingPipeline(
         eventIds: result.ids,
       }
     } catch (error) {
-      if (!isDevelopmentMode(runtimeEnv.NODE_ENV)) {
+      if (!isDevelopmentMode(env.NODE_ENV)) {
         console.error(
           'Failed to enqueue interview processing via Inngest. Falling back to inline processing.',
           error
         )
       }
     }
-  } else if (!isDevelopmentMode(runtimeEnv.NODE_ENV)) {
+  } else if (!isDevelopmentMode(env.NODE_ENV)) {
     console.error(
       'INNGEST_EVENT_KEY is required to enqueue interview processing.'
     )

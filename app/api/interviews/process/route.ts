@@ -9,6 +9,12 @@ import {
   createRequestId,
 } from '@/lib/interview/diagnostics'
 import { runInterviewProcessingPipeline } from '@/lib/processing/run-interview-processing-pipeline'
+import { serverEnv } from '@/lib/env/server'
+import { inngest } from '@/inngest/client'
+import {
+  INTERVIEW_PROCESSING_REQUESTED_EVENT,
+  interviewProcessingEventId,
+} from '@/lib/inngest/events'
 
 const bodySchema = z.object({
   sessionId: z.string(),
@@ -42,7 +48,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await runInterviewProcessingPipeline(typedSessionId)
+    const result = await runInterviewProcessingPipeline(
+      typedSessionId,
+      {
+        INNGEST_EVENT_KEY: serverEnv.INNGEST_EVENT_KEY,
+        NODE_ENV: serverEnv.NODE_ENV,
+      },
+      async (id) => {
+        return await inngest.send({
+          id: interviewProcessingEventId(id),
+          name: INTERVIEW_PROCESSING_REQUESTED_EVENT,
+          data: { sessionId: id },
+        })
+      }
+    )
 
     logger.info({
       event: result.fallback
