@@ -161,6 +161,31 @@ runtime modes selected by `KYMA_AGENT_REALTIME_PROVIDER`:
 
 Model routing rules:
 
+#### Model routing by stage
+
+Five model slots are configured per workspace (`workspaceSettings.defaultModels`)
+and optionally overridden per assessment template (`template.modelOverrides`):
+
+| Slot         | Pipeline                                         |
+| ------------ | ------------------------------------------------ |
+| `stt`        | Live interview transcription (cascade mode)      |
+| `llm`        | Live interviewer reasoning (cascade or realtime) |
+| `tts`        | Live interviewer voice (cascade mode)            |
+| `scoring`    | Post-session rubric scoring                      |
+| `reviewChat` | Recruiter report Q&A                             |
+
+Resolution order for every slot (see `lib/providers/resolve-model.ts`):
+
+```
+templateOverrides[kind] ?? workspaceDefaults[kind] ?? env[kind] ?? DEFAULT_MODELS[kind]
+```
+
+Env fallbacks: `LIVEKIT_AGENT_STT_MODEL`, `LIVEKIT_AGENT_LLM_MODEL`,
+`LIVEKIT_AGENT_TTS_MODEL`, `KYMA_SCORING_MODEL`, `KYMA_REVIEW_CHAT_MODEL`.
+
+Recruiters set workspace defaults and template overrides in settings UI;
+`resolveStageModels` exposes the effective ids for ops dashboards.
+
 - **STT/TTS in cascade mode** are passed to LiveKit as gateway model id strings
   (e.g. `deepgram/nova-3`, `cartesia/sonic`). These resolve through **LiveKit
   inference (LiveKit Cloud Inference)**. We intentionally do not bundle the
