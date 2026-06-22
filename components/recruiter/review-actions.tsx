@@ -11,17 +11,32 @@ import { ButtonGroup } from '@/components/ui/button-group'
 import { StatusBadge } from '@/components/workspace/status-badge'
 import { cn } from '@/lib/utils'
 
-type ReviewDecision = 'advance' | 'reject' | 'manual_review' | 'hold'
+import {
+  REVIEW_DECISION_LABELS,
+  type ReviewDecision,
+} from '@/lib/domain/review-decision'
 
 const DECISIONS: Array<{
   value: ReviewDecision
   label: string
   variant: 'default' | 'outline' | 'secondary' | 'destructive'
 }> = [
-  { value: 'advance', label: 'Advance', variant: 'default' },
-  { value: 'hold', label: 'Hold', variant: 'outline' },
-  { value: 'manual_review', label: 'Manual review', variant: 'secondary' },
-  { value: 'reject', label: 'Reject', variant: 'destructive' },
+  {
+    value: 'advance',
+    label: REVIEW_DECISION_LABELS.advance,
+    variant: 'default',
+  },
+  { value: 'hold', label: REVIEW_DECISION_LABELS.hold, variant: 'outline' },
+  {
+    value: 'manual_review',
+    label: REVIEW_DECISION_LABELS.manual_review,
+    variant: 'secondary',
+  },
+  {
+    value: 'reject',
+    label: REVIEW_DECISION_LABELS.reject,
+    variant: 'destructive',
+  },
 ]
 
 type ReviewActionsProps = {

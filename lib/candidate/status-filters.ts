@@ -8,6 +8,11 @@ export function isActiveStatus(status: string) {
   ].includes(status)
 }
 
+export function isCompletedPipelineStatus(status: string) {
+  const normalizedStatus = status.trim().toLowerCase()
+  return ['completed', 'submitted', 'processing'].includes(normalizedStatus)
+}
+
 export function isPendingRelease(item: {
   status: string
   reportStatus?: string

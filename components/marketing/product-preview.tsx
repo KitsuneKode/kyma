@@ -12,6 +12,7 @@ import {
 import { motion } from '@/components/motion/client-motion'
 import { DIMENSION_LABELS, RUBRIC_DIMENSIONS } from '@/lib/rubric/constants'
 import { cn } from '@/lib/utils'
+import { formatScoreValue } from '@/lib/ui/score-format'
 
 type Dimension = (typeof RUBRIC_DIMENSIONS)[number]
 
@@ -108,7 +109,7 @@ function RubricRow({
         />
       </div>
       <span className="w-6 shrink-0 text-right font-mono text-[10px] text-foreground/55 tabular-nums">
-        {score.toFixed(1)}
+        {formatScoreValue(score)}
       </span>
     </button>
   )

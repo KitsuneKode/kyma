@@ -6,6 +6,14 @@ import {
   RUBRIC_DIMENSIONS,
   type RubricDimension,
 } from '../rubric/constants'
+import {
+  type Confidence,
+  type Recommendation,
+  computeAssessmentWeightedScore,
+  isHardGateDimension,
+  isHardGateTriggered,
+  resolveRecommendation,
+} from './scoring-policy'
 
 export {
   DIMENSION_LABELS,
@@ -13,8 +21,7 @@ export {
   RUBRIC_DIMENSIONS,
   type RubricDimension,
 } from '../rubric/constants'
-export type Recommendation = 'strong_yes' | 'yes' | 'mixed' | 'no'
-export type Confidence = 'high' | 'medium' | 'low'
+export type { Recommendation, Confidence } from './scoring-policy'
 export type ReportStatus =
   | 'pending'
   | 'processing'
@@ -400,10 +407,7 @@ export function buildAssessmentReport(
       : RUBRIC_DIMENSIONS.map((dimension) => ({
           name: dimension,
           weight: DIMENSION_WEIGHTS[dimension],
-          isHardGate:
-            dimension === 'clarity' ||
-            dimension === 'patience' ||
-            dimension === 'accuracy',
+          isHardGate: isHardGateDimension(dimension),
           keywords: KEYWORDS[dimension],
         }))
 
@@ -426,16 +430,16 @@ export function buildAssessmentReport(
     .map((item) => item.evidence)
     .filter((item): item is DimensionEvidence => Boolean(item))
 
-  const totalWeight = dimensionDefinitions.reduce(
-    (total, definition) => total + definition.weight,
-    0
+  const weightByDimension = Object.fromEntries(
+    dimensionDefinitions.map((definition) => [
+      definition.name,
+      definition.weight,
+    ])
   )
-  const weightedScoreRaw = dimensionScores.reduce((total, item, index) => {
-    const weight = dimensionDefinitions[index]?.weight ?? 0
-    const normalizedWeight = totalWeight > 0 ? weight / totalWeight : 0
-    return total + item.score * normalizedWeight
-  }, 0)
-  const weightedScore = Number(weightedScoreRaw.toFixed(2))
+  const weightedScore = computeAssessmentWeightedScore(
+    dimensionScores,
+    weightByDimension
+  )
   const transcriptQualityNote = describeTranscriptQuality(
     candidateTurns,
     candidateWords
@@ -449,25 +453,13 @@ export function buildAssessmentReport(
     confidence = 'low'
   }
 
-  const hardGateTriggered = dimensionDefinitions.some(
-    (definition, index) =>
-      definition.isHardGate && (dimensionScores[index]?.score ?? 5) <= 2
-  )
+  const hardGateTriggered = isHardGateTriggered(dimensionScores)
 
-  let overallRecommendation: Recommendation = 'mixed'
-  if (hardGateTriggered) {
-    overallRecommendation = 'no'
-  } else if (confidence === 'low') {
-    overallRecommendation = weightedScore >= 3.7 ? 'mixed' : 'no'
-  } else if (weightedScore >= 4.25) {
-    overallRecommendation = 'strong_yes'
-  } else if (weightedScore >= 3.45) {
-    overallRecommendation = 'yes'
-  } else if (weightedScore >= 2.75) {
-    overallRecommendation = 'mixed'
-  } else {
-    overallRecommendation = 'no'
-  }
+  const overallRecommendation = resolveRecommendation({
+    weightedScore,
+    confidence,
+    hardGateTriggered,
+  })
 
   const topStrengths = pickTopDimensions(dimensionScores, 'high')
   const topConcerns = pickTopDimensions(dimensionScores, 'low')

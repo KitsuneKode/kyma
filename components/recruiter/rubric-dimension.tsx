@@ -6,7 +6,7 @@ import { IconChevronDown } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { formatTime } from '@/lib/format/time'
 import { formatDimensionLabel } from '@/lib/recruiter/format'
-import { scoreColor } from '@/lib/ui/score-format'
+import { scoreColor, formatScoreValue } from '@/lib/ui/score-format'
 import { EvidenceCard } from './evidence-card'
 
 type DimensionEvidence = {
@@ -84,7 +84,7 @@ export function RubricDimension({
               scoreColor(score)
             )}
           >
-            {score.toFixed(1)}
+            {formatScoreValue(score)}
           </span>
           <IconChevronDown
             className={cn(
