@@ -186,6 +186,7 @@ function buildAgentTemplateConfig(
 ): AgentTemplateConfig {
   const envConfig = getEnvAgentConfig()
   const modelOverrides = remoteConfig?.modelOverrides
+  const defaultModels = remoteConfig?.defaultModels
 
   return {
     templateName: remoteConfig?.templateName ?? 'AI Tutor Screener',
@@ -198,17 +199,17 @@ function buildAgentTemplateConfig(
     wrapUpInstructions:
       remoteConfig?.wrapUpPrompt?.trim() || envConfig.wrapUpInstructions,
     cascade: {
-      stt: resolveModelId('stt', undefined, modelOverrides),
-      llm: resolveModelId('llm', undefined, modelOverrides),
-      tts: resolveModelId('tts', undefined, modelOverrides),
+      stt: resolveModelId('stt', defaultModels, modelOverrides),
+      llm: resolveModelId('llm', defaultModels, modelOverrides),
+      tts: resolveModelId('tts', defaultModels, modelOverrides),
       childTts:
         modelOverrides?.tts?.trim() ||
         envConfig.childTts ||
-        resolveModelId('tts', undefined, modelOverrides),
+        resolveModelId('tts', defaultModels, modelOverrides),
       wrapUpTts:
         modelOverrides?.tts?.trim() ||
         envConfig.wrapUpTts ||
-        resolveModelId('tts', undefined, modelOverrides),
+        resolveModelId('tts', defaultModels, modelOverrides),
     },
   }
 }

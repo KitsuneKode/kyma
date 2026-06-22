@@ -332,6 +332,7 @@ export const getCandidateReviewDetail = query({
         name: template?.name ?? 'AI Tutor Screener',
         role: template?.role ?? 'teacher',
         rubricVersion: template?.rubricVersion ?? 'v1',
+        modelOverrides: template?.modelOverrides ?? undefined,
       },
       report: report
         ? {

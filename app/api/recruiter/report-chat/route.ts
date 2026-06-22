@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
     )
 
     const reviewChatModelId = resolveReviewChatModelId(
-      workspaceSettings?.defaultModels
+      workspaceSettings?.defaultModels,
+      detail.template.modelOverrides
     )
     const providerOptions = buildGatewayByokOptions({
       modelId: reviewChatModelId,
