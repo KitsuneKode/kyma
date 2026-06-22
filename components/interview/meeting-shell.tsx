@@ -18,31 +18,40 @@ import {
 import { Track, type DisconnectReason, type Room } from 'livekit-client'
 import { IconBuildingSkyscraper } from '@tabler/icons-react'
 
+import { TranscriptRail } from '@/components/interview/transcript-rail'
 import { Button } from '@/components/ui/button'
 import { type BootstrappedInterviewSession } from '@/lib/interview/bootstrap'
-import { type InterviewPolicy } from '@/lib/interview/types'
+import {
+  type InterviewPolicy,
+  type TranscriptSegment,
+} from '@/lib/interview/types'
 
 type MeetingShellProps = {
+  agentJoinTimedOut?: boolean
   connectionError: string | null
   isSubmittingInterview: boolean
   onConnected: () => void
   onDisconnected?: (reason?: DisconnectReason) => void
   onError: (error: Error) => void
+  onRetryAgentConnection?: () => void
   onSubmitInterview: () => void | Promise<void>
   policy?: InterviewPolicy
   preJoinChoices: LocalUserChoices
   room: Room
   session: BootstrappedInterviewSession
+  transcript: TranscriptSegment[]
 }
 
 function InterviewConference({
   isSubmitting,
   onSubmit,
   templateName,
+  transcript,
 }: {
   isSubmitting: boolean
   onSubmit: () => void | Promise<void>
   templateName?: string
+  transcript: TranscriptSegment[]
 }) {
   const layoutContext = useCreateLayoutContext()
   const tracks = useTracks(
@@ -68,7 +77,7 @@ function InterviewConference({
 
     window.addEventListener('mousemove', resetIdle)
     window.addEventListener('keydown', resetIdle)
-    window.addEventListener('touchstart', resetIdle)
+    window.addEventListener('touchstart', resetIdle, { passive: true })
 
     timeoutId = setTimeout(() => setIsIdle(true), 3000)
 
@@ -121,10 +130,16 @@ function InterviewConference({
             )}
           </AnimatePresence>
 
-          <div className="lk-grid-layout-wrapper h-full w-full bg-[#0a0a0a] [&_.lk-grid-layout]:gap-0 [&_.lk-grid-layout]:p-0 [&_.lk-participant-tile]:rounded-none [&_.lk-participant-tile]:border-none [&_video]:object-cover">
+          <div className="lk-grid-layout-wrapper relative h-full w-full bg-[#0a0a0a] [&_.lk-grid-layout]:gap-0 [&_.lk-grid-layout]:p-0 [&_.lk-participant-tile]:rounded-none [&_.lk-participant-tile]:border-none [&_video]:object-cover">
             <GridLayout tracks={tracks} className="h-full w-full">
               <ParticipantTile />
             </GridLayout>
+
+            <div className="pointer-events-auto absolute top-24 right-5 z-20 hidden max-h-[calc(100dvh-8rem)] w-[min(360px,calc(100vw-2.5rem))] overflow-y-auto lg:block">
+              <div className="border-white/10 bg-black/55 text-white backdrop-blur-md [&_p]:text-white/80 [&_section]:border-white/10 [&_section]:bg-black/45 [&_span]:text-white/60">
+                <TranscriptRail transcript={transcript} />
+              </div>
+            </div>
           </div>
 
           {/* Bottom control bar wrapper */}
@@ -189,15 +204,18 @@ function InterviewConference({
 }
 
 export function MeetingShell({
+  agentJoinTimedOut = false,
   connectionError,
   isSubmittingInterview,
   onConnected,
   onDisconnected,
   onError,
+  onRetryAgentConnection,
   onSubmitInterview,
   preJoinChoices,
   room,
   session,
+  transcript,
 }: MeetingShellProps) {
   return (
     // Intentional dark-locked immersive interview experience.
@@ -231,6 +249,7 @@ export function MeetingShell({
             isSubmitting={isSubmittingInterview}
             onSubmit={onSubmitInterview}
             templateName={session.templateName}
+            transcript={transcript}
           />
         </LiveKitRoom>
       </div>
@@ -238,6 +257,24 @@ export function MeetingShell({
       {connectionError ? (
         <div className="absolute top-24 left-1/2 z-[110] -translate-x-1/2 rounded-2xl border border-destructive/20 bg-destructive/90 px-6 py-4 text-sm text-white shadow-2xl backdrop-blur-md">
           {connectionError}
+        </div>
+      ) : null}
+
+      {agentJoinTimedOut ? (
+        <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/70 px-6 backdrop-blur-sm">
+          <div className="max-w-md rounded-2xl border border-white/15 bg-[#111] p-6 text-center text-white shadow-2xl">
+            <h2 className="text-lg font-semibold">Interviewer not available</h2>
+            <p className="mt-2 text-sm text-white/75">
+              The AI interviewer has not joined after 90 seconds. This is
+              usually a temporary connection issue.
+            </p>
+            <Button
+              className="mt-5 rounded-full"
+              onClick={onRetryAgentConnection}
+            >
+              Retry connection
+            </Button>
+          </div>
         </div>
       ) : null}
     </div>

@@ -2,7 +2,16 @@
 
 import dynamic from 'next/dynamic'
 import { type LocalUserChoices } from '@livekit/components-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { type DisconnectReason, Room } from 'livekit-client'
 
@@ -23,6 +32,28 @@ import { mergeInterviewSnapshot } from '@/lib/interview/snapshot'
 import { useInterviewRoomEvents } from '@/lib/interview/use-interview-room-events'
 import { type InterviewSessionSnapshot } from '@/lib/interview/types'
 
+function isAgentParticipant(identity: string) {
+  return !identity.startsWith('candidate-')
+}
+
+function hasInterviewAgentJoined(
+  room: Room,
+  session: InterviewSessionSnapshot
+) {
+  for (const participant of room.remoteParticipants.values()) {
+    if (isAgentParticipant(participant.identity)) {
+      return true
+    }
+  }
+
+  return (
+    session.events.some((event) => event.type === 'agent-speaking') ||
+    session.transcript.some((segment) => segment.speaker === 'agent')
+  )
+}
+
+const AGENT_JOIN_TIMEOUT_MS = 90_000
+
 const InterviewProcessingSuccess = dynamic(
   () =>
     import('@/components/interview/interview-processing-success').then(
@@ -37,28 +68,140 @@ type InterviewWorkspaceProps = {
 
 type InterviewView = 'prejoin' | 'meeting' | 'processing'
 
+type WorkspaceState = {
+  view: InterviewView
+  session: InterviewSessionSnapshot
+  participantName: string
+  preJoinChoices: LocalUserChoices | null
+  bootstrappedSession: BootstrappedInterviewSession | null
+  connectionError: string | null
+  isBootstrapping: boolean
+  isSubmittingInterview: boolean
+  agentJoinTimedOut: boolean
+}
+
+type WorkspaceAction =
+  | {
+      type: 'PATCH'
+      patch:
+        | Partial<WorkspaceState>
+        | ((state: WorkspaceState) => Partial<WorkspaceState>)
+    }
+  | {
+      type: 'UPDATE_SESSION'
+      updater: SetStateAction<InterviewSessionSnapshot>
+    }
+
+function createInitialWorkspaceState(
+  initialSnapshot: InterviewSessionSnapshot
+): WorkspaceState {
+  return {
+    view:
+      initialSnapshot.state === 'processing' ||
+      initialSnapshot.state === 'completed'
+        ? 'processing'
+        : 'prejoin',
+    session: initialSnapshot,
+    participantName: initialSnapshot.candidateName ?? 'Demo Candidate',
+    preJoinChoices: null,
+    bootstrappedSession: null,
+    connectionError: null,
+    isBootstrapping: false,
+    isSubmittingInterview: false,
+    agentJoinTimedOut: false,
+  }
+}
+
+function workspaceReducer(
+  state: WorkspaceState,
+  action: WorkspaceAction
+): WorkspaceState {
+  switch (action.type) {
+    case 'PATCH': {
+      const patch =
+        typeof action.patch === 'function' ? action.patch(state) : action.patch
+      return { ...state, ...patch }
+    }
+    case 'UPDATE_SESSION': {
+      const nextSession =
+        typeof action.updater === 'function'
+          ? action.updater(state.session)
+          : action.updater
+      return { ...state, session: nextSession }
+    }
+    default:
+      return state
+  }
+}
+
 export function InterviewWorkspace({
   initialSnapshot,
 }: InterviewWorkspaceProps) {
   const [requestId] = useState(() => createRequestId('client'))
-  const [view, setView] = useState<InterviewView>(() =>
-    initialSnapshot.state === 'processing' ||
-    initialSnapshot.state === 'completed'
-      ? 'processing'
-      : 'prejoin'
+  const [workspace, dispatch] = useReducer(
+    workspaceReducer,
+    initialSnapshot,
+    createInitialWorkspaceState
   )
-  const [session, setSession] = useState(initialSnapshot)
-  const [participantName, setParticipantName] = useState(
-    initialSnapshot.candidateName ?? 'Demo Candidate'
+  const {
+    view,
+    session,
+    participantName,
+    preJoinChoices,
+    bootstrappedSession,
+    connectionError,
+    isBootstrapping,
+    isSubmittingInterview,
+    agentJoinTimedOut,
+  } = workspace
+
+  const setSession = useCallback<
+    Dispatch<SetStateAction<InterviewSessionSnapshot>>
+  >((updater) => dispatch({ type: 'UPDATE_SESSION', updater }), [])
+  const setView = useCallback<Dispatch<SetStateAction<InterviewView>>>(
+    (updater) =>
+      dispatch({
+        type: 'PATCH',
+        patch: (state) => ({
+          view: typeof updater === 'function' ? updater(state.view) : updater,
+        }),
+      }),
+    []
   )
-  const [preJoinChoices, setPreJoinChoices] = useState<LocalUserChoices | null>(
-    null
+  const setConnectionError = useCallback<
+    Dispatch<SetStateAction<string | null>>
+  >(
+    (updater) =>
+      dispatch({
+        type: 'PATCH',
+        patch: (state) => ({
+          connectionError:
+            typeof updater === 'function'
+              ? updater(state.connectionError)
+              : updater,
+        }),
+      }),
+    []
   )
-  const [bootstrappedSession, setBootstrappedSession] =
-    useState<BootstrappedInterviewSession | null>(null)
-  const [connectionError, setConnectionError] = useState<string | null>(null)
-  const [isBootstrapping, setIsBootstrapping] = useState(false)
-  const [isSubmittingInterview, setIsSubmittingInterview] = useState(false)
+  const setBootstrappedSession = useCallback<
+    Dispatch<SetStateAction<BootstrappedInterviewSession | null>>
+  >(
+    (updater) =>
+      dispatch({
+        type: 'PATCH',
+        patch: (state) => ({
+          bootstrappedSession:
+            typeof updater === 'function'
+              ? updater(state.bootstrappedSession)
+              : updater,
+        }),
+      }),
+    []
+  )
+  const patchWorkspace = useCallback(
+    (patch: Partial<WorkspaceState>) => dispatch({ type: 'PATCH', patch }),
+    []
+  )
   const room = useMemo(
     () =>
       new Room({
@@ -113,6 +256,52 @@ export function InterviewWorkspace({
     participantNameRef.current = participantName
   }, [participantName])
 
+  useEffect(() => {
+    if (view !== 'meeting') {
+      return
+    }
+
+    const checkInterval = window.setInterval(() => {
+      if (hasInterviewAgentJoined(room, hydratedSession)) {
+        patchWorkspace({ agentJoinTimedOut: false })
+      }
+    }, 2000)
+
+    const timeoutId = window.setTimeout(() => {
+      if (!hasInterviewAgentJoined(room, hydratedSession)) {
+        patchWorkspace({ agentJoinTimedOut: true })
+        logger.warn({
+          event: 'agent.join.timeout',
+          detail:
+            'Interviewer agent did not join the room within the expected window.',
+          sessionId: sessionIdRef.current ?? undefined,
+          roomName: roomNameRef.current ?? undefined,
+        })
+      }
+    }, AGENT_JOIN_TIMEOUT_MS)
+
+    return () => {
+      window.clearInterval(checkInterval)
+      window.clearTimeout(timeoutId)
+    }
+  }, [hydratedSession, logger, patchWorkspace, room, view])
+
+  useEffect(() => {
+    if (view !== 'meeting' || hydratedSession.state !== 'processing') {
+      return
+    }
+
+    completionRequestedRef.current = true
+
+    void (async () => {
+      await room.disconnect(true).catch(() => null)
+      patchWorkspace({
+        bootstrappedSession: null,
+        view: 'processing',
+      })
+    })()
+  }, [hydratedSession.state, patchWorkspace, room, view])
+
   useInterviewRoomEvents({
     room,
     inviteToken: initialSnapshot.inviteId,
@@ -159,9 +348,11 @@ export function InterviewWorkspace({
     const candidateName = choices.username.trim() || participantName
 
     setConnectionError(null)
-    setIsBootstrapping(true)
-    setPreJoinChoices(choices)
-    setParticipantName(candidateName)
+    patchWorkspace({
+      isBootstrapping: true,
+      preJoinChoices: choices,
+      participantName: candidateName,
+    })
     completionRequestedRef.current = false
     logger.info({
       event: 'prejoin.completed',
@@ -229,7 +420,7 @@ export function InterviewWorkspace({
         error,
       })
     } finally {
-      setIsBootstrapping(false)
+      patchWorkspace({ isBootstrapping: false })
     }
   }
 
@@ -286,7 +477,7 @@ export function InterviewWorkspace({
 
   async function handleSubmitInterview() {
     completionRequestedRef.current = true
-    setIsSubmittingInterview(true)
+    patchWorkspace({ isSubmittingInterview: true })
     setConnectionError(null)
     logger.info({
       event: 'session.processing.started',
@@ -356,24 +547,39 @@ export function InterviewWorkspace({
         error,
       })
     } finally {
-      setIsSubmittingInterview(false)
+      patchWorkspace({ isSubmittingInterview: false })
     }
+  }
+
+  async function handleRetryAgentConnection() {
+    patchWorkspace({
+      agentJoinTimedOut: false,
+      preJoinChoices: null,
+      view: 'prejoin',
+      connectionError:
+        'The interviewer did not join in time. Check your connection and try again.',
+      bootstrappedSession: null,
+    })
+    await room.disconnect(true)
   }
 
   return (
     <div className="h-full w-full">
       {view === 'meeting' && bootstrappedSession && preJoinChoices ? (
         <MeetingShell
+          agentJoinTimedOut={agentJoinTimedOut}
           connectionError={connectionError}
           isSubmittingInterview={isSubmittingInterview}
           onConnected={handleRoomConnected}
           onDisconnected={handleRoomDisconnected}
           onError={handleRoomError}
+          onRetryAgentConnection={() => void handleRetryAgentConnection()}
           onSubmitInterview={handleSubmitInterview}
           policy={hydratedSession.policy}
           preJoinChoices={preJoinChoices}
           room={room}
           session={bootstrappedSession}
+          transcript={hydratedSession.transcript}
         />
       ) : view === 'processing' ? (
         <InterviewProcessingSuccess
