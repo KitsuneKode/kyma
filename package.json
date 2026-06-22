@@ -15,6 +15,7 @@
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
     "typecheck": "tsc --noEmit",
+    "check": "bun run fmt:check && bun run typecheck && bun run lint && bun run test && bun run convex:once && bun run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
