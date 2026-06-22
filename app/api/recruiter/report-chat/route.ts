@@ -1,4 +1,4 @@
-import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs'
+import { fetchMutation, fetchQuery } from 'convex/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { api } from '@/convex/_generated/api'
@@ -13,6 +13,7 @@ import {
   GROUNDING_VERSION,
 } from '@/lib/recruiter/report-chat'
 import { requireOrgEntitlement } from '@/lib/auth/entitlements'
+import { assertServerRateLimit } from '@/lib/http/server-rate-limit'
 import { reportChatBodySchema } from '@/lib/validation/interview-api'
 
 export async function POST(request: NextRequest) {
@@ -28,27 +29,29 @@ export async function POST(request: NextRequest) {
     const reportId = body.reportId as Id<'assessmentReports'> | undefined
     await requireOrgEntitlement('recruiter:ai-report-chat')
 
-    await fetchAction(api.rateLimiter.checkLimit, {
-      name: 'recruiterChat',
-      key: `report-chat:${clientIp}:${sessionId}`,
-    })
-
-    const detail = await fetchQuery(
-      api.recruiter.getCandidateReviewDetail,
-      {
-        sessionId,
-      },
-      {
-        token: token ?? undefined,
-      }
+    await assertServerRateLimit(
+      'recruiterChat',
+      `report-chat:${clientIp}:${sessionId}`
     )
-    const workspaceSettings = await fetchQuery(
-      api.admin.getWorkspaceSettingsRaw,
-      {},
-      {
-        token: token ?? undefined,
-      }
-    ).catch(() => null)
+
+    const [detail, workspaceSettings] = await Promise.all([
+      fetchQuery(
+        api.recruiter.getCandidateReviewDetail,
+        {
+          sessionId,
+        },
+        {
+          token: token ?? undefined,
+        }
+      ),
+      fetchQuery(
+        api.admin.getWorkspaceSettingsRaw,
+        {},
+        {
+          token: token ?? undefined,
+        }
+      ).catch(() => null),
+    ])
 
     if (!detail) {
       return NextResponse.json(

@@ -1,4 +1,4 @@
-import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs'
+import { fetchMutation, fetchQuery } from 'convex/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -7,6 +7,7 @@ import {
   createDiagnosticLogger,
   createRequestId,
 } from '@/lib/interview/diagnostics'
+import { assertServerRateLimit } from '@/lib/http/server-rate-limit'
 import { createParticipantToken } from '@/lib/livekit/token'
 
 const tokenRequestSchema = z.object({
@@ -45,10 +46,10 @@ export async function POST(request: NextRequest) {
     'unknown'
 
   try {
-    await fetchAction(api.rateLimiter.checkLimit, {
-      name: 'livekitToken',
-      key: `livekit-token:${clientIp}:${inviteToken}`,
-    })
+    await assertServerRateLimit(
+      'livekitToken',
+      `livekit-token:${clientIp}:${inviteToken}`
+    )
   } catch {
     return NextResponse.json(
       { error: 'Too many token requests.' },
@@ -119,6 +120,11 @@ export async function POST(request: NextRequest) {
         inviteToken,
         sessionId,
         role: 'candidate',
+      }),
+      agentMetadata: JSON.stringify({
+        inviteToken,
+        sessionId,
+        participantName,
       }),
       requestId,
     })

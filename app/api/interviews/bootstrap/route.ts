@@ -1,4 +1,4 @@
-import { fetchAction, fetchMutation } from 'convex/nextjs'
+import { fetchMutation, fetchQuery } from 'convex/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { api } from '@/convex/_generated/api'
@@ -6,8 +6,11 @@ import {
   createDiagnosticLogger,
   createRequestId,
 } from '@/lib/interview/diagnostics'
+import { assertServerRateLimit } from '@/lib/http/server-rate-limit'
 import { createParticipantToken } from '@/lib/livekit/token'
+import { validateProviderKeysForBootstrap } from '@/lib/agent/validate-provider-keys'
 import { bootstrapBodySchema } from '@/lib/validation/interview-api'
+import { serverEnv } from '@/lib/env/server'
 
 export async function POST(request: NextRequest) {
   const requestId = createRequestId('bootstrap')
@@ -40,12 +43,7 @@ export async function POST(request: NextRequest) {
   const { inviteToken, participantName } = parsed.data
 
   try {
-    await fetchAction(api.rateLimiter.checkLimit, {
-      name: 'publicSnapshot',
-      key: `bootstrap:${clientIp}`,
-    }).catch(() => {
-      throw new Error('RATE_LIMITED')
-    })
+    await assertServerRateLimit('publicSnapshot', `bootstrap:${clientIp}`)
 
     logger.info({
       event: 'bootstrap.started',
@@ -58,6 +56,37 @@ export async function POST(request: NextRequest) {
       inviteToken,
       participantName,
     })
+
+    const byokSummary = await fetchQuery(
+      api.interviews.getInviteBootstrapByokSummary,
+      { inviteToken }
+    )
+    if (byokSummary.providerKeys.length > 0) {
+      const validation = validateProviderKeysForBootstrap(
+        byokSummary.providerKeys,
+        {
+          encryptionKeyConfigured: Boolean(
+            serverEnv.KYMA_ENCRYPTION_KEY?.trim()
+          ),
+        }
+      )
+      if (!validation.ok) {
+        logger.warn({
+          event: 'bootstrap.byok.invalid',
+          detail: validation.issues.join(' '),
+          inviteToken,
+          meta: { issues: validation.issues },
+        })
+        return NextResponse.json(
+          {
+            error:
+              'Workspace provider keys are misconfigured for interview bootstrap.',
+          },
+          { status: 503 }
+        )
+      }
+    }
+
     logger.info({
       event: 'bootstrap.session.created',
       detail: 'Convex session bootstrap completed.',
