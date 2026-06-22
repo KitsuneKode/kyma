@@ -17,7 +17,7 @@ export const processInterviewAssessmentFunction = inngest.createFunction(
   {
     id: 'process-interview-assessment',
     name: 'Process interview assessment',
-    retries: 1,
+    retries: 3,
     triggers: {
       event: 'kyma/interview.processing.requested',
     },

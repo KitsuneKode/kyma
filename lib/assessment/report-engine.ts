@@ -1,16 +1,18 @@
-export const RUBRIC_DIMENSIONS = [
-  'clarity',
-  'simplification',
-  'patience',
-  'warmth',
-  'listening',
-  'fluency',
-  'adaptability',
-  'engagement',
-  'accuracy',
-] as const
+import type { RubricConfig } from './llm-report-schema'
+import {
+  DIMENSION_LABELS,
+  DIMENSION_WEIGHTS,
+  isRubricDimension,
+  RUBRIC_DIMENSIONS,
+  type RubricDimension,
+} from '../rubric/constants'
 
-export type RubricDimension = (typeof RUBRIC_DIMENSIONS)[number]
+export {
+  DIMENSION_LABELS,
+  DIMENSION_WEIGHTS,
+  RUBRIC_DIMENSIONS,
+  type RubricDimension,
+} from '../rubric/constants'
 export type Recommendation = 'strong_yes' | 'yes' | 'mixed' | 'no'
 export type Confidence = 'high' | 'medium' | 'low'
 export type ReportStatus =
@@ -41,13 +43,13 @@ export type CandidateReviewInput = {
 }
 
 export type DimensionScore = {
-  dimension: RubricDimension
+  dimension: string
   score: number
   rationale: string
 }
 
 export type DimensionEvidence = {
-  dimension: RubricDimension
+  dimension: string
   snippet: string
   rationale: string
   startedAt?: string
@@ -75,30 +77,6 @@ type AssessmentContext = {
 }
 
 type CandidateSegment = TranscriptEntry & { speaker: 'candidate' }
-
-const DIMENSION_LABELS: Record<RubricDimension, string> = {
-  clarity: 'clarity',
-  simplification: 'simplification',
-  patience: 'patience',
-  warmth: 'warmth',
-  listening: 'listening',
-  fluency: 'fluency',
-  adaptability: 'adaptability',
-  engagement: 'engagement',
-  accuracy: 'accuracy',
-}
-
-const DIMENSION_WEIGHTS: Record<RubricDimension, number> = {
-  clarity: 0.2,
-  simplification: 0.14,
-  patience: 0.14,
-  warmth: 0.1,
-  listening: 0.1,
-  fluency: 0.1,
-  adaptability: 0.08,
-  engagement: 0.08,
-  accuracy: 0.06,
-}
 
 const KEYWORDS: Record<RubricDimension, string[]> = {
   clarity: ['first', 'then', 'because', 'so that', 'step', 'important'],
@@ -231,12 +209,13 @@ function buildDimensionRationale(
 
 function pickEvidence(
   segments: CandidateSegment[],
-  dimension: RubricDimension
+  dimension: string,
+  keywords: string[]
 ): DimensionEvidence | null {
   const scoredSegments = segments
     .map((segment) => {
       const text = normalize(segment.text)
-      const keywordScore = countMatches(text, KEYWORDS[dimension])
+      const keywordScore = countMatches(text, keywords)
       const lengthScore = Math.min(countWords(segment.text) / 12, 2)
       const uncertaintyPenalty = includesAny(text, UNCERTAINTY) ? 1 : 0
 
@@ -256,23 +235,25 @@ function pickEvidence(
   return {
     dimension,
     snippet: best.segment.text,
-    rationale: `Representative transcript evidence for ${DIMENSION_LABELS[dimension]}.`,
+    rationale: `Representative transcript evidence for ${isRubricDimension(dimension) ? DIMENSION_LABELS[dimension] : dimension}.`,
     startedAt: best.segment.startedAt,
     endedAt: best.segment.endedAt,
   }
 }
 
 function computeDimensionScore(
-  dimension: RubricDimension,
+  dimension: string,
+  keywords: string[],
   segments: CandidateSegment[],
   candidateTurns: number,
-  candidateWords: number
+  candidateWords: number,
+  _isHardGate: boolean
 ) {
   const normalizedTranscript = normalize(
     segments.map((segment) => segment.text).join(' ')
   )
   const avgWords = average(segments.map((segment) => countWords(segment.text)))
-  const markerCount = countMatches(normalizedTranscript, KEYWORDS[dimension])
+  const markerCount = countMatches(normalizedTranscript, keywords)
   const fillerCount = countMatches(normalizedTranscript, FILLERS)
   const uncertaintyCount = countMatches(normalizedTranscript, UNCERTAINTY)
   const fillerRate = candidateWords > 0 ? fillerCount / candidateWords : 0
@@ -289,7 +270,7 @@ function computeDimensionScore(
     score -= 0.5
   }
 
-  if (dimension === 'clarity') {
+  if (isRubricDimension(dimension) && dimension === 'clarity') {
     if (avgWords >= 10 && avgWords <= 35) {
       score += 0.5
     }
@@ -298,7 +279,7 @@ function computeDimensionScore(
     }
   }
 
-  if (dimension === 'fluency') {
+  if (isRubricDimension(dimension) && dimension === 'fluency') {
     if (fillerRate > 0.08) {
       score -= 1
     } else if (fillerRate < 0.03 && avgWords >= 8) {
@@ -306,7 +287,7 @@ function computeDimensionScore(
     }
   }
 
-  if (dimension === 'accuracy') {
+  if (isRubricDimension(dimension) && dimension === 'accuracy') {
     if (uncertaintyCount >= 3) {
       score -= 1
     } else if (uncertaintyCount === 0 && markerCount >= 2) {
@@ -314,7 +295,7 @@ function computeDimensionScore(
     }
   }
 
-  if (dimension === 'engagement') {
+  if (isRubricDimension(dimension) && dimension === 'engagement') {
     const questionCount = segments.filter((segment) =>
       segment.text.includes('?')
     ).length
@@ -329,14 +310,18 @@ function computeDimensionScore(
   return {
     dimension,
     score: clampedScore,
-    rationale: buildDimensionRationale(dimension, clampedScore, {
-      candidateTurns,
-      candidateWords,
-      markerCount,
-      fillerRate,
-      uncertaintyCount,
-    }),
-    evidence: pickEvidence(segments, dimension),
+    rationale: buildDimensionRationale(
+      isRubricDimension(dimension) ? dimension : 'clarity',
+      clampedScore,
+      {
+        candidateTurns,
+        candidateWords,
+        markerCount,
+        fillerRate,
+        uncertaintyCount,
+      }
+    ),
+    evidence: pickEvidence(segments, dimension, keywords),
   }
 }
 
@@ -383,7 +368,8 @@ function deriveAssessmentContext(
 }
 
 export function buildAssessmentReport(
-  input: CandidateReviewInput
+  input: CandidateReviewInput,
+  rubricConfig?: RubricConfig
 ): AssessmentComputation {
   const assessmentContext = deriveAssessmentContext(input.events)
   const candidateSegments = input.transcript.filter(
@@ -396,12 +382,39 @@ export function buildAssessmentReport(
     0
   )
 
-  const scoredDimensions = RUBRIC_DIMENSIONS.map((dimension) =>
+  const configuredDimensions =
+    rubricConfig?.dimensions.filter((dimension) => dimension.name.trim()) ?? []
+  const dimensionDefinitions =
+    configuredDimensions.length > 0
+      ? configuredDimensions.map((dimension) => ({
+          name: dimension.name.trim(),
+          weight: dimension.weight,
+          isHardGate: dimension.isHardGate,
+          keywords:
+            dimension.keywords && dimension.keywords.length > 0
+              ? dimension.keywords
+              : isRubricDimension(dimension.name)
+                ? KEYWORDS[dimension.name]
+                : ['because', 'example', 'step', 'understand'],
+        }))
+      : RUBRIC_DIMENSIONS.map((dimension) => ({
+          name: dimension,
+          weight: DIMENSION_WEIGHTS[dimension],
+          isHardGate:
+            dimension === 'clarity' ||
+            dimension === 'patience' ||
+            dimension === 'accuracy',
+          keywords: KEYWORDS[dimension],
+        }))
+
+  const scoredDimensions = dimensionDefinitions.map((definition) =>
     computeDimensionScore(
-      dimension,
+      definition.name,
+      definition.keywords,
       candidateSegments,
       candidateTurns,
-      candidateWords
+      candidateWords,
+      definition.isHardGate
     )
   )
   const dimensionScores: DimensionScore[] = scoredDimensions.map((item) => ({
@@ -413,10 +426,15 @@ export function buildAssessmentReport(
     .map((item) => item.evidence)
     .filter((item): item is DimensionEvidence => Boolean(item))
 
-  const weightedScoreRaw = dimensionScores.reduce(
-    (total, item) => total + item.score * DIMENSION_WEIGHTS[item.dimension],
+  const totalWeight = dimensionDefinitions.reduce(
+    (total, definition) => total + definition.weight,
     0
   )
+  const weightedScoreRaw = dimensionScores.reduce((total, item, index) => {
+    const weight = dimensionDefinitions[index]?.weight ?? 0
+    const normalizedWeight = totalWeight > 0 ? weight / totalWeight : 0
+    return total + item.score * normalizedWeight
+  }, 0)
   const weightedScore = Number(weightedScoreRaw.toFixed(2))
   const transcriptQualityNote = describeTranscriptQuality(
     candidateTurns,
@@ -431,11 +449,9 @@ export function buildAssessmentReport(
     confidence = 'low'
   }
 
-  const hardGateTriggered = dimensionScores.some(
-    (item) =>
-      (item.dimension === 'clarity' && item.score <= 2) ||
-      (item.dimension === 'patience' && item.score <= 2) ||
-      (item.dimension === 'accuracy' && item.score <= 2)
+  const hardGateTriggered = dimensionDefinitions.some(
+    (definition, index) =>
+      definition.isHardGate && (dimensionScores[index]?.score ?? 5) <= 2
   )
 
   let overallRecommendation: Recommendation = 'mixed'

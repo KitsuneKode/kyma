@@ -4,11 +4,17 @@ import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
 import { serverEnv } from '@/lib/env/server'
+import {
+  buildGatewayByokOptions,
+  resolveScoringModelId,
+} from '@/lib/providers/resolve-model'
 
+import { buildHybridAssessmentReport } from './llm-report'
 import {
   buildAssessmentReport,
   type AssessmentComputation,
 } from './report-engine'
+import type { RubricConfig } from './llm-report-schema'
 
 type SessionId = Id<'interviewSessions'>
 const PROCESSING_WRITE_KEY = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
@@ -86,13 +92,72 @@ export async function processInterviewAssessment(
     return null
   }
 
-  const report = buildAssessmentReport({
-    sessionId,
+  const reviewInput = {
+    sessionId: `${sessionId}`,
     candidateName: detail.candidate.name,
     templateName: detail.template.name,
     transcript: detail.transcript,
     events: detail.events,
+  }
+
+  const scoringModelId = resolveScoringModelId(
+    detail.workspace?.defaultModels,
+    detail.template.modelOverrides
+  )
+  const providerOptions = buildGatewayByokOptions({
+    modelId: scoringModelId,
+    providerKeys: detail.workspace?.providerKeys,
   })
+
+  let report: AssessmentComputation
+  let scoringSource: 'llm' | 'deterministic' = 'deterministic'
+
+  try {
+    const hybrid = await buildHybridAssessmentReport({
+      input: reviewInput,
+      rubricConfig: detail.template.rubricConfig as RubricConfig | undefined,
+      modelId: scoringModelId,
+      providerOptions,
+    })
+
+    report = hybrid.report
+    scoringSource = hybrid.source
+
+    if (hybrid.crossCheck?.hasDisagreement) {
+      logger.warn({
+        event: 'assessment.cross_check.disagreement',
+        detail: hybrid.crossCheck.reasons.join(' '),
+      })
+    }
+
+    if (hybrid.evidenceValidation && !hybrid.evidenceValidation.valid) {
+      logger.warn({
+        event: 'assessment.evidence.invalid',
+        detail: `${hybrid.evidenceValidation.invalidQuotes.length} evidence quote(s) failed grounding validation.`,
+      })
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'LLM scoring failed unexpectedly.'
+
+    logger.warn({
+      event: 'assessment.llm.failed',
+      detail: message,
+    })
+
+    const deterministic = buildAssessmentReport(reviewInput)
+    report = {
+      ...deterministic,
+      status:
+        deterministic.status === 'completed'
+          ? 'manual_review'
+          : deterministic.status,
+      summary: `${deterministic.summary} LLM scoring was unavailable (${message}); deterministic cross-check used instead.`,
+    }
+    scoringSource = 'deterministic'
+  }
 
   await fetchMutation(api.recruiter.saveAssessmentReport, {
     sessionId,
@@ -108,6 +173,8 @@ export async function processInterviewAssessment(
     transcriptQualityNote: report.transcriptQualityNote,
     dimensionScores: report.dimensionScores,
     evidence: report.evidence,
+    scoringSource,
+    scoringModelId,
     policySnapshot: detail.policySnapshot,
   })
 
@@ -131,6 +198,8 @@ export async function processInterviewAssessment(
       recommendation: report.overallRecommendation,
       confidence: report.confidence,
       status: report.status,
+      scoringSource,
+      scoringModelId,
     },
   })
 
