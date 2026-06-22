@@ -15,7 +15,6 @@ export async function requireOrgEntitlement(feature: OrgEntitlementFeature) {
     throw new Error('Active organization context is required.')
   }
 
-  const _feature = feature
-  void _feature
+  void feature
   return { orgId, allowed: true as const }
 }

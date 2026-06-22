@@ -19,5 +19,13 @@
     ".context/**",
     "coverage/**",
     "dist/**"
-  ]
+  ],
+  "rules": {
+    "no-underscore-dangle": [
+      "warn",
+      {
+        "allow": ["_id", "_creationTime"]
+      }
+    ]
+  }
 }
