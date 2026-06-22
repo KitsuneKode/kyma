@@ -15,12 +15,22 @@ type VisualObservation = FunctionReturnType<
 
 type VideoEvidencePanelProps = {
   sessionId: string
+  initialObservations?: VisualObservation[]
 }
 
-export function VideoEvidencePanel({ sessionId }: VideoEvidencePanelProps) {
-  const observations = useQuery(api.visualObservations.listForSession, {
-    sessionId: sessionId as Id<'interviewSessions'>,
-  })
+export function VideoEvidencePanel({
+  sessionId,
+  initialObservations,
+}: VideoEvidencePanelProps) {
+  const liveObservations = useQuery(
+    api.visualObservations.listForSession,
+    initialObservations || !sessionId
+      ? 'skip'
+      : {
+          sessionId: sessionId as Id<'interviewSessions'>,
+        }
+  )
+  const observations = initialObservations ?? liveObservations
 
   if (observations === undefined) {
     return (

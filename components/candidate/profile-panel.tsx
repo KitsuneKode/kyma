@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation } from 'convex/react'
 
 import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
+import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
 
 type CandidateIdentity = {
   name: string
@@ -16,7 +17,10 @@ export function CandidateProfilePanel({
 }: {
   identity: CandidateIdentity
 }) {
-  const preferences = useQuery(api.profile.getCandidatePreferences)
+  const { data: preferences } = useAuthenticatedQuery(
+    api.profile.getCandidatePreferences,
+    {}
+  )
   const savePreferences = useMutation(api.profile.saveCandidatePreferences)
   const [language, setLanguage] = useState('English')
   const [duration, setDuration] = useState(20)

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     const [detail, workspaceSettings] = await Promise.all([
       fetchQuery(
-        api.recruiter.getCandidateReviewDetail,
+        api.recruiter.getReportChatGrounding,
         {
           sessionId,
         },

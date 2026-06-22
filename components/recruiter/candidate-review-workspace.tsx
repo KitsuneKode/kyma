@@ -21,6 +21,9 @@ type CandidateReviewWorkspaceProps = {
   readOnly?: boolean
   backHref?: string
   audioPlaybackUrl?: string | null
+  visualObservations?: FunctionReturnType<
+    typeof api.visualObservations.listForSession
+  >
 }
 
 export function CandidateReviewWorkspace({
@@ -28,6 +31,7 @@ export function CandidateReviewWorkspace({
   readOnly = false,
   backHref = '/recruiter/candidates',
   audioPlaybackUrl,
+  visualObservations,
 }: CandidateReviewWorkspaceProps) {
   const teachingSimulation = summarizeTeachingSimulation(detail.events)
   const primaryRecording = getPrimaryRecording(detail)
@@ -89,7 +93,10 @@ export function CandidateReviewWorkspace({
       />
 
       <RenderErrorBoundary title="Video evidence">
-        <VideoEvidencePanel sessionId={detail.session.id} />
+        <VideoEvidencePanel
+          sessionId={detail.session.id}
+          initialObservations={visualObservations}
+        />
       </RenderErrorBoundary>
 
       <ReviewDetailTabs

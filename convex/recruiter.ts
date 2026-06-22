@@ -253,6 +253,70 @@ export const getSessionProcessingDetail = query({
   },
 })
 
+export const getReportChatGrounding = candidateReadQuery({
+  args: {
+    sessionId: v.id('interviewSessions'),
+  },
+  handler: async (ctx, { sessionId }) => {
+    const base = await loadSessionReviewBase(ctx, sessionId)
+
+    if (!base || !base.invite) {
+      return null
+    }
+
+    const { invite, template, report } = base
+
+    const [transcript, evidence] = await Promise.all([
+      ctx.db
+        .query('transcriptSegments')
+        .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+        .collect(),
+      report
+        ? ctx.db
+            .query('dimensionEvidence')
+            .withIndex('by_report', (q) => q.eq('reportId', report._id))
+            .collect()
+        : Promise.resolve([]),
+    ])
+
+    const finalTranscript = sortByIsoAsc(transcript).filter(
+      (segment) => segment.status === 'final'
+    )
+
+    return {
+      candidate: {
+        name: invite.candidateName ?? 'Candidate',
+      },
+      template: {
+        name: template?.name ?? 'AI Tutor Screener',
+        modelOverrides: template?.modelOverrides,
+      },
+      report: report
+        ? {
+            summary: report.summary,
+            recommendation: report.overallRecommendation,
+            confidence: report.confidence,
+            topStrengths: report.topStrengths ?? [],
+            topConcerns: report.topConcerns ?? [],
+            dimensionScores: report.dimensionScores ?? [],
+          }
+        : null,
+      transcript: finalTranscript.slice(-20).map((segment) => ({
+        speaker: segment.speaker,
+        text: segment.text,
+        startedAt: segment.startedAt,
+      })),
+      evidence: sortByIsoAsc(evidence)
+        .slice(0, 8)
+        .map((item) => ({
+          dimension: item.dimension,
+          snippet: item.snippet,
+          rationale: item.rationale,
+        })),
+    }
+  },
+})
+
 export const getCandidateReviewDetail = query({
   args: {
     sessionId: v.id('interviewSessions'),

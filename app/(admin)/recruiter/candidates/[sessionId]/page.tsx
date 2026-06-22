@@ -21,13 +21,24 @@ export default async function CandidateReviewPage({
   params,
 }: CandidateReviewPageProps) {
   const { sessionId } = await params
-  const detailResult = hasConvexDeployment()
-    ? await serverConvexQuery(api.recruiter.getCandidateReviewDetail, {
-        sessionId: sessionId as Id<'interviewSessions'>,
-      })
-    : { ok: false as const, kind: 'not_found' as const }
+  const [detailResult, observationsResult] = hasConvexDeployment()
+    ? await Promise.all([
+        serverConvexQuery(api.recruiter.getCandidateReviewDetail, {
+          sessionId: sessionId as Id<'interviewSessions'>,
+        }),
+        serverConvexQuery(api.visualObservations.listForSession, {
+          sessionId: sessionId as Id<'interviewSessions'>,
+        }),
+      ])
+    : [
+        { ok: false as const, kind: 'not_found' as const },
+        { ok: true as const, data: [] },
+      ]
 
   const detail = detailResult.ok ? detailResult.data : null
+  const visualObservations = observationsResult.ok
+    ? observationsResult.data
+    : []
   const primaryRecording = detail ? getPrimaryRecording(detail) : null
   const audioPlaybackUrl = primaryRecording
     ? await createRecordingPlaybackUrl(
@@ -53,6 +64,7 @@ export default async function CandidateReviewPage({
       <CandidateReviewWorkspace
         detail={detail}
         audioPlaybackUrl={audioPlaybackUrl}
+        visualObservations={visualObservations}
       />
 
       <RenderErrorBoundary title="Recruiter chat">
