@@ -27,6 +27,14 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Convex validation (schema + bundle)
+        run: bun run convex:once
+        env:
+          CONVEX_AGENT_MODE: anonymous
+
+      - name: Convex generated files in sync
+        run: git diff --exit-code -- convex/_generated
+
       - name: Typecheck
         run: bun run typecheck
 
@@ -38,3 +46,23 @@ jobs:
 
       - name: React Doctor (changed files)
         run: bun run doctor:diff
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Playwright smoke tests
+        run: bun run test:e2e
