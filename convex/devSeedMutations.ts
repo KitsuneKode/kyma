@@ -4,6 +4,13 @@ import { ConvexError, v } from 'convex/values'
 
 import type { DataModel } from './_generated/dataModel'
 import { mutation } from './_generated/server'
+import {
+  DIMENSIONS,
+  initDeterministicFaker,
+  seedBatches,
+  seedFullSpectrumCohort,
+  type SampleIndex,
+} from './helpers/devSeedSpectrum'
 
 const SEED_TABLES = [
   'reportChatMessages',
@@ -51,127 +58,6 @@ function nowIso() {
 const SEED_ORG_ID = 'org_seed'
 const SEED_ORG_NAME = 'Kyma Seed Academy'
 
-const REALISTIC_CANDIDATES = [
-  {
-    name: 'Aarav Mehta',
-    email: 'aarav.mehta@example.test',
-    summary:
-      'Aarav gives a calm, structured explanation of equivalent fractions and checks for understanding before increasing difficulty. He is strongest when he uses a concrete pizza model, and weaker when the learner asks about edge cases involving mixed numbers.',
-    strengths: [
-      'Turns abstract fraction equivalence into concrete visual steps.',
-      'Checks learner understanding before moving to symbolic notation.',
-    ],
-    concerns: [
-      'Needs tighter recovery when a child gives a partially correct answer.',
-      'Occasionally over-explains instead of asking a guiding question.',
-    ],
-    transcript: [
-      {
-        speaker: 'agent' as const,
-        text: 'Pretend I am a student who thinks one half is bigger than two quarters because one is larger than two. How would you help me?',
-      },
-      {
-        speaker: 'candidate' as const,
-        text: 'I would start with a picture. Imagine one pizza cut into two equal slices, then the same size pizza cut into four equal slices. If we shade one of the two slices, it covers the same amount as shading two of the four slices.',
-      },
-      {
-        speaker: 'agent' as const,
-        text: 'But two pieces still sounds like more than one piece.',
-      },
-      {
-        speaker: 'candidate' as const,
-        text: 'That is a good observation. The number of pieces alone is not enough; we also need the size of each piece. Two small equal pieces can cover the same space as one larger equal piece.',
-      },
-      {
-        speaker: 'agent' as const,
-        text: 'Can you give me a quick check question?',
-      },
-      {
-        speaker: 'candidate' as const,
-        text: 'Yes. If I cut the same chocolate bar into six equal parts, how many sixths would cover the same amount as one half? I would wait for the student to reason it out, then connect three sixths back to one half.',
-      },
-      {
-        speaker: 'agent' as const,
-        text: 'What if I answer four sixths?',
-      },
-      {
-        speaker: 'candidate' as const,
-        text: 'I would say four sixths is more than half and ask them to compare it to three sixths on the same bar. Then I would have them mark the midpoint first.',
-      },
-    ],
-    evidence: [
-      {
-        dimension: 'clarity',
-        snippet:
-          'I would start with a picture. Imagine one pizza cut into two equal slices...',
-        rationale:
-          'Uses a concrete model before symbolic notation, which makes the concept inspectable for a child.',
-      },
-      {
-        dimension: 'listening',
-        snippet:
-          'That is a good observation. The number of pieces alone is not enough...',
-        rationale: 'Validates the child misconception before correcting it.',
-      },
-      {
-        dimension: 'adaptability',
-        snippet:
-          'I would say four sixths is more than half and ask them to compare it to three sixths...',
-        rationale:
-          'Responds to a wrong answer with a scaffold rather than simply giving the answer.',
-      },
-    ],
-  },
-] as const
-
-const GOLDEN_DIMENSION_SCORES = {
-  clarity: {
-    score: 4.6,
-    rationale:
-      'Uses a concrete pizza model before introducing numerator and denominator language.',
-  },
-  simplification: {
-    score: 4.4,
-    rationale:
-      'Breaks equivalent fractions into one visual comparison and one quick check question.',
-  },
-  patience: {
-    score: 4.2,
-    rationale:
-      'Validates the misconception before correcting it, which keeps the learner engaged.',
-  },
-  warmth: {
-    score: 4.1,
-    rationale:
-      'Uses encouraging language and avoids making the wrong answer feel punitive.',
-  },
-  listening: {
-    score: 4.7,
-    rationale:
-      'Responds directly to the child saying that two pieces sounds larger than one.',
-  },
-  fluency: {
-    score: 3.9,
-    rationale:
-      'Explains smoothly overall, with a few moments where the answer becomes longer than needed.',
-  },
-  adaptability: {
-    score: 4.0,
-    rationale:
-      'Adjusts the scaffold when the child answers four sixths instead of three sixths.',
-  },
-  engagement: {
-    score: 4.3,
-    rationale:
-      'Uses a familiar pizza and chocolate-bar context to keep the concept tangible.',
-  },
-  accuracy: {
-    score: 4.5,
-    rationale:
-      'Mathematical explanation of one half, two quarters, and three sixths is correct.',
-  },
-} as const
-
 export const clearTableChunk = mutation({
   args: {
     table: v.string(),
@@ -202,14 +88,14 @@ export const seedData = mutation({
     ownerName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    initDeterministicFaker()
     const orgId = args.targetOrgId?.trim() || SEED_ORG_ID
     const orgName = args.targetOrgName?.trim() || SEED_ORG_NAME
     const recruiterCount = Math.max(1, Math.min(args.recruiters ?? 3, 12))
     const candidateCount = Math.max(5, Math.min(args.candidates ?? 24, 200))
     const now = Date.now()
     const createdAtIso = nowIso()
-    const sampleInviteTokens: string[] = []
-    const sampleReviewSessionIds: string[] = []
+    const sampleIndex: SampleIndex = {}
 
     await ctx.db.insert('organizations', {
       clerkOrgId: orgId,
@@ -363,80 +249,52 @@ export const seedData = mutation({
       },
     })
 
-    const batchId = await ctx.db.insert('screeningBatches', {
+    const batchIds = await seedBatches(ctx, {
       orgId,
-      name: `Seed Batch ${faker.date.recent({ days: 2 }).toISOString().slice(0, 10)}`,
       templateId,
-      createdBy: `user:${recruiterIds[0]}`,
-      status: 'active',
-      expiresAt: faker.date.soon({ days: 14 }).toISOString(),
-      allowedAttempts: 2,
-      targetDurationMinutes: 18,
-      allowsResume: true,
-      createdAt: createdAtIso,
+      recruiterId: recruiterIds[0]!,
+      createdAtIso,
     })
+    const batchId = batchIds.active
 
-    const openInviteToken = `seed-open-${faker.string.alphanumeric(14).toLowerCase()}`
-    const openInviteId = await ctx.db.insert('candidateInvites', {
-      orgId,
-      inviteToken: openInviteToken,
-      candidateName: 'Nisha Rao',
-      candidateEmail: 'nisha.rao@example.test',
-      templateId,
-      batchId,
-      status: 'created',
-      expiresAt: faker.date.soon({ days: 7 }).toISOString(),
-    })
-    const openEligibilityId = await ctx.db.insert('candidateEligibility', {
-      orgId,
-      batchId,
-      inviteId: openInviteId,
-      candidateName: 'Nisha Rao',
-      candidateEmail: 'nisha.rao@example.test',
-      allowedAttempts: 2,
-      attemptCount: 0,
-      status: 'invited',
-      createdAt: createdAtIso,
-    })
-    await ctx.db.patch(openInviteId, { eligibilityId: openEligibilityId })
-    sampleInviteTokens.push(openInviteToken)
+    await seedFullSpectrumCohort(
+      ctx,
+      {
+        orgId,
+        templateId,
+        batchIds,
+        recruiterIds,
+        adminId,
+        createdAtIso,
+      },
+      sampleIndex,
+      candidateIds
+    )
 
-    const dimensions = [
-      'clarity',
-      'simplification',
-      'patience',
-      'warmth',
-      'listening',
-      'fluency',
-      'adaptability',
-      'engagement',
-      'accuracy',
-    ] as const
-
-    for (const [candidateIndex, candidateUserId] of candidateIds.entries()) {
-      const candidate = await ctx.db.get(candidateUserId)
-      const realisticCandidate = REALISTIC_CANDIDATES[candidateIndex]
-      const inviteToken = `seed-${faker.string.alphanumeric(18).toLowerCase()}`
-      if (sampleInviteTokens.length < 5) {
-        sampleInviteTokens.push(inviteToken)
-      }
+    const spectrumCount = Object.keys(sampleIndex).length
+    for (
+      let candidateIndex = spectrumCount;
+      candidateIndex < candidateCount;
+      candidateIndex += 1
+    ) {
+      const candidateUserId =
+        candidateIds[candidateIndex % candidateIds.length]!
+      const candidate = await ctx.db.get('users', candidateUserId)
+      const inviteToken = `seed-bulk-${faker.string.alphanumeric(18).toLowerCase()}`
       const inviteId = await ctx.db.insert('candidateInvites', {
         orgId,
         inviteToken,
-        candidateName: realisticCandidate?.name ?? candidate?.name,
-        candidateEmail: realisticCandidate?.email ?? candidate?.email,
+        candidateName: candidate?.name,
+        candidateEmail: candidate?.email,
         userId: candidateUserId,
         templateId,
         batchId,
-        status:
-          candidateIndex === 0
-            ? 'completed'
-            : faker.helpers.arrayElement([
-                'created',
-                'opened',
-                'in_progress',
-                'completed',
-              ] as const),
+        status: faker.helpers.arrayElement([
+          'created',
+          'opened',
+          'in_progress',
+          'completed',
+        ] as const),
         expiresAt: faker.date.soon({ days: 7 }).toISOString(),
       })
 
@@ -444,21 +302,15 @@ export const seedData = mutation({
         orgId,
         batchId,
         inviteId,
-        candidateName:
-          realisticCandidate?.name ??
-          candidate?.name ??
-          faker.person.fullName(),
-        candidateEmail: realisticCandidate?.email ?? candidate?.email,
+        candidateName: candidate?.name ?? faker.person.fullName(),
+        candidateEmail: candidate?.email,
         allowedAttempts: 2,
         attemptCount: faker.number.int({ min: 0, max: 1 }),
-        status:
-          candidateIndex === 0
-            ? 'submitted'
-            : faker.helpers.arrayElement([
-                'invited',
-                'in_progress',
-                'submitted',
-              ] as const),
+        status: faker.helpers.arrayElement([
+          'invited',
+          'in_progress',
+          'submitted',
+        ] as const),
         createdAt: createdAtIso,
       })
 
@@ -475,22 +327,20 @@ export const seedData = mutation({
             })
       const startedAt = startedAtDate.toISOString()
       const endedAt = endedAtDate.toISOString()
-      const state =
-        candidateIndex === 0
-          ? 'completed'
-          : faker.helpers.arrayElement([
-              'processing',
-              'completed',
-              'failed',
-              'live',
-            ] as const)
+      const state = faker.helpers.arrayElement([
+        'processing',
+        'completed',
+        'failed',
+        'live',
+        'ready',
+      ] as const)
       const sessionId = await ctx.db.insert('interviewSessions', {
         orgId,
         inviteId,
         state,
         provider: 'livekit',
         roomName: `room-${faker.string.alphanumeric(12).toLowerCase()}`,
-        participantName: realisticCandidate?.name ?? candidate?.name,
+        participantName: candidate?.name,
         participantIdentity: `candidate:${candidateUserId}`,
         reconnectCount: faker.number.int({ min: 0, max: 2 }),
         activeDurationMs: faker.number.int({
@@ -506,52 +356,16 @@ export const seedData = mutation({
         failureReason: state === 'failed' ? faker.lorem.sentence() : undefined,
         candidateUserId,
       })
-      if (sampleReviewSessionIds.length < 5) {
-        sampleReviewSessionIds.push(`${sessionId}`)
-      }
 
       await ctx.db.insert('sessionEvents', {
         orgId,
         sessionId,
         type: 'session.bootstrap',
-        detail: `Seeded session for ${realisticCandidate?.name ?? candidate?.name ?? 'candidate'}`,
+        detail: `Seeded bulk session for ${candidate?.name ?? 'candidate'}`,
         createdAt: startedAt,
       })
 
-      if (candidateIndex === 0) {
-        await ctx.db.insert('sessionEvents', {
-          orgId,
-          sessionId,
-          type: 'teaching-simulation-started',
-          detail: 'Child-persona fraction misconception simulation started.',
-          createdAt: new Date(
-            startedAtDate.getTime() + 7 * 60_000
-          ).toISOString(),
-        })
-        await ctx.db.insert('sessionEvents', {
-          orgId,
-          sessionId,
-          type: 'candidate-screen-share-started',
-          detail: 'Candidate shared a whiteboard to draw equivalent fractions.',
-          createdAt: new Date(
-            startedAtDate.getTime() + 8 * 60_000
-          ).toISOString(),
-        })
-        await ctx.db.insert('sessionEvents', {
-          orgId,
-          sessionId,
-          type: 'teaching-simulation-completed',
-          detail: 'Simulation completed with a follow-up check question.',
-          createdAt: new Date(
-            startedAtDate.getTime() + 14 * 60_000
-          ).toISOString(),
-        })
-      }
-
-      if (
-        state !== 'live' &&
-        (candidateIndex === 0 || faker.datatype.boolean())
-      ) {
+      if (state !== 'live' && faker.datatype.boolean()) {
         const egressId = `egress_${faker.string.alphanumeric(12).toLowerCase()}`
         await ctx.db.insert('recordingArtifacts', {
           orgId,
@@ -576,92 +390,56 @@ export const seedData = mutation({
         })
       }
 
-      const transcript = realisticCandidate?.transcript
-      const transcriptLength = transcript?.length ?? 8
+      const transcriptLength = 6
       for (
         let segmentIndex = 0;
         segmentIndex < transcriptLength;
         segmentIndex += 1
       ) {
-        const segment = transcript?.[segmentIndex]
         await ctx.db.insert('transcriptSegments', {
           sessionId,
           sourceSegmentId: faker.string.uuid(),
-          speaker:
-            segment?.speaker ??
-            (segmentIndex % 2 === 0 ? 'agent' : 'candidate'),
-          text: segment?.text ?? faker.lorem.sentences({ min: 1, max: 3 }),
+          speaker: segmentIndex % 2 === 0 ? 'agent' : 'candidate',
+          text: faker.lorem.sentences({ min: 1, max: 3 }),
           status: 'final',
-          startedAt:
-            candidateIndex === 0
-              ? new Date(
-                  startedAtDate.getTime() + segmentIndex * 90_000
-                ).toISOString()
-              : faker.date
-                  .between({ from: new Date(startedAt), to: new Date(endedAt) })
-                  .toISOString(),
-          endedAt:
-            candidateIndex === 0
-              ? new Date(
-                  startedAtDate.getTime() + segmentIndex * 90_000 + 45_000
-                ).toISOString()
-              : faker.date
-                  .between({ from: new Date(startedAt), to: new Date(endedAt) })
-                  .toISOString(),
+          startedAt: faker.date
+            .between({ from: new Date(startedAt), to: new Date(endedAt) })
+            .toISOString(),
+          endedAt: faker.date
+            .between({ from: new Date(startedAt), to: new Date(endedAt) })
+            .toISOString(),
         })
       }
 
-      const recommendation =
-        candidateIndex === 0 ? 'yes' : randomRecommendation()
-      const confidence = candidateIndex === 0 ? 'high' : randomConfidence()
+      const recommendation = randomRecommendation()
+      const confidence = randomConfidence()
       const reportId = await ctx.db.insert('assessmentReports', {
         orgId,
         sessionId,
-        status:
-          candidateIndex === 0
-            ? 'completed'
-            : faker.helpers.arrayElement([
-                'completed',
-                'manual_review',
-                'processing',
-              ] as const),
+        status: faker.helpers.arrayElement([
+          'completed',
+          'manual_review',
+          'processing',
+          'pending',
+          'failed',
+        ] as const),
         overallRecommendation: recommendation,
         confidence,
-        summary: realisticCandidate?.summary ?? faker.lorem.paragraph(),
-        weightedScore:
-          candidateIndex === 0
-            ? 4.3
-            : faker.number.float({
-                min: 2.1,
-                max: 4.9,
-                fractionDigits: 2,
-              }),
-        hardGateTriggered:
-          candidateIndex === 0 ? false : faker.datatype.boolean(),
-        topStrengths: realisticCandidate?.strengths
-          ? [...realisticCandidate.strengths]
-          : [faker.lorem.words(2), faker.lorem.words(2)],
-        topConcerns: realisticCandidate?.concerns
-          ? [...realisticCandidate.concerns]
-          : [faker.lorem.words(2), faker.lorem.words(2)],
-        transcriptQualityNote:
-          candidateIndex === 0
-            ? 'Transcript is complete enough for review; whiteboard detail is summarized from session events.'
-            : faker.lorem.sentence(),
-        dimensionScores: dimensions.map((dimension) => {
-          const goldenScore = GOLDEN_DIMENSION_SCORES[dimension]
-          return {
-            dimension,
-            score:
-              candidateIndex === 0
-                ? goldenScore.score
-                : faker.number.float({ min: 2, max: 5, fractionDigits: 1 }),
-            rationale:
-              candidateIndex === 0
-                ? goldenScore.rationale
-                : faker.lorem.sentence(),
-          }
+        summary: faker.lorem.paragraph(),
+        weightedScore: faker.number.float({
+          min: 2.1,
+          max: 4.9,
+          fractionDigits: 2,
         }),
+        hardGateTriggered: faker.datatype.boolean(),
+        topStrengths: [faker.lorem.words(2), faker.lorem.words(2)],
+        topConcerns: [faker.lorem.words(2), faker.lorem.words(2)],
+        transcriptQualityNote: faker.lorem.sentence(),
+        dimensionScores: DIMENSIONS.map((dimension) => ({
+          dimension,
+          score: faker.number.float({ min: 2, max: 5, fractionDigits: 1 }),
+          rationale: faker.lorem.sentence(),
+        })),
         generatedAt: endedAt,
         policySnapshot: {
           targetDurationMinutes: 18,
@@ -672,59 +450,33 @@ export const seedData = mutation({
           templateName: 'AI Tutor Screener Default',
           interviewStyleMode: 'standard',
         },
-        released: candidateIndex === 0 ? true : faker.datatype.boolean(),
+        released: faker.datatype.boolean(),
       })
 
-      const evidenceItems = realisticCandidate?.evidence
-      const evidenceLength = evidenceItems?.length ?? 3
-      for (let index = 0; index < evidenceLength; index += 1) {
-        const evidence = evidenceItems?.[index]
+      for (let index = 0; index < 2; index += 1) {
         await ctx.db.insert('dimensionEvidence', {
           orgId,
           reportId,
           sessionId,
-          dimension:
-            evidence?.dimension ?? faker.helpers.arrayElement(dimensions),
-          snippet: evidence?.snippet ?? faker.lorem.sentence(),
-          rationale: evidence?.rationale ?? faker.lorem.sentence(),
-          startedAt:
-            candidateIndex === 0
-              ? new Date(
-                  startedAtDate.getTime() + (index + 1) * 120_000
-                ).toISOString()
-              : faker.date
-                  .between({ from: new Date(startedAt), to: new Date(endedAt) })
-                  .toISOString(),
-          endedAt:
-            candidateIndex === 0
-              ? new Date(
-                  startedAtDate.getTime() + (index + 1) * 120_000 + 60_000
-                ).toISOString()
-              : faker.date
-                  .between({ from: new Date(startedAt), to: new Date(endedAt) })
-                  .toISOString(),
+          dimension: faker.helpers.arrayElement(DIMENSIONS),
+          snippet: faker.lorem.sentence(),
+          rationale: faker.lorem.sentence(),
           createdAt: endedAt,
         })
       }
 
-      if (candidateIndex === 0 || faker.datatype.boolean()) {
+      if (faker.datatype.boolean()) {
         await ctx.db.insert('reviewDecisions', {
           orgId,
           reportId,
           sessionId,
-          decision:
-            candidateIndex === 0
-              ? 'advance'
-              : faker.helpers.arrayElement([
-                  'advance',
-                  'reject',
-                  'manual_review',
-                  'hold',
-                ] as const),
-          rationale:
-            candidateIndex === 0
-              ? 'Advance to live panel: strong conceptual explanation and calm misconception handling.'
-              : faker.lorem.sentence(),
+          decision: faker.helpers.arrayElement([
+            'advance',
+            'reject',
+            'manual_review',
+            'hold',
+          ] as const),
+          rationale: faker.lorem.sentence(),
           reviewerId: `user:${faker.helpers.arrayElement(recruiterIds)}`,
           createdAt: faker.date.recent({ days: 2 }).toISOString(),
         })
@@ -735,10 +487,7 @@ export const seedData = mutation({
         sessionId,
         reportId,
         authorId: `user:${faker.helpers.arrayElement(recruiterIds)}`,
-        body:
-          candidateIndex === 0
-            ? 'Strong demo candidate. Follow up in panel on handling a quiet student and shortening explanations under time pressure.'
-            : faker.lorem.sentences({ min: 1, max: 2 }),
+        body: faker.lorem.sentences({ min: 1, max: 2 }),
         createdAt: faker.date.recent({ days: 2 }).toISOString(),
       })
 
@@ -756,17 +505,30 @@ export const seedData = mutation({
         sessionId,
         reportId,
         role: 'assistant',
-        content:
-          candidateIndex === 0
-            ? 'Top risk is not mathematical accuracy; it is pacing. Aarav explains clearly but should ask one more diagnostic question before giving the full correction.'
-            : faker.lorem.sentences({ min: 2, max: 4 }),
+        content: faker.lorem.sentences({ min: 2, max: 4 }),
         createdAt: faker.date.recent({ days: 1 }).toISOString(),
         answerSource: 'model',
         modelId: 'anthropic/claude-sonnet-4.6',
         citationsJson: JSON.stringify([
-          { kind: 'evidence', ref: 'seed:1', label: 'Seeded evidence' },
+          { kind: 'evidence', ref: 'seed:bulk', label: 'Bulk seed evidence' },
         ]),
         groundingVersion: 'v1',
+      })
+    }
+
+    for (const candidateUserId of candidateIds.slice(0, 3)) {
+      await ctx.db.insert('candidateReadinessRuns', {
+        candidateUserId,
+        ranAt: faker.date.recent({ days: 1 }).toISOString(),
+        checks: {
+          browserSupported: true,
+          audioInputAvailable: true,
+          videoInputAvailable: true,
+          networkOnline: true,
+          secureContext: true,
+          mediaPermissionsGranted: true,
+        },
+        notes: 'Seeded passing readiness run',
       })
     }
 
@@ -794,6 +556,13 @@ export const seedData = mutation({
       createdAt: nowIso(),
     })
 
+    const sampleInviteTokens = Object.values(sampleIndex).map(
+      (entry) => entry.inviteToken
+    )
+    const sampleReviewSessionIds = Object.values(sampleIndex).map(
+      (entry) => entry.sessionId
+    )
+
     return {
       ok: true,
       orgId,
@@ -801,6 +570,7 @@ export const seedData = mutation({
       batchId: `${batchId}`,
       candidates: candidateCount,
       recruiters: recruiterCount,
+      sampleIndex,
       sampleInviteTokens,
       sampleReviewSessionIds,
     }

@@ -16,6 +16,7 @@ import {
 } from './helpers/interviewPolicy'
 import { findUserByIdentity } from './helpers/clerkIdentity'
 import { ensureDefaultTemplate } from './helpers/templates'
+import { upsertTranscriptSegmentForSession } from './helpers/transcriptSegments'
 import { isDevelopmentMode } from '../lib/runtime-mode'
 import { runtimeEnv } from '../lib/env/runtime'
 
@@ -29,7 +30,6 @@ function isEnabledDemoInviteToken(inviteToken: string) {
 }
 
 const WRITE_WINDOW_MS = 60_000
-const MAX_TRANSCRIPT_WRITES_PER_WINDOW = 120
 const MAX_SESSION_EVENTS_PER_WINDOW = 90
 const DEMO_ORG_ID = 'org_demo'
 
@@ -43,24 +43,6 @@ function defaultDemoPolicy(expiresAt: string): InterviewPolicy {
     rubricVersion: 'v1',
     templateName: 'AI Tutor Screener',
     interviewStyleMode: 'standard',
-  }
-}
-
-async function assertTranscriptWriteThrottle(
-  ctx: MutationCtx,
-  sessionId: Id<'interviewSessions'>
-) {
-  const since = new Date(Date.now() - WRITE_WINDOW_MS).toISOString()
-  const segments = await ctx.db
-    .query('transcriptSegments')
-    .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-    .collect()
-  const recent = segments.filter((segment) => segment.startedAt >= since)
-
-  if (recent.length > MAX_TRANSCRIPT_WRITES_PER_WINDOW) {
-    throw new ConvexError(
-      'Transcript update rate exceeded. Please wait a moment and try again.'
-    )
   }
 }
 
@@ -90,20 +72,6 @@ function isInviteExpired(expiresAt: string) {
   }
 
   return parsed <= Date.now()
-}
-
-function resolveTranscriptLookupKey(args: {
-  segmentId: string
-  speaker: 'agent' | 'candidate' | 'system'
-  startedAt: string
-}) {
-  const normalizedSegmentId = args.segmentId.trim()
-
-  if (normalizedSegmentId) {
-    return normalizedSegmentId
-  }
-
-  return `${args.speaker}:${args.startedAt}`
 }
 
 async function requireInviteSessionWriteAccess(
@@ -412,6 +380,42 @@ export const getPublicSessionDetail = query({
           sizeBytes: artifact.sizeBytes,
           error: artifact.error,
         })),
+    }
+  },
+})
+
+export const getInviteBootstrapByokSummary = query({
+  args: {
+    inviteToken: v.string(),
+  },
+  returns: v.object({
+    providerKeys: v.array(
+      v.object({
+        provider: v.string(),
+        keyId: v.string(),
+      })
+    ),
+  }),
+  handler: async (ctx, { inviteToken }) => {
+    const invite = await ctx.db
+      .query('candidateInvites')
+      .withIndex('by_invite_token', (q) => q.eq('inviteToken', inviteToken))
+      .first()
+
+    if (!invite) {
+      return { providerKeys: [] }
+    }
+
+    const settings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', invite.orgId))
+      .first()
+
+    return {
+      providerKeys: (settings?.providerKeys ?? []).map((item) => ({
+        provider: item.provider,
+        keyId: item.keyId,
+      })),
     }
   },
 })
@@ -856,43 +860,10 @@ export const upsertTranscriptSegment = mutation({
   },
   handler: async (ctx, args) => {
     await requireInviteSessionWriteAccess(ctx, args.sessionId, args.inviteToken)
-    await assertTranscriptWriteThrottle(ctx, args.sessionId)
 
-    const sourceSegmentId = resolveTranscriptLookupKey(args)
-    const indexedMatch = await ctx.db
-      .query('transcriptSegments')
-      .withIndex('by_session_and_source_segment_id', (q) =>
-        q.eq('sessionId', args.sessionId).eq('sourceSegmentId', sourceSegmentId)
-      )
-      .first()
-    const match =
-      indexedMatch ??
-      (
-        await ctx.db
-          .query('transcriptSegments')
-          .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
-          .collect()
-      ).find(
-        (segment) =>
-          segment.sourceSegmentId === sourceSegmentId ||
-          (segment.startedAt === args.startedAt &&
-            segment.speaker === args.speaker &&
-            segment.status === 'partial')
-      )
-
-    if (match) {
-      await ctx.db.patch(match._id, {
-        sourceSegmentId,
-        text: args.text,
-        status: args.status,
-        endedAt: args.endedAt,
-      })
-      return match._id
-    }
-
-    return await ctx.db.insert('transcriptSegments', {
+    return await upsertTranscriptSegmentForSession(ctx, {
       sessionId: args.sessionId,
-      sourceSegmentId,
+      segmentId: args.segmentId,
       speaker: args.speaker,
       text: args.text,
       status: args.status,
@@ -917,49 +888,64 @@ export const upsertTranscriptSegmentInternal = internalMutation({
     endedAt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await assertTranscriptWriteThrottle(ctx, args.sessionId)
+    return await upsertTranscriptSegmentForSession(ctx, args)
+  },
+})
 
-    const sourceSegmentId = resolveTranscriptLookupKey(args)
-    const indexedMatch = await ctx.db
-      .query('transcriptSegments')
-      .withIndex('by_session_and_source_segment_id', (q) =>
-        q.eq('sessionId', args.sessionId).eq('sourceSegmentId', sourceSegmentId)
+export const claimCandidateInviteByToken = mutation({
+  args: {
+    inviteToken: v.string(),
+  },
+  returns: v.object({
+    linked: v.boolean(),
+  }),
+  handler: async (ctx, { inviteToken }) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity?.email) {
+      throw new ConvexError(
+        'Sign in with an email address to link this invite.'
       )
-      .first()
-    const match =
-      indexedMatch ??
-      (
-        await ctx.db
-          .query('transcriptSegments')
-          .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
-          .collect()
-      ).find(
-        (segment) =>
-          segment.sourceSegmentId === sourceSegmentId ||
-          (segment.startedAt === args.startedAt &&
-            segment.speaker === args.speaker &&
-            segment.status === 'partial')
-      )
-
-    if (match) {
-      await ctx.db.patch(match._id, {
-        sourceSegmentId,
-        text: args.text,
-        status: args.status,
-        endedAt: args.endedAt,
-      })
-      return match._id
     }
 
-    return await ctx.db.insert('transcriptSegments', {
-      sessionId: args.sessionId,
-      sourceSegmentId,
-      speaker: args.speaker,
-      text: args.text,
-      status: args.status,
-      startedAt: args.startedAt,
-      endedAt: args.endedAt,
+    const user = await findUserByIdentity(ctx, identity)
+    if (!user) {
+      throw new ConvexError('User profile not found.')
+    }
+
+    const invite = await ctx.db
+      .query('candidateInvites')
+      .withIndex('by_invite_token', (q) => q.eq('inviteToken', inviteToken))
+      .first()
+
+    if (!invite) {
+      return { linked: false }
+    }
+
+    const normalizedEmail = identity.email.trim().toLowerCase()
+    if (
+      invite.candidateEmail &&
+      invite.candidateEmail.trim().toLowerCase() !== normalizedEmail
+    ) {
+      throw new ConvexError(
+        'Your account email does not match this screening invite.'
+      )
+    }
+
+    await ctx.db.patch(invite._id, {
+      userId: user._id,
+      candidateEmail: invite.candidateEmail ?? identity.email,
     })
+
+    const session = await ctx.db
+      .query('interviewSessions')
+      .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
+      .first()
+
+    if (session) {
+      await ctx.db.patch(session._id, { candidateUserId: user._id })
+    }
+
+    return { linked: true }
   },
 })
 

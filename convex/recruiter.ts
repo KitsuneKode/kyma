@@ -1,4 +1,4 @@
-import { v } from 'convex/values'
+import { ConvexError, v } from 'convex/values'
 
 import type { Id } from './_generated/dataModel'
 import { mutation, query, type QueryCtx } from './_generated/server'
@@ -26,31 +26,12 @@ import {
 import { isDevelopmentMode } from '../lib/runtime-mode'
 import { runtimeEnv } from '../lib/env/runtime'
 import { rateLimiter } from './rateLimiter'
-
-const recommendationValidator = v.union(
-  v.literal('strong_yes'),
-  v.literal('yes'),
-  v.literal('mixed'),
-  v.literal('no')
-)
-
-const confidenceValidator = v.union(
-  v.literal('high'),
-  v.literal('medium'),
-  v.literal('low')
-)
-
-const rubricDimensionValidator = v.union(
-  v.literal('clarity'),
-  v.literal('simplification'),
-  v.literal('patience'),
-  v.literal('warmth'),
-  v.literal('listening'),
-  v.literal('fluency'),
-  v.literal('adaptability'),
-  v.literal('engagement'),
-  v.literal('accuracy')
-)
+import {
+  confidenceValidator,
+  interviewPolicySnapshotValidator,
+  recommendationValidator,
+  scoringDimensionValidator,
+} from './validators'
 
 const reviewDecisionValidator = v.union(
   v.literal('advance'),
@@ -58,18 +39,6 @@ const reviewDecisionValidator = v.union(
   v.literal('manual_review'),
   v.literal('hold')
 )
-
-const interviewPolicySnapshotValidator = v.object({
-  targetDurationMinutes: v.number(),
-  allowsResume: v.boolean(),
-  maxAttempts: v.number(),
-  rubricVersion: v.string(),
-  templateId: v.string(),
-  templateName: v.optional(v.string()),
-  interviewStyleMode: v.optional(
-    v.union(v.literal('standard'), v.literal('intensive'))
-  ),
-})
 
 function countWords(text: string) {
   return text.trim().split(/\s+/).filter(Boolean).length
@@ -105,10 +74,11 @@ export const listReviewCandidates = query({
     await requireAdminIdentity(ctx)
     const orgId = await requireOrgId(ctx)
 
+    // Bounded for dashboard load; use paginated list queries when the queue grows.
     const sessions = await ctx.db
       .query('interviewSessions')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-      .collect()
+      .take(100)
     const sortedSessions = [...sessions].toSorted((left, right) =>
       (right.startedAt ?? '').localeCompare(left.startedAt ?? '')
     )
@@ -181,6 +151,10 @@ export const getSessionProcessingDetail = query({
       ctx,
       invite
     )
+    const workspaceSettings = await ctx.db
+      .query('workspaceSettings')
+      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .first()
     const report = await ctx.db
       .query('assessmentReports')
       .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
@@ -204,7 +178,15 @@ export const getSessionProcessingDetail = query({
       },
       template: {
         name: template?.name ?? 'AI Tutor Screener',
+        rubricConfig: template?.rubricConfig ?? undefined,
+        modelOverrides: template?.modelOverrides ?? undefined,
       },
+      workspace: workspaceSettings
+        ? {
+            defaultModels: workspaceSettings.defaultModels ?? undefined,
+            providerKeys: workspaceSettings.providerKeys ?? undefined,
+          }
+        : null,
       policySnapshot,
       report: report
         ? {
@@ -461,10 +443,14 @@ export const saveAssessmentReport = mutation({
     topStrengths: v.optional(v.array(v.string())),
     topConcerns: v.optional(v.array(v.string())),
     transcriptQualityNote: v.optional(v.string()),
+    scoringSource: v.optional(
+      v.union(v.literal('llm'), v.literal('deterministic'))
+    ),
+    scoringModelId: v.optional(v.string()),
     dimensionScores: v.optional(
       v.array(
         v.object({
-          dimension: rubricDimensionValidator,
+          dimension: scoringDimensionValidator,
           score: v.number(),
           rationale: v.string(),
         })
@@ -473,7 +459,7 @@ export const saveAssessmentReport = mutation({
     evidence: v.optional(
       v.array(
         v.object({
-          dimension: rubricDimensionValidator,
+          dimension: scoringDimensionValidator,
           snippet: v.string(),
           rationale: v.string(),
           startedAt: v.optional(v.string()),
@@ -491,6 +477,10 @@ export const saveAssessmentReport = mutation({
         ctx,
         args.sessionId,
         args.processingKey
+      )
+    } else if (!isDevelopmentMode(runtimeEnv.NODE_ENV)) {
+      throw new ConvexError(
+        'Assessment reports must be written via the processing pipeline in production.'
       )
     } else {
       await requireAdminIdentity(ctx)
@@ -531,6 +521,8 @@ export const saveAssessmentReport = mutation({
       topConcerns: args.topConcerns,
       transcriptQualityNote: args.transcriptQualityNote,
       dimensionScores: args.dimensionScores,
+      scoringSource: args.scoringSource,
+      scoringModelId: args.scoringModelId,
       generatedAt: now,
       ...(args.policySnapshot ? { policySnapshot: args.policySnapshot } : {}),
     }

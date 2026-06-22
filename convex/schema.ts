@@ -1,45 +1,15 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
-const recommendationValidator = v.union(
-  v.literal('strong_yes'),
-  v.literal('yes'),
-  v.literal('mixed'),
-  v.literal('no')
-)
-
-const confidenceValidator = v.union(
-  v.literal('high'),
-  v.literal('medium'),
-  v.literal('low')
-)
-
-const rubricDimensionValidator = v.union(
-  v.literal('clarity'),
-  v.literal('simplification'),
-  v.literal('patience'),
-  v.literal('warmth'),
-  v.literal('listening'),
-  v.literal('fluency'),
-  v.literal('adaptability'),
-  v.literal('engagement'),
-  v.literal('accuracy')
-)
-
-const interviewStyleModeValidator = v.union(
-  v.literal('standard'),
-  v.literal('intensive')
-)
-
-const interviewPolicySnapshotValidator = v.object({
-  targetDurationMinutes: v.number(),
-  allowsResume: v.boolean(),
-  maxAttempts: v.number(),
-  rubricVersion: v.string(),
-  templateId: v.string(),
-  templateName: v.optional(v.string()),
-  interviewStyleMode: v.optional(interviewStyleModeValidator),
-})
+import {
+  confidenceValidator,
+  interviewPolicySnapshotValidator,
+  interviewStyleModeValidator,
+  modelOverridesValidator,
+  recommendationValidator,
+  scoringDimensionValidator,
+  workspaceProviderKeyValidator,
+} from './validators'
 
 export default defineSchema({
   users: defineTable({
@@ -111,14 +81,7 @@ export default defineSchema({
         ),
       })
     ),
-    modelOverrides: v.optional(
-      v.object({
-        stt: v.optional(v.string()),
-        llm: v.optional(v.string()),
-        tts: v.optional(v.string()),
-        reviewChat: v.optional(v.string()),
-      })
-    ),
+    modelOverrides: v.optional(modelOverridesValidator),
   })
     .index('by_org_id', ['orgId'])
     .index('by_org_id_and_status', ['orgId', 'status']),
@@ -144,14 +107,7 @@ export default defineSchema({
         ),
       })
     ),
-    modelOverrides: v.optional(
-      v.object({
-        stt: v.optional(v.string()),
-        llm: v.optional(v.string()),
-        tts: v.optional(v.string()),
-        reviewChat: v.optional(v.string()),
-      })
-    ),
+    modelOverrides: v.optional(modelOverridesValidator),
   })
     .index('by_org_id', ['orgId'])
     .index('by_template', ['templateId'])
@@ -373,12 +329,16 @@ export default defineSchema({
     dimensionScores: v.optional(
       v.array(
         v.object({
-          dimension: rubricDimensionValidator,
+          dimension: scoringDimensionValidator,
           score: v.number(),
           rationale: v.string(),
         })
       )
     ),
+    scoringSource: v.optional(
+      v.union(v.literal('llm'), v.literal('deterministic'))
+    ),
+    scoringModelId: v.optional(v.string()),
     generatedAt: v.optional(v.string()),
     policySnapshot: v.optional(interviewPolicySnapshotValidator),
     released: v.optional(v.boolean()),
@@ -394,7 +354,7 @@ export default defineSchema({
     orgId: v.string(),
     reportId: v.id('assessmentReports'),
     sessionId: v.id('interviewSessions'),
-    dimension: rubricDimensionValidator,
+    dimension: scoringDimensionValidator,
     snippet: v.string(),
     rationale: v.string(),
     startedAt: v.optional(v.string()),
@@ -468,32 +428,35 @@ export default defineSchema({
     .index('by_org_id', ['orgId'])
     .index('by_created_at', ['createdAt']),
 
+  visualObservations: defineTable({
+    orgId: v.string(),
+    sessionId: v.id('interviewSessions'),
+    observation: v.string(),
+    observedAt: v.string(),
+    source: v.union(v.literal('agent'), v.literal('system')),
+  })
+    .index('by_org_id', ['orgId'])
+    .index('by_session', ['sessionId']),
+
   workspaceSettings: defineTable({
     orgId: v.string(),
-    providerKeys: v.optional(
-      v.array(
-        v.object({
-          keyId: v.string(),
-          provider: v.string(),
-          encryptedKey: v.string(),
-          iv: v.string(),
-          label: v.optional(v.string()),
-          addedAt: v.number(),
-          addedBy: v.string(),
-          maskedKeyTail: v.optional(v.string()),
-        })
-      )
-    ),
-    defaultModels: v.optional(
-      v.object({
-        stt: v.optional(v.string()),
-        llm: v.optional(v.string()),
-        tts: v.optional(v.string()),
-        reviewChat: v.optional(v.string()),
-      })
-    ),
+    providerKeys: v.optional(v.array(workspaceProviderKeyValidator)),
+    defaultModels: v.optional(modelOverridesValidator),
     candidateReleaseMode: v.optional(
       v.union(v.literal('auto'), v.literal('manual'))
+    ),
+    recruiterOnboarding: v.optional(
+      v.object({
+        completedAt: v.optional(v.number()),
+        steps: v.array(
+          v.union(
+            v.literal('template'),
+            v.literal('batch'),
+            v.literal('invite_preview'),
+            v.literal('example_report')
+          )
+        ),
+      })
     ),
     updatedAt: v.number(),
     updatedBy: v.string(),

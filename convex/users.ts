@@ -1,6 +1,6 @@
 import { ConvexError, v } from 'convex/values'
 
-import { mutation } from './_generated/server'
+import { internalMutation, mutation } from './_generated/server'
 import { requireAdmin } from './helpers/auth'
 import {
   clerkIdFromIdentity,
@@ -30,7 +30,8 @@ export const ensureCurrentUser = mutation({
   },
 })
 
-export const upsert = mutation({
+/** Internal only — never expose unauthenticated user upserts. */
+export const upsertInternal = internalMutation({
   args: {
     clerkId: v.string(),
     email: v.optional(v.string()),

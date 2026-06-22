@@ -9,14 +9,14 @@ const DEV_PROCESSING_KEY = '__dev_preview__'
 
 export function hasTrustedProcessingKey(processingKey?: string) {
   const configured = runtimeEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
-  if (configured) {
-    return processingKey?.trim() === configured
+  if (!configured) {
+    if (!isDevelopmentMode(runtimeEnv.NODE_ENV)) {
+      return false
+    }
+    const normalized = processingKey?.trim() ?? ''
+    return normalized === '' || normalized === DEV_PROCESSING_KEY
   }
-  if (!isDevelopmentMode(runtimeEnv.NODE_ENV)) {
-    return false
-  }
-  const normalized = processingKey?.trim() ?? ''
-  return normalized === '' || normalized === DEV_PROCESSING_KEY
+  return processingKey?.trim() === configured
 }
 
 export async function resolveOrgIdForPipelineWrite(

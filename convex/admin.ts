@@ -2,6 +2,7 @@ import { ConvexError, v } from 'convex/values'
 
 import { api } from './_generated/api'
 import { action, mutation, query } from './_generated/server'
+import { recruiterQuery } from './lib/customFunctions'
 import {
   getRecruiterActorId,
   requireAdmin,
@@ -13,6 +14,7 @@ import { assertOrgOwnsReport, assertOrgOwnsSession } from './helpers/orgAccess'
 import { ensureDefaultTemplate } from './helpers/templates'
 import { decryptProviderKey, encryptProviderKey } from './helpers/encryption'
 import { runtimeEnv } from '../lib/env/runtime'
+import { modelOverridesValidator } from './validators'
 
 function slugify(value: string) {
   return value
@@ -140,11 +142,10 @@ export const listActiveTemplates = query({
   },
 })
 
-export const listScreeningBatches = query({
+export const listScreeningBatches = recruiterQuery({
   args: {},
   handler: async (ctx) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
 
     const batches = await ctx.db
       .query('screeningBatches')
@@ -409,11 +410,10 @@ export const addReportChatMessage = mutation({
   },
 })
 
-export const getDashboardSummary = query({
+export const getDashboardSummary = recruiterQuery({
   args: {},
   handler: async (ctx) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const [
       manualReviewReports,
       pendingReports,
@@ -632,12 +632,7 @@ export const removeProviderKey = mutation({
 
 export const updateDefaultModels = mutation({
   args: {
-    models: v.object({
-      stt: v.optional(v.string()),
-      llm: v.optional(v.string()),
-      tts: v.optional(v.string()),
-      reviewChat: v.optional(v.string()),
-    }),
+    models: modelOverridesValidator,
   },
   handler: async (ctx, args) => {
     const { identity } = await requireAdmin(ctx)
@@ -700,6 +695,7 @@ export const testProviderConnection = action({
     provider: v.string(),
   },
   handler: async (ctx, args) => {
+    await ctx.runQuery(api.admin.assertAdminForAction, {})
     if (!runtimeEnv.KYMA_ENCRYPTION_KEY?.trim()) {
       throw new ConvexError(
         'KYMA_ENCRYPTION_KEY is required to test provider keys.'
@@ -803,10 +799,20 @@ export const testProviderConnection = action({
   },
 })
 
+export const assertAdminForAction = query({
+  args: {},
+  returns: v.object({ orgId: v.string() }),
+  handler: async (ctx) => {
+    await requireAdmin(ctx)
+    const orgId = await requireOrgId(ctx)
+    return { orgId }
+  },
+})
+
 export const getWorkspaceSettingsRaw = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdminIdentity(ctx)
+    await requireAdmin(ctx)
     const orgId = await requireOrgId(ctx)
     return await ctx.db
       .query('workspaceSettings')
@@ -849,14 +855,7 @@ export const updateAssessmentTemplate = mutation({
         ),
       })
     ),
-    modelOverrides: v.optional(
-      v.object({
-        stt: v.optional(v.string()),
-        llm: v.optional(v.string()),
-        tts: v.optional(v.string()),
-        reviewChat: v.optional(v.string()),
-      })
-    ),
+    modelOverrides: v.optional(modelOverridesValidator),
   },
   handler: async (ctx, args) => {
     await requireAdminIdentity(ctx)

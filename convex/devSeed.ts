@@ -87,6 +87,10 @@ export const seedDevData = action({
     batchId: string
     candidates: number
     recruiters: number
+    sampleIndex: Record<
+      string,
+      { sessionId: string; inviteToken: string; candidateName: string }
+    >
     sampleInviteTokens: string[]
     sampleReviewSessionIds: string[]
   }> => {
@@ -133,6 +137,10 @@ export const seedDevDataForActiveOrg = action({
     batchId: string
     candidates: number
     recruiters: number
+    sampleIndex: Record<
+      string,
+      { sessionId: string; inviteToken: string; candidateName: string }
+    >
     sampleInviteTokens: string[]
     sampleReviewSessionIds: string[]
   }> => {

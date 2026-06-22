@@ -1,8 +1,9 @@
 import { MINUTE, RateLimiter } from '@convex-dev/rate-limiter'
-import { v } from 'convex/values'
+import { ConvexError, v } from 'convex/values'
 
 import { components } from './_generated/api'
 import { action } from './_generated/server'
+import { hasTrustedProcessingKey } from './helpers/processingAuth'
 
 export const rateLimiter = new RateLimiter(components.rateLimiter, {
   livekitToken: { kind: 'fixed window', period: MINUTE, rate: 5 },
@@ -21,18 +22,26 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   reportGeneration: { kind: 'fixed window', period: MINUTE, rate: 3 },
 })
 
-export const checkLimit = action({
+const rateLimitNameValidator = v.union(
+  v.literal('livekitToken'),
+  v.literal('publicSnapshot'),
+  v.literal('recruiterChat'),
+  v.literal('reportGeneration')
+)
+
+/** Server-only rate limit check — requires KYMA_PROCESSING_WRITE_KEY. */
+export const checkServerLimit = action({
   args: {
-    name: v.union(
-      v.literal('livekitToken'),
-      v.literal('publicSnapshot'),
-      v.literal('recruiterChat'),
-      v.literal('reportGeneration')
-    ),
+    name: rateLimitNameValidator,
     key: v.string(),
+    writeKey: v.string(),
   },
+  returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, args) => {
+    if (!hasTrustedProcessingKey(args.writeKey)) {
+      throw new ConvexError('Unauthorized rate limit check.')
+    }
     await rateLimiter.limit(ctx, args.name, { key: args.key, throws: true })
-    return { ok: true }
+    return { ok: true as const }
   },
 })
