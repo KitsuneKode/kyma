@@ -17,6 +17,22 @@ export {
 
 type WorkspaceModelOverrides = Partial<Record<ModelKind, string | undefined>>
 
+export type { WorkspaceModelOverrides }
+
+const MODEL_KINDS: ModelKind[] = ['stt', 'llm', 'tts', 'reviewChat', 'scoring']
+
+export function resolveStageModels(args: {
+  workspaceDefaults?: WorkspaceModelOverrides
+  templateOverrides?: WorkspaceModelOverrides
+}): Record<ModelKind, string> {
+  return Object.fromEntries(
+    MODEL_KINDS.map((kind) => [
+      kind,
+      resolveModelId(kind, args.workspaceDefaults, args.templateOverrides),
+    ])
+  ) as Record<ModelKind, string>
+}
+
 export function resolveModelId(
   kind: ModelKind,
   workspaceDefaults?: WorkspaceModelOverrides,
@@ -48,13 +64,12 @@ export function resolveScoringModelId(
   workspaceDefaults?: WorkspaceModelOverrides,
   templateOverrides?: WorkspaceModelOverrides
 ): string {
-  const scoringModel = resolveModelId(
-    'scoring',
-    workspaceDefaults,
-    templateOverrides
-  )
-  if (scoringModel) {
-    return scoringModel
+  const explicitScoring =
+    templateOverrides?.scoring?.trim() ||
+    workspaceDefaults?.scoring?.trim() ||
+    runtimeEnv.KYMA_SCORING_MODEL?.trim()
+  if (explicitScoring) {
+    return explicitScoring
   }
 
   const reviewChatFallback = resolveReviewChatModelId(
