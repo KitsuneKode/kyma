@@ -1,7 +1,7 @@
 # Kyma
 
 <p align="center">
-  <img src="public/kyma-mark.png" alt="Kyma logo" width="104" height="104" />
+  <img src="public/brand/kyma-mark.svg" alt="Kyma logo" width="104" height="92" />
 </p>
 
 <p align="center">
@@ -37,6 +37,18 @@ You send a candidate a link, they join a short guided interview in-browser, and 
 ![Kyma candidate flow preview](public/readme-candidate.png)
 ![Kyma recruiter dashboard preview](public/readme-recruiter.png)
 
+SVG sources for these previews live in `public/brand/readme-hero.svg`, `public/brand/readme-candidate.svg`, and `public/brand/readme-recruiter.svg`. Regenerate PNGs with `bun run brand:export`.
+
+## Solutions (SEO landing pages)
+
+Public persona pages for programmatic SEO and audience-specific positioning:
+
+- [/for/education-teams](https://kyma.kitsunelabs.xyz/for/education-teams)
+- [/for/tutor-recruiters](https://kyma.kitsunelabs.xyz/for/tutor-recruiters)
+- [/for/online-learning-companies](https://kyma.kitsunelabs.xyz/for/online-learning-companies)
+- [/for/communication-heavy-roles](https://kyma.kitsunelabs.xyz/for/communication-heavy-roles)
+- Hub: [/for](https://kyma.kitsunelabs.xyz/for)
+
 ## Demo and access
 
 - Public site: [https://kyma.kitsunelabs.xyz](https://kyma.kitsunelabs.xyz)
@@ -46,14 +58,17 @@ You send a candidate a link, they join a short guided interview in-browser, and 
 ### Product walkthrough media
 
 - Demo video: _coming soon_
-- Screenshots: available in `public/readme-hero.png`, `public/readme-candidate.png`, and `public/readme-recruiter.png`
+- Screenshots: `public/brand/readme-hero.svg` (source) and exported `public/readme-hero.png`, `public/readme-candidate.png`, `public/readme-recruiter.png`
 
 ### Icon and brand assets
 
-- Primary mark: `public/kyma-mark.png`
-- Favicon set: `public/favicon.ico`, `public/favicon-16x16.png`, `public/favicon-32x32.png`, `public/favicon-48x48.png`
+- Primary mark (SVG): `public/brand/kyma-mark.svg`
+- Wordmark (SVG): `public/brand/kyma-logo.svg`
+- Social preview (SVG source): `public/brand/og-image.svg`
+- Raster exports: `public/kyma-mark.png`, `public/og-image.png` (regenerate with `bun run brand:export`)
+- Favicon set: `app/icon.svg`, `public/favicon.ico`, `public/favicon-16x16.png`, `public/favicon-32x32.png`, `public/favicon-48x48.png`
 - Touch/app icons: `public/apple-touch-icon.png`, `public/android-chrome-192x192.png`, `public/android-chrome-512x512.png`
-- Social preview: `public/og-image.png`
+- Dynamic social cards: `app/opengraph-image.tsx`, `app/twitter-image.tsx`
 
 If you want public trial access, the clean approach is:
 

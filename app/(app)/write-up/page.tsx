@@ -1,11 +1,13 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import type { Metadata } from 'next'
+import { createPageMetadata } from '@/lib/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Kyma Write-Up',
+export const metadata = createPageMetadata({
+  title: 'Write-Up',
   description: 'Product and engineering write-up for Kyma.',
-}
+  path: '/write-up',
+  noIndex: true,
+})
 
 async function readWriteUp(): Promise<string | null> {
   try {

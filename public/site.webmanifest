@@ -1,11 +1,11 @@
 {
   "name": "Kyma",
   "short_name": "Kyma",
-  "description": "Voice-first AI tutor screening.",
+  "description": "Voice-first AI tutor screening with structured, evidence-backed reviews.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b1020",
-  "theme_color": "#0b1020",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",

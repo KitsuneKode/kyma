@@ -16,6 +16,8 @@ The App Router is split into layout shells:
 | Path                                       | Audience                          | Purpose                                                                    |
 | ------------------------------------------ | --------------------------------- | -------------------------------------------------------------------------- |
 | `/`                                        | Public                            | Landing / entry (stays public when signed in)                              |
+| `/for`                                     | Public                            | Solutions hub for persona SEO landing pages                                |
+| `/for/[slug]`                              | Public                            | Audience-specific SEO landing pages (education teams, recruiters, etc.)    |
 | `/sign-in`, `/sign-up`                     | Public unauthenticated            | Clerk auth (general)                                                       |
 | `/sign-in/candidate`, `/sign-up/candidate` | Public unauthenticated            | Candidate-focused auth copy + redirect intent                              |
 | `/sign-in/recruiter`, `/sign-up/recruiter` | Public unauthenticated            | Recruiter-focused auth copy + redirect intent                              |
