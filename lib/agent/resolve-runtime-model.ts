@@ -3,14 +3,21 @@ import * as google from '@livekit/agents-plugin-google'
 import * as openai from '@livekit/agents-plugin-openai'
 
 import { runtimeEnv } from '@/lib/env/runtime'
+import { providerFromModelId } from '@/lib/providers/provider-id'
 
 export type RealtimeProvider = 'gemini' | 'openai' | 'cascade'
 
 export type CascadeModelConfig = {
   mode: 'cascade'
   stt: string
-  llm: string
+  /**
+   * Either a gateway model id (resolved by LiveKit inference) or an explicit
+   * provider LLM instance when an org BYOK key is threaded through.
+   */
+  llm: string | llm.LLM
   tts: string
+  /** True when the LLM was bound to an explicit org/platform provider key. */
+  llmUsesExplicitKey: boolean
 }
 
 export type RealtimeModelConfig = {
@@ -79,7 +86,42 @@ export function resolveRuntimeModel(options: {
   return {
     mode: 'cascade',
     stt: options.cascade.stt,
-    llm: options.cascade.llm,
     tts: options.cascade.tts,
+    ...resolveCascadeLlm(options.cascade.llm, options.apiKeys),
   }
+}
+
+/** Strip a gateway provider prefix (e.g. `openai/gpt-4.1-mini` -> `gpt-4.1-mini`). */
+function stripProviderPrefix(modelId: string) {
+  const slashIndex = modelId.indexOf('/')
+  return slashIndex === -1 ? modelId : modelId.slice(slashIndex + 1)
+}
+
+/**
+ * Cascade STT/TTS always route through the LiveKit inference gateway (so the
+ * Deepgram/Cartesia model strings require those plugins/credentials to be
+ * configured on the worker or LiveKit Cloud). The cascade LLM is the one place
+ * we can honor an org BYOK key: when the LLM resolves to OpenAI and an OpenAI
+ * key is available, bind an explicit `openai.LLM` instance so generation is
+ * billed to the org key instead of the shared gateway. Otherwise fall back to
+ * the gateway model id string.
+ */
+function resolveCascadeLlm(
+  llmModelId: string,
+  apiKeys?: { openai?: string; google?: string }
+): { llm: string | llm.LLM; llmUsesExplicitKey: boolean } {
+  const provider = providerFromModelId(llmModelId)
+  const openaiKey = apiKeys?.openai ?? process.env.OPENAI_API_KEY
+
+  if (provider === 'openai' && openaiKey) {
+    return {
+      llm: new openai.LLM({
+        model: stripProviderPrefix(llmModelId),
+        apiKey: openaiKey,
+      }),
+      llmUsesExplicitKey: Boolean(apiKeys?.openai),
+    }
+  }
+
+  return { llm: llmModelId, llmUsesExplicitKey: false }
 }

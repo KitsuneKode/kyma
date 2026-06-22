@@ -253,7 +253,7 @@ function createSessionEventRecorder(
         return
       }
 
-      await fetchMutation(api.interviews.appendSessionEvent, {
+      await fetchMutation(api.interviews.sessionEvents.appendSessionEvent, {
         processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
         sessionId: sessionId as Id<'interviewSessions'>,
         type,
@@ -535,6 +535,86 @@ async function startSession(ctx: JobContext) {
     },
   })
 
+  if (isRedispatchState(remoteConfig?.sessionState)) {
+    await recorder.append(
+      'agent-redispatch',
+      'Agent re-joined an interview that was already active (worker redispatch/resume).'
+    )
+  }
+
+  try {
+    await runInterviewSession({
+      ctx,
+      logger,
+      sessionId,
+      recorder,
+      persister,
+      visualObservationPersister,
+      config,
+      remoteConfig,
+      candidateName,
+      videoInputEnabled,
+      participantIdentity: participant.identity,
+    })
+  } catch (error) {
+    logger.error({
+      event: 'agent.session.failed',
+      detail: 'Interviewer agent session failed before completion.',
+      sessionId,
+      error,
+    })
+    await recorder.append(
+      'agent-session-failed',
+      `Interviewer agent session failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+    throw error
+  }
+}
+
+const REDISPATCH_SESSION_STATES = new Set([
+  'live',
+  'reconnecting',
+  'interrupted',
+])
+
+/**
+ * A non-initial session state means an interview was already underway when this
+ * agent job started — i.e. the LiveKit worker was redispatched/resumed rather
+ * than dispatched fresh. We surface this to the session event log for operators.
+ */
+function isRedispatchState(state?: string | null) {
+  return state ? REDISPATCH_SESSION_STATES.has(state) : false
+}
+
+async function runInterviewSession(args: {
+  ctx: JobContext
+  logger: ReturnType<typeof createDiagnosticLogger>
+  sessionId: string | undefined
+  recorder: SessionEventRecorder
+  persister: TranscriptPersister
+  visualObservationPersister: VisualObservationPersister
+  config: AgentTemplateConfig
+  remoteConfig: Awaited<ReturnType<typeof fetchInterviewAgentConfig>> | null
+  candidateName: string
+  videoInputEnabled: boolean
+  participantIdentity: string
+}) {
+  const {
+    ctx,
+    logger,
+    sessionId,
+    recorder,
+    persister,
+    visualObservationPersister,
+    config,
+    remoteConfig,
+    candidateName,
+    videoInputEnabled,
+    participantIdentity,
+  } = args
+
   const runtimeModel = resolveRuntimeModel({
     cascade: {
       stt: config.cascade.stt,
@@ -698,6 +778,10 @@ When live video is available, call recordVisualObservation at most once per mean
       runtimeMode: runtimeModel.mode,
       realtimeProvider:
         runtimeModel.mode === 'realtime' ? runtimeModel.provider : undefined,
+      cascadeLlmUsesExplicitKey:
+        runtimeModel.mode === 'cascade'
+          ? runtimeModel.llmUsesExplicitKey
+          : undefined,
       videoInputEnabled,
     },
   })
@@ -754,7 +838,7 @@ Stay in the warm-up phase until they clearly say they are ready.
   logger.info({
     event: 'agent.ready-check.sent',
     detail: 'Initial welcome and readiness prompt was sent.',
-    participantIdentity: participant.identity,
+    participantIdentity,
     sessionId,
   })
 }

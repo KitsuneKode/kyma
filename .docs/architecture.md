@@ -151,6 +151,34 @@ Candidate interview links should be tokenized and public-facing so candidates do
 
 The realtime speaking agent can live inside a LiveKit agent service while still using AI SDK-compatible model providers for non-realtime generation paths.
 
+#### Agent media routing and BYOK
+
+The interviewer worker (`agents/worker.ts` + `agents/interviewer.ts`) supports two
+runtime modes selected by `KYMA_AGENT_REALTIME_PROVIDER`:
+
+- `cascade` (default): separate STT -> LLM -> TTS pipeline.
+- `openai` / `gemini`: a single speech-to-speech realtime model.
+
+Model routing rules:
+
+- **STT/TTS in cascade mode** are passed to LiveKit as gateway model id strings
+  (e.g. `deepgram/nova-3`, `cartesia/sonic`). These resolve through **LiveKit
+  inference (LiveKit Cloud Inference)**. We intentionally do not bundle the
+  `@livekit/agents-plugin-deepgram` / `@livekit/agents-plugin-cartesia` packages,
+  so Deepgram/Cartesia must be available via LiveKit inference. To self-host
+  those providers instead, install the matching plugins and construct explicit
+  STT/TTS instances in `lib/agent/resolve-runtime-model.ts`.
+- **Cascade LLM** is the one media leg that honors org BYOK. When the resolved
+  LLM is an OpenAI model and an OpenAI key is available (org BYOK first, then a
+  platform `OPENAI_API_KEY`), the resolver builds an explicit
+  `openai.LLM({ model, apiKey })` instance so generation bills to that key rather
+  than the shared gateway. Otherwise it falls back to the gateway model string.
+- **Realtime modes** thread the org/platform key directly into the
+  `openai`/`google` realtime model constructors.
+
+Worker liveness is reported to Convex (`agentWorkerHeartbeats`) on a fixed
+cadence so the operator health panel can flag a downed worker.
+
 ### Workflow Layer
 
 `Inngest` handles:

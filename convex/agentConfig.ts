@@ -6,6 +6,7 @@ import { resolveInterviewPolicyFromInvite } from './helpers/interviewPolicy'
 import { hasTrustedProcessingKey } from './helpers/processingAuth'
 import { upsertTranscriptSegmentForSession } from './helpers/transcriptSegments'
 import {
+  interviewSessionStateValidator,
   modelOverridesValidator,
   workspaceProviderKeyValidator,
 } from './validators'
@@ -30,6 +31,7 @@ const interviewAgentConfigValidator = v.object({
   modelOverrides: v.optional(modelOverridesValidator),
   rubricConfig: v.optional(rubricConfigValidator),
   providerKeys: v.optional(v.array(workspaceProviderKeyValidator)),
+  sessionState: interviewSessionStateValidator,
 })
 
 export const getInterviewAgentConfig = query({
@@ -73,6 +75,7 @@ export const getInterviewAgentConfig = query({
       modelOverrides: template.modelOverrides,
       rubricConfig: template.rubricConfig,
       providerKeys: workspaceSettings?.providerKeys,
+      sessionState: session.state,
     }
   },
 })
