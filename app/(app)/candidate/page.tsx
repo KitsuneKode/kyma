@@ -1,5 +1,3 @@
-import { fetchQuery } from 'convex/nextjs'
-
 import { api } from '@/convex/_generated/api'
 import { CandidateEmptyState } from '@/components/candidate/candidate-empty-state'
 import { CandidateInterviewCard } from '@/components/candidate/interview-card'
@@ -9,9 +7,7 @@ import {
   isPendingRelease,
 } from '@/lib/candidate/status-filters'
 import { timestampOf } from '@/lib/format/date'
-import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
-import { clientEnv } from '@/lib/env/client'
-import { runConvexFetch } from '@/lib/convex/server-fetch'
+import { serverConvexQueryWithFallback } from '@/lib/convex/server-query'
 
 function stateWeight(status: string) {
   const normalized = status.toLowerCase()
@@ -25,17 +21,11 @@ function stateWeight(status: string) {
 }
 
 export default async function CandidateHomePage() {
-  const token = await getServerConvexAuthToken()
-  const interviewsResult =
-    clientEnv.NEXT_PUBLIC_CONVEX_URL && token
-      ? await runConvexFetch(() =>
-          fetchQuery(
-            api.interviews.candidatePortal.listCandidateInterviews,
-            {},
-            { token: token ?? undefined }
-          )
-        )
-      : { ok: true as const, data: [] }
+  const interviewsResult = await serverConvexQueryWithFallback(
+    api.interviews.candidatePortal.listCandidateInterviews,
+    {},
+    []
+  )
 
   const interviews = interviewsResult.ok ? interviewsResult.data : []
 

@@ -1,15 +1,16 @@
 import 'server-only'
 
-import { fetchQuery } from 'convex/nextjs'
-
 import { api } from '@/convex/_generated/api'
 import { serverEnv } from '@/lib/env/server'
 import { clientEnv } from '@/lib/env/client'
+import { serverConvexQuery } from '@/lib/convex/server-query'
 import { hasLivekitRecordingConfig } from '@/lib/livekit/recording'
 import {
+  DEFAULT_MODELS,
   providerFromModelId,
-  resolveStageModels,
-} from '@/lib/providers/resolve-model'
+} from '@/lib/providers/provider-id'
+import { resolveStageModels } from '@/lib/providers/resolve-model'
+import { hasPlatformProviderKey } from '@/lib/env/providers'
 import { classifyWorkerLiveness } from '@/lib/agent/worker-liveness'
 
 export type HealthCheckStatus = 'ok' | 'warn' | 'error' | 'unknown'
@@ -59,7 +60,7 @@ function processingKeyStatus(): HealthCheck {
 
 function scoringCredentialsStatus(): HealthCheck {
   const scoringModel =
-    serverEnv.KYMA_SCORING_MODEL?.trim() || 'openai/gpt-4.1-mini'
+    serverEnv.KYMA_SCORING_MODEL?.trim() || DEFAULT_MODELS.scoring
   const provider = providerFromModelId(scoringModel)
   const isProd = serverEnv.NODE_ENV === 'production'
 
@@ -72,17 +73,9 @@ function scoringCredentialsStatus(): HealthCheck {
     }
   }
 
-  const hasPlatformKey =
-    provider === 'openai'
-      ? Boolean(process.env.OPENAI_API_KEY?.trim())
-      : provider === 'google'
-        ? Boolean(
-            process.env.GOOGLE_API_KEY?.trim() ||
-            process.env.GEMINI_API_KEY?.trim()
-          )
-        : provider === 'anthropic'
-          ? Boolean(process.env.ANTHROPIC_API_KEY?.trim())
-          : false
+  const hasPlatformKey = provider
+    ? hasPlatformProviderKey(provider, serverEnv)
+    : false
 
   return {
     id: 'scoring-credentials',
@@ -119,9 +112,17 @@ async function agentWorkerLivenessStatus(): Promise<HealthCheck> {
   }
 
   try {
-    const liveness = await fetchQuery(api.agentWorker.getWorkerLiveness, {
-      processingKey,
-    })
+    const livenessResult = await serverConvexQuery(
+      api.agentWorker.getWorkerLiveness,
+      {
+        processingKey,
+      },
+      { public: true }
+    )
+    if (!livenessResult.ok) {
+      throw new Error(livenessResult.message)
+    }
+    const liveness = livenessResult.data
     const { status, detail } = classifyWorkerLiveness({
       mostRecentSeenAt: liveness.mostRecentSeenAt,
       now: Date.now(),
@@ -229,7 +230,15 @@ export async function collectPlatformHealthChecks(): Promise<HealthCheck[]> {
         : 'Required before storing org provider keys.',
     },
     (() => {
-      const resolved = resolveStageModels({})
+      const resolved = resolveStageModels({
+        envFallbacks: {
+          stt: serverEnv.LIVEKIT_AGENT_STT_MODEL,
+          llm: serverEnv.LIVEKIT_AGENT_LLM_MODEL,
+          tts: serverEnv.LIVEKIT_AGENT_TTS_MODEL,
+          reviewChat: serverEnv.KYMA_REVIEW_CHAT_MODEL,
+          scoring: serverEnv.KYMA_SCORING_MODEL,
+        },
+      })
       return {
         id: 'agent-models',
         label: 'Agent models',

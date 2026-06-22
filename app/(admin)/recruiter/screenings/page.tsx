@@ -1,25 +1,18 @@
 import Link from 'next/link'
-import { fetchQuery } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
 import { AdminStatePanel } from '@/components/admin/admin-state-panel'
 import { PageHeader } from '@/components/admin/page-header'
 import { Button } from '@/components/ui/button'
 import { ScreeningBatchesTable } from '@/components/recruiter/screening-batches-table'
-import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
-import { clientEnv } from '@/lib/env/client'
+import { serverConvexQuery } from '@/lib/convex/server-query'
 
 export default async function AdminScreeningsPage() {
-  const token = await getServerConvexAuthToken()
-  const batches = clientEnv.NEXT_PUBLIC_CONVEX_URL
-    ? await fetchQuery(
-        api.admin.listScreeningBatches,
-        {},
-        {
-          token: token ?? undefined,
-        }
-      ).catch(() => [])
-    : []
+  const batchesResult = await serverConvexQuery(
+    api.admin.listScreeningBatches,
+    {}
+  )
+  const batches = batchesResult.ok ? batchesResult.data : []
 
   return (
     <div className="flex w-full flex-col gap-8">

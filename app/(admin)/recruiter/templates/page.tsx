@@ -1,37 +1,51 @@
 import Link from 'next/link'
-import { fetchMutation, fetchQuery } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
 import { AdminStatePanel } from '@/components/admin/admin-state-panel'
 import { PageHeader } from '@/components/admin/page-header'
 import { Button } from '@/components/ui/button'
+import {
+  hasConvexDeployment,
+  serverConvexMutation,
+  serverConvexQuery,
+} from '@/lib/convex/server-query'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
-import { clientEnv } from '@/lib/env/client'
 
 type TemplatesLoadResult =
   | { ok: true; templates: Awaited<ReturnType<typeof loadTemplates>> }
   | { ok: false; error: string }
 
-async function loadTemplates(token: string) {
-  await fetchMutation(
+async function loadTemplates() {
+  const bootstrapResult = await serverConvexMutation(
     api.admin.bootstrapOrgTemplates,
-    {},
-    { token: token ?? undefined }
+    {}
   )
-  return await fetchQuery(
+  if (!bootstrapResult.ok) {
+    throw new Error(
+      bootstrapResult.message ?? 'Unable to bootstrap organization templates.'
+    )
+  }
+
+  const templatesResult = await serverConvexQuery(
     api.admin.listActiveTemplates,
-    {},
-    { token: token ?? undefined }
+    {}
   )
+  if (!templatesResult.ok) {
+    throw new Error(
+      templatesResult.message ?? 'Unable to load screening templates.'
+    )
+  }
+
+  return templatesResult.data
 }
 
 export default async function TemplatesPage() {
   const token = await getServerConvexAuthToken()
   let result: TemplatesLoadResult = { ok: true, templates: [] }
 
-  if (clientEnv.NEXT_PUBLIC_CONVEX_URL && token) {
+  if (hasConvexDeployment() && token) {
     try {
-      const templates = await loadTemplates(token)
+      const templates = await loadTemplates()
       result = { ok: true, templates }
     } catch (error) {
       result = {

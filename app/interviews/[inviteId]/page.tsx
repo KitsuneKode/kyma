@@ -1,11 +1,9 @@
-import { fetchQuery } from 'convex/nextjs'
-
 import { api } from '@/convex/_generated/api'
 import { RenderErrorBoundary } from '@/components/errors/render-error-boundary'
 import { InterviewWorkspace } from '@/components/interview/interview-workspace'
-import { clientEnv } from '@/lib/env/client'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { serverEnv } from '@/lib/env/server'
+import { serverConvexQuery } from '@/lib/convex/server-query'
 import { createInitialInterviewSnapshot } from '@/lib/interview/snapshot'
 import { isEnabledDemoInviteToken as isEnabledDemoInviteTokenForEnv } from '@/lib/interview/demo-invite'
 
@@ -22,11 +20,16 @@ function isEnabledDemoInviteToken(inviteId: string) {
 export default async function InterviewPage({ params }: InterviewPageProps) {
   const { inviteId } = await params
   const nowMs = Date.now()
-  const publicSnapshot = clientEnv.NEXT_PUBLIC_CONVEX_URL
-    ? await fetchQuery(api.interviews.public.getPublicSessionDetail, {
-        inviteToken: inviteId,
-        nowMs,
-      }).catch(() => null)
+  const publicSnapshotResult = await serverConvexQuery(
+    api.interviews.public.getPublicSessionDetail,
+    {
+      inviteToken: inviteId,
+      nowMs,
+    },
+    { public: true }
+  )
+  const publicSnapshot = publicSnapshotResult.ok
+    ? publicSnapshotResult.data
     : null
 
   const snapshot = createInitialInterviewSnapshot(

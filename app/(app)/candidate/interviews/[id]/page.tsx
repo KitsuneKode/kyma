@@ -1,20 +1,21 @@
-import { fetchQuery } from 'convex/nextjs'
 import type { Id } from '@/convex/_generated/dataModel'
 import Link from 'next/link'
 
 import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
-import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
-import { clientEnv } from '@/lib/env/client'
 import {
   formatDateTime,
   formatRecommendationLabel,
 } from '@/lib/recruiter/format'
-import { scoreColor } from '@/lib/ui/score-format'
+import { formatScoreValue, scoreColor } from '@/lib/ui/score-format'
 import { cn } from '@/lib/utils'
 import { WorkspacePageHeader } from '@/components/workspace/page-header'
 import { WorkspaceSurface } from '@/components/workspace/surface'
-import { runConvexFetch } from '@/lib/convex/server-fetch'
+import {
+  hasConvexDeployment,
+  serverConvexQuery,
+} from '@/lib/convex/server-query'
+import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 
 type InterviewResultPageProps = {
   params: Promise<{ id: string }>
@@ -28,13 +29,10 @@ export default async function CandidateInterviewResultPage({
     getServerConvexAuthToken(),
   ])
   const resultFetch =
-    clientEnv.NEXT_PUBLIC_CONVEX_URL && token
-      ? await runConvexFetch(() =>
-          fetchQuery(
-            api.interviews.candidatePortal.getCandidateInterviewResult,
-            { sessionId: id as Id<'interviewSessions'> },
-            { token: token ?? undefined }
-          )
+    hasConvexDeployment() && token
+      ? await serverConvexQuery(
+          api.interviews.candidatePortal.getCandidateInterviewResult,
+          { sessionId: id as Id<'interviewSessions'> }
         )
       : { ok: false as const, kind: 'unknown' as const }
 
@@ -102,7 +100,7 @@ export default async function CandidateInterviewResultPage({
                 scoreColor(result.report.weightedScore)
               )}
             >
-              Weighted score {result.report.weightedScore.toFixed(1)} / 5
+              Weighted score {formatScoreValue(result.report.weightedScore)} / 5
             </p>
           ) : null}
           {result.report.summary ? (

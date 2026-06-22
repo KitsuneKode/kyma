@@ -1,16 +1,18 @@
 import Link from 'next/link'
-import { fetchQuery } from 'convex/nextjs'
-
 import type { Id } from '@/convex/_generated/dataModel'
+
 import { api } from '@/convex/_generated/api'
 import { AdminStatePanel } from '@/components/admin/admin-state-panel'
 import { PageHeader } from '@/components/admin/page-header'
 import { Button } from '@/components/ui/button'
 import { ScreeningCandidatesTable } from '@/components/recruiter/screening-candidates-table'
-import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { formatDateTime, formatStatusLabel } from '@/lib/recruiter/format'
+import { isCompletedPipelineStatus } from '@/lib/candidate/status-filters'
 import { MetricCard } from '@/components/admin/metric-card'
-import { clientEnv } from '@/lib/env/client'
+import {
+  hasConvexDeployment,
+  serverConvexQuery,
+} from '@/lib/convex/server-query'
 
 type ScreeningDetailPageProps = {
   params: Promise<{
@@ -21,21 +23,13 @@ type ScreeningDetailPageProps = {
 export default async function ScreeningDetailPage({
   params,
 }: ScreeningDetailPageProps) {
-  const [{ batchId }, token] = await Promise.all([
-    params,
-    getServerConvexAuthToken(),
-  ])
-  const detail = clientEnv.NEXT_PUBLIC_CONVEX_URL
-    ? await fetchQuery(
-        api.admin.getScreeningBatchDetail,
-        {
-          batchId: batchId as Id<'screeningBatches'>,
-        },
-        {
-          token: token ?? undefined,
-        }
-      ).catch(() => null)
-    : null
+  const { batchId } = await params
+  const detailResult = hasConvexDeployment()
+    ? await serverConvexQuery(api.admin.getScreeningBatchDetail, {
+        batchId: batchId as Id<'screeningBatches'>,
+      })
+    : { ok: false as const, kind: 'not_found' as const }
+  const detail = detailResult.ok ? detailResult.data : null
 
   if (!detail) {
     return (
@@ -58,10 +52,9 @@ export default async function ScreeningDetailPage({
     )
   }
 
-  const completedCandidates = detail.candidates.filter((candidate) => {
-    const normalizedStatus = String(candidate.status ?? '').toLowerCase()
-    return ['completed', 'submitted', 'reviewed'].includes(normalizedStatus)
-  }).length
+  const completedCandidates = detail.candidates.filter((candidate) =>
+    isCompletedPipelineStatus(String(candidate.status ?? ''))
+  ).length
   const totalCandidates = detail.candidates.length
   const completionPercent =
     totalCandidates === 0

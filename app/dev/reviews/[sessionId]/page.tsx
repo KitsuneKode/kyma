@@ -1,4 +1,3 @@
-import { fetchQuery } from 'convex/nextjs'
 import { notFound } from 'next/navigation'
 import { connection } from 'next/server'
 
@@ -6,8 +5,11 @@ import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { AdminStatePanel } from '@/components/admin/admin-state-panel'
 import { CandidateReviewWorkspace } from '@/components/recruiter/candidate-review-workspace'
-import { clientEnv } from '@/lib/env/client'
 import { serverEnv } from '@/lib/env/server'
+import {
+  hasConvexDeployment,
+  serverConvexQuery,
+} from '@/lib/convex/server-query'
 import { createRecordingPlaybackUrl } from '@/lib/livekit/recording-playback'
 import { getPrimaryRecording } from '@/lib/recruiter/recording-playback'
 
@@ -15,26 +17,26 @@ type DevReviewPageProps = {
   params: Promise<{ sessionId: string }>
 }
 
-export const metadata = {
-  title: 'Dev review preview',
-  description:
-    'Local-only recruiter review preview for seeded interview sessions.',
-}
-
 export default async function DevReviewPage({ params }: DevReviewPageProps) {
   await connection()
 
-  if (process.env.NODE_ENV === 'production') {
+  if (serverEnv.NODE_ENV === 'production') {
     notFound()
   }
 
   const { sessionId } = await params
-  const detail = clientEnv.NEXT_PUBLIC_CONVEX_URL
-    ? await fetchQuery(api.recruiter.getCandidateReviewDetail, {
-        sessionId: sessionId as Id<'interviewSessions'>,
-        processingKey: serverEnv.KYMA_PROCESSING_WRITE_KEY ?? '__dev_preview__',
-      }).catch(() => null)
-    : null
+  const detailResult = hasConvexDeployment()
+    ? await serverConvexQuery(
+        api.recruiter.getCandidateReviewDetail,
+        {
+          sessionId: sessionId as Id<'interviewSessions'>,
+          processingKey:
+            serverEnv.KYMA_PROCESSING_WRITE_KEY ?? '__dev_preview__',
+        },
+        { public: true }
+      )
+    : { ok: false as const, kind: 'not_found' as const }
+  const detail = detailResult.ok ? detailResult.data : null
 
   if (!detail) {
     return (

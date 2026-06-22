@@ -1,49 +1,24 @@
 import Link from 'next/link'
-import { fetchQuery } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
 import { RecruiterDashboard } from '@/components/recruiter/recruiter-dashboard'
 import { RecruiterFirstRunChecklist } from '@/components/recruiter/recruiter-first-run-checklist'
 import { WorkspaceEmptyState } from '@/components/workspace/empty-state'
 import { Button } from '@/components/ui/button'
-import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
-import { clientEnv } from '@/lib/env/client'
-import { runConvexFetch } from '@/lib/convex/server-fetch'
+import {
+  hasConvexDeployment,
+  serverConvexQuery,
+} from '@/lib/convex/server-query'
 import { signInPath } from '@/lib/auth/workspace-intent'
 
 export default async function AdminPage() {
-  const token = await getServerConvexAuthToken()
   const [candidatesResult, batchesResult, dashboardResult, onboardingResult] =
-    clientEnv.NEXT_PUBLIC_CONVEX_URL
+    hasConvexDeployment()
       ? await Promise.all([
-          runConvexFetch(() =>
-            fetchQuery(
-              api.recruiter.listReviewCandidates,
-              {},
-              { token: token ?? undefined }
-            )
-          ),
-          runConvexFetch(() =>
-            fetchQuery(
-              api.admin.listScreeningBatches,
-              {},
-              { token: token ?? undefined }
-            )
-          ),
-          runConvexFetch(() =>
-            fetchQuery(
-              api.admin.getDashboardSummary,
-              {},
-              { token: token ?? undefined }
-            )
-          ),
-          runConvexFetch(() =>
-            fetchQuery(
-              api.onboarding.getRecruiterOnboardingStatus,
-              {},
-              { token: token ?? undefined }
-            )
-          ),
+          serverConvexQuery(api.recruiter.listReviewCandidates, {}),
+          serverConvexQuery(api.admin.listScreeningBatches, {}),
+          serverConvexQuery(api.admin.getDashboardSummary, {}),
+          serverConvexQuery(api.onboarding.getRecruiterOnboardingStatus, {}),
         ])
       : [
           { ok: true as const, data: [] },

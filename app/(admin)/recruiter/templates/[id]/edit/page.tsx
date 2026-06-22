@@ -1,13 +1,15 @@
 import Link from 'next/link'
-import { fetchQuery } from 'convex/nextjs'
 import type { Id } from '@/convex/_generated/dataModel'
 
 import { api } from '@/convex/_generated/api'
 import { TemplateEditForm } from '@/components/admin/template-edit-form'
 import { PageHeader } from '@/components/admin/page-header'
 import { Button } from '@/components/ui/button'
+import {
+  hasConvexDeployment,
+  serverConvexQuery,
+} from '@/lib/convex/server-query'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
-import { clientEnv } from '@/lib/env/client'
 
 type TemplateEditPageProps = {
   params: Promise<{ id: string }>
@@ -20,14 +22,13 @@ export default async function TemplateEditPage({
     params,
     getServerConvexAuthToken(),
   ])
-  const template =
-    clientEnv.NEXT_PUBLIC_CONVEX_URL && token
-      ? await fetchQuery(
-          api.admin.getTemplateById,
-          { templateId: id as Id<'assessmentTemplates'> },
-          { token: token ?? undefined }
-        ).catch(() => null)
-      : null
+  const templateResult =
+    hasConvexDeployment() && token
+      ? await serverConvexQuery(api.admin.getTemplateById, {
+          templateId: id as Id<'assessmentTemplates'>,
+        })
+      : { ok: false as const, kind: 'not_found' as const }
+  const template = templateResult.ok ? templateResult.data : null
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-8">

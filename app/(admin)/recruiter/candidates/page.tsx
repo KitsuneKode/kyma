@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { fetchQuery } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
 import { MetricCard } from '@/components/admin/metric-card'
@@ -7,24 +6,14 @@ import { PageHeader } from '@/components/admin/page-header'
 import { WorkspaceEmptyState } from '@/components/workspace/empty-state'
 import { Button } from '@/components/ui/button'
 import { CandidatesTable } from '@/components/recruiter/candidates-table'
-import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
-import { clientEnv } from '@/lib/env/client'
-import { runConvexFetch } from '@/lib/convex/server-fetch'
+import { serverConvexQuery } from '@/lib/convex/server-query'
 import { signInPath } from '@/lib/auth/workspace-intent'
 
 export default async function AdminCandidatesPage() {
-  const token = await getServerConvexAuthToken()
-  const candidatesResult = clientEnv.NEXT_PUBLIC_CONVEX_URL
-    ? await runConvexFetch(() =>
-        fetchQuery(
-          api.recruiter.listReviewCandidates,
-          {},
-          {
-            token: token ?? undefined,
-          }
-        )
-      )
-    : { ok: true as const, data: [] }
+  const candidatesResult = await serverConvexQuery(
+    api.recruiter.listReviewCandidates,
+    {}
+  )
 
   if (!candidatesResult.ok) {
     return (

@@ -14,10 +14,12 @@ import { CandidateInviteLinkError } from '@/components/candidate/candidate-invit
 import { WorkspacePromptBanner } from '@/components/auth/workspace-prompt-banner'
 import { WorkspaceShell } from '@/components/workspace/workspace-shell'
 import { requireCandidatePageAccess } from '@/lib/auth/access'
-import { fetchMutation } from 'convex/nextjs'
 import { api } from '@/convex/_generated/api'
+import {
+  hasConvexDeployment,
+  serverConvexMutation,
+} from '@/lib/convex/server-query'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
-import { clientEnv } from '@/lib/env/client'
 
 export default async function CandidateLayout({
   children,
@@ -33,18 +35,15 @@ export default async function CandidateLayout({
 
   let linkError: string | null = null
 
-  if (clientEnv.NEXT_PUBLIC_CONVEX_URL && token) {
-    try {
-      await fetchMutation(
-        api.interviews.candidatePortal.linkCandidateInviteByEmail,
-        {},
-        { token: token ?? undefined }
-      )
-    } catch (error) {
+  if (hasConvexDeployment() && token) {
+    const linkResult = await serverConvexMutation(
+      api.interviews.candidatePortal.linkCandidateInviteByEmail,
+      {}
+    )
+    if (!linkResult.ok) {
       linkError =
-        error instanceof Error
-          ? error.message
-          : 'Unable to link screening invites to your account.'
+        linkResult.message ??
+        'Unable to link screening invites to your account.'
     }
   }
 
