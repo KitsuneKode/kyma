@@ -31,8 +31,9 @@ export const recruiterMutation = customMutation(mutation, {
 export const orgAdminMutation = customMutation(mutation, {
   args: {},
   input: async (ctx, args) => {
-    await requireAdmin(ctx)
+    const { identity } = await requireAdmin(ctx)
     const orgId = await requireOrgId(ctx)
-    return { ctx: { ...ctx, orgId }, args }
+    const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
+    return { ctx: { ...ctx, orgId, actor }, args }
   },
 })

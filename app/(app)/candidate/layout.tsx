@@ -35,7 +35,7 @@ export default async function CandidateLayout({
   if (clientEnv.NEXT_PUBLIC_CONVEX_URL && token) {
     try {
       await fetchMutation(
-        api.interviews.linkCandidateInviteByEmail,
+        api.interviews.candidatePortal.linkCandidateInviteByEmail,
         {},
         { token: token ?? undefined }
       )

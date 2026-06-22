@@ -2,6 +2,7 @@ import { ConvexError, v } from 'convex/values'
 
 import type { Id } from './_generated/dataModel'
 import { mutation, query, type QueryCtx } from './_generated/server'
+import { recruiterMutation, recruiterQuery } from './lib/customFunctions'
 import {
   getRecruiterActorId,
   requireAdminIdentity,
@@ -68,11 +69,55 @@ async function getLatestReviewDecision(
   )[0]
 }
 
-export const listReviewCandidates = query({
+/**
+ * Resolves the caller's org scope for review/processing reads. Trusted pipeline
+ * callers (with a valid processing key) resolve the org from the session; human
+ * recruiters fall back to authenticated admin identity + org membership.
+ */
+async function resolveReviewScopeOrgId(
+  ctx: QueryCtx,
+  sessionId: Id<'interviewSessions'>,
+  processingKey?: string
+) {
+  if (hasTrustedProcessingKey(processingKey)) {
+    return await resolveOrgIdForPipelineWrite(ctx, sessionId, processingKey)
+  }
+  await requireAdminIdentity(ctx)
+  return await requireOrgId(ctx)
+}
+
+/**
+ * Shared base loader for the session processing + recruiter review detail
+ * queries. Centralizes auth scoping, the org-ownership guard, and the common
+ * session/invite/template/report fetch so both read paths stay in sync. Returns
+ * null when the session is missing or not owned by the caller's org.
+ */
+async function loadSessionReviewBase(
+  ctx: QueryCtx,
+  sessionId: Id<'interviewSessions'>,
+  processingKey?: string
+) {
+  const orgId = await resolveReviewScopeOrgId(ctx, sessionId, processingKey)
+
+  const session = await ctx.db.get(sessionId)
+  if (!session || session.orgId !== orgId) {
+    return null
+  }
+
+  const invite = await ctx.db.get(session.inviteId)
+  const template = invite ? await ctx.db.get(invite.templateId) : null
+  const report = await ctx.db
+    .query('assessmentReports')
+    .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+    .first()
+
+  return { orgId, session, invite, template, report }
+}
+
+export const listReviewCandidates = recruiterQuery({
   args: {},
   handler: async (ctx) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
 
     // Bounded for dashboard load; use paginated list queries when the queue grows.
     const sessions = await ctx.db
@@ -127,26 +172,14 @@ export const getSessionProcessingDetail = query({
     processingKey: v.optional(v.string()),
   },
   handler: async (ctx, { sessionId, processingKey }) => {
-    const orgId = hasTrustedProcessingKey(processingKey)
-      ? await resolveOrgIdForPipelineWrite(ctx, sessionId, processingKey)
-      : await (async () => {
-          await requireAdminIdentity(ctx)
-          return await requireOrgId(ctx)
-        })()
+    const base = await loadSessionReviewBase(ctx, sessionId, processingKey)
 
-    const session = await ctx.db.get(sessionId)
-
-    if (!session || session.orgId !== orgId) {
+    if (!base || !base.invite) {
       return null
     }
 
-    const invite = await ctx.db.get(session.inviteId)
+    const { orgId, session, invite, template, report } = base
 
-    if (!invite) {
-      return null
-    }
-
-    const template = await ctx.db.get(invite.templateId)
     const { snapshot: policySnapshot } = await resolveInterviewPolicyFromInvite(
       ctx,
       invite
@@ -154,10 +187,6 @@ export const getSessionProcessingDetail = query({
     const workspaceSettings = await ctx.db
       .query('workspaceSettings')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-      .first()
-    const report = await ctx.db
-      .query('assessmentReports')
-      .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
       .first()
 
     const [transcript, events] = await Promise.all([
@@ -216,25 +245,13 @@ export const getCandidateReviewDetail = query({
     processingKey: v.optional(v.string()),
   },
   handler: async (ctx, { sessionId, processingKey }) => {
-    const orgId = hasTrustedProcessingKey(processingKey)
-      ? await resolveOrgIdForPipelineWrite(ctx, sessionId, processingKey)
-      : await (async () => {
-          await requireAdminIdentity(ctx)
-          return await requireOrgId(ctx)
-        })()
+    const base = await loadSessionReviewBase(ctx, sessionId, processingKey)
 
-    const session = await ctx.db.get(sessionId)
-
-    if (!session || session.orgId !== orgId) {
+    if (!base) {
       return null
     }
 
-    const invite = await ctx.db.get(session.inviteId)
-    const template = invite ? await ctx.db.get(invite.templateId) : null
-    const report = await ctx.db
-      .query('assessmentReports')
-      .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-      .first()
+    const { session, invite, template, report } = base
 
     const [
       transcript,
@@ -561,7 +578,7 @@ export const saveAssessmentReport = mutation({
   },
 })
 
-export const submitReviewDecision = mutation({
+export const submitReviewDecision = recruiterMutation({
   args: {
     reportId: v.id('assessmentReports'),
     sessionId: v.id('interviewSessions'),
@@ -570,8 +587,7 @@ export const submitReviewDecision = mutation({
     reviewerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const reviewerId = await getRecruiterActorId(ctx)
 
     await assertOrgOwnsSession(ctx, orgId, args.sessionId)
@@ -614,14 +630,13 @@ export const submitReviewDecision = mutation({
   },
 })
 
-export const releaseReport = mutation({
+export const releaseReport = recruiterMutation({
   args: {
     reportId: v.id('assessmentReports'),
     sessionId: v.id('interviewSessions'),
   },
   handler: async (ctx, args) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const actorId = await getRecruiterActorId(ctx)
 
     await assertOrgOwnsSession(ctx, orgId, args.sessionId)

@@ -29,7 +29,7 @@ export default async function CandidateInterviewResultPage({
     clientEnv.NEXT_PUBLIC_CONVEX_URL && token
       ? await runConvexFetch(() =>
           fetchQuery(
-            api.interviews.getCandidateInterviewResult,
+            api.interviews.candidatePortal.getCandidateInterviewResult,
             { sessionId: id as Id<'interviewSessions'> },
             { token: token ?? undefined }
           )

@@ -10,6 +10,7 @@
 
 import type * as admin from "../admin.js";
 import type * as agentConfig from "../agentConfig.js";
+import type * as agentWorker from "../agentWorker.js";
 import type * as devSeed from "../devSeed.js";
 import type * as devSeedMutations from "../devSeedMutations.js";
 import type * as helpers_audit from "../helpers/audit.js";
@@ -19,13 +20,18 @@ import type * as helpers_devSeedSpectrum from "../helpers/devSeedSpectrum.js";
 import type * as helpers_encryption from "../helpers/encryption.js";
 import type * as helpers_finalizeInterviewProcessing from "../helpers/finalizeInterviewProcessing.js";
 import type * as helpers_interviewPolicy from "../helpers/interviewPolicy.js";
+import type * as helpers_interviewSession from "../helpers/interviewSession.js";
 import type * as helpers_orgAccess from "../helpers/orgAccess.js";
 import type * as helpers_orgContext from "../helpers/orgContext.js";
 import type * as helpers_processingAuth from "../helpers/processingAuth.js";
 import type * as helpers_releasePolicy from "../helpers/releasePolicy.js";
 import type * as helpers_templates from "../helpers/templates.js";
 import type * as helpers_transcriptSegments from "../helpers/transcriptSegments.js";
-import type * as interviews from "../interviews.js";
+import type * as interviews_bootstrap from "../interviews/bootstrap.js";
+import type * as interviews_candidatePortal from "../interviews/candidatePortal.js";
+import type * as interviews_public from "../interviews/public.js";
+import type * as interviews_sessionEvents from "../interviews/sessionEvents.js";
+import type * as interviews_transcript from "../interviews/transcript.js";
 import type * as lib_customFunctions from "../lib/customFunctions.js";
 import type * as livekit from "../livekit.js";
 import type * as onboarding from "../onboarding.js";
@@ -49,6 +55,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   agentConfig: typeof agentConfig;
+  agentWorker: typeof agentWorker;
   devSeed: typeof devSeed;
   devSeedMutations: typeof devSeedMutations;
   "helpers/audit": typeof helpers_audit;
@@ -58,13 +65,18 @@ declare const fullApi: ApiFromModules<{
   "helpers/encryption": typeof helpers_encryption;
   "helpers/finalizeInterviewProcessing": typeof helpers_finalizeInterviewProcessing;
   "helpers/interviewPolicy": typeof helpers_interviewPolicy;
+  "helpers/interviewSession": typeof helpers_interviewSession;
   "helpers/orgAccess": typeof helpers_orgAccess;
   "helpers/orgContext": typeof helpers_orgContext;
   "helpers/processingAuth": typeof helpers_processingAuth;
   "helpers/releasePolicy": typeof helpers_releasePolicy;
   "helpers/templates": typeof helpers_templates;
   "helpers/transcriptSegments": typeof helpers_transcriptSegments;
-  interviews: typeof interviews;
+  "interviews/bootstrap": typeof interviews_bootstrap;
+  "interviews/candidatePortal": typeof interviews_candidatePortal;
+  "interviews/public": typeof interviews_public;
+  "interviews/sessionEvents": typeof interviews_sessionEvents;
+  "interviews/transcript": typeof interviews_transcript;
   "lib/customFunctions": typeof lib_customFunctions;
   livekit: typeof livekit;
   onboarding: typeof onboarding;

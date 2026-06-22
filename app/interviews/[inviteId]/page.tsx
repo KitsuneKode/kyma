@@ -21,7 +21,7 @@ function isEnabledDemoInviteToken(inviteId: string) {
 export default async function InterviewPage({ params }: InterviewPageProps) {
   const { inviteId } = await params
   const publicSnapshot = clientEnv.NEXT_PUBLIC_CONVEX_URL
-    ? await fetchQuery(api.interviews.getPublicSessionDetail, {
+    ? await fetchQuery(api.interviews.public.getPublicSessionDetail, {
         inviteToken: inviteId,
       }).catch(() => null)
     : null

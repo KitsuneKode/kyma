@@ -49,7 +49,7 @@ export async function markAssessmentFailed(
     topConcerns: ['processing failure'],
   })
 
-  await fetchMutation(api.interviews.appendSessionEvent, {
+  await fetchMutation(api.interviews.sessionEvents.appendSessionEvent, {
     processingKey: PROCESSING_WRITE_KEY,
     sessionId,
     type: 'processing-failed',
@@ -178,7 +178,7 @@ export async function processInterviewAssessment(
     policySnapshot: detail.policySnapshot,
   })
 
-  await fetchMutation(api.interviews.appendSessionEvent, {
+  await fetchMutation(api.interviews.sessionEvents.appendSessionEvent, {
     processingKey: PROCESSING_WRITE_KEY,
     sessionId,
     type: 'processing-completed',

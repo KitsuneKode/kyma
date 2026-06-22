@@ -56,7 +56,7 @@ export default async function CandidateInterviewsPage({
     clientEnv.NEXT_PUBLIC_CONVEX_URL && token
       ? await runConvexFetch(() =>
           fetchQuery(
-            api.interviews.listCandidateInterviews,
+            api.interviews.candidatePortal.listCandidateInterviews,
             {},
             { token: token ?? undefined }
           )

@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     sessionIdForFailure = sessionId
     const typedSessionId = sessionId as Id<'interviewSessions'>
     const allowed = await fetchQuery(
-      api.interviews.verifyPublicSessionProcessingAccess,
+      api.interviews.public.verifyPublicSessionProcessingAccess,
       {
         inviteToken,
         sessionId: typedSessionId,

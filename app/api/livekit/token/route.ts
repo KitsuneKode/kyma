@@ -57,9 +57,12 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const snapshot = await fetchQuery(api.interviews.getPublicSessionDetail, {
-    inviteToken,
-  }).catch(() => null)
+  const snapshot = await fetchQuery(
+    api.interviews.public.getPublicSessionDetail,
+    {
+      inviteToken,
+    }
+  ).catch(() => null)
 
   if (!snapshot || snapshot.accessState !== 'available') {
     return NextResponse.json(
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
   let sessionId = snapshot.sessionId ? `${snapshot.sessionId}` : undefined
   if (!roomName || !sessionId) {
     const bootstrapped = await fetchMutation(
-      api.interviews.bootstrapPublicSession,
+      api.interviews.bootstrap.bootstrapPublicSession,
       {
         inviteToken,
         participantName,

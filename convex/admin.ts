@@ -1,14 +1,13 @@
 import { ConvexError, v } from 'convex/values'
 
 import { api } from './_generated/api'
-import { action, mutation, query } from './_generated/server'
-import { recruiterQuery } from './lib/customFunctions'
+import { action, query } from './_generated/server'
 import {
-  getRecruiterActorId,
-  requireAdmin,
-  requireAdminIdentity,
-  requireOrgId,
-} from './helpers/auth'
+  orgAdminMutation,
+  recruiterMutation,
+  recruiterQuery,
+} from './lib/customFunctions'
+import { getRecruiterActorId, requireAdmin, requireOrgId } from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
 import { assertOrgOwnsReport, assertOrgOwnsSession } from './helpers/orgAccess'
 import { ensureDefaultTemplate } from './helpers/templates'
@@ -31,17 +30,17 @@ function buildInviteToken(candidateName: string) {
   return `${prefix}-${suffix}`
 }
 
-export const bootstrapOrgTemplates = mutation({
+export const bootstrapOrgTemplates = recruiterMutation({
   args: {},
+  returns: v.object({ templateId: v.id('assessmentTemplates') }),
   handler: async (ctx) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const template = await ensureDefaultTemplate(ctx, orgId)
     return { templateId: template._id }
   },
 })
 
-export const createAssessmentTemplate = mutation({
+export const createAssessmentTemplate = recruiterMutation({
   args: {
     name: v.string(),
     role: v.optional(v.string()),
@@ -51,9 +50,9 @@ export const createAssessmentTemplate = mutation({
       v.union(v.literal('standard'), v.literal('intensive'))
     ),
   },
+  returns: v.id('assessmentTemplates'),
   handler: async (ctx, args) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const actor = (await getRecruiterActorId(ctx)) ?? 'recruiter'
     const name = args.name.trim()
     if (!name) {
@@ -84,11 +83,10 @@ export const createAssessmentTemplate = mutation({
   },
 })
 
-export const listActiveTemplates = query({
+export const listActiveTemplates = recruiterQuery({
   args: {},
   handler: async (ctx) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
 
     const templates = await ctx.db
       .query('assessmentTemplates')
@@ -155,13 +153,12 @@ export const listScreeningBatches = recruiterQuery({
   },
 })
 
-export const getScreeningBatchDetail = query({
+export const getScreeningBatchDetail = recruiterQuery({
   args: {
     batchId: v.id('screeningBatches'),
   },
   handler: async (ctx, { batchId }) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
 
     const batch = await ctx.db.get(batchId)
 
@@ -213,7 +210,7 @@ export const getScreeningBatchDetail = query({
   },
 })
 
-export const createScreeningBatch = mutation({
+export const createScreeningBatch = recruiterMutation({
   args: {
     name: v.string(),
     createdBy: v.optional(v.string()),
@@ -232,9 +229,9 @@ export const createScreeningBatch = mutation({
       })
     ),
   },
+  returns: v.id('screeningBatches'),
   handler: async (ctx, args) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const createdBy = await getRecruiterActorId(ctx)
     const template = args.templateId
       ? await ctx.db.get(args.templateId)
@@ -299,16 +296,16 @@ export const createScreeningBatch = mutation({
   },
 })
 
-export const addRecruiterNote = mutation({
+export const addRecruiterNote = recruiterMutation({
   args: {
     sessionId: v.id('interviewSessions'),
     reportId: v.optional(v.id('assessmentReports')),
     authorId: v.optional(v.string()),
     body: v.string(),
   },
+  returns: v.id('recruiterNotes'),
   handler: async (ctx, args) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const authorId = await getRecruiterActorId(ctx)
 
     await assertOrgOwnsSession(ctx, orgId, args.sessionId)
@@ -340,7 +337,7 @@ export const addRecruiterNote = mutation({
   },
 })
 
-export const addReportChatMessage = mutation({
+export const addReportChatMessage = recruiterMutation({
   args: {
     sessionId: v.id('interviewSessions'),
     reportId: v.optional(v.id('assessmentReports')),
@@ -357,9 +354,9 @@ export const addReportChatMessage = mutation({
     citationsJson: v.optional(v.string()),
     groundingVersion: v.optional(v.string()),
   },
+  returns: v.id('reportChatMessages'),
   handler: async (ctx, args) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
 
     await assertOrgOwnsSession(ctx, orgId, args.sessionId)
     if (args.reportId) {
@@ -496,11 +493,10 @@ export const getDashboardSummary = recruiterQuery({
   },
 })
 
-export const getWorkspaceSettings = query({
+export const getWorkspaceSettings = recruiterQuery({
   args: {},
   handler: async (ctx) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const settings = await ctx.db
       .query('workspaceSettings')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
@@ -525,16 +521,15 @@ export const getWorkspaceSettings = query({
   },
 })
 
-export const addProviderKey = mutation({
+export const addProviderKey = orgAdminMutation({
   args: {
     provider: v.string(),
     key: v.string(),
     label: v.optional(v.string()),
   },
+  returns: v.id('workspaceSettings'),
   handler: async (ctx, args) => {
-    const { identity } = await requireAdmin(ctx)
-    const orgId = await requireOrgId(ctx)
-    const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
+    const { orgId, actor } = ctx
     const now = Date.now()
     const keyId =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -573,15 +568,14 @@ export const addProviderKey = mutation({
   },
 })
 
-export const removeProviderKey = mutation({
+export const removeProviderKey = orgAdminMutation({
   args: {
     provider: v.string(),
     keyId: v.string(),
   },
+  returns: v.union(v.id('workspaceSettings'), v.null()),
   handler: async (ctx, args) => {
-    const { identity } = await requireAdmin(ctx)
-    const orgId = await requireOrgId(ctx)
-    const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
+    const { orgId, actor } = ctx
     const settings = await ctx.db
       .query('workspaceSettings')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
@@ -599,14 +593,13 @@ export const removeProviderKey = mutation({
   },
 })
 
-export const updateDefaultModels = mutation({
+export const updateDefaultModels = orgAdminMutation({
   args: {
     models: modelOverridesValidator,
   },
+  returns: v.id('workspaceSettings'),
   handler: async (ctx, args) => {
-    const { identity } = await requireAdmin(ctx)
-    const orgId = await requireOrgId(ctx)
-    const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
+    const { orgId, actor } = ctx
     const now = Date.now()
     const settings = await ctx.db
       .query('workspaceSettings')
@@ -629,14 +622,13 @@ export const updateDefaultModels = mutation({
   },
 })
 
-export const updateCandidateReleaseMode = mutation({
+export const updateCandidateReleaseMode = orgAdminMutation({
   args: {
     mode: v.union(v.literal('auto'), v.literal('manual')),
   },
+  returns: v.id('workspaceSettings'),
   handler: async (ctx, args) => {
-    const { identity } = await requireAdmin(ctx)
-    const orgId = await requireOrgId(ctx)
-    const actor = identity?.tokenIdentifier ?? identity?.subject ?? 'admin'
+    const { orgId, actor } = ctx
     const now = Date.now()
     const settings = await ctx.db
       .query('workspaceSettings')
@@ -773,13 +765,12 @@ export const getWorkspaceSettingsRaw = query({
   },
 })
 
-export const getTemplateById = query({
+export const getTemplateById = recruiterQuery({
   args: {
     templateId: v.id('assessmentTemplates'),
   },
   handler: async (ctx, args) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const template = await ctx.db.get(args.templateId)
     if (!template || template.orgId !== orgId) {
       return null
@@ -788,7 +779,7 @@ export const getTemplateById = query({
   },
 })
 
-export const updateAssessmentTemplate = mutation({
+export const updateAssessmentTemplate = recruiterMutation({
   args: {
     templateId: v.id('assessmentTemplates'),
     name: v.optional(v.string()),
@@ -809,9 +800,9 @@ export const updateAssessmentTemplate = mutation({
     ),
     modelOverrides: v.optional(modelOverridesValidator),
   },
+  returns: v.id('assessmentTemplates'),
   handler: async (ctx, args) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const actor = (await getRecruiterActorId(ctx)) ?? 'admin'
     const template = await ctx.db.get(args.templateId)
     if (!template || template.orgId !== orgId) {
@@ -849,13 +840,12 @@ export const updateAssessmentTemplate = mutation({
   },
 })
 
-export const listTemplateVersions = query({
+export const listTemplateVersions = recruiterQuery({
   args: {
     templateId: v.id('assessmentTemplates'),
   },
   handler: async (ctx, args) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const template = await ctx.db.get(args.templateId)
     if (!template || template.orgId !== orgId) {
       return []
@@ -877,13 +867,12 @@ export const listTemplateVersions = query({
   },
 })
 
-export const searchCandidates = query({
+export const searchCandidates = recruiterQuery({
   args: {
     query: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireAdminIdentity(ctx)
-    const orgId = await requireOrgId(ctx)
+    const { orgId } = ctx
     const normalized = args.query.trim().toLowerCase()
     const invites = await ctx.db
       .query('candidateInvites')

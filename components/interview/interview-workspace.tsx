@@ -162,13 +162,18 @@ export function InterviewWorkspace({
     initialSnapshot.state
   )
   const participantNameRef = useRef(participantName)
-  const appendSessionEvent = useMutation(api.interviews.appendSessionEvent)
-  const upsertTranscriptSegment = useMutation(
-    api.interviews.upsertTranscriptSegment
+  const appendSessionEvent = useMutation(
+    api.interviews.sessionEvents.appendSessionEvent
   )
-  const persistedSession = useQuery(api.interviews.getPublicSessionDetail, {
-    inviteToken: initialSnapshot.inviteId,
-  })
+  const upsertTranscriptSegment = useMutation(
+    api.interviews.transcript.upsertTranscriptSegment
+  )
+  const persistedSession = useQuery(
+    api.interviews.public.getPublicSessionDetail,
+    {
+      inviteToken: initialSnapshot.inviteId,
+    }
+  )
 
   const logger = useMemo(
     () =>

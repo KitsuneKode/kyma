@@ -15,7 +15,9 @@ type CandidateInviteLinkBannerProps = {
 export function CandidateInviteLinkBanner({
   initialError,
 }: CandidateInviteLinkBannerProps) {
-  const claimInvite = useMutation(api.interviews.claimCandidateInviteByToken)
+  const claimInvite = useMutation(
+    api.interviews.candidatePortal.claimCandidateInviteByToken
+  )
   const [inviteToken, setInviteToken] = useState('')
   const [status, setStatus] = useState<string | null>(initialError ?? null)
   const [busy, setBusy] = useState(false)

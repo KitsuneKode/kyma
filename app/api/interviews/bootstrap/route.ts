@@ -52,13 +52,16 @@ export async function POST(request: NextRequest) {
       participantIdentity: participantName,
     })
 
-    const session = await fetchMutation(api.interviews.bootstrapPublicSession, {
-      inviteToken,
-      participantName,
-    })
+    const session = await fetchMutation(
+      api.interviews.bootstrap.bootstrapPublicSession,
+      {
+        inviteToken,
+        participantName,
+      }
+    )
 
     const byokSummary = await fetchQuery(
-      api.interviews.getInviteBootstrapByokSummary,
+      api.interviews.bootstrap.getInviteBootstrapByokSummary,
       { inviteToken }
     )
     if (byokSummary.providerKeys.length > 0) {
