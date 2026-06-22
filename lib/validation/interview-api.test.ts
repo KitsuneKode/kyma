@@ -5,10 +5,10 @@ import { bootstrapBodySchema, reportChatBodySchema } from './interview-api'
 describe('bootstrapBodySchema', () => {
   it('accepts valid payload', () => {
     const parsed = bootstrapBodySchema.parse({
-      inviteToken: 'demo-invite',
+      inviteToken: 'invite-123',
       participantName: 'Jo',
     })
-    expect(parsed.inviteToken).toBe('demo-invite')
+    expect(parsed.inviteToken).toBe('invite-123')
   })
 
   it('rejects short participant name', () => {

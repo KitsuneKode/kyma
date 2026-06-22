@@ -268,20 +268,6 @@ export async function collectPlatformHealthChecks(): Promise<HealthCheck[]> {
         : 'Recording env incomplete — review audio playback may be unavailable.',
     },
     scoringCredentialsStatus(),
-    {
-      id: 'demo-invite',
-      label: 'Demo invite',
-      status:
-        serverEnv.KYMA_ENABLE_DEMO_INVITE === '1'
-          ? isProd
-            ? 'warn'
-            : 'ok'
-          : 'ok',
-      detail:
-        serverEnv.KYMA_ENABLE_DEMO_INVITE === '1'
-          ? 'demo-invite token enabled.'
-          : 'demo-invite disabled (default).',
-    },
   ]
 }
 

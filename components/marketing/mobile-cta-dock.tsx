@@ -20,7 +20,7 @@ export function MobileCtaDock() {
           <Button
             variant="outline"
             className="h-11 min-h-[44px] min-w-[44px] rounded-xl transition-[transform,background-color] duration-150 ease-out active:scale-[0.96]"
-            render={<Link href="/interviews/demo-invite" />}
+            render={<Link href={signUpPath('candidate')} />}
             nativeButton={false}
           >
             Candidate flow

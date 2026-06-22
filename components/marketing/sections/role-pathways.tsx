@@ -47,7 +47,7 @@ const pathways = [
     ],
     primaryCta: {
       label: 'Try the candidate flow',
-      href: '/interviews/demo-invite',
+      href: signUpPath('candidate'),
     },
     secondaryCta: {
       label: 'Create candidate account',

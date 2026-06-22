@@ -65,7 +65,7 @@ export function MarketingCtaRow({
           pressable,
           'h-12 px-8 text-base ring-1 ring-border/40 hover:bg-muted/30'
         )}
-        render={<Link href="/interviews/demo-invite" />}
+        render={<Link href={signUpPath('candidate')} />}
         nativeButton={false}
       >
         <span className="text-nowrap">Try the candidate flow</span>

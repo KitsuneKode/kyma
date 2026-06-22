@@ -7,7 +7,7 @@ import { Show, UserButton } from '@clerk/nextjs'
 
 import { WorkspaceSwitcher } from '@/components/auth/workspace-switcher'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { signInPath } from '@/lib/auth/workspace-intent'
+import { signInPath, signUpPath } from '@/lib/auth/workspace-intent'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { PreferredWorkspace } from '@/lib/auth/clerk-role'
@@ -48,9 +48,9 @@ export function AppLayoutChrome({
             ) : null}
             <Link
               className="text-muted-foreground transition-colors hover:text-foreground"
-              href="/interviews/demo-invite"
+              href={signUpPath('candidate')}
             >
-              Demo interview
+              Try candidate flow
             </Link>
           </div>
           <div className="flex items-center gap-4">

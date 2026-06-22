@@ -194,6 +194,3 @@ export function ReviewCommandHeader({
     </motion.header>
   )
 }
-
-/** @deprecated Use ReviewCommandHeader */
-export const DecisionBar = ReviewCommandHeader

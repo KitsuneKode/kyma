@@ -17,7 +17,6 @@ type ClerkWebhookUser = {
   email_addresses?: ClerkEmailAddress[]
   primary_email_address_id?: string
   public_metadata?: {
-    persona?: unknown
     preferredWorkspace?: unknown
   }
 }
@@ -32,10 +31,6 @@ function preferredWorkspaceFromWebhookUser(
   const preferred = metadata.preferredWorkspace
   if (preferred === 'candidate' || preferred === 'recruiter') {
     return preferred
-  }
-  const legacy = metadata.persona
-  if (legacy === 'candidate' || legacy === 'recruiter') {
-    return legacy
   }
   return undefined
 }

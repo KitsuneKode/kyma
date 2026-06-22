@@ -35,7 +35,6 @@ const SCREEN_LINKS = [
   { href: '/candidate', label: 'Candidate portal home' },
   { href: '/candidate/interviews', label: 'Candidate interviews' },
   { href: '/recruiter/setup', label: 'Recruiter org setup' },
-  { href: '/interviews/demo-invite', label: 'Public demo invite' },
 ] as const
 
 function DevSetupHubHeader() {
