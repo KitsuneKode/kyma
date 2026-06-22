@@ -40,15 +40,15 @@ bun run dev:stack
 
 5. Verify routes manually:
    - `/candidate`
-   - `/onboarding/recruiter`
+   - `/recruiter/setup`
    - `/recruiter`
-   - `/interviews/demo-invite`
+   - `/i/demo-invite` or mock interview from `/candidate`
 
 ### Production (explicit, no destructive reset)
 
 1. Configure Clerk in production:
    - org roles/permissions
-   - JWT claims (`org_id`, `org_role`, `org_permissions`, `metadata.persona`)
+   - JWT claims (`org_id`, `org_role`, `org_permissions`, `metadata.preferredWorkspace`)
    - webhook endpoint + all required events
 2. Ensure production env vars include:
    - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
@@ -68,27 +68,25 @@ Production guardrail:
 
 - Never run `db:cutover:org-rbac:dev` in production.
 
-## Stuck on `/onboarding` after signup?
+## Stuck after signup?
 
-Symptom: clicking **Continue as candidate/recruiter** reloads the same page.
+Symptom: recruiter sign-in does not reach `/recruiter`, or workspace preference does not persist.
 
-1. Open Clerk Dashboard → **Users** → your user → **Public metadata**. After a click you should see `preferredWorkspace` (or legacy `persona`).
+1. Open Clerk Dashboard → **Users** → your user → **Public metadata**. You should see `preferredWorkspace` (`candidate` | `recruiter`).
 2. Open **JWT Templates** → **Session token** (default). Claims must include:
    - `metadata.preferredWorkspace` from `{{user.public_metadata.preferredWorkspace}}`
-   - Legacy fallback: `metadata.persona` from `{{user.public_metadata.persona}}`
    - `org_id`, `org_role`, `org_permissions` for recruiter routes
 3. Open **JWT Templates** → **convex** (application ID `convex`). Same org claims as above.
 4. **Organizations** enabled; membership mode **optional** (candidate + recruiter on one login).
 5. Sign out and sign in once after changing the JWT template (forces a fresh session).
-6. Local debug: set `KYMA_AUTH_DEBUG=1` in `.env.local` and reload `/onboarding` to compare API metadata vs session claims.
+6. Local debug: set `KYMA_AUTH_DEBUG=1` in `.env.local` and reload a signed-in page to compare API metadata vs session claims.
 
 Example session-token claims JSON (adjust to your Clerk UI):
 
 ```json
 {
   "metadata": {
-    "preferredWorkspace": "{{user.public_metadata.preferredWorkspace}}",
-    "persona": "{{user.public_metadata.persona}}"
+    "preferredWorkspace": "{{user.public_metadata.preferredWorkspace}}"
   },
   "org_id": "{{org.id}}",
   "org_role": "{{org.role}}",
@@ -120,7 +118,6 @@ Include these claims for app + Convex guards:
 - `org_role`
 - `org_permissions`
 - `metadata.preferredWorkspace` (`candidate|recruiter`) for routing hints only
-- Legacy: `metadata.persona` (`candidate|recruiter|both`) until all environments migrate
 
 ### Clerk webhook subscriptions
 
@@ -170,7 +167,7 @@ bun run verify:auth-org-rbac
 Then verify behavior manually:
 
 - Candidate user without org can access candidate routes.
-- Recruiter persona without active org is redirected to recruiter onboarding.
+- Recruiter without active org is redirected to `/recruiter/setup`.
 - Recruiter with active org and permission can access recruiter routes.
 - Users with org access can switch candidate/recruiter workspaces from the header.
 - Cross-org isolation holds for recruiter data.
@@ -185,7 +182,7 @@ Then verify behavior manually:
 
 ### Recruiter-only user
 
-- Sign in without org -> onboarding recruiter org setup.
+- Sign in without org -> `/recruiter/setup`.
 - Create/join/select org -> recruiter workspace loads.
 - Organization switcher changes context and access scope.
 
@@ -237,18 +234,14 @@ Canonical machine-readable fixtures live in:
   - `mem_test_alpha_recruiter_01`
   - `mem_test_beta_recruiter_01`
 
-### Persona hint fixtures (`publicMetadata`)
+### Workspace preference fixtures (`publicMetadata`)
 
 ```json
-{ "persona": "candidate" }
+{ "preferredWorkspace": "candidate" }
 ```
 
 ```json
-{ "persona": "recruiter" }
-```
-
-```json
-{ "persona": "both" }
+{ "preferredWorkspace": "recruiter" }
 ```
 
 ### JWT claim fixtures for recruiter authz
@@ -258,7 +251,7 @@ Candidate-only claim sample:
 ```json
 {
   "sub": "user_test_candidate_01",
-  "metadata": { "persona": "candidate" }
+  "metadata": { "preferredWorkspace": "candidate" }
 }
 ```
 
@@ -270,7 +263,7 @@ Recruiter claim sample (allowed):
   "org_id": "org_test_alpha",
   "org_role": "org:member",
   "org_permissions": ["org:recruiter:access"],
-  "metadata": { "persona": "recruiter" }
+  "metadata": { "preferredWorkspace": "recruiter" }
 }
 ```
 
@@ -282,7 +275,7 @@ Recruiter claim sample (denied - no permission):
   "org_id": "org_test_alpha",
   "org_role": "org:member",
   "org_permissions": [],
-  "metadata": { "persona": "recruiter" }
+  "metadata": { "preferredWorkspace": "recruiter" }
 }
 ```
 
@@ -294,7 +287,7 @@ Org admin claim sample:
   "org_id": "org_test_alpha",
   "org_role": "org:admin",
   "org_permissions": [],
-  "metadata": { "persona": "both" }
+  "metadata": { "preferredWorkspace": "recruiter" }
 }
 ```
 
@@ -336,6 +329,10 @@ Organization membership created:
 - Recruiter flow page:
   - `/recruiter`
 - Recruiter onboarding with no org selected:
-  - `/onboarding/recruiter`
-- Public demo interview:
-  - `/interviews/demo-invite`
+  - `/recruiter/setup`
+- Team invite accept:
+  - `/join/[orgId]`
+- Short candidate invite link:
+  - `/i/[token]`
+- Mock interview (auth-gated):
+  - `/candidate` → "Try mock interview"

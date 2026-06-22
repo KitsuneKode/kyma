@@ -46,7 +46,7 @@ Before public launch, verify one real end-to-end run with production-like env:
 ## Production Gaps
 
 - Real LiveKit/agent/STT/TTS validation is still the biggest launch blocker.
-- `/admin/*` and `/recruiter/*` both build, but product navigation currently treats `/recruiter` as canonical while several docs still call `/admin` important. Choose one canonical external route before launch.
+- `/recruiter/*` is the canonical recruiter route. `/admin/*` redirects to `/recruiter/*` (shim removed).
 - Convex admin/recruiter reads still use broad `.collect()` in several list/detail queries. Fine for pilot data, but replace with pagination or bounded `.take()` plus targeted indexes before larger cohorts.
 - Processing can fall back inline when Inngest enqueue fails. Good for local resilience, but production should alert on enqueue failure and make fallback behavior visible in ops logs.
 - Public demo entry points exist in marketing/candidate empty states. Decide whether `KYMA_ENABLE_DEMO_INVITE` is production-enabled; if not, hide demo CTAs or route them to recruiter login/request-demo.
@@ -57,7 +57,7 @@ Before public launch, verify one real end-to-end run with production-like env:
 
 1. Run the launch bar manually with real Clerk, Convex, LiveKit, Inngest, and recording env.
 2. Fix any live-path failures in agent join, transcript, webhook, recording, and processing.
-3. Canonicalize `/recruiter` vs `/admin` in docs, redirects, nav, and route guard language.
+3. ~~Canonicalize `/recruiter` vs `/admin`~~ Done — `/recruiter` canonical, `/admin` redirects.
 4. Replace unbounded Convex list queries on recruiter/admin surfaces with paginated or bounded queries.
 5. Add an operator health page for env readiness, LiveKit config, Inngest config, webhook signing, and processing-key status.
 6. Add production observability: structured error IDs, event failure counts, processing latency, transcript quality counts, room join success, and recruiter override rate.

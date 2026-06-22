@@ -21,7 +21,7 @@ the conversation + assessment to feel like a genuine interview** — cheaply.
 - The assessment is NOT AI: `lib/assessment/report-engine.ts` scores 9 rubric dimensions by
   counting English keyword phrases. AI SDK (`ai` v6) is only used for recruiter chat.
 - Video is transport-only: agent subscribes `AUDIO_ONLY`; no gesture/facial/body analysis.
-- `/admin/*` hard-404s; `/recruiter/*` re-exports it through ~18 shim files.
+- `/admin/*` legacy URLs redirect to `/recruiter/*`; shim tree removed (flow foundation redesign).
 
 ## Decisions Locked (2026-06-22)
 
@@ -187,9 +187,9 @@ This is the biggest "less code to maintain" win. No behavior change intended.
 
 - [ ] Delete unused `TranscriptRail`/`SessionOverview`/`SessionTimeline` **OR** wire `TranscriptRail`
       into the live call (see Phase 4 live captions) — pick one, don't leave them orphaned.
-- [ ] Remove the `/admin/*` shim tree; make `/recruiter/*` the single canonical route; align
-      `proxy.ts`, `lib/auth/routing.ts`, sidebars, and docs. Rename `(admin)` group + `convex/admin.ts`
-      to recruiter-centric names if low-risk.
+- [x] Remove the `/admin/*` shim tree; make `/recruiter/*` the single canonical route; align
+      `proxy.ts`, `lib/auth/routing.ts`, sidebars, and docs. (Done in flow foundation redesign.)
+- [ ] Rename `convex/admin.ts` to recruiter-centric name if low-risk.
 - [ ] Remove `video-demo` placeholder and `app/interviews/page.tsx` legacy stub if unused.
 - [ ] Add `returns:` validators incrementally to public Convex functions (project rule; currently zero).
 

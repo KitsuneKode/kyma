@@ -9,8 +9,10 @@ This file is the fast restart point for future agents. Read this before re-resea
 - Admin auth: `Clerk`
 - Background jobs: `Inngest`
 - UI approach for now: minimal `shadcn/ui` style primitives, no polish detours
-- Candidate access: public invite links, not full auth
-- Candidate IA: invite-first (`/interviews/[inviteId]`) with secondary signed-in portal (`/candidate/*`)
+- Candidate access: invite-first (`/i/[token]` or `/interviews/[inviteId]`); screening invites require auth + auto-claim
+- Mock interviews: auth-gated from `/candidate` (`sessionPurpose: mock`)
+- Candidate IA: invite-first with secondary signed-in portal (`/candidate/*`)
+- Recruiter canonical routes: `/recruiter/*` (`/admin/*` redirects)
 
 ## Why LiveKit Won
 
@@ -35,8 +37,8 @@ This file is the fast restart point for future agents. Read this before re-resea
 - LiveKit egress recording artifacts are now stored in Convex and surfaced on recruiter detail pages
 - interview processing can now be triggered through `/api/interviews/process`
 - Inngest is now wired at `/api/inngest`, with an inline fallback processor when enqueueing is unavailable
-- recruiter-side review surfaces now exist at `/admin/candidates` and `/admin/candidates/[sessionId]`
-- admin screening batch flows now exist at `/admin/screenings`, `/admin/screenings/new`, and `/admin/screenings/[batchId]`
+- recruiter-side review surfaces at `/recruiter/candidates` and `/recruiter/candidates/[sessionId]`
+- screening batch flows at `/recruiter/screenings`, `/recruiter/screenings/new`, and `/recruiter/screenings/[batchId]`
 - recruiter detail now supports human notes and grounded recruiter chat
 - report, dimension-evidence, and review-decision data models now exist in Convex
 - invite links now surface explicit `expired`, `consumed`, and `unavailable` states in the candidate flow
@@ -49,7 +51,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - assessment summaries now explicitly mention whether live teaching evidence was captured
 - recruiter/admin Convex reads and writes are now auth-gated when Clerk is configured, and server-rendered admin pages pass Clerk-backed Convex tokens
 - assessment writes now support an internal processing key via `KYMA_PROCESSING_WRITE_KEY` for safer background/report mutations
-- `/admin` is Clerk-protected when Clerk env is configured
+- `/recruiter` is Clerk-protected when Clerk env is configured (`/admin` redirects here)
 - `bun run test` (Vitest) and `bun run test:e2e` (Playwright smoke) exercise core helpers and the home route
 - template-driven screening policy (duration, resume, attempts) is stored on templates and batches and resolved for the candidate lobby; completed reports store a `policySnapshot`
 - HTTP rate limits on interview bootstrap and recruiter chat; Convex-side throttles on hot candidate mutations; `auditEvents` for review decisions and recruiter notes
@@ -67,12 +69,16 @@ This file is the fast restart point for future agents. Read this before re-resea
 ## Important Routes
 
 - `/`
-- `/admin`
-- `/admin/candidates`
-- `/admin/candidates/[sessionId]`
-- `/admin/screenings`
-- `/admin/screenings/new`
-- `/admin/screenings/[batchId]`
+- `/recruiter` (canonical; `/admin` redirects)
+- `/recruiter/setup`
+- `/recruiter/candidates`
+- `/recruiter/candidates/[sessionId]`
+- `/recruiter/screenings`
+- `/recruiter/screenings/new`
+- `/recruiter/screenings/[batchId]`
+- `/recruiter/settings`
+- `/join/[orgId]`
+- `/i/[token]` (short invite alias)
 - `/interviews/[inviteId]`
 - `/candidate`
 - `/candidate/interviews`
@@ -82,7 +88,6 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `/api/inngest`
 - `/api/interviews/bootstrap`
 - `/api/interviews/process`
-- `/api/livekit/token`
 - `/api/livekit/webhook`
 - `/api/recruiter/report-chat`
 
@@ -91,8 +96,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `convex/schema.ts`: current schema
 - `convex/interviews.ts`: public snapshot, bootstrap, event persistence, transcript persistence
 - `convex/admin.ts`: screening creation, eligibility, recruiter notes, and recruiter chat persistence
-- `app/api/interviews/bootstrap/route.ts`: server bootstrap path
-- `app/api/livekit/token/route.ts`: generic token path
+- `app/api/interviews/bootstrap/route.ts`: canonical server bootstrap + LiveKit token path
 - `app/api/recruiter/report-chat/route.ts`: grounded recruiter chat endpoint
 - `components/interview/interview-workspace.tsx`: candidate-side join flow
 - `convex/recruiter.ts`: recruiter-side read models, report persistence, review decisions
@@ -104,11 +108,12 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `lib/assessment/report-engine.ts`: deterministic scoring and evidence extraction for v1
 - `lib/assessment/process-session.ts`: shared report-processing pipeline
 - `convex/helpers/auth.ts`: shared recruiter auth helpers for Convex functions
-- `app/(app)/admin/candidates/page.tsx`: recruiter queue
-- `app/(app)/admin/candidates/[sessionId]/page.tsx`: recruiter detail page
-- `app/(app)/admin/screenings/page.tsx`: screening batch list
-- `app/(app)/admin/screenings/new/page.tsx`: screening creation flow
-- `app/(app)/admin/screenings/[batchId]/page.tsx`: invite/eligibility detail
+- `app/(admin)/recruiter/candidates/page.tsx`: recruiter queue
+- `app/(admin)/recruiter/candidates/[sessionId]/page.tsx`: recruiter detail page
+- `app/(admin)/recruiter/screenings/page.tsx`: screening batch list
+- `app/(admin)/recruiter/screenings/new/page.tsx`: screening creation flow
+- `app/(admin)/recruiter/screenings/[batchId]/page.tsx`: invite/eligibility detail
+- `app/(app)/recruiter/setup/page.tsx`: org create/join wizard
 - `components/recruiter/recruiter-notes.tsx`: recruiter note entry
 - `components/recruiter/recruiter-chat.tsx`: grounded recruiter chat UI
 - `lib/recruiter/report-chat.ts`: recruiter-chat prompt grounding and fallback
@@ -184,12 +189,12 @@ This file is the fast restart point for future agents. Read this before re-resea
 12. submit the interview, then reload the invite and confirm it no longer allows a second attempt
 13. try an invalid invite id and confirm the unavailable screen renders
 14. confirm the agent greets the candidate warmly, waits for readiness, then eventually runs the teaching simulation
-15. open `/admin/candidates` and confirm sessions show up in the recruiter queue
-16. open `/admin/candidates/[sessionId]` for a real session and confirm transcript/session detail renders even before report generation exists
+15. open `/recruiter/candidates` and confirm sessions show up in the recruiter queue
+16. open `/recruiter/candidates/[sessionId]` for a real session and confirm transcript/session detail renders even before report generation exists
 17. if LiveKit webhook delivery is configured, confirm session events and recording artifacts start appearing from webhook traffic
 18. submit the interview and confirm a report plus evidence appear on the recruiter detail page after processing
 19. confirm the recruiter detail page shows teaching-simulation status and whether screen share was used
-20. create a screening batch at `/admin/screenings/new` and confirm invite links are generated for the eligible candidates
+20. create a screening batch at `/recruiter/screenings/new` and confirm invite links are generated for the eligible candidates
 21. on a recruiter detail page, save a note and ask a recruiter-chat question
 
 ## Research Findings Worth Not Repeating

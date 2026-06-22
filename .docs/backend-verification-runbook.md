@@ -42,7 +42,8 @@ Roles to validate:
 Procedure outcomes:
 
 - Non-admin/recruiter cannot read recruiter/admin Convex APIs.
-- `/admin/*` blocks candidate + missing-role users.
+- `/recruiter/*` blocks users without org + recruiter permission.
+- `/admin/*` legacy URLs redirect to `/recruiter/*`.
 - `/dashboard/*` blocks unauthorized roles per guard policy.
 - Missing role routes to onboarding flow.
 

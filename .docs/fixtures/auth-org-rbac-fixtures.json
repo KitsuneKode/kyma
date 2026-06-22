@@ -18,6 +18,7 @@
     ]
   },
   "personaMetadata": {
+    "_deprecated": "Use preferredWorkspaceMetadata instead",
     "candidate": { "persona": "candidate" },
     "recruiter": { "persona": "recruiter" },
     "both": { "persona": "both" }
@@ -77,7 +78,8 @@
   "routeShortcuts": {
     "candidate": "/candidate",
     "recruiter": "/recruiter",
-    "recruiterOnboarding": "/onboarding/recruiter",
-    "publicDemoInterview": "/interviews/demo-invite"
+    "recruiterOnboarding": "/recruiter/setup",
+    "mockInterviewEntry": "/candidate",
+    "shortInvitePrefix": "/i/"
   }
 }
