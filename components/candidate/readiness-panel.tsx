@@ -10,6 +10,7 @@ import {
   countPassingReadinessChecks,
   runReadinessChecks,
 } from '@/lib/candidate/readiness-checks'
+import { formatDateTime } from '@/lib/format/date'
 
 export function CandidateReadinessPanel() {
   const [running, setRunning] = useState(false)
@@ -63,8 +64,7 @@ export function CandidateReadinessPanel() {
             <p className="text-sm font-medium">Latest run</p>
             {latest ? (
               <p className="text-sm text-muted-foreground">
-                {latestScore}/6 checks passing,{' '}
-                {new Date(latest.ranAt).toLocaleString()}
+                {latestScore}/6 checks passing, {formatDateTime(latest.ranAt)}
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -97,7 +97,7 @@ export function CandidateReadinessPanel() {
             {runs.slice(0, 5).map((run) => (
               <Surface key={`${run._id}`} padding="md">
                 <p className="text-sm font-medium">
-                  {new Date(run.ranAt).toLocaleString()}
+                  {formatDateTime(run.ranAt)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {run.notes}

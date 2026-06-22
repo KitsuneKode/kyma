@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Surface } from '@/components/ui/surface'
 import { StatusBadge } from '@/components/workspace/status-badge'
+import { formatDateTime } from '@/lib/format/date'
 
 type CandidateInterviewCardProps = {
   sessionId: string
@@ -35,7 +36,7 @@ export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
       </div>
       {props.startedAt ? (
         <p className="mt-3 text-sm text-muted-foreground tabular-nums">
-          Started: {new Date(props.startedAt).toLocaleString()}
+          Started: {formatDateTime(props.startedAt)}
         </p>
       ) : null}
       <div className="mt-4 flex gap-3">

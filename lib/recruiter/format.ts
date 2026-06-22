@@ -1,4 +1,7 @@
 import { DIMENSION_LABELS, type RubricDimension } from '@/lib/rubric/constants'
+import { formatDateTime } from '@/lib/format/date'
+
+export { formatDateTime }
 
 const RECOMMENDATION_LABELS: Record<string, string> = {
   strong_yes: 'Strong yes',
@@ -61,23 +64,6 @@ export function formatConfidenceLabel(confidence?: string | null) {
   }
 
   return humanizeToken(confidence)
-}
-
-export function formatDateTime(value?: string | null) {
-  if (!value) {
-    return 'Not available'
-  }
-
-  const parsed = new Date(value)
-
-  if (Number.isNaN(parsed.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat('en-IN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(parsed)
 }
 
 function humanizeToken(value: string) {

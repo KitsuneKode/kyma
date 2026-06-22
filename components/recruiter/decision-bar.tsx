@@ -12,6 +12,7 @@ import {
   formatRecommendationLabel,
   formatStatusLabel,
 } from '@/lib/recruiter/format'
+import { formatDurationMinutes } from '@/lib/format/date'
 import { cn } from '@/lib/utils'
 
 type MetricPill = { label: string; value: string }
@@ -29,11 +30,11 @@ function formatSessionDuration(
     return `Started ${startLabel} · ${endLabel}`
   }
 
-  const startMs = new Date(startedAt).getTime()
-  const endMs = new Date(endedAt).getTime()
-  const durationMin = Math.max(1, Math.round((endMs - startMs) / 60_000))
+  const durationMin = formatDurationMinutes(startedAt, endedAt)
 
-  return `Started ${startLabel} · Ended ${endLabel} · ${durationMin} min`
+  return durationMin
+    ? `Started ${startLabel} · Ended ${endLabel} · ${durationMin} min`
+    : `Started ${startLabel} · Ended ${endLabel}`
 }
 
 export function ReviewCommandHeader({

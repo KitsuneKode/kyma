@@ -8,6 +8,7 @@ import {
   isActiveStatus,
   isPendingRelease,
 } from '@/lib/candidate/status-filters'
+import { timestampOf } from '@/lib/format/date'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { clientEnv } from '@/lib/env/client'
 import { runConvexFetch } from '@/lib/convex/server-fetch'
@@ -41,10 +42,7 @@ export default async function CandidateHomePage() {
   const prioritizedInterviews = interviews.toSorted((a, b) => {
     const weightDiff = stateWeight(a.status) - stateWeight(b.status)
     if (weightDiff !== 0) return weightDiff
-    return (
-      (b.startedAt ? new Date(b.startedAt).getTime() : 0) -
-      (a.startedAt ? new Date(a.startedAt).getTime() : 0)
-    )
+    return timestampOf(b.startedAt) - timestampOf(a.startedAt)
   })
   const active = prioritizedInterviews.filter((item) =>
     isActiveStatus(item.status)
