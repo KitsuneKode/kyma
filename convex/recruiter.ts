@@ -343,6 +343,8 @@ export const getCandidateReviewDetail = query({
             summary: report.summary,
             weightedScore: report.weightedScore,
             hardGateTriggered: report.hardGateTriggered ?? false,
+            scoringSource: report.scoringSource,
+            scoringModelId: report.scoringModelId,
             topStrengths: report.topStrengths ?? [],
             topConcerns: report.topConcerns ?? [],
             transcriptQualityNote: report.transcriptQualityNote,

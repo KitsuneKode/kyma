@@ -13,6 +13,7 @@ import {
   formatStatusLabel,
 } from '@/lib/recruiter/format'
 import { formatDurationMinutes } from '@/lib/format/date'
+import { formatScoringSourceLabel } from '@/lib/ui/score-format'
 import { cn } from '@/lib/utils'
 
 type MetricPill = { label: string; value: string }
@@ -53,6 +54,9 @@ export function ReviewCommandHeader({
   released = false,
   startedAt,
   endedAt,
+  hardGateTriggered = false,
+  scoringSource,
+  scoringModelId,
   className,
 }: {
   candidateName?: string
@@ -70,6 +74,9 @@ export function ReviewCommandHeader({
   released?: boolean
   startedAt?: string | null
   endedAt?: string | null
+  hardGateTriggered?: boolean
+  scoringSource?: 'llm' | 'deterministic' | null
+  scoringModelId?: string | null
   className?: string
 }) {
   const eyebrow = [templateName, templateRole].filter(Boolean).join(' · ')
@@ -154,6 +161,15 @@ export function ReviewCommandHeader({
               status={released ? 'released' : 'pending'}
               label={released ? 'Released' : 'Not released'}
             />
+            {hardGateTriggered ? (
+              <StatusBadge status="failed" label="Hard gate triggered" />
+            ) : null}
+            {scoringSource ? (
+              <StatusBadge
+                status={scoringSource === 'llm' ? 'completed' : 'manual_review'}
+                label={formatScoringSourceLabel(scoringSource, scoringModelId)}
+              />
+            ) : null}
           </div>
 
           {metrics?.length ? (

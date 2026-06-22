@@ -18,12 +18,19 @@ type ReviewConsoleProps = {
   dimensionScores: NonNullable<
     CandidateReviewDetail['report']
   >['dimensionScores']
+  weightedScore?: number | null
+  hardGateTriggered?: boolean
   audioUrl?: string
   recordingStartTime?: string
 }
 
 function ReviewConsoleBody() {
-  const { dimensionScores, evidenceWithTiming } = useReviewData()
+  const {
+    dimensionScores,
+    evidenceWithTiming,
+    weightedScore,
+    hardGateTriggered,
+  } = useReviewData()
   const activeDimension = useReviewActiveDimension()
   const { setActiveDimension, jumpToTime } = useReviewActions()
 
@@ -38,6 +45,8 @@ function ReviewConsoleBody() {
         <RubricVerdict
           dimensionScores={dimensionScores}
           evidence={evidenceWithTiming}
+          weightedScore={weightedScore}
+          hardGateTriggered={hardGateTriggered}
           activeDimension={activeDimension}
           onSelectDimension={setActiveDimension}
           onJumpToTime={jumpToTime}
@@ -47,9 +56,17 @@ function ReviewConsoleBody() {
   )
 }
 
-export function ReviewConsole(props: ReviewConsoleProps) {
+export function ReviewConsole({
+  weightedScore,
+  hardGateTriggered,
+  ...props
+}: ReviewConsoleProps) {
   return (
-    <ReviewProvider {...props}>
+    <ReviewProvider
+      {...props}
+      weightedScore={weightedScore}
+      hardGateTriggered={hardGateTriggered}
+    >
       <ReviewConsoleBody />
     </ReviewProvider>
   )

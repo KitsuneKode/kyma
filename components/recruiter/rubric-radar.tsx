@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 
+import { ChartLoadingState } from '@/components/recruiter/chart-states'
 import type { RubricRadarChart } from '@/components/recruiter/rubric-radar-chart'
 
 const RubricRadarChartLazy = dynamic(
@@ -9,7 +10,10 @@ const RubricRadarChartLazy = dynamic(
     import('@/components/recruiter/rubric-radar-chart').then(
       (mod) => mod.RubricRadarChart
     ),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => <ChartLoadingState />,
+  }
 )
 
 type RubricRadarProps = {
@@ -17,10 +21,19 @@ type RubricRadarProps = {
     dimension: string
     score: number
   }>
+  hardGateDimensions?: string[]
 }
 
-export function RubricRadar({ dimensionScores }: RubricRadarProps) {
-  return <RubricRadarChartLazy dimensionScores={dimensionScores} />
+export function RubricRadar({
+  dimensionScores,
+  hardGateDimensions,
+}: RubricRadarProps) {
+  return (
+    <RubricRadarChartLazy
+      dimensionScores={dimensionScores}
+      hardGateDimensions={hardGateDimensions}
+    />
+  )
 }
 
 export type { RubricRadarChart }

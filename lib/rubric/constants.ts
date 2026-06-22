@@ -36,6 +36,16 @@ export const DIMENSION_WEIGHTS: Record<RubricDimension, number> = {
   accuracy: 0.06,
 }
 
+export const DEFAULT_HARD_GATE_DIMENSIONS = [
+  'clarity',
+  'patience',
+  'accuracy',
+] as const satisfies readonly RubricDimension[]
+
 export function isRubricDimension(value: string): value is RubricDimension {
   return (RUBRIC_DIMENSIONS as readonly string[]).includes(value)
+}
+
+export function isDefaultHardGateDimension(dimension: string): boolean {
+  return (DEFAULT_HARD_GATE_DIMENSIONS as readonly string[]).includes(dimension)
 }

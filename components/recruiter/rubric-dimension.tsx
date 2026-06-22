@@ -118,6 +118,7 @@ export function RubricDimension({
                       ? formatTime(item.startedAtSec)
                       : undefined
                   }
+                  timestampUnavailable={item.startedAtSec === undefined}
                   index={index}
                   onJumpToTime={
                     item.startedAtSec !== undefined && onJumpToTime

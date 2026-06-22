@@ -8,6 +8,7 @@ type EvidenceCardProps = {
   snippet: string
   rationale: string
   timestamp?: string
+  timestampUnavailable?: boolean
   index?: number
   onJumpToTime?: () => void
 }
@@ -16,9 +17,12 @@ export function EvidenceCard({
   snippet,
   rationale,
   timestamp,
+  timestampUnavailable = false,
   index = 0,
   onJumpToTime,
 }: EvidenceCardProps) {
+  const isInteractive = Boolean(onJumpToTime)
+
   return (
     <motion.button
       type="button"
@@ -30,10 +34,11 @@ export function EvidenceCard({
         ease: [0.23, 1, 0.32, 1],
       }}
       onClick={onJumpToTime}
+      disabled={!isInteractive}
       className={cn(
         'w-full rounded-xl bg-muted/15 p-3.5 text-left ring-1 ring-border/30',
         'transition-[background-color,box-shadow] duration-150',
-        'hover:bg-muted/25'
+        isInteractive ? 'hover:bg-muted/25' : 'cursor-default opacity-95'
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -44,6 +49,10 @@ export function EvidenceCard({
         {timestamp ? (
           <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
             {timestamp}
+          </span>
+        ) : timestampUnavailable ? (
+          <span className="text-[10px] text-muted-foreground">
+            Timestamp unavailable
           </span>
         ) : null}
       </div>

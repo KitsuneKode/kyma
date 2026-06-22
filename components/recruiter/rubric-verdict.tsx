@@ -7,18 +7,12 @@ import { WorkspaceSurface } from '@/components/workspace/surface'
 import { RubricDimension } from './rubric-dimension'
 import { RubricRadar } from './rubric-radar'
 import { RubricScoreBars } from './rubric-score-bars'
-
-function getScoreColor(score: number) {
-  if (score <= 2.0) return 'text-red-500'
-  if (score <= 3.0) return 'text-amber-500'
-  return 'text-emerald-500'
-}
-
-function getScoreBandClass(score: number) {
-  if (score <= 2.0) return 'bg-red-500/15'
-  if (score <= 3.0) return 'bg-amber-500/15'
-  return 'bg-emerald-500/15'
-}
+import {
+  formatScoreValue,
+  resolveOverallScore,
+  scoreBandClass,
+  scoreTextColor,
+} from '@/lib/ui/score-format'
 
 type DimensionScore = {
   dimension: string
@@ -37,6 +31,8 @@ type EvidenceItem = {
 type RubricVerdictProps = {
   dimensionScores: DimensionScore[]
   evidence: EvidenceItem[]
+  weightedScore?: number | null
+  hardGateTriggered?: boolean
   activeDimension: string | null
   onSelectDimension: (dimension: string) => void
   onJumpToTime?: (sec: number) => void
@@ -45,6 +41,8 @@ type RubricVerdictProps = {
 export function RubricVerdict({
   dimensionScores,
   evidence,
+  weightedScore,
+  hardGateTriggered = false,
   activeDimension,
   onSelectDimension,
   onJumpToTime,
@@ -56,11 +54,10 @@ export function RubricVerdict({
     }))
   }, [dimensionScores, evidence])
 
-  const overallScore = useMemo(() => {
-    if (!dimensionScores.length) return 0
-    const sum = dimensionScores.reduce((acc, d) => acc + d.score, 0)
-    return sum / dimensionScores.length
-  }, [dimensionScores])
+  const overallScore = useMemo(
+    () => resolveOverallScore(weightedScore, dimensionScores),
+    [dimensionScores, weightedScore]
+  )
 
   if (!dimensionScores.length) {
     return (
@@ -78,21 +75,26 @@ export function RubricVerdict({
         <div
           className={cn(
             'flex size-16 shrink-0 items-center justify-center rounded-2xl',
-            getScoreBandClass(overallScore)
+            overallScore !== null ? scoreBandClass(overallScore) : 'bg-muted/20'
           )}
         >
           <span
             className={cn(
               'font-mono text-2xl font-semibold tabular-nums',
-              getScoreColor(overallScore)
+              overallScore !== null
+                ? scoreTextColor(overallScore)
+                : 'text-muted-foreground'
             )}
           >
-            {overallScore.toFixed(1)}
+            {formatScoreValue(overallScore)}
           </span>
         </div>
         <div>
           <p className="text-sm font-semibold">Overall rubric score</p>
-          <p className="text-xs text-muted-foreground">Out of 5.0</p>
+          <p className="text-xs text-muted-foreground">
+            Weighted score out of 5.0
+            {hardGateTriggered ? ' · Hard gate triggered' : ''}
+          </p>
         </div>
       </div>
 

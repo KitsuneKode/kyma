@@ -65,6 +65,9 @@ export function CandidateReviewWorkspace({
         released={detail.report?.released ?? false}
         startedAt={detail.session.startedAt}
         endedAt={detail.session.endedAt}
+        hardGateTriggered={detail.report?.hardGateTriggered ?? false}
+        scoringSource={detail.report?.scoringSource}
+        scoringModelId={detail.report?.scoringModelId}
       />
 
       <RenderErrorBoundary title="Review console">
@@ -73,6 +76,8 @@ export function CandidateReviewWorkspace({
           transcript={detail.transcript}
           evidence={detail.evidence}
           dimensionScores={detail.report?.dimensionScores ?? []}
+          weightedScore={detail.report?.weightedScore}
+          hardGateTriggered={detail.report?.hardGateTriggered ?? false}
           audioUrl={resolvedAudioUrl}
           recordingStartTime={primaryRecording?.startedAt}
         />

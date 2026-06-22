@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 import { SummaryList } from '@/components/admin/summary-list'
 import { StatusBadge } from '@/components/workspace/status-badge'
@@ -11,17 +11,18 @@ import {
   getTeachingSimulationStatusLabel,
   type TeachingSimulationSummary,
 } from '@/lib/recruiter/teaching-simulation'
-
-function getScoreColor(score: number) {
-  if (score <= 2.0) return 'text-red-500'
-  if (score <= 3.0) return 'text-amber-500'
-  return 'text-emerald-500'
-}
+import {
+  formatScoreValue,
+  resolveOverallScore,
+  scoreTextColor,
+} from '@/lib/ui/score-format'
 
 type ReviewAssessmentBentoProps = {
   report: {
     summary?: string | null
     transcriptQualityNote?: string | null
+    weightedScore?: number | null
+    hardGateTriggered?: boolean
     topStrengths: string[]
     topConcerns: string[]
     dimensionScores: Array<{ dimension: string; score: number }>
@@ -35,10 +36,13 @@ export function ReviewAssessmentBento({
 }: ReviewAssessmentBentoProps) {
   const [summaryExpanded, setSummaryExpanded] = useState(false)
 
-  const overallScore = report?.dimensionScores.length
-    ? report.dimensionScores.reduce((acc, d) => acc + d.score, 0) /
-      report.dimensionScores.length
-    : 0
+  const overallScore = useMemo(
+    () =>
+      report
+        ? resolveOverallScore(report.weightedScore, report.dimensionScores)
+        : null,
+    [report]
+  )
 
   const summary = report?.summary ?? 'No summary generated yet.'
   const summaryTruncated = summary.length > 280 && !summaryExpanded
@@ -55,13 +59,22 @@ export function ReviewAssessmentBento({
               <span
                 className={cn(
                   'font-mono text-4xl font-semibold tabular-nums',
-                  getScoreColor(overallScore)
+                  overallScore !== null
+                    ? scoreTextColor(overallScore)
+                    : 'text-muted-foreground'
                 )}
               >
-                {overallScore.toFixed(1)}
+                {formatScoreValue(overallScore)}
               </span>
-              <span className="text-sm text-muted-foreground">/ 5 overall</span>
+              <span className="text-sm text-muted-foreground">
+                / 5 weighted
+              </span>
             </div>
+            {report.hardGateTriggered ? (
+              <p className="mt-2 text-xs font-medium text-red-400">
+                Hard gate triggered on a core dimension
+              </p>
+            ) : null}
             <div className="-mx-2 mt-4">
               <RubricRadar dimensionScores={report.dimensionScores} />
             </div>

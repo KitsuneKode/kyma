@@ -12,7 +12,7 @@ import {
   formatRecommendationLabel,
   formatStatusLabel,
 } from '@/lib/recruiter/format'
-import { scoreColor } from '@/lib/ui/score-format'
+import { scoreColor, formatScoreValue } from '@/lib/ui/score-format'
 import { cn } from '@/lib/utils'
 
 type CandidateRow = {
@@ -113,9 +113,7 @@ export function CandidatesTable({ data }: { data: CandidateRow[] }) {
               scoreColor(row.original.weightedScore)
             )}
           >
-            {typeof row.original.weightedScore === 'number'
-              ? row.original.weightedScore.toFixed(1)
-              : '—'}
+            {formatScoreValue(row.original.weightedScore)}
           </span>
         ),
       },

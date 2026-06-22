@@ -95,6 +95,8 @@ type ReviewData = {
   dimensionScores: DimensionScore[]
   dimensionSummaries: DimensionSummary[]
   defaultActiveDimension: string | null
+  weightedScore?: number | null
+  hardGateTriggered: boolean
 }
 
 const ReviewStoreContext = createContext<StoreApi<ReviewStoreState> | null>(
@@ -111,6 +113,12 @@ function normaliseSnippet(value: string) {
     .trim()
 }
 
+function tokenizeSnippet(value: string) {
+  return normaliseSnippet(value)
+    .split(' ')
+    .filter((token) => token.length > 2)
+}
+
 function segmentMatchesEvidence(
   segment: TranscriptSegmentWithTiming,
   evidenceItem: EvidenceWithTiming
@@ -119,14 +127,23 @@ function segmentMatchesEvidence(
   const snippetText = normaliseSnippet(evidenceItem.snippet)
 
   if (!segmentText || !snippetText) return false
-  if (segmentText.includes(snippetText) || snippetText.includes(segmentText))
-    return true
 
-  const snippetWindow = snippetText.slice(0, 56)
-  const segmentWindow = segmentText.slice(0, 56)
-  return (
-    segmentText.includes(snippetWindow) || snippetText.includes(segmentWindow)
-  )
+  if (segmentText.includes(snippetText) || snippetText.includes(segmentText)) {
+    return true
+  }
+
+  const snippetTokens = tokenizeSnippet(evidenceItem.snippet)
+  if (snippetTokens.length === 0) return false
+
+  const segmentTokens = tokenizeSnippet(segment.text)
+  const snippetTokenSet = new Set(snippetTokens)
+  const matchedTokens = segmentTokens.filter((token) =>
+    snippetTokenSet.has(token)
+  ).length
+  const overlapRatio = matchedTokens / snippetTokens.length
+  const minimumMatches = Math.min(3, snippetTokens.length)
+
+  return overlapRatio >= 0.6 && matchedTokens >= minimumMatches
 }
 
 type ReviewProviderProps = {
@@ -134,6 +151,8 @@ type ReviewProviderProps = {
   transcript: TranscriptSegment[]
   evidence: Evidence[]
   dimensionScores: DimensionScore[]
+  weightedScore?: number | null
+  hardGateTriggered?: boolean
   audioUrl?: string
   recordingStartTime?: string
   children: ReactNode
@@ -144,6 +163,8 @@ export function ReviewProvider({
   transcript,
   evidence,
   dimensionScores,
+  weightedScore,
+  hardGateTriggered = false,
   audioUrl,
   recordingStartTime,
   children,
@@ -355,6 +376,8 @@ export function ReviewProvider({
       dimensionScores,
       dimensionSummaries,
       defaultActiveDimension,
+      weightedScore,
+      hardGateTriggered,
     }),
     [
       candidateName,
@@ -365,6 +388,8 @@ export function ReviewProvider({
       dimensionScores,
       dimensionSummaries,
       defaultActiveDimension,
+      weightedScore,
+      hardGateTriggered,
     ]
   )
 
