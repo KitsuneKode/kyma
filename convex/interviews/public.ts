@@ -1,117 +1,102 @@
 import { v } from 'convex/values'
 
-import { query } from '../_generated/server'
-import { resolveInterviewPolicyFromInvite } from '../helpers/interviewPolicy'
+import type { Doc } from '../_generated/dataModel'
+import { query, type QueryCtx } from '../_generated/server'
 import {
-  defaultDemoPolicy,
-  deriveAccessState,
-  isEnabledDemoInviteToken,
-} from '../helpers/interviewSession'
-import { resolveSessionPurpose } from '../../lib/interview/session-purpose'
+  resolveInterviewPolicyFromInvite,
+  type InterviewPolicy,
+} from '../helpers/interviewPolicy'
+import { deriveAccessState } from '../helpers/interviewSession'
+import {
+  resolveSessionPurpose,
+  type SessionPurpose,
+} from '../../lib/interview/session-purpose'
 
-export const getPublicInterviewSnapshot = query({
-  args: {
-    inviteToken: v.string(),
-    nowMs: v.number(),
-  },
-  handler: async (ctx, { inviteToken, nowMs }) => {
-    const invite = await ctx.db
-      .query('candidateInvites')
-      .withIndex('by_invite_token', (q) => q.eq('inviteToken', inviteToken))
-      .first()
+const DEFAULT_TEMPLATE_NAME = 'AI Tutor Screener'
 
-    if (!invite && !isEnabledDemoInviteToken(inviteToken)) {
-      return null
+type PublicSessionBase =
+  | { kind: 'not-found' }
+  | {
+      kind: 'resolved'
+      invite: Doc<'candidateInvites'>
+      template: Doc<'assessmentTemplates'> | null
+      session: Doc<'interviewSessions'> | null
+      access: ReturnType<typeof deriveAccessState>
+      policy: InterviewPolicy
+      sessionPurpose: SessionPurpose
     }
 
-    if (!invite) {
-      return {
-        inviteToken,
-        templateName: 'AI Tutor Screener',
-        candidateName: 'Demo Candidate',
-        state: 'ready' as const,
-        accessState: 'available' as const,
-        accessMessage: undefined,
-        policy: defaultDemoPolicy(
-          new Date(nowMs + 1000 * 60 * 60 * 24).toISOString()
-        ),
-        sessionPurpose: 'demo' as const,
-      }
-    }
+/**
+ * Single resolver for the public candidate read model. Both the lightweight SSR
+ * snapshot and the reactive session-detail query derive invite, template,
+ * session, access, policy, and purpose from here so the two paths never drift
+ * on access gating or policy resolution. Slice fetching stays in the detail
+ * query since only it needs transcript/events/recordings.
+ */
+async function resolvePublicSessionBase(
+  ctx: QueryCtx,
+  inviteToken: string,
+  nowMs: number
+): Promise<PublicSessionBase> {
+  const invite = await ctx.db
+    .query('candidateInvites')
+    .withIndex('by_invite_token', (q) => q.eq('inviteToken', inviteToken))
+    .first()
 
-    const template = await ctx.db.get(invite.templateId)
-    const session = await ctx.db
-      .query('interviewSessions')
-      .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
-      .first()
-    const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite)
-    const sessionPurpose = resolveSessionPurpose(invite.sessionPurpose)
+  if (!invite) {
+    return { kind: 'not-found' }
+  }
 
-    return {
-      inviteToken,
-      templateName: template?.name ?? 'AI Tutor Screener',
-      candidateName: invite.candidateName ?? 'Candidate',
-      state: session?.state ?? ('ready' as const),
-      sessionPurpose,
-      ...deriveAccessState(invite, session, nowMs),
-      policy,
-    }
-  },
-})
+  const template = await ctx.db.get(invite.templateId)
+  const session = await ctx.db
+    .query('interviewSessions')
+    .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
+    .first()
+  const access = deriveAccessState(invite, session, nowMs)
+  const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite)
+  const sessionPurpose = resolveSessionPurpose(
+    session?.sessionPurpose ?? invite.sessionPurpose
+  )
 
+  return {
+    kind: 'resolved',
+    invite,
+    template,
+    session,
+    access,
+    policy,
+    sessionPurpose,
+  }
+}
+
+/**
+ * The single canonical public candidate read model. Serves both the SSR initial
+ * paint and the client's reactive subscription, so there is exactly one source
+ * of truth for candidate-facing session state, access gating, policy, and the
+ * transcript/events/recordings slices. Slices are only fetched once a session
+ * exists and access is available; fresh or gated invites return empty slices
+ * without extra reads.
+ */
 export const getPublicSessionDetail = query({
   args: {
     inviteToken: v.string(),
     nowMs: v.number(),
   },
   handler: async (ctx, { inviteToken, nowMs }) => {
-    const invite = await ctx.db
-      .query('candidateInvites')
-      .withIndex('by_invite_token', (q) => q.eq('inviteToken', inviteToken))
-      .first()
+    const base = await resolvePublicSessionBase(ctx, inviteToken, nowMs)
 
-    if (!invite && !isEnabledDemoInviteToken(inviteToken)) {
+    if (base.kind === 'not-found') {
       return null
     }
 
-    if (!invite) {
-      return {
-        inviteId: inviteToken,
-        sessionId: undefined,
-        candidateName: 'Demo Candidate',
-        templateName: 'AI Tutor Screener',
-        state: 'ready' as const,
-        accessState: 'available' as const,
-        accessMessage: undefined,
-        policy: defaultDemoPolicy(
-          new Date(nowMs + 1000 * 60 * 60 * 24).toISOString()
-        ),
-        roomName: undefined,
-        activeDurationMs: 0,
-        sessionPurpose: 'demo' as const,
-        events: [],
-        transcript: [],
-        recordings: [],
-      }
-    }
-
-    const template = await ctx.db.get(invite.templateId)
-    const session = await ctx.db
-      .query('interviewSessions')
-      .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
-      .first()
-    const access = deriveAccessState(invite, session, nowMs)
-    const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite)
-    const sessionPurpose = resolveSessionPurpose(
-      session?.sessionPurpose ?? invite.sessionPurpose
-    )
+    const { invite, template, session, access, policy, sessionPurpose } = base
 
     if (!session) {
       return {
         inviteId: invite._id,
         sessionId: undefined,
         candidateName: invite.candidateName ?? 'Candidate',
-        templateName: template?.name ?? 'AI Tutor Screener',
+        templateName: template?.name ?? DEFAULT_TEMPLATE_NAME,
         state: 'ready' as const,
         sessionPurpose,
         ...access,
@@ -129,7 +114,7 @@ export const getPublicSessionDetail = query({
         inviteId: invite._id,
         sessionId: session._id,
         candidateName: invite.candidateName ?? 'Candidate',
-        templateName: template?.name ?? 'AI Tutor Screener',
+        templateName: template?.name ?? DEFAULT_TEMPLATE_NAME,
         state: session.state,
         sessionPurpose,
         ...access,
@@ -161,7 +146,7 @@ export const getPublicSessionDetail = query({
       inviteId: invite._id,
       sessionId: session._id,
       candidateName: invite.candidateName ?? 'Candidate',
-      templateName: template?.name ?? 'AI Tutor Screener',
+      templateName: template?.name ?? DEFAULT_TEMPLATE_NAME,
       state: session.state,
       sessionPurpose,
       ...access,

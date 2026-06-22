@@ -4,10 +4,8 @@ import { api } from '@/convex/_generated/api'
 import { RenderErrorBoundary } from '@/components/errors/render-error-boundary'
 import { InterviewWorkspace } from '@/components/interview/interview-workspace'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
-import { serverEnv } from '@/lib/env/server'
 import { serverConvexQuery } from '@/lib/convex/server-query'
 import { createInitialInterviewSnapshot } from '@/lib/interview/snapshot'
-import { isEnabledDemoInviteToken as isEnabledDemoInviteTokenForEnv } from '@/lib/interview/demo-invite'
 
 type InterviewPageProps = {
   params: Promise<{
@@ -15,16 +13,12 @@ type InterviewPageProps = {
   }>
 }
 
-function isEnabledDemoInviteToken(inviteId: string) {
-  return isEnabledDemoInviteTokenForEnv(inviteId, serverEnv)
-}
-
 export default async function InterviewPage({ params }: InterviewPageProps) {
   await connection()
   const { inviteId } = await params
   const nowMs = Date.now()
   const publicSnapshotResult = await serverConvexQuery(
-    api.interviews.public.getPublicInterviewSnapshot,
+    api.interviews.public.getPublicSessionDetail,
     {
       inviteToken: inviteId,
       nowMs,
@@ -38,7 +32,7 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
   const snapshot = createInitialInterviewSnapshot(
     inviteId,
     publicSnapshot,
-    !publicSnapshot && !isEnabledDemoInviteToken(inviteId)
+    !publicSnapshot
       ? {
           accessState: 'unavailable',
           accessMessage:
