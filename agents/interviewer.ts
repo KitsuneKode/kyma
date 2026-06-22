@@ -5,7 +5,6 @@ import {
   voice,
   type JobContext,
 } from '@livekit/agents'
-import { fetchMutation, fetchQuery } from 'convex/nextjs'
 import { z } from 'zod'
 
 import {
@@ -17,8 +16,11 @@ import {
   resolveRuntimeModel,
   resolveRealtimeProvider,
 } from '@/lib/agent/resolve-runtime-model'
-import { api } from '@/convex/_generated/api'
-import type { Id } from '@/convex/_generated/dataModel'
+import {
+  createAgentSessionPort,
+  type AgentSessionConfig,
+  type AgentSessionPort,
+} from '@/lib/agent/session-port'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
 import { maybeStartRoomRecording } from '@/lib/livekit/recording'
 import { runtimeEnv } from '@/lib/env/runtime'
@@ -118,25 +120,6 @@ type AgentTemplateConfig = {
   }
 }
 
-type SessionEventRecorder = {
-  append: (type: string, detail: string, state?: 'processing') => Promise<void>
-}
-
-type TranscriptPersister = {
-  upsert: (segment: {
-    segmentId: string
-    speaker: 'agent' | 'candidate' | 'system'
-    text: string
-    status: 'partial' | 'final'
-    startedAt: string
-    endedAt?: string
-  }) => Promise<void>
-}
-
-type VisualObservationPersister = {
-  record: (observation: string) => Promise<void>
-}
-
 function isAgentVideoInputEnabled() {
   return (
     runtimeEnv.KYMA_AGENT_VIDEO_INPUT === '1' &&
@@ -190,7 +173,7 @@ function getEnvAgentConfig() {
 }
 
 function buildAgentTemplateConfig(
-  remoteConfig: Awaited<ReturnType<typeof fetchInterviewAgentConfig>> | null
+  remoteConfig: AgentSessionConfig | null
 ): AgentTemplateConfig {
   const envConfig = getEnvAgentConfig()
   const modelOverrides = remoteConfig?.modelOverrides
@@ -244,13 +227,6 @@ function buildAgentTemplateConfig(
   }
 }
 
-async function fetchInterviewAgentConfig(sessionId: string) {
-  return await fetchQuery(api.agentConfig.getInterviewAgentConfig, {
-    sessionId: sessionId as Id<'interviewSessions'>,
-    processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
-  }).catch(() => null)
-}
-
 function parseCandidateMetadata(rawMetadata?: string): CandidateMetadata {
   if (!rawMetadata) {
     return {}
@@ -274,109 +250,15 @@ function parseCandidateMetadata(rawMetadata?: string): CandidateMetadata {
   }
 }
 
-function createSessionEventRecorder(
-  logger: ReturnType<typeof createDiagnosticLogger>,
-  sessionId?: string
-): SessionEventRecorder {
-  return {
-    append: async (type, detail, state) => {
-      if (!sessionId) {
-        return
-      }
-
-      await fetchMutation(api.interviews.sessionEvents.appendSessionEvent, {
-        processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
-        sessionId: sessionId as Id<'interviewSessions'>,
-        type,
-        detail,
-        source: 'livekit-agent',
-        dedupeKey: `${type}:${sessionId}:${detail.slice(0, 64)}`,
-        state,
-      }).catch((error) => {
-        logger.warn({
-          event: 'agent.session-event.persist.failed',
-          detail: `Unable to persist session event ${type}.`,
-          sessionId,
-          error,
-        })
-      })
-    },
-  }
-}
-
-function createTranscriptPersister(
-  logger: ReturnType<typeof createDiagnosticLogger>,
-  sessionId?: string
-): TranscriptPersister {
-  return {
-    upsert: async (segment) => {
-      if (!sessionId || !segment.text.trim()) {
-        return
-      }
-
-      await fetchMutation(api.agentConfig.upsertAgentTranscriptSegment, {
-        processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
-        sessionId: sessionId as Id<'interviewSessions'>,
-        segmentId: segment.segmentId,
-        speaker: segment.speaker,
-        text: segment.text,
-        status: segment.status,
-        startedAt: segment.startedAt,
-        endedAt: segment.endedAt,
-      }).catch((error) => {
-        logger.warn({
-          event: 'agent.transcript.persist.failed',
-          detail: 'Unable to persist transcript segment from agent session.',
-          sessionId,
-          error,
-        })
-      })
-    },
-  }
-}
-
-function createVisualObservationPersister(
-  logger: ReturnType<typeof createDiagnosticLogger>,
-  sessionId?: string
-): VisualObservationPersister {
-  return {
-    record: async (observation) => {
-      if (!sessionId) {
-        return
-      }
-
-      const trimmed = observation.trim()
-      if (!trimmed) {
-        return
-      }
-
-      await fetchMutation(api.visualObservations.recordVisualObservation, {
-        processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
-        sessionId: sessionId as Id<'interviewSessions'>,
-        observation: trimmed,
-        observedAt: new Date().toISOString(),
-        source: 'agent',
-      }).catch((error) => {
-        logger.warn({
-          event: 'agent.visual-observation.persist.failed',
-          detail: 'Unable to persist visual observation from agent session.',
-          sessionId,
-          error,
-        })
-      })
-    },
-  }
-}
-
 function attachTranscriptPersistence(
   session: voice.AgentSession<InterviewUserData>,
-  persister: TranscriptPersister,
+  port: AgentSessionPort,
   logger: ReturnType<typeof createDiagnosticLogger>,
   sessionId: string | undefined,
   onBudgetCheck?: () => void
 ) {
   session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (event) => {
-    void persister.upsert({
+    void port.upsertTranscript({
       segmentId: `candidate:${event.createdAt}`,
       speaker: 'candidate',
       text: event.transcript,
@@ -430,7 +312,7 @@ function attachTranscriptPersistence(
       onBudgetCheck?.()
     }
 
-    void persister.upsert({
+    void port.upsertTranscript({
       segmentId: event.item.id,
       speaker,
       text,
@@ -443,7 +325,7 @@ function attachTranscriptPersistence(
 class TeachingChildAgent extends voice.Agent<InterviewUserData> {
   constructor(
     instructions: string,
-    private readonly recorder: SessionEventRecorder,
+    private readonly port: AgentSessionPort,
     private readonly candidateName: string,
     tools: llm.ToolContext,
     tts: string
@@ -461,7 +343,7 @@ class TeachingChildAgent extends voice.Agent<InterviewUserData> {
     userData.phase = 'simulation'
     userData.teachingSimulationStarted = true
 
-    await this.recorder.append(
+    await this.port.appendEvent(
       'teaching-simulation-started',
       'Interviewer switched into the child-teaching simulation.'
     )
@@ -479,7 +361,7 @@ class TeachingChildAgent extends voice.Agent<InterviewUserData> {
 class WrapUpInterviewerAgent extends voice.Agent<InterviewUserData> {
   constructor(
     instructions: string,
-    private readonly recorder: SessionEventRecorder,
+    private readonly port: AgentSessionPort,
     tools: llm.ToolContext,
     tts: string
   ) {
@@ -494,7 +376,7 @@ class WrapUpInterviewerAgent extends voice.Agent<InterviewUserData> {
     const userData = this.session.userData
     userData.phase = 'wrapup'
 
-    await this.recorder.append(
+    await this.port.appendEvent(
       'teaching-simulation-completed',
       'Teaching simulation completed and the interviewer resumed the wrap-up.'
     )
@@ -542,16 +424,9 @@ async function startSession(ctx: JobContext) {
   const participant = await ctx.waitForParticipant()
   const participantMetadata = parseCandidateMetadata(participant.metadata)
   const sessionId = participantMetadata.sessionId
-  const remoteConfig = sessionId
-    ? await fetchInterviewAgentConfig(sessionId)
-    : null
+  const port = createAgentSessionPort({ sessionId, logger })
+  const remoteConfig = await port.fetchConfig()
   const config = buildAgentTemplateConfig(remoteConfig)
-  const recorder = createSessionEventRecorder(logger, sessionId)
-  const persister = createTranscriptPersister(logger, sessionId)
-  const visualObservationPersister = createVisualObservationPersister(
-    logger,
-    sessionId
-  )
   const videoInputEnabled = isAgentVideoInputEnabled()
   const candidateName =
     participant.name ||
@@ -576,7 +451,7 @@ async function startSession(ctx: JobContext) {
   })
 
   if (isRedispatchState(remoteConfig?.sessionState)) {
-    await recorder.append(
+    await port.appendEvent(
       'agent-redispatch',
       'Agent re-joined an interview that was already active (worker redispatch/resume).'
     )
@@ -587,9 +462,7 @@ async function startSession(ctx: JobContext) {
       ctx,
       logger,
       sessionId,
-      recorder,
-      persister,
-      visualObservationPersister,
+      port,
       config,
       remoteConfig,
       candidateName,
@@ -603,7 +476,7 @@ async function startSession(ctx: JobContext) {
       sessionId,
       error,
     })
-    await recorder.append(
+    await port.appendEvent(
       'agent-session-failed',
       `Interviewer agent session failed: ${
         error instanceof Error ? error.message : String(error)
@@ -636,7 +509,7 @@ type SessionBudgetLimits = {
 }
 
 function resolveBudgetLimits(
-  remoteConfig: Awaited<ReturnType<typeof fetchInterviewAgentConfig>> | null
+  remoteConfig: AgentSessionConfig | null
 ): SessionBudgetLimits {
   const sessionPurpose = remoteConfig?.sessionPurpose ?? 'screening'
   const budget = resolveSessionBudget(sessionPurpose)
@@ -656,7 +529,7 @@ function createBudgetEnforcer(args: {
   sessionId: string | undefined
   limits: SessionBudgetLimits
   logger: ReturnType<typeof createDiagnosticLogger>
-  recorder: SessionEventRecorder
+  port: AgentSessionPort
   getActiveDurationMs: () => Promise<number>
   completeInterview: () => Promise<void>
 }) {
@@ -665,7 +538,7 @@ function createBudgetEnforcer(args: {
     sessionId,
     limits,
     logger,
-    recorder,
+    port,
     getActiveDurationMs,
     completeInterview,
   } = args
@@ -707,7 +580,7 @@ function createBudgetEnforcer(args: {
       },
     })
 
-    await recorder.append('session-budget-enforced', `${detail} ${reason}`)
+    await port.appendEvent('session-budget-enforced', `${detail} ${reason}`)
     await completeInterview()
   }
 
@@ -727,11 +600,9 @@ async function runInterviewSession(args: {
   ctx: JobContext
   logger: ReturnType<typeof createDiagnosticLogger>
   sessionId: string | undefined
-  recorder: SessionEventRecorder
-  persister: TranscriptPersister
-  visualObservationPersister: VisualObservationPersister
+  port: AgentSessionPort
   config: AgentTemplateConfig
-  remoteConfig: Awaited<ReturnType<typeof fetchInterviewAgentConfig>> | null
+  remoteConfig: AgentSessionConfig | null
   candidateName: string
   videoInputEnabled: boolean
   participantIdentity: string
@@ -740,9 +611,7 @@ async function runInterviewSession(args: {
     ctx,
     logger,
     sessionId,
-    recorder,
-    persister,
-    visualObservationPersister,
+    port,
     config,
     remoteConfig,
     candidateName,
@@ -767,7 +636,7 @@ async function runInterviewSession(args: {
           detail: resolved.error,
           sessionId,
         })
-        void recorder.append(
+        void port.appendEvent(
           'agent-session-failed',
           `Workspace provider keys could not be decrypted: ${resolved.error}`
         )
@@ -801,42 +670,18 @@ async function runInterviewSession(args: {
       const userData = session.userData
       userData.phase = 'wrapup'
 
-      if (sessionId) {
-        await fetchMutation(api.agentConfig.requestInterviewProcessing, {
-          processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
-          sessionId: sessionId as Id<'interviewSessions'>,
-          detail:
-            'Agent completed the interview and requested post-call processing.',
-        }).catch((error) => {
-          logger.warn({
-            event: 'agent.processing.request.failed',
-            detail: 'Unable to request interview processing from agent tool.',
-            sessionId,
-            error,
-          })
-        })
-      }
+      await port.requestProcessing(
+        'Agent completed the interview and requested post-call processing.'
+      )
 
       return 'The interview is complete. Thank the candidate warmly, remind them the team will review the conversation, and let them know the session will finish automatically in a moment.'
     },
   })
 
   const completeInterviewFromBudget = async () => {
-    if (sessionId) {
-      await fetchMutation(api.agentConfig.requestInterviewProcessing, {
-        processingKey: runtimeEnv.KYMA_PROCESSING_WRITE_KEY,
-        sessionId: sessionId as Id<'interviewSessions'>,
-        detail:
-          'Interview session budget reached; agent requested post-call processing.',
-      }).catch((error) => {
-        logger.warn({
-          event: 'agent.processing.budget.failed',
-          detail: 'Unable to request processing after budget enforcement.',
-          sessionId,
-          error,
-        })
-      })
-    }
+    await port.requestProcessing(
+      'Interview session budget reached; agent requested post-call processing.'
+    )
 
     try {
       await session.generateReply({
@@ -860,13 +705,9 @@ async function runInterviewSession(args: {
     sessionId,
     limits: budgetLimits,
     logger,
-    recorder,
+    port,
     getActiveDurationMs: async () => {
-      if (!sessionId) {
-        return 0
-      }
-
-      const latestConfig = await fetchInterviewAgentConfig(sessionId)
+      const latestConfig = await port.fetchConfig()
       return (
         latestConfig?.activeDurationMs ?? remoteConfig?.activeDurationMs ?? 0
       )
@@ -877,7 +718,7 @@ async function runInterviewSession(args: {
 
   const wrapUpAgent = new WrapUpInterviewerAgent(
     config.wrapUpInstructions,
-    recorder,
+    port,
     {
       completeInterview: completeInterviewTool,
     },
@@ -886,7 +727,7 @@ async function runInterviewSession(args: {
 
   const childAgent = new TeachingChildAgent(
     config.childInstructions,
-    recorder,
+    port,
     candidateName,
     {
       returnToInterviewer: llm.tool({
@@ -915,7 +756,7 @@ async function runInterviewSession(args: {
         ),
     }),
     execute: async ({ observation }) => {
-      await visualObservationPersister.record(observation)
+      await port.recordVisualObservation(observation)
       return 'Visual observation saved for recruiter review.'
     },
   })
@@ -952,7 +793,7 @@ When live video is available, call recordVisualObservation at most once per mean
     },
   })
 
-  attachTranscriptPersistence(session, persister, logger, sessionId, () => {
+  attachTranscriptPersistence(session, port, logger, sessionId, () => {
     void budgetEnforcer.checkBudget('turn-budget-check')
   })
 
@@ -983,7 +824,7 @@ When live video is available, call recordVisualObservation at most once per mean
     },
   })
 
-  await recorder.append(
+  await port.appendEvent(
     'agent-session-started',
     'Interviewer agent joined the room and started the voice session.'
   )
@@ -1028,7 +869,7 @@ Stay in the warm-up phase until they clearly say they are ready.
 
   session.userData.phase = 'warmup'
 
-  await recorder.append(
+  await port.appendEvent(
     'agent-ready-check-sent',
     'Interviewer welcomed the candidate and asked for readiness before screening began.'
   )
