@@ -3,30 +3,15 @@ import { ConvexError } from 'convex/values'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import { convexEnv } from '../../lib/env/convex'
 import { getOrgContextFromIdentity } from './orgContext'
+import {
+  RECRUITER_PERMISSION_MAP,
+  type RecruiterCapability,
+} from '../../lib/auth/recruiter-capabilities'
 
-const ORG_RECRUITER_ACCESS = 'org:recruiter:access'
+export { RECRUITER_PERMISSION_MAP }
+export type { RecruiterCapability }
 
-export type RecruiterCapability =
-  | 'recruiter:access'
-  | 'recruiter:candidates:read'
-  | 'recruiter:candidates:write'
-  | 'recruiter:screenings:write'
-  | 'recruiter:templates:write'
-  | 'recruiter:settings:write'
-  | 'recruiter:billing:write'
-
-export const RECRUITER_PERMISSION_MAP: Record<
-  RecruiterCapability,
-  `org:${string}`
-> = {
-  'recruiter:access': ORG_RECRUITER_ACCESS,
-  'recruiter:candidates:read': 'org:recruiter:candidates:read',
-  'recruiter:candidates:write': 'org:recruiter:candidates:write',
-  'recruiter:screenings:write': 'org:recruiter:screenings:write',
-  'recruiter:templates:write': 'org:recruiter:templates:write',
-  'recruiter:settings:write': 'org:recruiter:settings:write',
-  'recruiter:billing:write': 'org:recruiter:billing:write',
-}
+const ORG_RECRUITER_ACCESS = RECRUITER_PERMISSION_MAP['recruiter:access']
 
 function hasRecruiterAuthConfig() {
   return Boolean(
@@ -109,12 +94,6 @@ export async function requireRecruiterMember(ctx: QueryCtx | MutationCtx) {
   const { identity } = await requireRecruiterContext(ctx, 'recruiter:access')
   return identity
 }
-
-/** @deprecated Use requireRecruiterMember */
-export const requireAdminIdentity = requireRecruiterMember
-
-/** @deprecated Use requireRecruiterMember */
-export const requireRecruiterIdentity = requireRecruiterMember
 
 export async function getRecruiterActorId(ctx: QueryCtx | MutationCtx) {
   const identity = await requireRecruiterMember(ctx)

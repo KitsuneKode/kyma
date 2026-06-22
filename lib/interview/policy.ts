@@ -5,6 +5,7 @@ export const DEFAULT_INTERVIEW_POLICY: InterviewPolicy = {
   targetDurationMinutes: 18,
   allowsResume: true,
   maxAttempts: 1,
+  rubricVersion: 'v1',
 }
 
 export function formatDurationPolicy(policy: InterviewPolicy) {

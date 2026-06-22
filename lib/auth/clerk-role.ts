@@ -1,34 +1,15 @@
+import {
+  RECRUITER_PERMISSION_MAP,
+  type RecruiterCapability,
+} from './recruiter-capabilities'
+
 export type PreferredWorkspace = 'candidate' | 'recruiter'
 
-export type RecruiterCapability =
-  | 'recruiter:access'
-  | 'recruiter:candidates:read'
-  | 'recruiter:candidates:write'
-  | 'recruiter:screenings:write'
-  | 'recruiter:templates:write'
-  | 'recruiter:settings:write'
-  | 'recruiter:billing:write'
-
-export const RECRUITER_PERMISSION_MAP: Record<
-  RecruiterCapability,
-  `org:${string}`
-> = {
-  'recruiter:access': 'org:recruiter:access',
-  'recruiter:candidates:read': 'org:recruiter:candidates:read',
-  'recruiter:candidates:write': 'org:recruiter:candidates:write',
-  'recruiter:screenings:write': 'org:recruiter:screenings:write',
-  'recruiter:templates:write': 'org:recruiter:templates:write',
-  'recruiter:settings:write': 'org:recruiter:settings:write',
-  'recruiter:billing:write': 'org:recruiter:billing:write',
-}
-
-/** Admin-only capabilities (org:admin bypasses checks). */
-export const ADMIN_CAPABILITIES = new Set<RecruiterCapability>([
-  'recruiter:screenings:write',
-  'recruiter:templates:write',
-  'recruiter:settings:write',
-  'recruiter:billing:write',
-])
+export {
+  RECRUITER_PERMISSION_MAP,
+  ADMIN_CAPABILITIES,
+} from './recruiter-capabilities'
+export type { RecruiterCapability } from './recruiter-capabilities'
 
 type SessionClaims = Record<string, unknown> | null | undefined
 

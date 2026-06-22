@@ -1,18 +1,10 @@
 import type { Doc } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
+import type { InterviewPolicy } from '../../lib/interview/types'
+
+export type { InterviewPolicy }
 
 export const DEFAULT_INTERVIEW_DURATION_MINUTES = 18
-
-export type InterviewPolicy = {
-  durationMode: 'timed'
-  targetDurationMinutes: number
-  allowsResume: boolean
-  maxAttempts: number
-  expiresAt?: string
-  rubricVersion: string
-  templateName?: string
-  interviewStyleMode?: 'standard' | 'intensive'
-}
 
 export type InterviewPolicySnapshot = {
   targetDurationMinutes: number

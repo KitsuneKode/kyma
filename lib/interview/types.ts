@@ -20,14 +20,24 @@ export type InviteAccessState =
 
 export type InterviewDurationMode = 'timed' | 'flexible'
 
+export type InterviewStyleMode = 'standard' | 'intensive'
+
 export type SessionPurpose = 'screening' | 'demo' | 'mock'
 
+/**
+ * Single source of truth for the resolved interview policy. The Convex policy
+ * resolver and the client snapshot both speak this exact shape so the read
+ * model never narrows on the wire boundary.
+ */
 export type InterviewPolicy = {
   durationMode: InterviewDurationMode
-  targetDurationMinutes?: number
+  targetDurationMinutes: number
   allowsResume: boolean
   maxAttempts: number
   expiresAt?: string
+  rubricVersion: string
+  templateName?: string
+  interviewStyleMode?: InterviewStyleMode
 }
 
 export const PRE_FLIGHT_STEPS = [
@@ -49,28 +59,31 @@ export type PreflightStep = {
   status: PreflightStepStatus
 }
 
-export type SessionEventType =
-  | 'invite-opened'
-  | 'preflight-started'
-  | 'preflight-completed'
-  | 'room-token-requested'
-  | 'participant-connecting'
-  | 'participant-joined'
-  | 'participant-left'
-  | 'agent-speaking'
-  | 'candidate-speaking'
-  | 'reconnect-started'
-  | 'reconnect-succeeded'
-  | 'reconnect-failed'
-  | 'transcript-partial'
-  | 'transcript-final'
-  | 'candidate-screen-share-started'
-  | 'candidate-screen-share-stopped'
-  | 'teaching-simulation-started'
-  | 'teaching-simulation-completed'
-  | 'processing-started'
-  | 'processing-completed'
-  | 'session-failed'
+export const SESSION_EVENT_TYPES = [
+  'invite-opened',
+  'preflight-started',
+  'preflight-completed',
+  'room-token-requested',
+  'participant-connecting',
+  'participant-joined',
+  'participant-left',
+  'agent-speaking',
+  'candidate-speaking',
+  'reconnect-started',
+  'reconnect-succeeded',
+  'reconnect-failed',
+  'transcript-partial',
+  'transcript-final',
+  'candidate-screen-share-started',
+  'candidate-screen-share-stopped',
+  'teaching-simulation-started',
+  'teaching-simulation-completed',
+  'processing-started',
+  'processing-completed',
+  'session-failed',
+] as const
+
+export type SessionEventType = (typeof SESSION_EVENT_TYPES)[number]
 
 export type SessionEvent = {
   type: SessionEventType
