@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React from 'react'
 import {
   IconMicrophone,
   IconClipboardCheck,
@@ -8,16 +8,9 @@ import {
   IconClockPlay,
 } from '@tabler/icons-react'
 import { MarketingCtaRow } from '@/components/marketing/marketing-cta-row'
-import { ProductPreview } from '@/components/marketing/product-preview'
-import {
-  motion,
-  useMotionValue,
-  useSpring,
-  useTransform,
-  type Variants,
-} from '@/components/motion/client-motion'
+import { HeroProductShowcase } from '@/components/marketing/hero-product-showcase'
+import { motion, type Variants } from '@/components/motion/client-motion'
 import { TextEffect } from '@/components/ui/text-effect'
-import { MOUSE_PARALLAX_SPRING } from '@/lib/motion/constants'
 
 const transitionVariants: { container: Variants; item: Variants } = {
   container: {
@@ -48,77 +41,9 @@ const transitionVariants: { container: Variants; item: Variants } = {
   },
 }
 
-function HeroImageMockup() {
-  const mouseX = useMotionValue(0)
-  const mouseY = useMotionValue(0)
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const { innerWidth, innerHeight } = window
-      const x = (e.clientX / innerWidth) * 2 - 1
-      const y = (e.clientY / innerHeight) * 2 - 1
-      mouseX.set(x)
-      mouseY.set(y)
-    }
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [mouseX, mouseY])
-
-  const springX = useSpring(mouseX, MOUSE_PARALLAX_SPRING)
-  const springY = useSpring(mouseY, MOUSE_PARALLAX_SPRING)
-
-  const rotateX = useTransform(springY, [-1, 1], [3, -3])
-  const rotateY = useTransform(springX, [-1, 1], [-3, 3])
-
-  return (
-    <div
-      style={{ perspective: 2000 }}
-      className="relative mx-auto mt-16 max-w-6xl px-2 sm:mt-20 lg:mt-24"
-    >
-      {/* Ambient glow + stacked panel for depth */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -inset-x-8 -top-10 bottom-0 -z-10"
-      >
-        <div className="absolute inset-0 rounded-[3rem] bg-[radial-gradient(60%_60%_at_50%_0%,rgba(232,255,71,0.10),transparent_70%)]" />
-        <div className="absolute inset-x-10 top-6 bottom-0 rounded-[2rem] border border-border/30 bg-muted/[0.06] shadow-[var(--shadow-lg)]" />
-      </div>
-
-      <motion.div
-        style={{
-          rotateX,
-          rotateY,
-          transformStyle: 'preserve-3d',
-        }}
-        initial={{
-          opacity: 0,
-          scale: 0.95,
-          filter: 'blur(8px)',
-          clipPath: 'inset(0 0 100% 0)',
-        }}
-        animate={{
-          opacity: 1,
-          scale: 1,
-          filter: 'blur(0px)',
-          clipPath: 'inset(0 0 0 0)',
-        }}
-        transition={{ duration: 0.8, ease: [0.77, 0, 0.175, 1], delay: 0.4 }}
-        className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-muted/10 p-1.5 shadow-[var(--shadow-xl)] ring-1 ring-border/40 backdrop-blur-xl"
-      >
-        {/* Top edge highlight */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent"
-        />
-        <ProductPreview />
-      </motion.div>
-    </div>
-  )
-}
-
 export function MarketingHero() {
   return (
-    <section className="relative overflow-hidden bg-background pt-24 md:pt-36">
+    <section className="relative bg-background pt-24 md:pt-36">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 isolate hidden opacity-65 lg:block"
@@ -138,7 +63,7 @@ export function MarketingHero() {
       />
 
       <div className="mx-auto max-w-7xl px-6">
-        <div className="relative z-10 text-center sm:mx-auto lg:mt-0 lg:mr-auto">
+        <div className="relative z-10 mx-auto text-center lg:mt-0">
           <motion.div
             initial={{ opacity: 0, y: 12, filter: 'blur(8px)' }}
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
@@ -195,9 +120,9 @@ export function MarketingHero() {
             </motion.div>
           </motion.div>
         </div>
-
-        <HeroImageMockup />
       </div>
+
+      <HeroProductShowcase />
 
       <div className="mx-auto mt-24 max-w-7xl px-6 pb-24 md:mt-32 md:pb-32">
         <p className="mb-12 text-center text-sm font-semibold tracking-wider text-muted-foreground uppercase">
