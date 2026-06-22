@@ -12,6 +12,7 @@ import {
   resolveModelId,
   tryResolveWorkspaceApiKeys,
 } from '@/lib/providers/resolve-model'
+import { DEFAULT_MODELS } from '@/lib/providers/provider-id'
 import {
   resolveRuntimeModel,
   resolveRealtimeProvider,
@@ -159,17 +160,17 @@ const CHILD_TURN_HANDLING = {
 
 function getEnvAgentConfig() {
   return {
-    stt: runtimeEnv.LIVEKIT_AGENT_STT_MODEL ?? 'deepgram/nova-3',
-    llm: runtimeEnv.LIVEKIT_AGENT_LLM_MODEL ?? 'openai/gpt-4.1-mini',
-    tts: runtimeEnv.LIVEKIT_AGENT_TTS_MODEL ?? 'cartesia/sonic',
+    stt: runtimeEnv.LIVEKIT_AGENT_STT_MODEL ?? DEFAULT_MODELS.stt,
+    llm: runtimeEnv.LIVEKIT_AGENT_LLM_MODEL ?? DEFAULT_MODELS.llm,
+    tts: runtimeEnv.LIVEKIT_AGENT_TTS_MODEL ?? DEFAULT_MODELS.tts,
     childTts:
       runtimeEnv.LIVEKIT_AGENT_CHILD_TTS_MODEL ??
       runtimeEnv.LIVEKIT_AGENT_TTS_MODEL ??
-      'cartesia/sonic',
+      DEFAULT_MODELS.tts,
     wrapUpTts:
       runtimeEnv.LIVEKIT_AGENT_WRAP_TTS_MODEL ??
       runtimeEnv.LIVEKIT_AGENT_TTS_MODEL ??
-      'cartesia/sonic',
+      DEFAULT_MODELS.tts,
     interviewerInstructions:
       runtimeEnv.LIVEKIT_AGENT_INSTRUCTIONS ?? DEFAULT_INTERVIEWER_INSTRUCTIONS,
     childInstructions:

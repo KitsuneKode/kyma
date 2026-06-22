@@ -6,7 +6,7 @@ import { InterviewWorkspace } from '@/components/interview/interview-workspace'
 import { clientEnv } from '@/lib/env/client'
 import { serverEnv } from '@/lib/env/server'
 import { createInitialInterviewSnapshot } from '@/lib/interview/snapshot'
-import { isDevelopmentMode } from '@/lib/runtime-mode'
+import { isEnabledDemoInviteToken as isEnabledDemoInviteTokenForEnv } from '@/lib/interview/demo-invite'
 
 type InterviewPageProps = {
   params: Promise<{
@@ -14,12 +14,8 @@ type InterviewPageProps = {
   }>
 }
 
-const DEMO_INVITE_ENABLED =
-  isDevelopmentMode(serverEnv.NODE_ENV) ||
-  serverEnv.KYMA_ENABLE_DEMO_INVITE === '1'
-
 function isEnabledDemoInviteToken(inviteId: string) {
-  return inviteId === 'demo-invite' && DEMO_INVITE_ENABLED
+  return isEnabledDemoInviteTokenForEnv(inviteId, serverEnv)
 }
 
 export default async function InterviewPage({ params }: InterviewPageProps) {

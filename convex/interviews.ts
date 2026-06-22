@@ -19,14 +19,10 @@ import { ensureDefaultTemplate } from './helpers/templates'
 import { upsertTranscriptSegmentForSession } from './helpers/transcriptSegments'
 import { isDevelopmentMode } from '../lib/runtime-mode'
 import { runtimeEnv } from '../lib/env/runtime'
-
-const DEVELOPMENT_INVITE_TOKEN = 'demo-invite'
-const DEMO_INVITE_ENABLED =
-  isDevelopmentMode(runtimeEnv.NODE_ENV) ||
-  runtimeEnv.KYMA_ENABLE_DEMO_INVITE === '1'
+import { isEnabledDemoInviteToken as isEnabledDemoInviteTokenForEnv } from '../lib/interview/demo-invite'
 
 function isEnabledDemoInviteToken(inviteToken: string) {
-  return inviteToken === DEVELOPMENT_INVITE_TOKEN && DEMO_INVITE_ENABLED
+  return isEnabledDemoInviteTokenForEnv(inviteToken, runtimeEnv)
 }
 
 const WRITE_WINDOW_MS = 60_000

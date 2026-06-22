@@ -5,14 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
 import { Button } from '@/components/ui/button'
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
+import { slugify } from '@/lib/format/slug'
 
 export function RecruiterOrgOnboarding() {
   const router = useRouter()

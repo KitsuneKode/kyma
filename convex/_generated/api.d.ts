@@ -17,6 +17,7 @@ import type * as helpers_auth from "../helpers/auth.js";
 import type * as helpers_clerkIdentity from "../helpers/clerkIdentity.js";
 import type * as helpers_devSeedSpectrum from "../helpers/devSeedSpectrum.js";
 import type * as helpers_encryption from "../helpers/encryption.js";
+import type * as helpers_finalizeInterviewProcessing from "../helpers/finalizeInterviewProcessing.js";
 import type * as helpers_interviewPolicy from "../helpers/interviewPolicy.js";
 import type * as helpers_orgAccess from "../helpers/orgAccess.js";
 import type * as helpers_orgContext from "../helpers/orgContext.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   "helpers/clerkIdentity": typeof helpers_clerkIdentity;
   "helpers/devSeedSpectrum": typeof helpers_devSeedSpectrum;
   "helpers/encryption": typeof helpers_encryption;
+  "helpers/finalizeInterviewProcessing": typeof helpers_finalizeInterviewProcessing;
   "helpers/interviewPolicy": typeof helpers_interviewPolicy;
   "helpers/orgAccess": typeof helpers_orgAccess;
   "helpers/orgContext": typeof helpers_orgContext;

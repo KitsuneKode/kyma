@@ -15,14 +15,11 @@ import { ensureDefaultTemplate } from './helpers/templates'
 import { decryptProviderKey, encryptProviderKey } from './helpers/encryption'
 import { runtimeEnv } from '../lib/env/runtime'
 import { modelOverridesValidator } from './validators'
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
+import { slugify } from '../lib/format/slug'
+import {
+  latestProviderKey,
+  normalizeProvider,
+} from '../lib/providers/provider-id'
 
 function buildInviteToken(candidateName: string) {
   const prefix = slugify(candidateName) || 'candidate'
@@ -32,34 +29,6 @@ function buildInviteToken(candidateName: string) {
       : `${Date.now()}`
 
   return `${prefix}-${suffix}`
-}
-
-function selectLatestProviderKey(
-  providerKeys:
-    | Array<{
-        keyId: string
-        provider: string
-        encryptedKey: string
-        iv: string
-        label?: string
-        addedAt: number
-        addedBy: string
-        maskedKeyTail?: string
-      }>
-    | undefined,
-  provider: string
-) {
-  const candidates = (providerKeys ?? []).filter(
-    (item) => item.provider === provider
-  )
-  if (!candidates.length) return null
-  return candidates.toSorted((a, b) => b.addedAt - a.addedAt)[0]
-}
-
-function normalizeProvider(provider: string) {
-  const value = provider.trim().toLowerCase()
-  if (value === 'gemini') return 'google'
-  return value
 }
 
 export const bootstrapOrgTemplates = mutation({
@@ -579,7 +548,7 @@ export const addProviderKey = mutation({
     const encrypted = await encryptProviderKey(args.key)
     const entry = {
       keyId,
-      provider: args.provider,
+      provider: normalizeProvider(args.provider),
       encryptedKey: encrypted.encryptedKey,
       iv: encrypted.iv,
       label: args.label,
@@ -703,24 +672,7 @@ export const testProviderConnection = action({
     }
     const normalizedProvider = normalizeProvider(args.provider)
     const settings = await ctx.runQuery(api.admin.getWorkspaceSettingsRaw, {})
-    const candidate = selectLatestProviderKey(
-      settings?.providerKeys?.map(
-        (item: {
-          keyId: string
-          provider: string
-          encryptedKey: string
-          iv: string
-          label?: string
-          addedAt: number
-          addedBy: string
-          maskedKeyTail?: string
-        }) => ({
-          ...item,
-          provider: normalizeProvider(item.provider),
-        })
-      ),
-      normalizedProvider
-    )
+    const candidate = latestProviderKey(settings?.providerKeys, args.provider)
     if (!candidate) {
       throw new ConvexError(
         `No key configured for provider "${args.provider}".`

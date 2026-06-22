@@ -1,34 +1,21 @@
 import { runtimeEnv } from '@/lib/env/runtime'
 import { createDecipheriv } from 'node:crypto'
 
-export type ModelKind = 'stt' | 'llm' | 'tts' | 'reviewChat' | 'scoring'
+import {
+  DEFAULT_MODELS,
+  latestProviderKey,
+  providerFromModelId,
+  type ModelKind,
+  type WorkspaceProviderKey,
+} from '@/lib/providers/provider-id'
 
-const DEFAULT_MODELS: Record<ModelKind, string> = {
-  stt: 'deepgram/nova-3',
-  llm: 'openai/gpt-4.1-mini',
-  tts: 'cartesia/sonic',
-  reviewChat: 'openai/gpt-4.1-mini',
-  scoring: 'openai/gpt-4.1-mini',
-}
+export {
+  providerFromModelId,
+  type ModelKind,
+  type WorkspaceProviderKey,
+} from '@/lib/providers/provider-id'
 
 type WorkspaceModelOverrides = Partial<Record<ModelKind, string | undefined>>
-
-export type WorkspaceProviderKey = {
-  keyId: string
-  provider: string
-  encryptedKey: string
-  iv: string
-  label?: string
-  addedAt: number
-  addedBy: string
-  maskedKeyTail?: string
-}
-
-function normalizeProvider(provider: string) {
-  const value = provider.trim().toLowerCase()
-  if (value === 'gemini') return 'google'
-  return value
-}
 
 export function resolveModelId(
   kind: ModelKind,
@@ -115,32 +102,6 @@ export function decryptWorkspaceKey(args: {
     decipher.final(),
   ])
   return decrypted.toString('utf8')
-}
-
-export function providerFromModelId(modelId?: string) {
-  if (!modelId) return null
-  const [provider] = modelId.split('/')
-  const normalized = normalizeProvider(provider ?? '')
-  if (
-    normalized === 'openai' ||
-    normalized === 'anthropic' ||
-    normalized === 'google'
-  ) {
-    return normalized
-  }
-  return null
-}
-
-function latestProviderKey(
-  keys: WorkspaceProviderKey[] | undefined,
-  provider: string
-) {
-  const normalized = normalizeProvider(provider)
-  const candidates = (keys ?? []).filter(
-    (item) => normalizeProvider(item.provider) === normalized
-  )
-  if (!candidates.length) return null
-  return candidates.toSorted((a, b) => b.addedAt - a.addedAt)[0]
 }
 
 export function resolveWorkspaceApiKeys(

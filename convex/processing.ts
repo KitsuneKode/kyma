@@ -3,6 +3,10 @@ import { v } from 'convex/values'
 import { internalAction } from './_generated/server'
 import { isDevelopmentMode } from '../lib/runtime-mode'
 import { runtimeEnv } from '../lib/env/runtime'
+import {
+  INTERVIEW_PROCESSING_REQUESTED_EVENT,
+  interviewProcessingEventId,
+} from '../lib/inngest/events'
 
 export const enqueueInterviewProcessing = internalAction({
   args: {
@@ -30,9 +34,9 @@ export const enqueueInterviewProcessing = internalAction({
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: 'kyma/interview.processing.requested',
+        name: INTERVIEW_PROCESSING_REQUESTED_EVENT,
         data: { sessionId: args.sessionId },
-        id: `interview-processing-${args.sessionId}`,
+        id: interviewProcessingEventId(args.sessionId),
       }),
     })
 

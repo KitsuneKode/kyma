@@ -14,6 +14,10 @@ import {
   createRequestId,
 } from '@/lib/interview/diagnostics'
 import { inngest } from '@/inngest/client'
+import {
+  INTERVIEW_PROCESSING_REQUESTED_EVENT,
+  interviewProcessingEventId,
+} from '@/lib/inngest/events'
 
 const bodySchema = z.object({
   sessionId: z.string(),
@@ -51,8 +55,8 @@ export async function POST(request: NextRequest) {
 
     try {
       const result = await inngest.send({
-        id: `interview-processing-${sessionId}`,
-        name: 'kyma/interview.processing.requested',
+        id: interviewProcessingEventId(sessionId),
+        name: INTERVIEW_PROCESSING_REQUESTED_EVENT,
         data: { sessionId },
       })
 

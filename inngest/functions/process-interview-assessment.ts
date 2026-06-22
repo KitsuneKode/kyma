@@ -7,6 +7,8 @@ import {
   processInterviewAssessment,
 } from '@/lib/assessment/process-session'
 
+import { INTERVIEW_PROCESSING_REQUESTED_EVENT } from '@/lib/inngest/events'
+
 import { inngest } from '../client'
 
 const payloadSchema = z.object({
@@ -19,7 +21,7 @@ export const processInterviewAssessmentFunction = inngest.createFunction(
     name: 'Process interview assessment',
     retries: 3,
     triggers: {
-      event: 'kyma/interview.processing.requested',
+      event: INTERVIEW_PROCESSING_REQUESTED_EVENT,
     },
   },
   async ({ event, step }) => {
