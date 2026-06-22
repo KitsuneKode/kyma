@@ -1,11 +1,8 @@
 import { v } from 'convex/values'
 
-import { mutation } from './_generated/server'
 import { finalizeInterviewForProcessing } from './helpers/finalizeInterviewProcessing'
-import { transitionSessionSafely } from '../lib/interview/session-machine'
-import type { InterviewSessionState } from '../lib/interview/types'
-import { isConvexDevelopmentMode } from '../lib/env/convex-deployment-mode'
-import { convexEnv } from '../lib/env/convex'
+import { insertSessionEventWithTransition } from './helpers/interviewSession'
+import { pipelineMutation } from './lib/pipelineFunctions'
 
 function mapArtifactStatus(event: string, hasError: boolean) {
   if (hasError) {
@@ -61,9 +58,8 @@ function toIsoFromEpochMs(value?: number) {
   return new Date(value).toISOString()
 }
 
-export const ingestWebhookEvent = mutation({
+export const ingestWebhookEvent = pipelineMutation({
   args: {
-    processingKey: v.optional(v.string()),
     event: v.string(),
     roomName: v.optional(v.string()),
     participantIdentity: v.optional(v.string()),
@@ -82,16 +78,6 @@ export const ingestWebhookEvent = mutation({
     details: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const configuredProcessingKey = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
-    const hasValidProcessingKey =
-      Boolean(configuredProcessingKey) &&
-      args.processingKey === configuredProcessingKey
-    const allowDevelopmentBypass =
-      !configuredProcessingKey && isConvexDevelopmentMode(convexEnv)
-    if (!hasValidProcessingKey && !allowDevelopmentBypass) {
-      return null
-    }
-
     if (!args.roomName) {
       return null
     }
@@ -122,18 +108,6 @@ export const ingestWebhookEvent = mutation({
       )
       .first()
 
-    if (!existingEvent) {
-      await ctx.db.insert('sessionEvents', {
-        orgId: session.orgId,
-        sessionId: session._id,
-        type: args.event,
-        detail,
-        source: 'livekit-webhook',
-        dedupeKey,
-        createdAt: now,
-      })
-    }
-
     if (existingEvent) {
       return {
         sessionId: session._id,
@@ -141,18 +115,26 @@ export const ingestWebhookEvent = mutation({
       }
     }
 
+    const isCandidateParticipant =
+      args.participantIdentity?.startsWith('candidate-') ?? false
+
+    // Route session-state-changing participant events through the shared
+    // transition path so duration accounting, start timing, and ownership rules
+    // run on every entry point (candidate, agent, webhook) - not just here.
     if (
       args.event === 'participant_joined' &&
       !['processing', 'completed', 'failed'].includes(session.state)
     ) {
-      const nextState = transitionSessionSafely(
-        session.state as InterviewSessionState,
-        'live'
-      )
-      await ctx.db.patch(session._id, {
-        state: nextState,
-        startedAt: session.startedAt ?? now,
+      await insertSessionEventWithTransition(ctx, {
+        session,
+        sessionId: session._id,
+        type: args.event,
+        detail,
+        source: 'livekit-webhook',
+        dedupeKey,
+        state: 'live',
       })
+      return { sessionId: session._id, roomName: session.roomName }
     }
 
     if (
@@ -161,16 +143,31 @@ export const ingestWebhookEvent = mutation({
       !['processing', 'completed', 'failed', 'reconnecting'].includes(
         session.state
       ) &&
-      args.participantIdentity?.startsWith('candidate-')
+      isCandidateParticipant
     ) {
-      const nextState = transitionSessionSafely(
-        session.state as InterviewSessionState,
-        'interrupted'
-      )
-      await ctx.db.patch(session._id, {
-        state: nextState,
+      await insertSessionEventWithTransition(ctx, {
+        session,
+        sessionId: session._id,
+        type: args.event,
+        detail,
+        source: 'livekit-webhook',
+        dedupeKey,
+        state: 'interrupted',
       })
+      return { sessionId: session._id, roomName: session.roomName }
     }
+
+    // Non-state events (egress, room lifecycle, agent participant churn) are
+    // recorded for the audit trail.
+    await ctx.db.insert('sessionEvents', {
+      orgId: session.orgId,
+      sessionId: session._id,
+      type: args.event,
+      detail,
+      source: 'livekit-webhook',
+      dedupeKey,
+      createdAt: now,
+    })
 
     if (
       args.event === 'room_finished' &&

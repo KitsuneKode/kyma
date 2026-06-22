@@ -1,7 +1,6 @@
-import { ConvexError, v } from 'convex/values'
+import { v } from 'convex/values'
 
-import { mutation, query } from './_generated/server'
-import { hasTrustedProcessingKey } from './helpers/processingAuth'
+import { pipelineMutation, pipelineQuery } from './lib/pipelineFunctions'
 
 const workerStatusValidator = v.union(
   v.literal('running'),
@@ -14,9 +13,8 @@ const workerStatusValidator = v.union(
  * processing key so only the backend worker can report liveness. Upserts a
  * single row per workerId.
  */
-export const recordWorkerHeartbeat = mutation({
+export const recordWorkerHeartbeat = pipelineMutation({
   args: {
-    processingKey: v.optional(v.string()),
     workerId: v.string(),
     agentName: v.string(),
     status: workerStatusValidator,
@@ -25,10 +23,6 @@ export const recordWorkerHeartbeat = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    if (!hasTrustedProcessingKey(args.processingKey)) {
-      throw new ConvexError('Invalid processing key for worker heartbeat.')
-    }
-
     const existing = await ctx.db
       .query('agentWorkerHeartbeats')
       .withIndex('by_worker_id', (q) => q.eq('workerId', args.workerId))
@@ -74,16 +68,10 @@ const workerLivenessValidator = v.object({
  * computed by the caller (server-side) so this query stays deterministic and
  * cacheable — never read wall-clock time inside a Convex query.
  */
-export const getWorkerLiveness = query({
-  args: {
-    processingKey: v.optional(v.string()),
-  },
+export const getWorkerLiveness = pipelineQuery({
+  args: {},
   returns: workerLivenessValidator,
-  handler: async (ctx, args) => {
-    if (!hasTrustedProcessingKey(args.processingKey)) {
-      throw new ConvexError('Invalid processing key for worker liveness.')
-    }
-
+  handler: async (ctx) => {
     const heartbeats = await ctx.db
       .query('agentWorkerHeartbeats')
       .withIndex('by_last_seen_at')

@@ -1,11 +1,8 @@
 import { ConvexError, v } from 'convex/values'
 
-import { mutation } from './_generated/server'
-import {
-  hasTrustedProcessingKey,
-  resolveOrgIdForPipelineWrite,
-} from './helpers/processingAuth'
+import { requireSessionOrgId } from './helpers/processingAuth'
 import { recruiterQuery } from './lib/customFunctions'
+import { pipelineMutation } from './lib/pipelineFunctions'
 
 const visualObservationRecordValidator = v.object({
   id: v.id('visualObservations'),
@@ -14,9 +11,8 @@ const visualObservationRecordValidator = v.object({
   source: v.union(v.literal('agent'), v.literal('system')),
 })
 
-export const recordVisualObservation = mutation({
+export const recordVisualObservation = pipelineMutation({
   args: {
-    processingKey: v.optional(v.string()),
     sessionId: v.id('interviewSessions'),
     observation: v.string(),
     observedAt: v.optional(v.string()),
@@ -24,22 +20,12 @@ export const recordVisualObservation = mutation({
   },
   returns: v.id('visualObservations'),
   handler: async (ctx, args) => {
-    if (!hasTrustedProcessingKey(args.processingKey)) {
-      throw new ConvexError(
-        'Invalid processing key for visual observation write.'
-      )
-    }
-
     const observation = args.observation.trim()
     if (!observation) {
       throw new ConvexError('Observation must not be empty.')
     }
 
-    const orgId = await resolveOrgIdForPipelineWrite(
-      ctx,
-      args.sessionId,
-      args.processingKey
-    )
+    const orgId = await requireSessionOrgId(ctx, args.sessionId)
 
     return await ctx.db.insert('visualObservations', {
       orgId,

@@ -6,21 +6,9 @@ import { transitionSessionSafely } from '../../lib/interview/session-machine'
 import { isSessionStateWriteAllowed } from '../../lib/interview/session-state-ownership'
 import type { InterviewSessionState } from '../../lib/interview/types'
 import type { SessionPurpose } from '../../lib/interview/session-purpose'
-import {
-  DEFAULT_INTERVIEW_DURATION_MINUTES,
-  type InterviewPolicy,
-} from './interviewPolicy'
-import { ensureDefaultTemplate } from './templates'
-import { isEnabledDemoInviteToken as isEnabledDemoInviteTokenForEnv } from '../../lib/interview/demo-invite'
-import { convexEnv } from '../../lib/env/convex'
 
 export const WRITE_WINDOW_MS = 60_000
 export const MAX_SESSION_EVENTS_PER_WINDOW = 90
-export const DEMO_ORG_ID = 'org_demo'
-
-export function isEnabledDemoInviteToken(inviteToken: string) {
-  return isEnabledDemoInviteTokenForEnv(inviteToken, convexEnv)
-}
 
 export function resolveInviteSessionPurpose(
   invite: Pick<Doc<'candidateInvites'>, 'sessionPurpose'>
@@ -29,19 +17,6 @@ export function resolveInviteSessionPurpose(
     return invite.sessionPurpose
   }
   return 'screening'
-}
-
-export function defaultDemoPolicy(expiresAt: string): InterviewPolicy {
-  return {
-    durationMode: 'timed',
-    targetDurationMinutes: DEFAULT_INTERVIEW_DURATION_MINUTES,
-    allowsResume: true,
-    maxAttempts: 1,
-    expiresAt,
-    rubricVersion: 'v1',
-    templateName: 'AI Tutor Screener',
-    interviewStyleMode: 'standard',
-  }
 }
 
 export async function assertSessionEventThrottle(
@@ -169,28 +144,7 @@ export async function ensureInvite(
     return existingInvite
   }
 
-  if (!isEnabledDemoInviteToken(inviteToken)) {
-    throw new ConvexError('Invite not found.')
-  }
-
-  const template = await ensureDefaultTemplate(ctx, DEMO_ORG_ID)
-  const inviteId = await ctx.db.insert('candidateInvites', {
-    orgId: DEMO_ORG_ID,
-    inviteToken,
-    candidateName: 'Demo Candidate',
-    templateId: template._id,
-    status: 'created',
-    sessionPurpose: 'demo',
-    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
-  })
-
-  const invite = await ctx.db.get(inviteId)
-
-  if (!invite) {
-    throw new ConvexError('Unable to create development invite.')
-  }
-
-  return invite
+  throw new ConvexError('Invite not found.')
 }
 
 /**
@@ -199,7 +153,7 @@ export async function ensureInvite(
  * session-event mutations. Keeping this in one place prevents the two write
  * paths from drifting on duration accounting or invite completion.
  */
-async function applySessionStateTransition(
+export async function applySessionStateTransition(
   ctx: MutationCtx,
   session: Doc<'interviewSessions'>,
   sessionId: Id<'interviewSessions'>,
@@ -216,6 +170,10 @@ async function applySessionStateTransition(
 
   if (nextState === 'live' && session.state !== 'live') {
     patch.lastLiveStartedAt = nowIso
+    // First time the interview goes live is the canonical start time.
+    if (!session.startedAt) {
+      patch.startedAt = nowIso
+    }
   }
 
   if (

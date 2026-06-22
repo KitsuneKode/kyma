@@ -19,6 +19,25 @@ export function hasTrustedProcessingKey(processingKey?: string) {
   return processingKey?.trim() === configured
 }
 
+/**
+ * Resolves a session's org scope for a trusted write whose caller has already
+ * been authenticated (e.g. inside a `pipelineMutation`). Does not re-check the
+ * processing key — use {@link resolveOrgIdForPipelineWrite} when the key still
+ * needs validating (dual-gate read paths).
+ */
+export async function requireSessionOrgId(
+  ctx: QueryCtx | MutationCtx,
+  sessionId: Id<'interviewSessions'>
+) {
+  const session = await ctx.db.get(sessionId)
+  const orgId = session?.orgId?.trim()
+  if (!orgId) {
+    throw new ConvexError('Interview session not found for processing.')
+  }
+
+  return orgId
+}
+
 export async function resolveOrgIdForPipelineWrite(
   ctx: QueryCtx | MutationCtx,
   sessionId: Id<'interviewSessions'>,
@@ -28,11 +47,5 @@ export async function resolveOrgIdForPipelineWrite(
     throw new ConvexError('Invalid processing key for pipeline write.')
   }
 
-  const session = await ctx.db.get(sessionId)
-  const orgId = session?.orgId?.trim()
-  if (!orgId) {
-    throw new ConvexError('Interview session not found for processing.')
-  }
-
-  return orgId
+  return await requireSessionOrgId(ctx, sessionId)
 }

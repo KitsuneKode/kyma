@@ -1,16 +1,21 @@
 import { ConvexError, v } from 'convex/values'
 
-import { internalMutation, mutation } from '../_generated/server'
-import { isConvexDevelopmentMode } from '../../lib/env/convex-deployment-mode'
-import { convexEnv } from '../../lib/env/convex'
+import { mutation } from '../_generated/server'
 import type { InterviewSessionState } from '../../lib/interview/types'
 import { interviewSessionStateValidator } from '../validators'
+import { hasTrustedProcessingKey } from '../helpers/processingAuth'
 import {
   assertSessionEventThrottle,
   insertSessionEventWithTransition,
   requireInviteSessionWriteAccess,
 } from '../helpers/interviewSession'
 
+/**
+ * The single session-event write entry point. Trusted server-origin callers
+ * (agent, processing pipeline) authenticate with the processing key; candidate
+ * clients authenticate with their invite token. Both paths converge on the same
+ * throttle + state-transition logic so server and candidate writes stay in sync.
+ */
 export const appendSessionEvent = mutation({
   args: {
     inviteToken: v.optional(v.string()),
@@ -35,23 +40,15 @@ export const appendSessionEvent = mutation({
       state,
     }
   ) => {
-    const configuredProcessingKey = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
-    const hasTrustedKey =
-      Boolean(configuredProcessingKey) &&
-      processingKey === configuredProcessingKey
-    const allowDevelopmentBypass =
-      !configuredProcessingKey && isConvexDevelopmentMode(convexEnv)
-
-    const session =
-      hasTrustedKey || allowDevelopmentBypass
-        ? await ctx.db.get(sessionId)
-        : (
-            await requireInviteSessionWriteAccess(
-              ctx,
-              sessionId,
-              inviteToken ?? ''
-            )
-          ).session
+    const session = hasTrustedProcessingKey(processingKey)
+      ? await ctx.db.get(sessionId)
+      : (
+          await requireInviteSessionWriteAccess(
+            ctx,
+            sessionId,
+            inviteToken ?? ''
+          )
+        ).session
 
     if (!session) {
       throw new ConvexError('Interview session not found.')
@@ -65,36 +62,6 @@ export const appendSessionEvent = mutation({
       type,
       detail,
       source: source ?? 'candidate-client',
-      dedupeKey,
-      state: state as InterviewSessionState | undefined,
-    })
-  },
-})
-
-export const appendSessionEventInternal = internalMutation({
-  args: {
-    sessionId: v.id('interviewSessions'),
-    type: v.string(),
-    detail: v.string(),
-    source: v.string(),
-    dedupeKey: v.optional(v.string()),
-    state: v.optional(interviewSessionStateValidator),
-  },
-  handler: async (
-    ctx,
-    { sessionId, type, detail, source, dedupeKey, state }
-  ) => {
-    const session = await ctx.db.get(sessionId)
-    if (!session) {
-      throw new ConvexError('Interview session not found.')
-    }
-
-    return await insertSessionEventWithTransition(ctx, {
-      session,
-      sessionId,
-      type,
-      detail,
-      source,
       dedupeKey,
       state: state as InterviewSessionState | undefined,
     })

@@ -1,10 +1,9 @@
 import { ConvexError, v } from 'convex/values'
 
-import { mutation, query } from './_generated/server'
 import { finalizeInterviewForProcessing } from './helpers/finalizeInterviewProcessing'
 import { resolveInterviewPolicyFromInvite } from './helpers/interviewPolicy'
-import { hasTrustedProcessingKey } from './helpers/processingAuth'
 import { upsertTranscriptSegmentForSession } from './helpers/transcriptSegments'
+import { pipelineMutation, pipelineQuery } from './lib/pipelineFunctions'
 import {
   interviewSessionStateValidator,
   modelOverridesValidator,
@@ -46,17 +45,12 @@ const interviewAgentConfigValidator = v.object({
   maxAgentTurns: v.number(),
 })
 
-export const getInterviewAgentConfig = query({
+export const getInterviewAgentConfig = pipelineQuery({
   args: {
     sessionId: v.id('interviewSessions'),
-    processingKey: v.optional(v.string()),
   },
   returns: v.union(interviewAgentConfigValidator, v.null()),
   handler: async (ctx, args) => {
-    if (!hasTrustedProcessingKey(args.processingKey)) {
-      throw new ConvexError('Invalid processing key for agent config.')
-    }
-
     const session = await ctx.db.get(args.sessionId)
     if (!session) {
       return null
@@ -102,9 +96,8 @@ export const getInterviewAgentConfig = query({
   },
 })
 
-export const requestInterviewProcessing = mutation({
+export const requestInterviewProcessing = pipelineMutation({
   args: {
-    processingKey: v.optional(v.string()),
     sessionId: v.id('interviewSessions'),
     detail: v.optional(v.string()),
   },
@@ -113,10 +106,6 @@ export const requestInterviewProcessing = mutation({
     transitioned: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    if (!hasTrustedProcessingKey(args.processingKey)) {
-      throw new ConvexError('Invalid processing key for interview processing.')
-    }
-
     const session = await ctx.db.get(args.sessionId)
     if (!session) {
       throw new ConvexError('Interview session not found.')
@@ -133,9 +122,8 @@ export const requestInterviewProcessing = mutation({
   },
 })
 
-export const upsertAgentTranscriptSegment = mutation({
+export const upsertAgentTranscriptSegment = pipelineMutation({
   args: {
-    processingKey: v.optional(v.string()),
     sessionId: v.id('interviewSessions'),
     segmentId: v.string(),
     speaker: v.union(
@@ -150,10 +138,6 @@ export const upsertAgentTranscriptSegment = mutation({
   },
   returns: v.id('transcriptSegments'),
   handler: async (ctx, args) => {
-    if (!hasTrustedProcessingKey(args.processingKey)) {
-      throw new ConvexError('Invalid processing key for transcript write.')
-    }
-
     return await upsertTranscriptSegmentForSession(ctx, {
       sessionId: args.sessionId,
       segmentId: args.segmentId,
