@@ -6,8 +6,8 @@ export const serverSchema = {
     .default('development'),
   CLERK_SECRET_KEY: z.string().min(1).optional(),
   CLERK_WEBHOOK_SIGNING_SECRET: z.string().min(1).optional(),
-  CLERK_FRONTEND_API_URL: z.string().url().optional(),
-  CLERK_JWT_ISSUER_DOMAIN: z.string().url().optional(),
+  CLERK_FRONTEND_API_URL: z.url().optional(),
+  CLERK_JWT_ISSUER_DOMAIN: z.url().optional(),
   LIVEKIT_API_KEY: z.string().min(1).optional(),
   LIVEKIT_API_SECRET: z.string().min(1).optional(),
   LIVEKIT_AGENT_NAME: z.string().min(1).optional(),
@@ -19,6 +19,10 @@ export const serverSchema = {
   LIVEKIT_AGENT_INSTRUCTIONS: z.string().min(1).optional(),
   LIVEKIT_AGENT_CHILD_INSTRUCTIONS: z.string().min(1).optional(),
   LIVEKIT_AGENT_WRAP_UP_INSTRUCTIONS: z.string().min(1).optional(),
+  KYMA_AGENT_REALTIME_PROVIDER: z
+    .enum(['gemini', 'openai', 'cascade'])
+    .optional(),
+  KYMA_AGENT_VIDEO_INPUT: z.enum(['0', '1']).optional(),
   LIVEKIT_AGENT_LOG_LEVEL: z.string().min(1).optional(),
   LIVEKIT_WEBHOOK_API_KEY: z.string().min(1).optional(),
   LIVEKIT_WEBHOOK_API_SECRET: z.string().min(1).optional(),
@@ -31,6 +35,7 @@ export const serverSchema = {
   LIVEKIT_RECORDING_STORAGE_SECRET_KEY: z.string().min(1).optional(),
   KYMA_ENABLE_DEMO_INVITE: z.enum(['0', '1']).optional(),
   KYMA_REVIEW_CHAT_MODEL: z.string().min(1).optional(),
+  KYMA_SCORING_MODEL: z.string().min(1).optional(),
   KYMA_PROCESSING_WRITE_KEY: z.string().min(1).optional(),
   KYMA_ADMIN_EMAILS: z.string().min(1).optional(),
   KYMA_AUTH_DEBUG: z.enum(['0', '1']).optional(),
@@ -38,7 +43,7 @@ export const serverSchema = {
   INNGEST_APP_ID: z.string().min(1).optional(),
   INNGEST_EVENT_KEY: z.string().min(1).optional(),
   INNGEST_SIGNING_KEY: z.string().min(1).optional(),
-  PLAYWRIGHT_BASE_URL: z.string().url().optional(),
+  PLAYWRIGHT_BASE_URL: z.url().optional(),
   PLAYWRIGHT_SKIP_WEBSERVER: z.string().min(1).optional(),
   CI: z.string().min(1).optional(),
 } as const
@@ -46,7 +51,7 @@ export const serverSchema = {
 export const clientSchema = {
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
   NEXT_PUBLIC_LIVEKIT_URL: z.string().min(1).optional(),
-  NEXT_PUBLIC_CONVEX_URL: z.string().url().optional(),
+  NEXT_PUBLIC_CONVEX_URL: z.url().optional(),
   NEXT_PUBLIC_ENABLE_DEV_TRACE: z.enum(['0', '1']).optional(),
 } as const
 

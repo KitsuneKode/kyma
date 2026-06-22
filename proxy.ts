@@ -12,11 +12,7 @@ import { hasClerkServerCredentials } from '@/lib/clerk/config'
 const isRecruiterRoute = createRouteMatcher(['/recruiter(.*)', '/admin(.*)'])
 const isCandidateRoute = createRouteMatcher(['/candidate(.*)'])
 const isOnboardingRoute = createRouteMatcher(['/onboarding(.*)'])
-const isAppShellRoute = createRouteMatcher([
-  '/video-demo(.*)',
-  '/write-up(.*)',
-  '/settings(.*)',
-])
+const isAppShellRoute = createRouteMatcher(['/write-up(.*)', '/settings(.*)'])
 const isAuthRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)'])
 const isDevPreviewRoute = createRouteMatcher(['/dev(.*)'])
 const isPublicRoute = createRouteMatcher([
@@ -62,6 +58,15 @@ export default hasClerk
       }
 
       const pathname = req.nextUrl.pathname
+
+      if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+        const recruiterPath =
+          pathname === '/admin'
+            ? '/recruiter'
+            : `/recruiter${pathname.slice('/admin'.length)}`
+        return NextResponse.redirect(new URL(recruiterPath, req.url))
+      }
+
       const redirectTarget = resolveAppRoute({
         pathname,
         isSignedIn: true,
