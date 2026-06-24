@@ -21,7 +21,7 @@ const PROCESSING_WRITE_KEY = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
 
 export async function markAssessmentProcessing(sessionId: SessionId) {
   const detail = await fetchQuery(
-    api.recruiter.reviews.getSessionProcessingDetail,
+    api.processing.assessment.getSessionProcessingDetail,
     {
       sessionId,
       processingKey: PROCESSING_WRITE_KEY,
@@ -32,7 +32,7 @@ export async function markAssessmentProcessing(sessionId: SessionId) {
     return
   }
 
-  await fetchMutation(api.recruiter.reviews.saveAssessmentReport, {
+  await fetchMutation(api.processing.assessment.saveAssessmentReport, {
     sessionId,
     processingKey: PROCESSING_WRITE_KEY,
     status: 'processing',
@@ -44,7 +44,7 @@ export async function markAssessmentFailed(
   sessionId: SessionId,
   reason: string
 ) {
-  await fetchMutation(api.recruiter.reviews.saveAssessmentReport, {
+  await fetchMutation(api.processing.assessment.saveAssessmentReport, {
     sessionId,
     processingKey: PROCESSING_WRITE_KEY,
     status: 'failed',
@@ -79,7 +79,7 @@ export async function processInterviewAssessment(
   })
 
   const detail = await fetchQuery(
-    api.recruiter.reviews.getSessionProcessingDetail,
+    api.processing.assessment.getSessionProcessingDetail,
     {
       sessionId,
       processingKey: PROCESSING_WRITE_KEY,
@@ -170,7 +170,7 @@ export async function processInterviewAssessment(
     scoringSource = 'deterministic'
   }
 
-  await fetchMutation(api.recruiter.reviews.saveAssessmentReport, {
+  await fetchMutation(api.processing.assessment.saveAssessmentReport, {
     sessionId,
     processingKey: PROCESSING_WRITE_KEY,
     status: report.status,

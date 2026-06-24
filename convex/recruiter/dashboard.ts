@@ -22,6 +22,9 @@ export const getDashboardSummary = recruiterQuery({
     const oneHourAgo = nowMs - 60 * 60 * 1000
     const todayDateString = new Date(nowMs).toDateString()
 
+    const MAX_PENDING_REPORTS = 100
+    const MAX_ACTIVE_SESSIONS_PER_STATE = 100
+
     const [
       manualReviewReports,
       pendingReports,
@@ -35,13 +38,13 @@ export const getDashboardSummary = recruiterQuery({
         .withIndex('by_org_id_and_status', (q) =>
           q.eq('orgId', orgId).eq('status', 'manual_review')
         )
-        .collect(),
+        .take(MAX_MANUAL_REVIEW_CANDIDATES),
       ctx.db
         .query('assessmentReports')
         .withIndex('by_org_id_and_status', (q) =>
           q.eq('orgId', orgId).eq('status', 'pending')
         )
-        .collect(),
+        .take(MAX_PENDING_REPORTS),
       Promise.all(
         ACTIVE_SESSION_STATES.map((state) =>
           ctx.db
@@ -49,7 +52,7 @@ export const getDashboardSummary = recruiterQuery({
             .withIndex('by_org_id_and_state', (q) =>
               q.eq('orgId', orgId).eq('state', state)
             )
-            .collect()
+            .take(MAX_ACTIVE_SESSIONS_PER_STATE)
         )
       ),
       ctx.db

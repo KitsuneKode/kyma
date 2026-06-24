@@ -15,6 +15,9 @@ function buildInviteToken(candidateName: string) {
   return `${prefix}-${suffix}`
 }
 
+const MAX_SCREENING_BATCHES = 100
+const MAX_BATCH_ELIGIBILITY = 500
+
 export const listScreeningBatches = recruiterQuery({
   args: {},
   handler: async (ctx) => {
@@ -23,7 +26,7 @@ export const listScreeningBatches = recruiterQuery({
     const batches = await ctx.db
       .query('screeningBatches')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-      .collect()
+      .take(MAX_SCREENING_BATCHES)
 
     return await Promise.all(
       [...batches]
@@ -36,7 +39,7 @@ export const listScreeningBatches = recruiterQuery({
             ctx.db
               .query('candidateEligibility')
               .withIndex('by_batch', (q) => q.eq('batchId', batch._id))
-              .collect(),
+              .take(MAX_BATCH_ELIGIBILITY),
           ])
 
           return {
@@ -77,7 +80,7 @@ export const getScreeningBatchDetail = recruiterQuery({
       ctx.db
         .query('candidateEligibility')
         .withIndex('by_batch', (q) => q.eq('batchId', batchId))
-        .collect(),
+        .take(MAX_BATCH_ELIGIBILITY),
     ])
 
     const candidates = await Promise.all(

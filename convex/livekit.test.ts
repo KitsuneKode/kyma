@@ -186,7 +186,7 @@ describe('finalize -> report pipeline', () => {
       roomName,
     })
 
-    await t.mutation(api.recruiter.reviews.saveAssessmentReport, {
+    await t.mutation(api.processing.assessment.saveAssessmentReport, {
       processingKey: PROCESSING_KEY,
       sessionId,
       status: 'completed',

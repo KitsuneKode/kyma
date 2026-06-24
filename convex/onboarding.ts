@@ -20,6 +20,10 @@ const ALL_ONBOARDING_STEPS = [
 
 type OnboardingStep = (typeof ALL_ONBOARDING_STEPS)[number]
 
+const MAX_ONBOARDING_TEMPLATES = 50
+const MAX_ONBOARDING_BATCHES = 50
+const MAX_ONBOARDING_ELIGIBILITY = 100
+
 async function detectCompletedSteps(
   ctx: QueryCtx | MutationCtx,
   orgId: string
@@ -31,7 +35,7 @@ async function detectCompletedSteps(
     .withIndex('by_org_id_and_status', (q) =>
       q.eq('orgId', orgId).eq('status', 'active')
     )
-    .collect()
+    .take(MAX_ONBOARDING_TEMPLATES)
   if (templates.length > 0) {
     detected.push('template')
   }
@@ -39,7 +43,7 @@ async function detectCompletedSteps(
   const batches = await ctx.db
     .query('screeningBatches')
     .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-    .collect()
+    .take(MAX_ONBOARDING_BATCHES)
   if (batches.length > 0) {
     detected.push('batch')
   }
@@ -49,7 +53,7 @@ async function detectCompletedSteps(
     const eligibility = await ctx.db
       .query('candidateEligibility')
       .withIndex('by_batch', (q) => q.eq('batchId', activeBatch._id))
-      .collect()
+      .take(MAX_ONBOARDING_ELIGIBILITY)
 
     for (const item of eligibility) {
       const invite = await ctx.db.get(item.inviteId)

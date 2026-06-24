@@ -9,6 +9,10 @@ import {
   resolveTemplateName,
 } from '../helpers/sessionReview'
 
+const INVITE_SEARCH_SAMPLE = 500
+const QUEUE_STATS_SESSION_SAMPLE = 1000
+const QUEUE_STATS_REPORT_SAMPLE = 1000
+
 export const searchCandidates = candidateReadQuery({
   args: {
     query: v.string(),
@@ -19,7 +23,7 @@ export const searchCandidates = candidateReadQuery({
     const invites = await ctx.db
       .query('candidateInvites')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-      .collect()
+      .take(INVITE_SEARCH_SAMPLE)
     return invites
       .filter((invite) => {
         if (!normalized) return true
@@ -107,23 +111,38 @@ export const getCandidateQueueStats = candidateReadQuery({
     // Org-scoped aggregate counts for the queue header. These are inherently
     // whole-collection reductions, so they live in a dedicated query rather
     // than being recomputed from a paginated page.
-    const [sessions, reports] = await Promise.all([
+    const [
+      sessions,
+      completedReports,
+      manualReviewReports,
+      recommendationSample,
+    ] = await Promise.all([
       ctx.db
         .query('interviewSessions')
         .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-        .collect(),
+        .take(QUEUE_STATS_SESSION_SAMPLE),
+      ctx.db
+        .query('assessmentReports')
+        .withIndex('by_org_id_and_status', (q) =>
+          q.eq('orgId', orgId).eq('status', 'completed')
+        )
+        .take(QUEUE_STATS_REPORT_SAMPLE),
+      ctx.db
+        .query('assessmentReports')
+        .withIndex('by_org_id_and_status', (q) =>
+          q.eq('orgId', orgId).eq('status', 'manual_review')
+        )
+        .take(QUEUE_STATS_REPORT_SAMPLE),
       ctx.db
         .query('assessmentReports')
         .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-        .collect(),
+        .take(QUEUE_STATS_REPORT_SAMPLE),
     ])
 
-    let reportsReady = 0
-    let manualReview = 0
+    const reportsReady = completedReports.length
+    const manualReview = manualReviewReports.length
     let strongSignals = 0
-    for (const report of reports) {
-      if (report.status === 'completed') reportsReady += 1
-      if (report.status === 'manual_review') manualReview += 1
+    for (const report of recommendationSample) {
       if (report.overallRecommendation === 'strong_yes') strongSignals += 1
     }
 

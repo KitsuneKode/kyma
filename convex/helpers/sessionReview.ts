@@ -88,28 +88,54 @@ export async function loadSessionReviewBase(
 export async function loadSessionReviewSlices(
   ctx: QueryCtx,
   sessionId: Id<'interviewSessions'>,
-  reportId?: Id<'assessmentReports'>
+  reportId?: Id<'assessmentReports'>,
+  options?: {
+    transcriptLimit?: number
+    eventsLimit?: number
+  }
 ) {
-  const [transcript, events, evidence] = await Promise.all([
-    ctx.db
-      .query('transcriptSegments')
-      .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-      .collect(),
-    ctx.db
-      .query('sessionEvents')
-      .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-      .collect(),
+  const transcriptLimit = options?.transcriptLimit
+  const eventsLimit = options?.eventsLimit
+
+  const [transcriptRaw, eventsRaw, evidence] = await Promise.all([
+    transcriptLimit !== undefined
+      ? ctx.db
+          .query('transcriptSegments')
+          .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+          .order('desc')
+          .take(transcriptLimit)
+      : ctx.db
+          .query('transcriptSegments')
+          .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+          .collect(),
+    eventsLimit !== undefined
+      ? ctx.db
+          .query('sessionEvents')
+          .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+          .order('desc')
+          .take(eventsLimit)
+      : ctx.db
+          .query('sessionEvents')
+          .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+          .collect(),
     reportId
       ? ctx.db
           .query('dimensionEvidence')
           .withIndex('by_report', (q) => q.eq('reportId', reportId))
-          .collect()
+          .take(200)
       : Promise.resolve([]),
   ])
 
+  const transcript = sortByIsoAsc(
+    transcriptLimit !== undefined ? transcriptRaw.toReversed() : transcriptRaw
+  )
+  const events = sortByIsoAsc(
+    eventsLimit !== undefined ? eventsRaw.toReversed() : eventsRaw
+  )
+
   return {
-    transcript: sortByIsoAsc(transcript),
-    events: sortByIsoAsc(events),
+    transcript,
+    events,
     evidence: sortByIsoAsc(evidence),
   }
 }
