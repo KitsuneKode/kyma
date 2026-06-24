@@ -144,6 +144,14 @@ export const reapStuckProcessingSessions = internalMutation({
       reEnqueued += 1
     }
 
+    if (sessions.length === SCAN_BATCH) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.processingReaper.reapStuckProcessingSessions,
+        {}
+      )
+    }
+
     return { scanned: sessions.length, reconciled, reEnqueued, failed }
   },
 })

@@ -1,4 +1,4 @@
-import { fetchMutation, fetchQuery } from 'convex/nextjs'
+import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { api } from '@/convex/_generated/api'
@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
           token: token ?? undefined,
         }
       ),
-      fetchQuery(
-        api.recruiter.workspace.getWorkspaceSettingsRaw,
+      fetchAction(
+        api.recruiter.workspace.getWorkspaceSettingsForReportChat,
         {},
         {
           token: token ?? undefined,

@@ -3,7 +3,6 @@ import { z } from 'zod'
 import type { Id } from '@/convex/_generated/dataModel'
 import {
   markAssessmentFailed,
-  markAssessmentProcessing,
   processInterviewAssessment,
 } from '@/lib/assessment/process-session'
 
@@ -27,10 +26,6 @@ export const processInterviewAssessmentFunction = inngest.createFunction(
   async ({ event, step }) => {
     const { sessionId } = payloadSchema.parse(event.data)
     const typedSessionId = sessionId as Id<'interviewSessions'>
-
-    await step.run('mark-report-processing', async () => {
-      await markAssessmentProcessing(typedSessionId)
-    })
 
     try {
       return await step.run('generate-assessment-report', async () => {

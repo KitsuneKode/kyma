@@ -1,12 +1,16 @@
 import { ConvexError, v } from 'convex/values'
 
-import { api } from '../_generated/api'
-import { action, query } from '../_generated/server'
+import { api, internal } from '../_generated/api'
+import type { Doc } from '../_generated/dataModel'
+import { action, internalQuery, query } from '../_generated/server'
 import { orgAdminMutation, recruiterQuery } from '../lib/customFunctions'
 import { requireAdmin, requireOrgId } from '../helpers/auth'
 import { decryptProviderKey, encryptProviderKey } from '../helpers/encryption'
 import { convexEnv } from '../../lib/env/convex'
-import { modelOverridesValidator } from '../validators'
+import {
+  modelOverridesValidator,
+  workspaceProviderKeyValidator,
+} from '../validators'
 import {
   latestProviderKey,
   normalizeProvider,
@@ -180,15 +184,63 @@ export const assertAdminForAction = query({
   },
 })
 
-export const getWorkspaceSettingsRaw = query({
-  args: {},
-  handler: async (ctx) => {
-    await requireAdmin(ctx)
-    const orgId = await requireOrgId(ctx)
+export const getWorkspaceSettingsRaw = internalQuery({
+  args: {
+    orgId: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id('workspaceSettings'),
+      _creationTime: v.number(),
+      orgId: v.string(),
+      defaultModels: v.optional(modelOverridesValidator),
+      candidateReleaseMode: v.optional(
+        v.union(v.literal('auto'), v.literal('manual'))
+      ),
+      providerKeys: v.optional(v.array(workspaceProviderKeyValidator)),
+      updatedAt: v.optional(v.number()),
+      updatedBy: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, { orgId }) => {
     return await ctx.db
       .query('workspaceSettings')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
       .first()
+  },
+})
+
+export const getWorkspaceSettingsForReportChat = action({
+  args: {},
+  returns: v.union(
+    v.object({
+      defaultModels: v.optional(modelOverridesValidator),
+      providerKeys: v.optional(v.array(workspaceProviderKeyValidator)),
+    }),
+    v.null()
+  ),
+  handler: async (
+    ctx
+  ): Promise<{
+    defaultModels?: Doc<'workspaceSettings'>['defaultModels']
+    providerKeys?: Doc<'workspaceSettings'>['providerKeys']
+  } | null> => {
+    const { orgId } = await ctx.runQuery(
+      api.recruiter.workspace.assertAdminForAction,
+      {}
+    )
+    const settings: Doc<'workspaceSettings'> | null = await ctx.runQuery(
+      internal.recruiter.workspace.getWorkspaceSettingsRaw,
+      { orgId }
+    )
+    if (!settings) {
+      return null
+    }
+    return {
+      defaultModels: settings.defaultModels,
+      providerKeys: settings.providerKeys,
+    }
   },
 })
 
@@ -204,9 +256,13 @@ export const testProviderConnection = action({
       )
     }
     const normalizedProvider = normalizeProvider(args.provider)
-    const settings = await ctx.runQuery(
-      api.recruiter.workspace.getWorkspaceSettingsRaw,
+    const { orgId } = await ctx.runQuery(
+      api.recruiter.workspace.assertAdminForAction,
       {}
+    )
+    const settings = await ctx.runQuery(
+      internal.recruiter.workspace.getWorkspaceSettingsRaw,
+      { orgId }
     )
     const candidate = latestProviderKey(settings?.providerKeys, args.provider)
     if (!candidate) {

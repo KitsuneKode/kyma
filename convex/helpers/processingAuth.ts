@@ -2,15 +2,23 @@ import { ConvexError } from 'convex/values'
 
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
-import { isConvexDevelopmentMode } from '../../lib/env/convex-deployment-mode'
+import { isConvexDevelopmentMode } from '../../lib/env/deployment-mode'
 import { convexEnv } from '../../lib/env/convex'
 
 const DEV_PROCESSING_KEY = '__dev_preview__'
 
+function allowsLocalProcessingKeyFallback() {
+  return (
+    convexEnv.NODE_ENV === 'development' &&
+    isConvexDevelopmentMode(convexEnv) &&
+    !convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+  )
+}
+
 export function hasTrustedProcessingKey(processingKey?: string) {
   const configured = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
   if (!configured) {
-    if (!isConvexDevelopmentMode(convexEnv)) {
+    if (!allowsLocalProcessingKeyFallback()) {
       return false
     }
     const normalized = processingKey?.trim() ?? ''
