@@ -26,13 +26,14 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `bun run typecheck` passes
 - `bun run lint` passes
 - `bun run build` passes
-- `/interviews/demo-invite` renders a candidate flow
+- `bun run check` mirrors CI (`fmt:check`, `lint`, `test`, `convex:ci`, typecheck, build)
+- invite flow renders at `/i/[token]` and `/interviews/[inviteId]`
 - candidate flow now uses `LiveKit PreJoin` plus a composed meeting shell built from LiveKit React components
 - candidate join triggers a real backend bootstrap route
 - bootstrap route creates or reuses an interview session in Convex
 - bootstrap route returns a real LiveKit token
 - candidate page connects to a LiveKit room using the selected prejoin device IDs
-- candidate page now listens to LiveKit transcription events and persists transcript segments into Convex during the live room
+- candidate page listens to LiveKit transcription events; the **interview agent** persists transcript segments into Convex (not the browser)
 - LiveKit webhook intake now exists at `/api/livekit/webhook`
 - LiveKit egress recording artifacts are now stored in Convex and surfaced on recruiter detail pages
 - interview processing can now be triggered through `/api/interviews/process`
@@ -40,6 +41,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - recruiter-side review surfaces at `/recruiter/candidates` and `/recruiter/candidates/[sessionId]`
 - screening batch flows at `/recruiter/screenings`, `/recruiter/screenings/new`, and `/recruiter/screenings/[batchId]`
 - recruiter detail now supports human notes and grounded recruiter chat
+- hybrid assessment pipeline (`lib/assessment/process-session.ts`) attempts LLM scoring with deterministic fallback to `manual_review`
 - report, dimension-evidence, and review-decision data models now exist in Convex
 - invite links now surface explicit `expired`, `consumed`, and `unavailable` states in the candidate flow
 - submitted interviews now lock the invite so the same screening cannot be started twice
@@ -94,7 +96,9 @@ This file is the fast restart point for future agents. Read this before re-resea
 ## Important Files
 
 - `convex/schema.ts`: current schema
-- `convex/interviews.ts`: public snapshot, bootstrap, event persistence, transcript persistence
+- `convex/interviews/*`: public snapshot, bootstrap, session events, candidate portal
+- `convex/processing/assessment.ts`: pipeline-only assessment read/write (`getSessionProcessingDetail`, `saveAssessmentReport`)
+- `convex/recruiter/*`: recruiter workspace queries and review surfaces
 - `convex/admin.ts`: screening creation, eligibility, recruiter notes, and recruiter chat persistence
 - `app/api/interviews/bootstrap/route.ts`: canonical server bootstrap + LiveKit token path
 - `app/api/recruiter/report-chat/route.ts`: grounded recruiter chat endpoint
@@ -177,7 +181,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 
 1. ensure `.env.local` contains LiveKit credentials, plus Clerk credentials when testing admin/auth paths
 2. ensure `NEXT_PUBLIC_CONVEX_URL` exists from `bun run convex:once`
-3. visit `/interviews/demo-invite`
+3. visit `/candidate` and start a mock interview, or open a screening invite at `/i/[token]`
 4. enter candidate name
 5. complete the LiveKit prejoin flow
 6. click `Join interview`

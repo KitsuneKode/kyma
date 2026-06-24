@@ -45,7 +45,6 @@ The App Router is split into layout shells:
 | `/recruiter/templates/[id]/edit`           | Recruiter                         | Edit template + rubric                                                     |
 | `/recruiter/settings`                      | Recruiter admin                   | Workspace settings, BYOK, team invites                                     |
 | `/admin/*` (legacy)                        | —                                 | Middleware redirects to `/recruiter/*`                                     |
-| `/video-demo`                              | Recruiter (Clerk when configured) | Product demo helper page                                                   |
 | `/write-up`                                | Recruiter (Clerk when configured) | Repository write-up reader                                                 |
 
 Recruiter workspace pages live under `app/(admin)/recruiter/*`. Org setup lives under `app/(app)/recruiter/setup` to avoid the recruiter sidebar guard.

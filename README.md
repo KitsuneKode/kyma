@@ -102,15 +102,18 @@ Kyma can be self-hosted for teams that want infrastructure control.
 
 ```bash
 bun install
+bun run convex:sync-env   # when using Clerk + Convex auth locally
+bun run dev:stack         # Convex + Next.js (recommended)
+```
+
+For web-only UI work without Convex reactivity:
+
+```bash
 bun run convex:once
 bun run dev
 ```
 
-For active backend/schema work:
-
-```bash
-bun run convex:dev
-```
+For active backend/schema work, `dev:stack` already runs `convex:dev`. Optional agent worker:
 
 For org-first auth cutover verification:
 

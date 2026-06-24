@@ -330,21 +330,19 @@ Keep lightweight summary fields on `assessmentReports` or a dedicated summary do
 
 These power tables efficiently.
 
-## Convex Module Split
+## Convex Module Layout (current)
 
-The current `convex/interviews.ts` is doing too much.
+Interview and recruiter logic is split under `convex/`:
 
-Recommended split:
+- `convex/interviews/*` — public snapshot, bootstrap, session events, candidate portal
+- `convex/processing/assessment.ts` — pipeline-only assessment read/write (Inngest / agent workers)
+- `convex/recruiter/*` — recruiter workspace, dashboard, candidates, screenings, reviews
+- `convex/agentConfig.ts` — agent transcript persistence and room config
+- `convex/processingReaper.ts` — stuck-processing recovery
 
-- `convex/templates.ts`
-- `convex/invites.ts`
-- `convex/sessions.ts`
-- `convex/transcripts.ts`
-- `convex/reports.ts`
-- `convex/recruiter.ts`
-- `convex/leaderboard.ts`
+Transcript writes from the LiveKit agent go through `convex/agentConfig.ts`, not a public browser mutation.
 
-This reduces merge conflicts and keeps ownership clear.
+Older monolithic `convex/interviews.ts` and public `convex/interviews/transcript.ts` stubs have been removed.
 
 ## Query And Mutation Guidance
 

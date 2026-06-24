@@ -1,5 +1,7 @@
 # Kyma Hardening & Polish Plan v1
 
+> **Superseded in part (2026-06):** RBAC is org-scoped via Clerk org context + Convex `requireRecruiterAccess` — not global roles. `/video-demo` and legacy `/admin/*` middleware notes below are historical; see `.docs/auth-and-access-boundaries.md` and `.docs/route-and-api-architecture.md`.
+
 > Priority-ordered execution plan covering security, UI redesign, configurability, and polish.
 > Each phase is self-contained — complete one before starting the next.
 

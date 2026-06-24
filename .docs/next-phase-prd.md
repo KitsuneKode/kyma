@@ -263,8 +263,9 @@ Do not prioritize these before the four workstreams above are solid:
 
 ## Key Files To Know Before Editing
 
-- `convex/interviews.ts`
-- `convex/recruiter.ts`
+- `convex/interviews/*`
+- `convex/processing/assessment.ts`
+- `convex/recruiter/*`
 - `convex/admin.ts`
 - `convex/livekit.ts`
 - `convex/schema.ts`

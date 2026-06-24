@@ -1,5 +1,7 @@
 # MVP Plan
 
+> **Superseded in part (2026-06):** Phase 0/1 references to `demo-invite` are historical — candidate flow is invite-token based (`/i/[token]`, `/interviews/[inviteId]`).
+
 ## Product Mindset
 
 - build the first credible working version, not a fake AI demo

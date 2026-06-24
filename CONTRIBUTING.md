@@ -12,11 +12,9 @@ Thanks for your interest. Kyma is a small codebase with a clear split between **
 
 ```bash
 bun install
-bun run convex:once
-bun run dev
-# optional: second terminal
-bun run convex:dev
-# optional: agent worker
+bun run convex:sync-env   # Clerk + Convex auth locally
+bun run dev:stack         # Convex + Next.js (recommended)
+# optional: agent worker in another terminal
 bun run agent:dev
 ```
 
@@ -25,10 +23,11 @@ See [README](README.md) for environment variables and stack overview.
 ## Quality checks
 
 ```bash
+bun run fmt:check
 bun run typecheck
 bun run lint
 bun run test
-bun run build
+bun run check    # mirrors CI locally
 ```
 
 ## Pull requests
@@ -39,7 +38,7 @@ bun run build
 
 ## Convex
 
-- Do not use the Next.js `@/` path alias from `convex/*` for shared code — use **relative** imports into `lib/` (see `convex/interviews.ts`).
+- Do not use the Next.js `@/` path alias from `convex/*` for shared code — use **relative** imports into `lib/` (see `convex/interviews/public.ts`).
 - New helpers under `convex/helpers/` must use **valid** filenames for Convex (alphanumeric, underscore, period only in path components).
 
 ## Where to look

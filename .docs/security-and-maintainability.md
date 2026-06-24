@@ -89,9 +89,10 @@ Until that exists, keep BYOK out of the critical path.
 
 Preferred backend domain boundaries:
 
-- `convex/interviews.ts`
+- `convex/interviews/*`
 - `convex/livekit.ts`
-- `convex/recruiter.ts`
+- `convex/processing/assessment.ts`
+- `convex/recruiter/*`
 - `convex/admin.ts`
 
 Preferred frontend domain boundaries:

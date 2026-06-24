@@ -30,6 +30,8 @@ Do not own the low-level meeting mechanics.
 
 ## 4. Should `demo-invite` stay special-cased?
 
+> **Superseded (2026-06):** Use real screening invites at `/i/[token]` and `/interviews/[inviteId]` — no special `demo-invite` route.
+
 ### Recommended answer
 
 Yes, but only as a demo invite token. The meeting path behind it must still be real.

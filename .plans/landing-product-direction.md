@@ -1,5 +1,7 @@
 # Landing Product Direction
 
+> **Superseded in part (2026-06):** Primary CTAs should use `/recruiter` (signed-in) and screening invites at `/i/[token]` — not `/video-demo` or `/interviews/demo-invite`.
+
 Use this document when briefing a design or frontend agent to build the `/(marketing)` landing page.
 
 ## Objective

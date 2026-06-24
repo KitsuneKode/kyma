@@ -23,8 +23,8 @@ Use this contract for every section in `components/marketing/`.
 
 ## CTA conventions
 
-- Primary CTA: high-intent route (`/interviews/demo-invite`, booking link, or equivalent).
-- Secondary CTA: lower-commitment route (`/video-demo`, docs, etc).
+- Primary CTA: high-intent route (`/i/[token]`, `/candidate`, booking link, or equivalent).
+- Secondary CTA: lower-commitment route (`/recruiter`, docs, etc).
 - Use meaningful hrefs (avoid placeholder anchors in committed code).
 
 ## Ownership
