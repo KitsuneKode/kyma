@@ -15,7 +15,7 @@
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
     "typecheck": "tsc --noEmit",
-    "check": "bun run fmt:check && bun run lint && bun run test && bun run convex:once && bun run build",
+    "check": "bun run fmt:check && bun run lint && bun run test && bun run convex:ci && git diff --exit-code -- convex/_generated && bunx next typegen && bun run typecheck && bun run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -31,7 +31,7 @@
     "clerk:setup-auth": "bun run scripts/clerk-setup-kyma-auth.ts",
     "brand:export": "bun run scripts/export-brand-pngs.ts",
     "readme:capture": "node scripts/capture-readme-screenshots.mjs",
-    "verify:auth-org-rbac": "bun run fmt && bun run typecheck && bun run lint && bun run test",
+    "verify:auth-org-rbac": "bun run fmt:check && bun run typecheck && bun run lint && bun run test",
     "agent:dev": "bun run agents/worker.ts dev",
     "agent:start": "bun run agents/worker.ts start",
     "prepare": "husky"

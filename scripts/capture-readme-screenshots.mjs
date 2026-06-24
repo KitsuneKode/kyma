@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Capture real README product screenshots from the live marketing site.
- * Usage: node scripts/capture-readme-screenshots.mjs
+ * Usage: node scripts/capture-readme-screenshots.mjs [--url=https://example.com]
  */
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -10,8 +10,8 @@ import { chromium } from '@playwright/test'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const publicDir = join(root, 'public')
-const baseUrl =
-  process.env.README_SCREENSHOT_URL ?? 'https://kyma.kitsunelabs.xyz'
+const urlArg = process.argv.find((arg) => arg.startsWith('--url='))
+const baseUrl = urlArg?.slice('--url='.length) ?? 'https://kyma.kitsunelabs.xyz'
 
 mkdirSync(publicDir, { recursive: true })
 

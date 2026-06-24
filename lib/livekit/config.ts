@@ -4,13 +4,11 @@ import { serverEnv } from '@/lib/env/server'
 import { clientEnv } from '@/lib/env/client'
 import {
   getLivekitWebhookCredentials,
-  hasLivekitCredentials,
-  sliceLivekitEnv,
   type LivekitEnvSlice,
 } from '@/lib/livekit/env'
 
 export function getLivekitServerEnv(): LivekitEnvSlice {
-  return sliceLivekitEnv({
+  return {
     NEXT_PUBLIC_LIVEKIT_URL: clientEnv.NEXT_PUBLIC_LIVEKIT_URL,
     LIVEKIT_API_KEY: serverEnv.LIVEKIT_API_KEY,
     LIVEKIT_API_SECRET: serverEnv.LIVEKIT_API_SECRET,
@@ -28,13 +26,7 @@ export function getLivekitServerEnv(): LivekitEnvSlice {
       serverEnv.LIVEKIT_RECORDING_STORAGE_ACCESS_KEY,
     LIVEKIT_RECORDING_STORAGE_SECRET_KEY:
       serverEnv.LIVEKIT_RECORDING_STORAGE_SECRET_KEY,
-  })
-}
-
-export function hasLivekitServerCredentials(
-  env: LivekitEnvSlice = getLivekitServerEnv()
-) {
-  return hasLivekitCredentials(env)
+  }
 }
 
 export function getLivekitWebhookSigningCredentials(
