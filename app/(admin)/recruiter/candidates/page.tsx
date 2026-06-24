@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { api } from '@/convex/_generated/api'
-import { MetricCard } from '@/components/admin/metric-card'
+import { StaticMetricCard } from '@/components/admin/metric-card-static'
 import { PageHeader } from '@/components/admin/page-header'
 import { WorkspaceEmptyState } from '@/components/workspace/empty-state'
 import { Button } from '@/components/ui/button'
@@ -77,22 +77,22 @@ export default async function AdminCandidatesPage() {
       />
 
       <section className="grid gap-4 md:grid-cols-4">
-        <MetricCard
+        <StaticMetricCard
           label="Sessions"
           value={String(stats?.totalSessions ?? 0)}
           detail="Total sessions captured so far."
         />
-        <MetricCard
+        <StaticMetricCard
           label="Reports Ready"
           value={String(stats?.reportsReady ?? 0)}
           detail="Completed assessment reports."
         />
-        <MetricCard
+        <StaticMetricCard
           label="Manual Review"
           value={String(stats?.manualReview ?? 0)}
           detail="Candidates needing a human call."
         />
-        <MetricCard
+        <StaticMetricCard
           label="Strong Signals"
           value={String(stats?.strongSignals ?? 0)}
           detail="Candidates currently standing out."

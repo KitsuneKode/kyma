@@ -1,3 +1,10 @@
+import type { FunctionReturnType } from 'convex/server'
+import { api } from '@/convex/_generated/api'
+
+export type CandidateReviewDetail = NonNullable<
+  FunctionReturnType<typeof api.recruiter.reviews.getCandidateReviewDetail>
+>
+
 export type DashboardNeedsAttention = {
   manualReviewCandidates: Array<{
     reportId: string

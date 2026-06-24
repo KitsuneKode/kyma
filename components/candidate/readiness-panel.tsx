@@ -1,28 +1,34 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 
 import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { Surface } from '@/components/ui/surface'
-import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
+import type { FunctionReturnType } from 'convex/server'
 import {
   countPassingReadinessChecks,
   runReadinessChecks,
 } from '@/lib/candidate/readiness-checks'
 import { formatDateTime } from '@/lib/format/date'
 
-export function CandidateReadinessPanel() {
+type ReadinessRun = FunctionReturnType<
+  typeof api.readiness.getCandidateReadinessRuns
+>[number]
+
+export function CandidateReadinessPanel({
+  initialRuns = [],
+}: {
+  initialRuns?: ReadinessRun[]
+}) {
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const liveRuns = useQuery(api.readiness.getCandidateReadinessRuns, {})
+  const runs = liveRuns ?? initialRuns
   const saveRun = useMutation(api.readiness.saveCandidateReadinessRun)
-  const { data: runs } = useAuthenticatedQuery(
-    api.readiness.getCandidateReadinessRuns,
-    {}
-  )
 
-  const latest = runs?.[0] ?? null
+  const latest = runs[0] ?? null
   const latestScore = useMemo(() => {
     if (!latest) {
       return null

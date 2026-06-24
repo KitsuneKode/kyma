@@ -5,7 +5,11 @@ import { useMutation } from 'convex/react'
 
 import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
-import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
+import type { FunctionReturnType } from 'convex/server'
+
+type CandidatePreferences = FunctionReturnType<
+  typeof api.profile.getCandidatePreferences
+>
 
 type CandidateIdentity = {
   name: string
@@ -14,30 +18,36 @@ type CandidateIdentity = {
 
 export function CandidateProfilePanel({
   identity,
+  initialPreferences,
 }: {
   identity: CandidateIdentity
+  initialPreferences?: CandidatePreferences
 }) {
-  const { data: preferences } = useAuthenticatedQuery(
-    api.profile.getCandidatePreferences,
-    {}
-  )
   const savePreferences = useMutation(api.profile.saveCandidatePreferences)
-  const [language, setLanguage] = useState('English')
-  const [duration, setDuration] = useState(20)
-  const [timezone, setTimezone] = useState('UTC')
-  const [notes, setNotes] = useState('')
+  const [language, setLanguage] = useState(
+    initialPreferences?.preferredInterviewLanguage ?? 'English'
+  )
+  const [duration, setDuration] = useState(
+    initialPreferences?.preferredInterviewLengthMinutes ?? 20
+  )
+  const [timezone, setTimezone] = useState(
+    initialPreferences?.timezone ?? 'UTC'
+  )
+  const [notes, setNotes] = useState(
+    initialPreferences?.accessibilityNotes ?? ''
+  )
   const [saving, setSaving] = useState(false)
   const [saveState, setSaveState] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!preferences) {
+    if (!initialPreferences) {
       return
     }
-    setLanguage(preferences.preferredInterviewLanguage)
-    setDuration(preferences.preferredInterviewLengthMinutes)
-    setTimezone(preferences.timezone)
-    setNotes(preferences.accessibilityNotes)
-  }, [preferences])
+    setLanguage(initialPreferences.preferredInterviewLanguage)
+    setDuration(initialPreferences.preferredInterviewLengthMinutes)
+    setTimezone(initialPreferences.timezone)
+    setNotes(initialPreferences.accessibilityNotes)
+  }, [initialPreferences])
 
   async function handleSave() {
     setSaving(true)

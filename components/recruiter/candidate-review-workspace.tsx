@@ -11,10 +11,9 @@ import { VideoEvidencePanel } from '@/components/recruiter/video-evidence-panel'
 import { formatStatusLabel } from '@/lib/recruiter/format'
 import { getPrimaryRecording } from '@/lib/recruiter/recording-playback'
 import { summarizeTeachingSimulation } from '@/lib/recruiter/teaching-simulation'
+import type { CandidateReviewDetail } from '@/lib/recruiter/types'
 
-export type CandidateReviewDetail = NonNullable<
-  FunctionReturnType<typeof api.recruiter.reviews.getCandidateReviewDetail>
->
+export type { CandidateReviewDetail }
 
 type CandidateReviewWorkspaceProps = {
   detail: CandidateReviewDetail

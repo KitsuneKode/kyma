@@ -12,7 +12,7 @@ import {
   IconArrowRight,
 } from '@tabler/icons-react'
 
-import { MetricCard } from '@/components/admin/metric-card'
+import { StaticMetricCard } from '@/components/admin/metric-card-static'
 import { WorkspacePageHeader } from '@/components/workspace/page-header'
 import { formatStatusLabel, formatDateTime } from '@/lib/recruiter/format'
 import type { DashboardSummary } from '@/lib/recruiter/types'
@@ -40,32 +40,28 @@ export function RecruiterDashboard({
       />
 
       <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
+        <StaticMetricCard
           label="Sessions today"
           value={String(sessionsToday)}
           detail="Live interview sessions started in the last 24h cycle."
-          delay={0.1}
           icon="dashboard"
         />
-        <MetricCard
+        <StaticMetricCard
           label="Reports pending"
           value={String(reportsPending)}
           detail="Sessions processing through the AI assessment pipeline."
-          delay={0.15}
           icon="users"
         />
-        <MetricCard
+        <StaticMetricCard
           label="Active batches"
           value={String(activeBatches)}
           detail="Screening batches currently accepting candidate attempts."
-          delay={0.2}
           icon="folder"
         />
-        <MetricCard
+        <StaticMetricCard
           label="Pending reviews"
           value={String(pendingReviews)}
           detail="Candidates awaiting final human-verified decision."
-          delay={0.25}
           icon="users"
           emphasis
         />

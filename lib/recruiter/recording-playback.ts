@@ -1,4 +1,4 @@
-import type { CandidateReviewDetail } from '@/components/recruiter/candidate-review-workspace'
+import type { CandidateReviewDetail } from '@/lib/recruiter/types'
 
 export function getPrimaryRecording(detail: CandidateReviewDetail) {
   return detail.recordings.find(

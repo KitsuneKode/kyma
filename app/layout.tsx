@@ -8,7 +8,6 @@ import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { brandColors } from '@/lib/brand/colors'
 import { createSiteMetadata } from '@/lib/seo/metadata'
 import { Providers } from './providers'
-import '@livekit/components-styles'
 import './globals.css'
 
 const fontSans = Outfit({
