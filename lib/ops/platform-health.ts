@@ -139,6 +139,64 @@ async function agentWorkerLivenessStatus(): Promise<HealthCheck> {
   }
 }
 
+async function stuckProcessingStatus(): Promise<HealthCheck> {
+  const isProd = serverEnv.NODE_ENV === 'production'
+  const processingKey = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+  const label = 'Stuck processing sessions'
+
+  if (!isSet(clientEnv.NEXT_PUBLIC_CONVEX_URL)) {
+    return {
+      id: 'stuck-processing',
+      label,
+      status: 'unknown',
+      detail: 'Convex URL not set — cannot read processing backlog.',
+    }
+  }
+
+  if (!processingKey) {
+    return {
+      id: 'stuck-processing',
+      label,
+      status: isProd ? 'error' : 'warn',
+      detail:
+        'KYMA_PROCESSING_WRITE_KEY not set — cannot query stuck session count.',
+    }
+  }
+
+  try {
+    const result = await serverConvexQuery(
+      api.processingReaper.getStuckProcessingSummary,
+      { processingKey },
+      { public: true }
+    )
+    if (!result.ok) {
+      throw new Error(result.message)
+    }
+    const { stuckCount, thresholdMinutes, scanned } = result.data
+    if (stuckCount > 0) {
+      return {
+        id: 'stuck-processing',
+        label,
+        status: 'warn',
+        detail: `${stuckCount} session(s) in processing longer than ${thresholdMinutes}m (scanned ${scanned}). Check processing reaper / Inngest.`,
+      }
+    }
+    return {
+      id: 'stuck-processing',
+      label,
+      status: 'ok',
+      detail: `No sessions stuck in processing beyond ${thresholdMinutes} minutes.`,
+    }
+  } catch {
+    return {
+      id: 'stuck-processing',
+      label,
+      status: 'unknown',
+      detail: 'Unable to read stuck processing session count from Convex.',
+    }
+  }
+}
+
 export async function collectPlatformHealthChecks(): Promise<HealthCheck[]> {
   const isProd = serverEnv.NODE_ENV === 'production'
   const clerkConfigured =
@@ -149,6 +207,7 @@ export async function collectPlatformHealthChecks(): Promise<HealthCheck[]> {
     isSet(serverEnv.CLERK_JWT_ISSUER_DOMAIN)
 
   const agentWorkerLiveness = await agentWorkerLivenessStatus()
+  const stuckProcessing = await stuckProcessingStatus()
 
   return [
     {
@@ -259,6 +318,7 @@ export async function collectPlatformHealthChecks(): Promise<HealthCheck[]> {
         : 'LIVEKIT_AGENT_NAME not set — token dispatch may not start the interviewer worker.',
     },
     agentWorkerLiveness,
+    stuckProcessing,
     {
       id: 'recording-playback',
       label: 'Recording playback',

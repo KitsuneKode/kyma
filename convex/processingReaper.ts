@@ -2,12 +2,13 @@ import { v } from 'convex/values'
 
 import { internalMutation } from './_generated/server'
 import { internal } from './_generated/api'
+import { pipelineQuery } from './lib/pipelineFunctions'
 import { interviewProcessingEventId } from '../lib/inngest/events'
 import { transitionSessionSafely } from '../lib/interview/session-machine'
 import type { InterviewSessionState } from '../lib/interview/types'
 
 // Sessions still in `processing` after this window are re-enqueued.
-const STUCK_AFTER_MS = 10 * 60 * 1000
+export const STUCK_AFTER_MS = 10 * 60 * 1000
 // Past this window we stop retrying and mark the session failed so it never
 // sticks in `processing` forever.
 const GIVE_UP_AFTER_MS = 60 * 60 * 1000
@@ -153,5 +154,39 @@ export const reapStuckProcessingSessions = internalMutation({
     }
 
     return { scanned: sessions.length, reconciled, reEnqueued, failed }
+  },
+})
+
+export const getStuckProcessingSummary = pipelineQuery({
+  args: {},
+  returns: v.object({
+    stuckCount: v.number(),
+    thresholdMinutes: v.number(),
+    scanned: v.number(),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now()
+    const sessions = await ctx.db
+      .query('interviewSessions')
+      .withIndex('by_state', (q) => q.eq('state', 'processing'))
+      .take(SCAN_BATCH)
+
+    let stuckCount = 0
+    for (const session of sessions) {
+      const anchorMs = session.endedAt
+        ? Date.parse(session.endedAt)
+        : session._creationTime
+      const ageMs =
+        now - (Number.isFinite(anchorMs) ? anchorMs : session._creationTime)
+      if (ageMs >= STUCK_AFTER_MS) {
+        stuckCount += 1
+      }
+    }
+
+    return {
+      stuckCount,
+      thresholdMinutes: STUCK_AFTER_MS / (60 * 1000),
+      scanned: sessions.length,
+    }
   },
 })
