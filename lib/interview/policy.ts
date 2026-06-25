@@ -36,3 +36,36 @@ export function formatExpiryLabel(expiresAt?: string) {
     timeStyle: 'short',
   }).format(parsed)
 }
+
+export function formatExpiryRelative(
+  expiresAt: string | undefined,
+  nowMs: number
+) {
+  if (!expiresAt) {
+    return 'No expiry set'
+  }
+
+  const parsed = Date.parse(expiresAt)
+  if (Number.isNaN(parsed)) {
+    return 'Expiry unavailable'
+  }
+
+  const deltaMs = parsed - nowMs
+  if (deltaMs <= 0) {
+    return 'Expired'
+  }
+
+  const totalMinutes = Math.floor(deltaMs / 60_000)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  if (hours >= 24) {
+    return formatExpiryLabel(expiresAt)
+  }
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m remaining`
+  }
+
+  return `${Math.max(minutes, 1)}m remaining`
+}

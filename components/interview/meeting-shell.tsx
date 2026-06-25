@@ -20,6 +20,13 @@ import { IconBuildingSkyscraper } from '@tabler/icons-react'
 
 import { TranscriptRail } from '@/components/interview/transcript-rail'
 import { Button } from '@/components/ui/button'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 import { type BootstrappedInterviewSession } from '@/lib/interview/bootstrap'
 import {
   type InterviewPolicy,
@@ -76,6 +83,7 @@ function InterviewConference({
   )
 
   const [isIdle, setIsIdle] = useState(false)
+  const [transcriptOpen, setTranscriptOpen] = useState(false)
   const [liveElapsedMs, setLiveElapsedMs] = useState(0)
   const liveStartedAtRef = useRef(Date.now())
   const durationCapTriggeredRef = useRef(false)
@@ -174,6 +182,33 @@ function InterviewConference({
               <div className="border-white/10 bg-black/55 text-white backdrop-blur-md [&_p]:text-white/80 [&_section]:border-white/10 [&_section]:bg-black/45 [&_span]:text-white/60">
                 <TranscriptRail transcript={transcript} />
               </div>
+            </div>
+
+            <div className="pointer-events-auto absolute top-24 right-5 z-20 lg:hidden">
+              <Sheet open={transcriptOpen} onOpenChange={setTranscriptOpen}>
+                <SheetTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-white/20 bg-black/55 text-white hover:bg-black/70"
+                    />
+                  }
+                >
+                  Transcript
+                </SheetTrigger>
+                <SheetContent
+                  side="right"
+                  className="w-[min(360px,100vw)] border-border/60 bg-background"
+                >
+                  <SheetHeader>
+                    <SheetTitle>Live transcript</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-4 max-h-[calc(100dvh-8rem)] overflow-y-auto">
+                    <TranscriptRail transcript={transcript} />
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
 

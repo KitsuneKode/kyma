@@ -1,13 +1,18 @@
+import Link from 'next/link'
+
 import { api } from '@/convex/_generated/api'
 import { CandidateEmptyState } from '@/components/candidate/candidate-empty-state'
 import { CandidateInterviewCard } from '@/components/candidate/interview-card'
+import { CandidatePortalTimeline } from '@/components/candidate/candidate-portal-timeline'
 import { WorkspacePageHeader } from '@/components/workspace/page-header'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import {
   isActiveStatus,
   isPendingRelease,
 } from '@/lib/candidate/status-filters'
 import { timestampOf } from '@/lib/format/date'
-import { serverConvexQueryWithFallback } from '@/lib/convex/server-query'
+import { serverConvexPortalQuery } from '@/lib/convex/server-query'
 
 function stateWeight(status: string) {
   const normalized = status.toLowerCase()
@@ -21,13 +26,39 @@ function stateWeight(status: string) {
 }
 
 export default async function CandidateHomePage() {
-  const interviewsResult = await serverConvexQueryWithFallback(
+  const interviewsResult = await serverConvexPortalQuery(
     api.interviews.candidatePortal.listCandidateInterviews,
+    { purpose: 'screening' },
+    []
+  )
+  const practiceResult = await serverConvexPortalQuery(
+    api.interviews.candidatePortal.listRecentPracticeSessions,
     {},
     []
   )
 
-  const interviews = interviewsResult.ok ? interviewsResult.data : []
+  if (interviewsResult.status === 'error') {
+    return (
+      <section className="mx-auto w-full space-y-6">
+        <WorkspacePageHeader
+          eyebrow="Your interviews"
+          title="Candidate dashboard"
+          description="Track active interviews first, then review pending and released outcomes."
+        />
+        <Alert variant="destructive">
+          <AlertTitle>Unable to load interviews</AlertTitle>
+          <AlertDescription>{interviewsResult.message}</AlertDescription>
+        </Alert>
+        <Button nativeButton={false} render={<Link href="/candidate" />}>
+          Retry
+        </Button>
+      </section>
+    )
+  }
+
+  const interviews = interviewsResult.data
+  const recentPractice =
+    practiceResult.status === 'ok' ? practiceResult.data.slice(0, 2) : []
 
   const prioritizedInterviews = interviews.toSorted((a, b) => {
     const weightDiff = stateWeight(a.status) - stateWeight(b.status)
@@ -50,20 +81,50 @@ export default async function CandidateHomePage() {
         description="Track active interviews first, then review pending and released outcomes."
       />
 
+      {recentPractice.length > 0 ? (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
+              Recent practice
+            </p>
+            <Button
+              nativeButton={false}
+              variant="ghost"
+              size="sm"
+              render={<Link href="/candidate/practice" />}
+            >
+              View all practice
+            </Button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {recentPractice.map((item) => (
+              <CandidateInterviewCard
+                key={`${item.sessionId}`}
+                sessionId={`${item.sessionId}`}
+                templateName={item.templateName}
+                status={item.status}
+                startedAt={item.startedAt}
+                sessionPurpose="mock"
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {prioritizedInterviews.length === 0 ? (
         <CandidateEmptyState />
       ) : (
-        <div className="relative space-y-16 before:absolute before:inset-y-0 before:left-[19px] before:w-[2px] before:bg-border/30">
-          <section className="relative">
-            <div className="absolute top-1 left-0 flex size-10 items-center justify-center rounded-full bg-background ring-4 ring-background">
-              <div className="size-3 rounded-full bg-primary ring-4 ring-primary/20" />
-            </div>
-            <div className="pl-16">
-              <h2 className="text-xs font-bold tracking-widest text-primary uppercase">
-                Active
-              </h2>
-              <div className="mt-6 flex flex-col gap-4">
-                {active.length === 0 ? (
+        <CandidatePortalTimeline
+          sections={[
+            {
+              key: 'active',
+              markerClassName:
+                'size-3 rounded-full bg-primary ring-4 ring-primary/20',
+              title: 'Active',
+              titleClassName:
+                'text-xs font-bold tracking-widest text-primary uppercase',
+              children:
+                active.length === 0 ? (
                   <p className="text-sm text-muted-foreground/60">
                     No active interviews right now.
                   </p>
@@ -76,23 +137,18 @@ export default async function CandidateHomePage() {
                       status={item.status}
                       startedAt={item.startedAt}
                       inviteToken={item.inviteToken}
+                      sessionPurpose={item.sessionPurpose}
                     />
                   ))
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section className="relative">
-            <div className="absolute top-1 left-0 flex size-10 items-center justify-center rounded-full bg-background ring-4 ring-background">
-              <div className="size-3 rounded-full bg-muted-foreground/40 ring-4 ring-muted-foreground/10" />
-            </div>
-            <div className="pl-16">
-              <h2 className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
-                Pending release
-              </h2>
-              <div className="mt-6 flex flex-col gap-4">
-                {pendingRelease.length === 0 ? (
+                ),
+            },
+            {
+              key: 'pending',
+              markerClassName:
+                'size-3 rounded-full bg-muted-foreground/40 ring-4 ring-muted-foreground/10',
+              title: 'Pending release',
+              children:
+                pendingRelease.length === 0 ? (
                   <p className="text-sm text-muted-foreground/60">
                     No pending results.
                   </p>
@@ -105,23 +161,20 @@ export default async function CandidateHomePage() {
                       status={item.reportStatus ?? item.status}
                       startedAt={item.startedAt}
                       inviteToken={item.inviteToken}
+                      sessionPurpose={item.sessionPurpose}
                     />
                   ))
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section className="relative">
-            <div className="absolute top-1 left-0 flex size-10 items-center justify-center rounded-full bg-background ring-4 ring-background">
-              <div className="size-3 rounded-full bg-emerald-500/60 ring-4 ring-emerald-500/10" />
-            </div>
-            <div className="pl-16">
-              <h2 className="text-xs font-bold tracking-widest text-emerald-600 uppercase dark:text-emerald-400">
-                Released
-              </h2>
-              <div className="mt-6 flex flex-col gap-4">
-                {released.length === 0 ? (
+                ),
+            },
+            {
+              key: 'released',
+              markerClassName:
+                'size-3 rounded-full bg-emerald-500/60 ring-4 ring-emerald-500/10',
+              title: 'Released',
+              titleClassName:
+                'text-xs font-bold tracking-widest text-emerald-600 uppercase dark:text-emerald-400',
+              children:
+                released.length === 0 ? (
                   <p className="text-sm text-muted-foreground/60">
                     No released outcomes yet.
                   </p>
@@ -134,13 +187,13 @@ export default async function CandidateHomePage() {
                       status={item.reportStatus ?? item.status}
                       startedAt={item.startedAt}
                       inviteToken={item.inviteToken}
+                      sessionPurpose={item.sessionPurpose}
                     />
                   ))
-                )}
-              </div>
-            </div>
-          </section>
-        </div>
+                ),
+            },
+          ]}
+        />
       )}
     </section>
   )

@@ -1,13 +1,19 @@
 import { ConvexError, v } from 'convex/values'
 
 import { finalizeInterviewForProcessing } from './helpers/finalizeInterviewProcessing'
+import {
+  resolveTemplateSimulationMode,
+  resolveTemplateSimulationPersonaPrompt,
+} from './helpers/assessmentTemplateMigration'
 import { resolveInterviewPolicyFromInvite } from './helpers/interviewPolicy'
 import { upsertTranscriptSegmentForSession } from './helpers/transcriptSegments'
 import { pipelineMutation, pipelineQuery } from './lib/pipelineFunctions'
 import {
   interviewSessionStateValidator,
+  jobFamilyValidator,
   modelOverridesValidator,
   sessionPurposeValidator,
+  simulationModeValidator,
   workspaceProviderKeyValidator,
 } from './validators'
 import {
@@ -30,8 +36,11 @@ const rubricConfigValidator = v.object({
 const interviewAgentConfigValidator = v.object({
   templateName: v.string(),
   targetDurationMinutes: v.number(),
+  jobFamily: v.optional(jobFamilyValidator),
+  simulationMode: simulationModeValidator,
   systemPrompt: v.optional(v.string()),
   childPersonaPrompt: v.optional(v.string()),
+  simulationPersonaPrompt: v.optional(v.string()),
   wrapUpPrompt: v.optional(v.string()),
   modelOverrides: v.optional(modelOverridesValidator),
   defaultModels: v.optional(modelOverridesValidator),
@@ -79,8 +88,11 @@ export const getInterviewAgentConfig = pipelineQuery({
     return {
       templateName: template.name,
       targetDurationMinutes: policy.targetDurationMinutes,
+      jobFamily: template.jobFamily,
+      simulationMode: resolveTemplateSimulationMode(template),
       systemPrompt: template.systemPrompt,
       childPersonaPrompt: template.childPersonaPrompt,
+      simulationPersonaPrompt: resolveTemplateSimulationPersonaPrompt(template),
       wrapUpPrompt: template.wrapUpPrompt,
       modelOverrides: template.modelOverrides,
       defaultModels: workspaceSettings?.defaultModels,

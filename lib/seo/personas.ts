@@ -374,6 +374,125 @@ export const personaPages: PersonaPage[] = [
     ],
     relatedSlugs: ['tutor-recruiters', 'online-learning-companies'],
   },
+  ...(
+    [
+      {
+        slug: 'software-engineers',
+        eyebrow: 'For engineering hiring',
+        title: 'Kyma for software engineers',
+        headline:
+          'Screen engineers on voice, reasoning, and explanation — not just take-homes',
+        roleLabel: 'engineering',
+      },
+      {
+        slug: 'product-managers',
+        eyebrow: 'For product hiring',
+        title: 'Kyma for product managers',
+        headline:
+          'Hear how PMs prioritize, communicate tradeoffs, and structure ambiguous problems',
+        roleLabel: 'product',
+      },
+      {
+        slug: 'customer-support',
+        eyebrow: 'For support hiring',
+        title: 'Kyma for customer support',
+        headline:
+          'Evaluate empathy, clarity, and troubleshooting communication before live role plays',
+        roleLabel: 'support',
+      },
+      {
+        slug: 'sales',
+        eyebrow: 'For sales hiring',
+        title: 'Kyma for sales teams',
+        headline:
+          'Screen discovery, objection handling, and concise storytelling at scale',
+        roleLabel: 'sales',
+      },
+    ] as const
+  ).map((config) => ({
+    slug: config.slug,
+    eyebrow: config.eyebrow,
+    title: config.title,
+    headline: config.headline,
+    description: `Kyma runs structured voice screens for ${config.roleLabel} roles with transcript-backed evidence recruiters can review before live loops.`,
+    metaTitle: config.title,
+    metaDescription: `Structured AI voice screening for ${config.roleLabel} hiring with evidence-backed rubrics and recruiter review.`,
+    painPoints: [
+      {
+        title: 'Phone screens vary by interviewer',
+        description:
+          'Different recruiters ask different questions, making it hard to compare candidates fairly early in the funnel.',
+      },
+      {
+        title: 'Resumes miss spoken communication',
+        description:
+          'Credentials do not show how someone explains ideas live, handles follow-ups, or recovers from ambiguity.',
+      },
+      {
+        title: 'Review packets are manual',
+        description:
+          'Teams stitch notes and impressions together before hiring managers can make a confident call.',
+      },
+    ],
+    outcomes: [
+      {
+        title: 'Consistent rubric across the cohort',
+        description:
+          'Every candidate gets the same structured voice interview and scoring dimensions.',
+      },
+      {
+        title: 'Evidence hiring managers trust',
+        description:
+          'Scores link to transcript quotes with timestamps for fast validation.',
+      },
+      {
+        title: 'Fewer expensive live loops',
+        description:
+          'Spend onsite and panel time on candidates who already passed a calibrated screen.',
+      },
+    ],
+    workflow: [
+      {
+        step: '01',
+        title: 'Configure the screen',
+        description:
+          'Pick a role template, rubric, and invite policy for your hiring batch.',
+      },
+      {
+        step: '02',
+        title: 'Candidates complete a voice interview',
+        description:
+          'Applicants join from any device, pass readiness checks, and finish a guided conversation.',
+      },
+      {
+        step: '03',
+        title: 'Review structured evidence',
+        description:
+          'Recruiters triage recommendations, citations, and notes in one workspace.',
+      },
+    ],
+    faqs: [
+      {
+        id: 'practice',
+        question: 'Can candidates practice before a real screen?',
+        answer:
+          'Yes. Candidates can run private practice interviews by role family to build confidence before an employer-invited session.',
+      },
+      {
+        id: 'decision',
+        question: 'Does Kyma auto-reject candidates?',
+        answer:
+          'No. Kyma recommends and surfaces evidence, but your team makes the final decision.',
+      },
+      {
+        id: 'evidence',
+        question: 'What do reviewers see?',
+        answer:
+          'Rubric scores, recommendation rationale, and transcript quotes tied to each evaluated signal.',
+      },
+    ],
+    relatedSlugs: ['communication-heavy-roles', 'education-teams'],
+  })),
 ]
 
 const personaBySlug = new Map(

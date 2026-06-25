@@ -647,7 +647,7 @@ type SeedContext = {
 }
 
 function profileWeightedScore(
-  profile: CandidateProfile | undefined,
+  _profile: CandidateProfile | undefined,
   recommendation?: Recommendation
 ) {
   if (recommendation === 'strong_yes') return 4.6

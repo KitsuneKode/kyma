@@ -118,6 +118,17 @@ export async function requireRecruiterPageAccess() {
   return await requireOrgPermission('recruiter:access')
 }
 
+export async function hasOrgPermission(
+  capability: RecruiterCapability
+): Promise<boolean> {
+  const access = await getUserAppAccess()
+  if (!access.isSignedIn || !access.canAccessRecruiter) {
+    return false
+  }
+  const { has } = await auth()
+  return clerkHasCapability(has, capability)
+}
+
 export async function requireAdminPageAccess() {
   const access = await requireRecruiterPageAccess()
   if (!access.isOrgAdmin) {

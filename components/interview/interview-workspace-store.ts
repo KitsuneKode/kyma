@@ -38,7 +38,7 @@ function createInitialState(
         ? 'processing'
         : 'prejoin',
     session: initialSnapshot,
-    participantName: initialSnapshot.candidateName ?? 'Demo Candidate',
+    participantName: initialSnapshot.candidateName ?? 'Candidate',
     preJoinChoices: null,
     bootstrappedSession: null,
     connectionError: null,

@@ -93,11 +93,13 @@ type InterviewPhase = 'warmup' | 'screening' | 'simulation' | 'wrapup'
 
 type InterviewUserData = {
   phase: InterviewPhase
-  teachingSimulationStarted: boolean
+  simulationStarted: boolean
   candidateTurnCount: number
   agentTurnCount: number
   budgetEnforced: boolean
 }
+
+type SimulationMode = 'teaching' | 'roleplay' | 'case_discussion' | 'none'
 
 type CandidateMetadata = {
   inviteToken?: string
@@ -108,8 +110,9 @@ type CandidateMetadata = {
 type AgentTemplateConfig = {
   templateName: string
   targetDurationMinutes: number
+  simulationMode: SimulationMode
   interviewerInstructions: string
-  childInstructions: string
+  simulationPersonaInstructions: string
   wrapUpInstructions: string
   cascade: {
     stt: string
@@ -187,13 +190,16 @@ function buildAgentTemplateConfig(
   }
 
   return {
-    templateName: remoteConfig?.templateName ?? 'AI Tutor Screener',
+    templateName: remoteConfig?.templateName ?? 'AI Voice Screener',
     targetDurationMinutes:
       remoteConfig?.targetDurationMinutes ?? DEFAULT_TARGET_DURATION_MINUTES,
+    simulationMode: remoteConfig?.simulationMode ?? 'teaching',
     interviewerInstructions:
       remoteConfig?.systemPrompt?.trim() || envConfig.interviewerInstructions,
-    childInstructions:
-      remoteConfig?.childPersonaPrompt?.trim() || envConfig.childInstructions,
+    simulationPersonaInstructions:
+      remoteConfig?.simulationPersonaPrompt?.trim() ||
+      remoteConfig?.childPersonaPrompt?.trim() ||
+      envConfig.childInstructions,
     wrapUpInstructions:
       remoteConfig?.wrapUpPrompt?.trim() || envConfig.wrapUpInstructions,
     cascade: {
@@ -322,11 +328,12 @@ function attachTranscriptPersistence(
   })
 }
 
-class TeachingChildAgent extends voice.Agent<InterviewUserData> {
+class SimulationPersonaAgent extends voice.Agent<InterviewUserData> {
   constructor(
     instructions: string,
     private readonly port: AgentSessionPort,
     private readonly candidateName: string,
+    private readonly simulationMode: Exclude<SimulationMode, 'none'>,
     tools: llm.ToolContext,
     tts: string
   ) {
@@ -341,20 +348,27 @@ class TeachingChildAgent extends voice.Agent<InterviewUserData> {
   override async onEnter() {
     const userData = this.session.userData
     userData.phase = 'simulation'
-    userData.teachingSimulationStarted = true
+    userData.simulationStarted = true
 
     await this.port.appendEvent(
+      'simulation-started',
+      `Interviewer switched into the ${this.simulationMode} simulation.`
+    )
+    await this.port.appendEvent(
       'teaching-simulation-started',
-      'Interviewer switched into the child-teaching simulation.'
+      `Interviewer switched into the ${this.simulationMode} simulation.`
     )
 
-    await this.session.say(
-      `Okay ${this.candidateName}, let's do a short teaching simulation. I'm Mia, I'm eight, and I get confused easily. Can you teach me something simple like fractions or multiplication in a way I can really understand?`,
-      {
-        addToChatCtx: true,
-        allowInterruptions: true,
-      }
-    )
+    const introByMode: Record<Exclude<SimulationMode, 'none'>, string> = {
+      teaching: `Okay ${this.candidateName}, let's do a short teaching simulation. I'm Mia, I'm eight, and I get confused easily. Can you teach me something simple like fractions or multiplication in a way I can really understand?`,
+      roleplay: `Thanks ${this.candidateName}. Let's try a short roleplay next so I can see how you handle it in the moment.`,
+      case_discussion: `Thanks ${this.candidateName}. Let's walk through a short case discussion so I can see how you think through the tradeoffs.`,
+    }
+
+    await this.session.say(introByMode[this.simulationMode], {
+      addToChatCtx: true,
+      allowInterruptions: true,
+    })
   }
 }
 
@@ -377,8 +391,12 @@ class WrapUpInterviewerAgent extends voice.Agent<InterviewUserData> {
     userData.phase = 'wrapup'
 
     await this.port.appendEvent(
+      'simulation-completed',
+      'Simulation completed and the interviewer resumed the wrap-up.'
+    )
+    await this.port.appendEvent(
       'teaching-simulation-completed',
-      'Teaching simulation completed and the interviewer resumed the wrap-up.'
+      'Simulation completed and the interviewer resumed the wrap-up.'
     )
 
     await this.session.say(
@@ -648,7 +666,7 @@ async function runInterviewSession(args: {
   const session = new voice.AgentSession<InterviewUserData>({
     userData: {
       phase: 'warmup',
-      teachingSimulationStarted: false,
+      simulationStarted: false,
       candidateTurnCount: 0,
       agentTurnCount: 0,
       budgetEnforced: false,
@@ -725,25 +743,29 @@ async function runInterviewSession(args: {
     config.cascade.wrapUpTts
   )
 
-  const childAgent = new TeachingChildAgent(
-    config.childInstructions,
-    port,
-    candidateName,
-    {
-      returnToInterviewer: llm.tool({
-        description:
-          'Use this when the candidate has had enough time to teach the child and you should return control to the interviewer for a brief wrap-up.',
-        execute: async () => {
-          return llm.handoff({
-            agent: wrapUpAgent,
-            returns:
-              'The child-teaching simulation is complete. Returning control to the interviewer.',
-          })
-        },
-      }),
-    },
-    config.cascade.childTts
-  )
+  const personaAgent =
+    config.simulationMode === 'none'
+      ? null
+      : new SimulationPersonaAgent(
+          config.simulationPersonaInstructions,
+          port,
+          candidateName,
+          config.simulationMode,
+          {
+            returnToInterviewer: llm.tool({
+              description:
+                'Use this when the candidate has had enough time in the simulation and you should return control to the interviewer for a brief wrap-up.',
+              execute: async () => {
+                return llm.handoff({
+                  agent: wrapUpAgent,
+                  returns:
+                    'The simulation is complete. Returning control to the interviewer.',
+                })
+              },
+            }),
+          },
+          config.cascade.childTts
+        )
 
   const recordVisualObservationTool = llm.tool({
     description:
@@ -771,25 +793,28 @@ When live video is available, call recordVisualObservation at most once per mean
       ...(videoInputEnabled
         ? { recordVisualObservation: recordVisualObservationTool }
         : {}),
-      startTeachingSimulation: llm.tool({
-        description:
-          'Use this after the candidate has answered two or three substantive screening questions and you are ready to test how they teach a mildly confused child.',
-        execute: async () => {
-          const userData = session.userData
-          if (userData.teachingSimulationStarted) {
-            return 'The teaching simulation is already in progress or has already happened.'
+      ...(config.simulationMode !== 'none' && personaAgent
+        ? {
+            runSimulation: llm.tool({
+              description:
+                'Use this after the candidate has answered two or three substantive screening questions and you are ready to run the configured simulation segment.',
+              execute: async () => {
+                const userData = session.userData
+                if (userData.simulationStarted) {
+                  return 'The simulation is already in progress or has already happened.'
+                }
+
+                userData.phase = 'simulation'
+                userData.simulationStarted = true
+
+                return llm.handoff({
+                  agent: personaAgent,
+                  returns: `Switching into the ${config.simulationMode} simulation now.`,
+                })
+              },
+            }),
           }
-
-          userData.phase = 'simulation'
-          userData.teachingSimulationStarted = true
-
-          return llm.handoff({
-            agent: childAgent,
-            returns:
-              'Switching into the child teaching simulation now so the candidate can explain a concept to a young learner.',
-          })
-        },
-      }),
+        : {}),
     },
   })
 
@@ -840,8 +865,8 @@ When live video is available, call recordVisualObservation at most once per mean
   })
 
   const welcomeInstructions = `
-Greet ${candidateName} warmly as the interviewer for the ${config.templateName} tutor screening conversation.
-Explain this should take about ${config.targetDurationMinutes} minutes and focuses on how they teach, explain, and communicate.
+Greet ${candidateName} warmly as the interviewer for the ${config.templateName} voice screening conversation.
+Explain this should take about ${config.targetDurationMinutes} minutes and focuses on how they communicate and perform in role-relevant scenarios.
 Ask them to settle in and tell you when they are ready to begin.
 Stay in the warm-up phase until they clearly say they are ready.
 `.trim()
@@ -859,7 +884,7 @@ Stay in the warm-up phase until they clearly say they are ready.
     })
 
     await session.say(
-      `Hi ${candidateName}, welcome. I am your interviewer for this tutor screening conversation. This should take about ${config.targetDurationMinutes} minutes, and it will focus on how you teach, explain, and communicate. Please take a moment to settle in, and whenever you are ready, just tell me you are ready to begin.`,
+      `Hi ${candidateName}, welcome. I am your interviewer for this voice screening conversation. This should take about ${config.targetDurationMinutes} minutes, and it will focus on how you communicate and handle role-relevant scenarios. Please take a moment to settle in, and whenever you are ready, just tell me you are ready to begin.`,
       {
         addToChatCtx: true,
         allowInterruptions: true,

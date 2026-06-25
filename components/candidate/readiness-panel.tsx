@@ -4,12 +4,16 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
 import { api } from '@/convex/_generated/api'
+import { ReadinessCheckList } from '@/components/candidate/readiness-check-list'
 import { Button } from '@/components/ui/button'
-import { Surface } from '@/components/ui/surface'
+import { Progress } from '@/components/ui/progress'
+import { WorkspacePageHeader } from '@/components/workspace/page-header'
+import { WorkspaceSurface } from '@/components/workspace/surface'
 import type { FunctionReturnType } from 'convex/server'
 import {
   countPassingReadinessChecks,
   runReadinessChecks,
+  type ReadinessChecks,
 } from '@/lib/candidate/readiness-checks'
 import { formatDateTime } from '@/lib/format/date'
 
@@ -24,6 +28,7 @@ export function CandidateReadinessPanel({
 }) {
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [latestChecks, setLatestChecks] = useState<ReadinessChecks | null>(null)
   const liveRuns = useQuery(api.readiness.getCandidateReadinessRuns, {})
   const runs = liveRuns ?? initialRuns
   const saveRun = useMutation(api.readiness.saveCandidateReadinessRun)
@@ -41,6 +46,7 @@ export function CandidateReadinessPanel({
     setError(null)
     try {
       const checks = await runReadinessChecks()
+      setLatestChecks(checks)
       await saveRun({
         checks,
         notes: checks.mediaPermissionsGranted
@@ -59,23 +65,27 @@ export function CandidateReadinessPanel({
   }
 
   return (
-    <section className="space-y-5">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Interview readiness</h1>
-        <p className="text-sm text-muted-foreground">
-          Run microphone, camera, browser, and network checks before live
-          interviews.
-        </p>
-      </div>
+    <section className="space-y-8">
+      <WorkspacePageHeader
+        eyebrow="Before you join"
+        title="Interview readiness"
+        description="Run microphone, camera, browser, and network checks before live interviews."
+      />
 
-      <Surface elevation="raised" padding="lg">
+      <WorkspaceSurface className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium">Latest run</p>
             {latest ? (
-              <p className="text-sm text-muted-foreground">
-                {latestScore}/6 checks passing, {formatDateTime(latest.ranAt)}
-              </p>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {latestScore}/6 checks passing, {formatDateTime(latest.ranAt)}
+                </p>
+                <Progress
+                  value={((latestScore ?? 0) / 6) * 100}
+                  className="max-w-xs"
+                />
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">
                 No readiness runs yet.
@@ -83,10 +93,17 @@ export function CandidateReadinessPanel({
             )}
           </div>
           <Button onClick={handleRunReadiness} disabled={running}>
-            {running ? 'Running checks...' : 'Run readiness checks'}
+            {running ? 'Running checks…' : 'Run readiness checks'}
           </Button>
         </div>
-      </Surface>
+      </WorkspaceSurface>
+
+      {latestChecks || latest ? (
+        <WorkspaceSurface className="p-5">
+          <p className="mb-3 text-sm font-medium">Check breakdown</p>
+          <ReadinessCheckList checks={latestChecks ?? latest?.checks} />
+        </WorkspaceSurface>
+      ) : null}
 
       {error ? (
         <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
@@ -99,20 +116,20 @@ export function CandidateReadinessPanel({
           History
         </h2>
         {!runs || runs.length === 0 ? (
-          <Surface padding="md" className="text-sm text-muted-foreground">
+          <WorkspaceSurface className="p-5 text-sm text-muted-foreground">
             No readiness history yet.
-          </Surface>
+          </WorkspaceSurface>
         ) : (
           <div className="space-y-2">
             {runs.slice(0, 5).map((run) => (
-              <Surface key={`${run._id}`} padding="md">
+              <WorkspaceSurface key={`${run._id}`} className="p-5">
                 <p className="text-sm font-medium">
                   {formatDateTime(run.ranAt)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {run.notes}
                 </p>
-              </Surface>
+              </WorkspaceSurface>
             ))}
           </div>
         )}

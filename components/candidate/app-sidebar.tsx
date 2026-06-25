@@ -34,6 +34,12 @@ const NAV_ITEMS = [
     exact: true,
   },
   {
+    title: 'Practice',
+    url: '/candidate/practice',
+    icon: IconVideo,
+    exact: false,
+  },
+  {
     title: 'Interviews',
     url: '/candidate/interviews',
     icon: IconVideo,
@@ -123,13 +129,11 @@ export function CandidateSidebar({
               </Show>
             </>
           ) : (
-            <div className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                AM
-              </div>
-              <span className="text-sm font-medium text-foreground">
-                Aarav M.
-              </span>
+            <div className="flex flex-col gap-1 px-1">
+              <p className="text-xs font-medium text-muted-foreground">Guest</p>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                Sign in to save practice progress
+              </p>
             </div>
           )}
           <ThemeToggle />

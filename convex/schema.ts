@@ -6,10 +6,13 @@ import {
   interviewPolicySnapshotValidator,
   interviewSessionStateValidator,
   interviewStyleModeValidator,
+  jobFamilyValidator,
+  practiceJobFamilyValidator,
   modelOverridesValidator,
   recommendationValidator,
   scoringDimensionValidator,
   sessionPurposeValidator,
+  simulationModeValidator,
   workspaceProviderKeyValidator,
 } from './validators'
 
@@ -68,9 +71,14 @@ export default defineSchema({
     targetDurationMinutes: v.optional(v.number()),
     allowsResume: v.optional(v.boolean()),
     interviewStyleMode: v.optional(interviewStyleModeValidator),
+    jobFamily: v.optional(jobFamilyValidator),
+    simulationMode: v.optional(simulationModeValidator),
     systemPrompt: v.optional(v.string()),
+    /** @deprecated Use simulationPersonaPrompt */
     childPersonaPrompt: v.optional(v.string()),
+    simulationPersonaPrompt: v.optional(v.string()),
     wrapUpPrompt: v.optional(v.string()),
+    updatedAt: v.optional(v.number()),
     rubricConfig: v.optional(
       v.object({
         dimensions: v.array(
@@ -94,8 +102,11 @@ export default defineSchema({
     rubricVersion: v.string(),
     savedAt: v.number(),
     savedBy: v.string(),
+    jobFamily: v.optional(jobFamilyValidator),
+    simulationMode: v.optional(simulationModeValidator),
     systemPrompt: v.optional(v.string()),
     childPersonaPrompt: v.optional(v.string()),
+    simulationPersonaPrompt: v.optional(v.string()),
     wrapUpPrompt: v.optional(v.string()),
     rubricConfig: v.optional(
       v.object({
@@ -179,6 +190,9 @@ export default defineSchema({
       v.literal('expired')
     ),
     sessionPurpose: v.optional(sessionPurposeValidator),
+    /** Set for mock/practice invites — avoids parsing invite tokens. */
+    practiceJobFamily: v.optional(practiceJobFamilyValidator),
+    practiceCreatedAt: v.optional(v.number()),
     expiresAt: v.string(),
   })
     .index('by_org_id', ['orgId'])

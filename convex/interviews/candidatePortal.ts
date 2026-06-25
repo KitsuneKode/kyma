@@ -1,9 +1,89 @@
 import { ConvexError, v } from 'convex/values'
 
 import { mutation, query } from '../_generated/server'
+import type { Id } from '../_generated/dataModel'
+import type { MutationCtx, QueryCtx } from '../_generated/server'
 import { findUserByIdentity } from '../helpers/clerkIdentity'
-import { ensureSystemJsJuniorTemplate } from '../helpers/systemTemplates'
+import {
+  ensureSystemPracticeTemplate,
+  type PracticeJobFamily,
+} from '../helpers/systemTemplates'
+import { practiceJobFamilyValidator } from '../validators'
 import { SYSTEM_ORG_ID } from '../../lib/interview/session-purpose'
+import { formatCandidateScoreBand } from '../../lib/candidate/result-copy'
+import {
+  PRACTICE_PACKS,
+  PRACTICE_SESSION_LIMIT,
+  PRACTICE_SESSION_WINDOW_MS,
+} from '../../lib/practice/packs'
+
+const PRACTICE_JOB_FAMILIES = new Set([
+  'software_engineering',
+  'product',
+  'customer_support',
+  'sales',
+  'tutor',
+  'general',
+])
+
+function resolvePracticeCreatedAt(invite: {
+  practiceCreatedAt?: number
+  inviteToken: string
+}): number | null {
+  if (typeof invite.practiceCreatedAt === 'number') {
+    return invite.practiceCreatedAt
+  }
+  const parts = invite.inviteToken.split('-')
+  const encoded = parts[parts.length - 1]
+  if (!encoded) {
+    return null
+  }
+  const parsed = Number.parseInt(encoded, 36)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function resolvePracticeJobFamily(invite: {
+  practiceJobFamily?: string
+  inviteToken: string
+}): PracticeJobFamily | undefined {
+  if (
+    invite.practiceJobFamily &&
+    PRACTICE_JOB_FAMILIES.has(invite.practiceJobFamily)
+  ) {
+    return invite.practiceJobFamily as PracticeJobFamily
+  }
+  const tokenFamily = invite.inviteToken.split('-')[1]
+  if (tokenFamily && PRACTICE_JOB_FAMILIES.has(tokenFamily)) {
+    return tokenFamily as PracticeJobFamily
+  }
+  return undefined
+}
+
+async function countRecentPracticeSessions(
+  ctx: MutationCtx | QueryCtx,
+  userId: Id<'users'>
+) {
+  const cutoff = Date.now() - PRACTICE_SESSION_WINDOW_MS
+  const invites = await ctx.db
+    .query('candidateInvites')
+    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .collect()
+
+  return invites.filter((invite) => {
+    if (invite.sessionPurpose !== 'mock') {
+      return false
+    }
+    const createdAt = resolvePracticeCreatedAt(invite)
+    if (createdAt === null || createdAt < cutoff) {
+      return false
+    }
+    // Abandoned invites (never opened) do not consume the daily quota.
+    if (invite.status === 'created') {
+      return false
+    }
+    return true
+  }).length
+}
 
 export const claimCandidateInviteByToken = mutation({
   args: {
@@ -62,12 +142,65 @@ export const claimCandidateInviteByToken = mutation({
   },
 })
 
-export const createMockInterview = mutation({
+export const listPracticePacks = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      id: practiceJobFamilyValidator,
+      title: v.string(),
+      description: v.string(),
+      durationMinutes: v.number(),
+      readinessRecommended: v.boolean(),
+    })
+  ),
+  handler: async () => {
+    return PRACTICE_PACKS.map((pack) => ({ ...pack }))
+  },
+})
+
+export const getPracticeUsage = query({
   args: {},
   returns: v.object({
-    inviteToken: v.string(),
+    sessionsUsed: v.number(),
+    sessionsLimit: v.number(),
+    windowHours: v.number(),
   }),
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      return {
+        sessionsUsed: 0,
+        sessionsLimit: PRACTICE_SESSION_LIMIT,
+        windowHours: PRACTICE_SESSION_WINDOW_MS / (1000 * 60 * 60),
+      }
+    }
+    const user = await findUserByIdentity(ctx, identity)
+    if (!user) {
+      return {
+        sessionsUsed: 0,
+        sessionsLimit: PRACTICE_SESSION_LIMIT,
+        windowHours: PRACTICE_SESSION_WINDOW_MS / (1000 * 60 * 60),
+      }
+    }
+    const sessionsUsed = await countRecentPracticeSessions(ctx, user._id)
+    return {
+      sessionsUsed,
+      sessionsLimit: PRACTICE_SESSION_LIMIT,
+      windowHours: PRACTICE_SESSION_WINDOW_MS / (1000 * 60 * 60),
+    }
+  },
+})
+
+export const createMockInterview = mutation({
+  args: {
+    jobFamily: v.optional(practiceJobFamilyValidator),
+    templateId: v.optional(v.id('assessmentTemplates')),
+  },
+  returns: v.object({
+    inviteToken: v.string(),
+    sessionId: v.optional(v.id('interviewSessions')),
+  }),
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) {
       throw new ConvexError('Sign in to try a mock interview.')
@@ -78,37 +211,59 @@ export const createMockInterview = mutation({
       throw new ConvexError('User profile not found.')
     }
 
+    const recentCount = await countRecentPracticeSessions(ctx, user._id)
+    if (recentCount >= PRACTICE_SESSION_LIMIT) {
+      throw new ConvexError(
+        `Practice limit reached (${PRACTICE_SESSION_LIMIT} sessions per 24 hours). Try again tomorrow.`
+      )
+    }
+
     const activeSessions = await ctx.db
       .query('interviewSessions')
       .withIndex('by_candidate_user', (q) => q.eq('candidateUserId', user._id))
       .collect()
 
-    for (const session of activeSessions) {
+    for (const activeSession of activeSessions) {
       if (
-        session.sessionPurpose !== 'mock' ||
-        ['processing', 'completed', 'failed'].includes(session.state)
+        activeSession.sessionPurpose !== 'mock' ||
+        ['processing', 'completed', 'failed'].includes(activeSession.state)
       ) {
         continue
       }
 
-      const invite = await ctx.db.get(session.inviteId)
+      const invite = await ctx.db.get(activeSession.inviteId)
       if (
         invite &&
         invite.status !== 'completed' &&
         invite.status !== 'expired'
       ) {
-        return { inviteToken: invite.inviteToken }
+        return {
+          inviteToken: invite.inviteToken,
+          sessionId: activeSession._id,
+        }
       }
     }
 
-    const template = await ensureSystemJsJuniorTemplate(ctx)
-    const inviteToken = `mock-${user._id}-${Date.now().toString(36)}`
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
+    const jobFamily: PracticeJobFamily =
+      args.jobFamily ?? 'software_engineering'
+    let template = await ensureSystemPracticeTemplate(ctx, jobFamily)
+    if (args.templateId) {
+      const selected = await ctx.db.get(args.templateId)
+      if (selected && selected.orgId === SYSTEM_ORG_ID) {
+        template = selected
+      }
+    }
+
+    const now = Date.now()
+    const inviteToken = `mock-${jobFamily}-${user._id}-${now.toString(36)}`
+    const expiresAt = new Date(now + 1000 * 60 * 60 * 24).toISOString()
 
     const inviteId = await ctx.db.insert('candidateInvites', {
       orgId: SYSTEM_ORG_ID,
       inviteToken,
       sessionPurpose: 'mock',
+      practiceJobFamily: jobFamily,
+      practiceCreatedAt: now,
       candidateName: user.name ?? identity.name ?? 'Candidate',
       candidateEmail: identity.email,
       userId: user._id,
@@ -122,12 +277,111 @@ export const createMockInterview = mutation({
       throw new ConvexError('Unable to create mock interview invite.')
     }
 
-    return { inviteToken: invite.inviteToken }
+    return { inviteToken: invite.inviteToken, sessionId: undefined }
+  },
+})
+
+export const getPracticeSessionSummary = query({
+  args: {
+    sessionId: v.id('interviewSessions'),
+  },
+  returns: v.union(
+    v.object({
+      sessionId: v.id('interviewSessions'),
+      templateName: v.string(),
+      jobFamily: v.optional(practiceJobFamilyValidator),
+      state: v.string(),
+      processingState: v.union(
+        v.literal('processing'),
+        v.literal('ready'),
+        v.literal('unavailable')
+      ),
+      tips: v.array(v.string()),
+      strengths: v.array(v.string()),
+      focusAreas: v.array(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new ConvexError('Sign in to view practice feedback.')
+    }
+    const user = await findUserByIdentity(ctx, identity)
+    if (!user) {
+      return null
+    }
+
+    const session = await ctx.db.get(args.sessionId)
+    if (!session || session.candidateUserId !== user._id) {
+      throw new ConvexError('Practice session not found.')
+    }
+    if (session.sessionPurpose !== 'mock') {
+      throw new ConvexError('This session is not a practice interview.')
+    }
+
+    const invite = await ctx.db.get(session.inviteId)
+    const template = invite?.templateId
+      ? await ctx.db.get(invite.templateId)
+      : null
+    const report = await ctx.db
+      .query('assessmentReports')
+      .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
+      .first()
+
+    const jobFamily = invite
+      ? resolvePracticeJobFamily({
+          practiceJobFamily: invite.practiceJobFamily,
+          inviteToken: invite.inviteToken,
+        })
+      : undefined
+
+    const processingState =
+      report?.status === 'completed' || report?.status === 'manual_review'
+        ? ('ready' as const)
+        : session.state === 'processing' || report?.status === 'processing'
+          ? ('processing' as const)
+          : session.state === 'completed' && !report
+            ? ('processing' as const)
+            : ('unavailable' as const)
+
+    const strengths = (report?.topStrengths ?? []).filter(
+      (item) => !/\b(hire|reject|advance)\b/i.test(item)
+    )
+    const focusAreas = (report?.topConcerns ?? []).filter(
+      (item) => !/\b(hire|reject|advance)\b/i.test(item)
+    )
+    const tips = [
+      strengths.length > 0
+        ? `Lean into what worked: ${strengths.slice(0, 2).join(', ')}.`
+        : 'Lead with a clear structure before diving into details.',
+      focusAreas.length > 0
+        ? `Next rep, tighten: ${focusAreas.slice(0, 2).join(', ')}.`
+        : 'Pause briefly after each question to organize your answer.',
+      'Practice interviews are private learning reps — no hiring outcome is attached.',
+    ]
+
+    return {
+      sessionId: session._id,
+      templateName: template?.name ?? 'Practice interview',
+      jobFamily,
+      state: session.state,
+      processingState,
+      tips,
+      strengths,
+      focusAreas,
+    }
   },
 })
 
 export const linkCandidateInviteByEmail = mutation({
   args: {},
+  returns: v.union(
+    v.object({
+      linkedInvites: v.number(),
+    }),
+    v.null()
+  ),
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity?.email) {
@@ -163,8 +417,31 @@ export const linkCandidateInviteByEmail = mutation({
 })
 
 export const listCandidateInterviews = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    purpose: v.optional(
+      v.union(v.literal('screening'), v.literal('practice'), v.literal('all'))
+    ),
+  },
+  returns: v.array(
+    v.object({
+      sessionId: v.id('interviewSessions'),
+      inviteToken: v.optional(v.string()),
+      sessionPurpose: v.optional(
+        v.union(v.literal('screening'), v.literal('demo'), v.literal('mock'))
+      ),
+      candidateName: v.optional(v.string()),
+      templateName: v.string(),
+      status: v.string(),
+      inviteStatus: v.optional(v.string()),
+      startedAt: v.optional(v.string()),
+      endedAt: v.optional(v.string()),
+      reportStatus: v.optional(v.string()),
+      recommendation: v.optional(v.string()),
+      released: v.boolean(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const purpose = args.purpose ?? 'screening'
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) {
       throw new ConvexError('You must be signed in to access interviews.')
@@ -177,32 +454,146 @@ export const listCandidateInterviews = query({
       .query('interviewSessions')
       .withIndex('by_candidate_user', (q) => q.eq('candidateUserId', user._id))
       .collect()
-    return await Promise.all(
-      sessions.map(async (session) => {
+
+    const filteredSessions = sessions.filter((session) => {
+      const sessionPurpose = session.sessionPurpose
+      if (purpose === 'all') {
+        return true
+      }
+      if (purpose === 'practice') {
+        return sessionPurpose === 'mock'
+      }
+      return sessionPurpose !== 'mock'
+    })
+
+    const inviteIds = [
+      ...new Set(filteredSessions.map((session) => session.inviteId)),
+    ]
+    const invites = await Promise.all(
+      inviteIds.map((inviteId) => ctx.db.get(inviteId))
+    )
+    const inviteById = new Map(
+      inviteIds
+        .map((inviteId, index) => [inviteId, invites[index]] as const)
+        .filter(
+          (
+            entry
+          ): entry is [(typeof entry)[0], NonNullable<(typeof entry)[1]>] =>
+            Boolean(entry[1])
+        )
+    )
+
+    const templateIds = [
+      ...new Set(
+        [...inviteById.values()]
+          .map((invite) => invite.templateId)
+          .filter((templateId): templateId is NonNullable<typeof templateId> =>
+            Boolean(templateId)
+          )
+      ),
+    ]
+    const templates = await Promise.all(
+      templateIds.map((templateId) => ctx.db.get(templateId))
+    )
+    const templateById = new Map(
+      templateIds
+        .map((templateId, index) => [templateId, templates[index]] as const)
+        .filter(
+          (
+            entry
+          ): entry is [(typeof entry)[0], NonNullable<(typeof entry)[1]>] =>
+            Boolean(entry[1])
+        )
+    )
+
+    const reports = await Promise.all(
+      filteredSessions.map((session) =>
+        ctx.db
+          .query('assessmentReports')
+          .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+          .first()
+      )
+    )
+
+    return filteredSessions.map((session, index) => {
+      const invite = inviteById.get(session.inviteId)
+      const template = invite?.templateId
+        ? templateById.get(invite.templateId)
+        : null
+      const report = reports[index] ?? null
+      return {
+        sessionId: session._id,
+        inviteToken: invite?.inviteToken,
+        sessionPurpose: session.sessionPurpose ?? invite?.sessionPurpose,
+        candidateName: invite?.candidateName,
+        templateName: template?.name ?? 'Interview',
+        status: session.state,
+        inviteStatus: invite?.status,
+        startedAt: session.startedAt,
+        endedAt: session.endedAt,
+        reportStatus: report?.status,
+        recommendation: report?.overallRecommendation,
+        released: report?.released ?? false,
+      }
+    })
+  },
+})
+
+const recentPracticeSessionValidator = v.object({
+  sessionId: v.id('interviewSessions'),
+  templateName: v.string(),
+  status: v.string(),
+  startedAt: v.optional(v.string()),
+  jobFamily: v.optional(practiceJobFamilyValidator),
+})
+
+export const listRecentPracticeSessions = query({
+  args: {},
+  returns: v.array(recentPracticeSessionValidator),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new ConvexError('Sign in to view practice history.')
+    }
+    const user = await findUserByIdentity(ctx, identity)
+    if (!user) {
+      return []
+    }
+
+    const sessions = await ctx.db
+      .query('interviewSessions')
+      .withIndex('by_candidate_user', (q) => q.eq('candidateUserId', user._id))
+      .order('desc')
+      .take(40)
+
+    const practiceSessions = sessions
+      .filter((session) => session.sessionPurpose === 'mock')
+      .slice(0, 20)
+
+    const results = await Promise.all(
+      practiceSessions.map(async (session) => {
         const invite = await ctx.db.get(session.inviteId)
         const template = invite?.templateId
           ? await ctx.db.get(invite.templateId)
           : null
-        const report = await ctx.db
-          .query('assessmentReports')
-          .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-          .first()
+        const jobFamily = invite
+          ? resolvePracticeJobFamily({
+              practiceJobFamily: invite.practiceJobFamily,
+              inviteToken: invite.inviteToken,
+            })
+          : undefined
+
         return {
           sessionId: session._id,
-          inviteToken: invite?.inviteToken,
-          sessionPurpose: session.sessionPurpose ?? invite?.sessionPurpose,
-          candidateName: invite?.candidateName,
-          templateName: template?.name ?? 'Interview',
+          templateName: template?.name ?? 'Practice interview',
           status: session.state,
-          inviteStatus: invite?.status,
           startedAt: session.startedAt,
-          endedAt: session.endedAt,
-          reportStatus: report?.status,
-          recommendation: report?.overallRecommendation,
-          released: report?.released ?? false,
+          jobFamily,
         }
       })
     )
+
+    return results
   },
 })
 
@@ -210,6 +601,62 @@ export const getCandidateInterviewResult = query({
   args: {
     sessionId: v.id('interviewSessions'),
   },
+  returns: v.union(
+    v.object({
+      sessionId: v.id('interviewSessions'),
+      state: v.string(),
+      resultState: v.union(
+        v.literal('released'),
+        v.literal('under_review'),
+        v.literal('processing'),
+        v.literal('unavailable')
+      ),
+      reportStatus: v.union(
+        v.literal('pending'),
+        v.literal('processing'),
+        v.literal('completed'),
+        v.literal('failed'),
+        v.literal('manual_review'),
+        v.null()
+      ),
+      reportReleased: v.boolean(),
+      templateName: v.string(),
+      startedAt: v.optional(v.string()),
+      endedAt: v.optional(v.string()),
+      timeline: v.array(
+        v.object({
+          id: v.id('sessionEvents'),
+          type: v.string(),
+          detail: v.string(),
+          createdAt: v.string(),
+        })
+      ),
+      report: v.union(
+        v.object({
+          status: v.string(),
+          recommendation: v.optional(v.string()),
+          confidence: v.optional(v.string()),
+          summary: v.optional(v.string()),
+          weightedScore: v.optional(v.number()),
+          generatedAt: v.optional(v.string()),
+          rubricSummary: v.union(
+            v.array(
+              v.object({
+                dimension: v.string(),
+                score: v.number(),
+                band: v.string(),
+              })
+            ),
+            v.null()
+          ),
+          strengths: v.array(v.string()),
+          growthAreas: v.array(v.string()),
+        }),
+        v.null()
+      ),
+    }),
+    v.null()
+  ),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) {
@@ -227,6 +674,17 @@ export const getCandidateInterviewResult = query({
       .query('assessmentReports')
       .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
       .first()
+    const invite = await ctx.db.get(session.inviteId)
+    const template = invite?.templateId
+      ? await ctx.db.get(invite.templateId)
+      : null
+    const events = await ctx.db
+      .query('sessionEvents')
+      .withIndex('by_session_and_created_at', (q) =>
+        q.eq('sessionId', args.sessionId)
+      )
+      .order('desc')
+      .take(12)
     const resultState = report?.released
       ? ('released' as const)
       : report?.status === 'manual_review'
@@ -235,12 +693,37 @@ export const getCandidateInterviewResult = query({
           ? ('processing' as const)
           : ('unavailable' as const)
 
+    const candidateTimelineTypes = new Set([
+      'invite-opened',
+      'preflight-started',
+      'preflight-completed',
+      'participant-connecting',
+      'participant-joined',
+      'participant-left',
+      'processing-started',
+      'processing-completed',
+      'teaching-simulation-started',
+      'teaching-simulation-completed',
+      'session-failed',
+    ])
+
     return {
       sessionId: session._id,
       state: session.state,
       resultState,
       reportStatus: report?.status ?? null,
       reportReleased: report?.released ?? false,
+      templateName: template?.name ?? 'Interview',
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      timeline: events
+        .filter((event) => candidateTimelineTypes.has(event.type))
+        .map((event) => ({
+          id: event._id,
+          type: event.type,
+          detail: event.detail,
+          createdAt: event.createdAt,
+        })),
       report: report?.released
         ? {
             status: report.status,
@@ -249,6 +732,14 @@ export const getCandidateInterviewResult = query({
             summary: report.summary,
             weightedScore: report.weightedScore,
             generatedAt: report.generatedAt,
+            rubricSummary:
+              report.dimensionScores?.map((item) => ({
+                dimension: item.dimension,
+                score: item.score,
+                band: formatCandidateScoreBand(item.score),
+              })) ?? null,
+            strengths: report.topStrengths ?? [],
+            growthAreas: report.topConcerns ?? [],
           }
         : null,
     }

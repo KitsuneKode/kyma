@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Surface } from '@/components/ui/surface'
 import { StatusBadge } from '@/components/workspace/status-badge'
 import { formatDateTime } from '@/lib/format/date'
+import type { SessionPurpose } from '@/lib/interview/types'
 
 type CandidateInterviewCardProps = {
   sessionId: string
@@ -11,6 +12,7 @@ type CandidateInterviewCardProps = {
   status: string
   startedAt?: string
   inviteToken?: string
+  sessionPurpose?: SessionPurpose
 }
 
 const ACTIVE_STATES = [
@@ -27,6 +29,9 @@ export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
     normalizedStatus.includes(state)
   )
   const isProcessing = normalizedStatus.includes('processing')
+  const isPractice = props.sessionPurpose === 'mock'
+  const feedbackPath = `/candidate/practice/${props.sessionId}/feedback`
+  const screeningResultPath = `/candidate/interviews/${props.sessionId}`
 
   return (
     <Surface
@@ -55,6 +60,15 @@ export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
           >
             Join interview
           </Button>
+        ) : isProcessing && isPractice ? (
+          <Button
+            nativeButton={false}
+            size="sm"
+            className="active:scale-[0.96]"
+            render={<Link href={feedbackPath} />}
+          >
+            View practice feedback
+          </Button>
         ) : isProcessing ? (
           <Button size="sm" disabled className="active:scale-[0.96]">
             Processing…
@@ -64,9 +78,11 @@ export function CandidateInterviewCard(props: CandidateInterviewCardProps) {
             nativeButton={false}
             size="sm"
             className="active:scale-[0.96]"
-            render={<Link href={`/candidate/interviews/${props.sessionId}`} />}
+            render={
+              <Link href={isPractice ? feedbackPath : screeningResultPath} />
+            }
           >
-            View result
+            {isPractice ? 'View practice feedback' : 'View result'}
           </Button>
         )}
       </div>

@@ -1,25 +1,44 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { motion } from '@/components/motion/client-motion'
 import { Button } from '@/components/ui/button'
+import type { SessionPurpose } from '@/lib/interview/types'
 
 type InterviewProcessingSuccessProps = {
   connectionError: string | null
   onRetrySubmission: () => void
   sessionId?: string | null
+  sessionPurpose?: SessionPurpose
 }
 
 export function InterviewProcessingSuccess({
   connectionError,
   onRetrySubmission,
   sessionId,
+  sessionPurpose = 'screening',
 }: InterviewProcessingSuccessProps) {
   const router = useRouter()
+  const isPractice = sessionPurpose === 'mock'
   const candidatePortalPath = sessionId
-    ? `/candidate/interviews/${sessionId}`
-    : '/candidate'
+    ? isPractice
+      ? `/candidate/practice/${sessionId}/feedback`
+      : `/candidate/interviews/${sessionId}`
+    : isPractice
+      ? '/candidate/practice'
+      : '/candidate'
+
+  useEffect(() => {
+    if (!isPractice || !sessionId || connectionError) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      router.push(candidatePortalPath)
+    }, 2500)
+    return () => window.clearTimeout(timer)
+  }, [candidatePortalPath, connectionError, isPractice, router, sessionId])
 
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden bg-[#0a0a0a] p-4">
@@ -75,7 +94,7 @@ export function InterviewProcessingSuccess({
             Success
           </p>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-            Interview Submitted
+            {isPractice ? 'Practice session submitted' : 'Interview submitted'}
           </h1>
         </motion.div>
 
@@ -89,9 +108,9 @@ export function InterviewProcessingSuccess({
           }}
         >
           <p className="mx-auto mt-6 max-w-sm text-base leading-relaxed text-pretty text-muted-foreground">
-            Your interview has been submitted and linked to your candidate
-            portal. Track processing status and view your outcome when it is
-            released.
+            {isPractice
+              ? 'Your practice session is processing. View learning-focused feedback with tips for your next rep — no hiring decision is attached.'
+              : 'Your interview has been submitted and linked to your candidate portal. Track processing status and view your outcome when it is released.'}
           </p>
         </motion.div>
 
@@ -110,7 +129,7 @@ export function InterviewProcessingSuccess({
             className="rounded-full bg-primary px-8 py-6 font-medium text-primary-foreground shadow-[0_0_0_1px_rgba(232,255,71,0.45),0_10px_30px_rgba(0,0,0,0.35)] transition-colors hover:bg-primary/90"
             onClick={() => router.push(candidatePortalPath)}
           >
-            Go to candidate portal
+            {isPractice ? 'View practice feedback' : 'Go to candidate portal'}
           </Button>
         </motion.div>
 

@@ -76,6 +76,8 @@ export const SESSION_EVENT_TYPES = [
   'transcript-final',
   'candidate-screen-share-started',
   'candidate-screen-share-stopped',
+  'simulation-started',
+  'simulation-completed',
   'teaching-simulation-started',
   'teaching-simulation-completed',
   'processing-started',

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { MarketingCtaRow } from '@/components/marketing/marketing-cta-row'
-import { signUpPath } from '@/lib/auth/workspace-intent'
+import { authContinuePath, signUpPath } from '@/lib/auth/workspace-intent'
 import {
   getRelatedPersonas,
   personaPath,
@@ -214,10 +214,22 @@ export function PersonaLanding({ persona }: { persona: PersonaPage }) {
             <Button
               size="lg"
               className="min-h-[44px] rounded-xl px-8"
+              render={
+                <Link
+                  href={authContinuePath('candidate', '/candidate/practice')}
+                />
+              }
+              nativeButton={false}
+            >
+              Try a practice interview
+            </Button>
+            <Button
+              size="lg"
+              className="min-h-[44px] rounded-xl px-8"
               render={<Link href={signUpPath('recruiter')} />}
               nativeButton={false}
             >
-              Start screening tutors
+              Start screening
             </Button>
             <Button
               size="lg"

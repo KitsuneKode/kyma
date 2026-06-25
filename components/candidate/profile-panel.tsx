@@ -2,9 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useMutation } from 'convex/react'
+import { toast } from 'sonner'
 
 import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { WorkspacePageHeader } from '@/components/workspace/page-header'
+import { WorkspaceSurface } from '@/components/workspace/surface'
+import { WorkspaceTextarea } from '@/components/workspace/textarea'
 import type { FunctionReturnType } from 'convex/server'
 
 type CandidatePreferences = FunctionReturnType<
@@ -37,7 +43,6 @@ export function CandidateProfilePanel({
     initialPreferences?.accessibilityNotes ?? ''
   )
   const [saving, setSaving] = useState(false)
-  const [saveState, setSaveState] = useState<string | null>(null)
 
   useEffect(() => {
     if (!initialPreferences) {
@@ -51,7 +56,6 @@ export function CandidateProfilePanel({
 
   async function handleSave() {
     setSaving(true)
-    setSaveState(null)
     try {
       await savePreferences({
         preferredInterviewLanguage: language,
@@ -59,9 +63,9 @@ export function CandidateProfilePanel({
         timezone,
         accessibilityNotes: notes.trim() || undefined,
       })
-      setSaveState('Saved')
+      toast.success('Profile preferences saved')
     } catch (error) {
-      setSaveState(
+      toast.error(
         error instanceof Error
           ? error.message
           : 'Unable to save profile preferences.'
@@ -72,72 +76,75 @@ export function CandidateProfilePanel({
   }
 
   return (
-    <section className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Profile settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Identity is managed by your auth account, interview preferences are
-          editable here.
-        </p>
-      </div>
+    <section className="space-y-8">
+      <WorkspacePageHeader
+        eyebrow="Candidate account"
+        title="Profile settings"
+        description="Identity is managed by your auth account. Interview preferences are editable here."
+      />
 
-      <article className="rounded-2xl bg-card p-5 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
+      <WorkspaceSurface className="space-y-3 p-5">
         <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
           Identity
         </h2>
-        <p className="mt-3 text-sm">{identity.name}</p>
+        <p className="text-sm">{identity.name}</p>
         <p className="text-sm text-muted-foreground">{identity.email}</p>
-      </article>
+      </WorkspaceSurface>
 
-      <article className="space-y-4 rounded-2xl bg-card p-5 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
+      <WorkspaceSurface className="space-y-5 p-5">
         <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
           Interview preferences
         </h2>
-        <label className="block space-y-2 text-sm">
-          <span>Preferred language</span>
-          <input
-            value={language}
-            onChange={(event) => setLanguage(event.target.value)}
-            className="w-full rounded-xl border border-border/60 bg-background px-3 py-2"
-          />
-        </label>
-        <label className="block space-y-2 text-sm">
-          <span>Preferred interview length (minutes)</span>
-          <input
-            type="number"
-            min={10}
-            max={60}
-            value={duration}
-            onChange={(event) => setDuration(Number(event.target.value) || 20)}
-            className="w-full rounded-xl border border-border/60 bg-background px-3 py-2"
-          />
-        </label>
-        <label className="block space-y-2 text-sm">
-          <span>Timezone</span>
-          <input
-            value={timezone}
-            onChange={(event) => setTimezone(event.target.value)}
-            className="w-full rounded-xl border border-border/60 bg-background px-3 py-2"
-          />
-        </label>
-        <label className="block space-y-2 text-sm">
-          <span>Accessibility notes</span>
-          <textarea
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            rows={3}
-            className="w-full rounded-xl border border-border/60 bg-background px-3 py-2"
-          />
-        </label>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="profile-language">Preferred language</Label>
+            <Input
+              id="profile-language"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="profile-duration">
+              Preferred interview length (minutes)
+            </Label>
+            <Input
+              id="profile-duration"
+              type="number"
+              min={10}
+              max={60}
+              value={duration}
+              onChange={(event) =>
+                setDuration(Number(event.target.value) || 20)
+              }
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="profile-timezone">Timezone</Label>
+            <Input
+              id="profile-timezone"
+              value={timezone}
+              onChange={(event) => setTimezone(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="profile-notes">Accessibility notes</Label>
+            <WorkspaceTextarea
+              id="profile-notes"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              rows={3}
+            />
+          </div>
+        </div>
+
         <div className="flex items-center gap-3">
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save preferences'}
+            {saving ? 'Saving…' : 'Save preferences'}
           </Button>
-          {saveState ? (
-            <p className="text-sm text-muted-foreground">{saveState}</p>
-          ) : null}
         </div>
-      </article>
+      </WorkspaceSurface>
     </section>
   )
 }

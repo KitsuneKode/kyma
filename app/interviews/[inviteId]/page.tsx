@@ -5,6 +5,7 @@ import { RenderErrorBoundary } from '@/components/errors/render-error-boundary'
 import { InviteAccessScreen } from '@/components/interview/invite-access-screen'
 import { InterviewWorkspace } from '@/components/interview/interview-workspace'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
+import { isProductionNodeEnv } from '@/lib/env/node-env'
 import { serverConvexQuery } from '@/lib/convex/server-query'
 import { UNAVAILABLE_INVITE_FALLBACK_MESSAGE } from '@/lib/interview/invite-access-copy'
 import { createInitialInterviewSnapshot } from '@/lib/interview/snapshot'
@@ -44,7 +45,7 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
               UNAVAILABLE_INVITE_FALLBACK_MESSAGE
             }
             accessState={publicSnapshot?.accessState ?? 'unavailable'}
-            inviteId={inviteId}
+            templateName={publicSnapshot?.templateName}
           />
         </div>
       </main>
@@ -59,7 +60,9 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
       <RenderErrorBoundary title="Interview workspace">
         <InterviewWorkspace
           initialSnapshot={snapshot}
-          skipInviteAuth={!hasClerkServerCredentials()}
+          skipInviteAuth={
+            !isProductionNodeEnv() && !hasClerkServerCredentials()
+          }
         />
       </RenderErrorBoundary>
     </main>

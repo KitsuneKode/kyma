@@ -144,3 +144,158 @@ export async function ensureSystemJsJuniorTemplate(
 
   return template
 }
+
+const GENERAL_PRACTICE_SYSTEM_PROMPT = `
+You are conducting a short practice voice screen for professional communication and role-fit signal.
+
+Keep the conversation warm, structured, and spoken-friendly. Ask one question at a time, follow up when answers are vague, and avoid revealing scores or hiring outcomes. This is a practice session for the candidate to build confidence.
+`.trim()
+
+const GENERAL_PRACTICE_WRAP_UP = `
+Close the practice interview warmly. Thank the candidate for practicing and remind them this is private feedback for learning, not a hiring decision.
+`.trim()
+
+const GENERAL_PRACTICE_RUBRIC = {
+  dimensions: [
+    {
+      name: 'clarity',
+      weight: 0.3,
+      isHardGate: false,
+      keywords: ['clear', 'structure', 'example'],
+    },
+    {
+      name: 'communication',
+      weight: 0.35,
+      isHardGate: false,
+      keywords: ['listen', 'respond', 'concise'],
+    },
+    {
+      name: 'problem_solving',
+      weight: 0.35,
+      isHardGate: false,
+      keywords: ['approach', 'tradeoff', 'reason'],
+    },
+  ],
+} as const
+
+async function ensureSystemTemplateByRole(
+  ctx: MutationCtx | QueryCtx,
+  role: string,
+  name: string,
+  rubricVersion: string,
+  systemPrompt: string,
+  wrapUpPrompt: string,
+  childPersonaPrompt?: string
+): Promise<Doc<'assessmentTemplates'>> {
+  const existing = await ctx.db
+    .query('assessmentTemplates')
+    .withIndex('by_org_id_and_status', (q) =>
+      q.eq('orgId', SYSTEM_ORG_ID).eq('status', 'active')
+    )
+    .collect()
+
+  const matched = existing.find(
+    (template) => template.role === role || template.name === name
+  )
+  if (matched) {
+    return matched
+  }
+
+  if (!('insert' in ctx.db)) {
+    throw new ConvexError('System template must be created in a mutation.')
+  }
+
+  const templateId = await ctx.db.insert('assessmentTemplates', {
+    orgId: SYSTEM_ORG_ID,
+    name,
+    role,
+    status: 'active',
+    createdBy: 'system',
+    rubricVersion,
+    targetDurationMinutes: MOCK_INTERVIEW_DURATION_MINUTES,
+    allowsResume: false,
+    interviewStyleMode: 'standard',
+    systemPrompt,
+    childPersonaPrompt,
+    wrapUpPrompt,
+    rubricConfig: {
+      dimensions: GENERAL_PRACTICE_RUBRIC.dimensions.map((dimension) => ({
+        ...dimension,
+        keywords: [...dimension.keywords],
+      })),
+    },
+  })
+
+  const template = await ctx.db.get(templateId)
+  if (!template) {
+    throw new ConvexError(`Unable to create system template for ${role}.`)
+  }
+
+  return template
+}
+
+export type PracticeJobFamily =
+  | 'software_engineering'
+  | 'product'
+  | 'customer_support'
+  | 'sales'
+  | 'tutor'
+  | 'general'
+
+export async function ensureSystemPracticeTemplate(
+  ctx: MutationCtx | QueryCtx,
+  jobFamily: PracticeJobFamily
+): Promise<Doc<'assessmentTemplates'>> {
+  if (jobFamily === 'software_engineering') {
+    return ensureSystemJsJuniorTemplate(ctx)
+  }
+
+  if (jobFamily === 'tutor') {
+    return ensureSystemTemplateByRole(
+      ctx,
+      'practice-tutor',
+      'Practice - Tutor Screen',
+      'practice-tutor-v1',
+      `${GENERAL_PRACTICE_SYSTEM_PROMPT}\n\nFocus on teaching clarity, patience, and adapting explanations for a learner.`,
+      GENERAL_PRACTICE_WRAP_UP,
+      JS_JUNIOR_CHILD_PROMPT
+    )
+  }
+
+  const familyLabels: Record<
+    Exclude<PracticeJobFamily, 'software_engineering' | 'tutor'>,
+    { role: string; name: string; focus: string }
+  > = {
+    product: {
+      role: 'practice-product',
+      name: 'Practice - Product Manager',
+      focus:
+        'prioritization, stakeholder communication, and structured tradeoffs',
+    },
+    customer_support: {
+      role: 'practice-support',
+      name: 'Practice - Customer Support',
+      focus: 'empathy, de-escalation, and step-by-step troubleshooting',
+    },
+    sales: {
+      role: 'practice-sales',
+      name: 'Practice - Sales',
+      focus: 'discovery, objection handling, and concise value storytelling',
+    },
+    general: {
+      role: 'practice-general',
+      name: 'Practice - General Professional',
+      focus: 'communication, professionalism, and structured answers',
+    },
+  }
+
+  const config = familyLabels[jobFamily as keyof typeof familyLabels]
+  return ensureSystemTemplateByRole(
+    ctx,
+    config.role,
+    config.name,
+    `${config.role}-v1`,
+    `${GENERAL_PRACTICE_SYSTEM_PROMPT}\n\nFocus on ${config.focus}.`,
+    GENERAL_PRACTICE_WRAP_UP
+  )
+}

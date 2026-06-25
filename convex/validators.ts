@@ -69,6 +69,33 @@ export const sessionPurposeValidator = v.union(
   v.literal('mock')
 )
 
+export const jobFamilyValidator = v.union(
+  v.literal('tutor'),
+  v.literal('software_engineering'),
+  v.literal('product'),
+  v.literal('sales'),
+  v.literal('customer_support'),
+  v.literal('general'),
+  v.literal('custom')
+)
+
+/** Practice packs exclude `custom` — matches PRACTICE_PACKS job families. */
+export const practiceJobFamilyValidator = v.union(
+  v.literal('software_engineering'),
+  v.literal('product'),
+  v.literal('customer_support'),
+  v.literal('sales'),
+  v.literal('tutor'),
+  v.literal('general')
+)
+
+export const simulationModeValidator = v.union(
+  v.literal('teaching'),
+  v.literal('roleplay'),
+  v.literal('case_discussion'),
+  v.literal('none')
+)
+
 export const interviewPolicySnapshotValidator = v.object({
   targetDurationMinutes: v.number(),
   allowsResume: v.boolean(),

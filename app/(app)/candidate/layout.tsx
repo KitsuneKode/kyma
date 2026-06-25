@@ -3,6 +3,7 @@ import { connection } from 'next/server'
 
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { CandidateSidebar } from '@/components/candidate/app-sidebar'
+import { CandidateInviteEmailLinker } from '@/components/candidate/candidate-invite-email-linker'
 import {
   SidebarProvider,
   SidebarInset,
@@ -10,17 +11,10 @@ import {
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { CandidateInviteLinkBanner } from '@/components/candidate/candidate-invite-link-banner'
-import { CandidateInviteLinkError } from '@/components/candidate/candidate-invite-link-error'
 import { AppAuthGate } from '@/components/auth/app-auth-gate'
 import { WorkspacePromptBanner } from '@/components/auth/workspace-prompt-banner'
 import { WorkspaceShell } from '@/components/workspace/workspace-shell'
 import { requireCandidatePageAccess } from '@/lib/auth/access'
-import { api } from '@/convex/_generated/api'
-import {
-  hasConvexDeployment,
-  serverConvexMutation,
-} from '@/lib/convex/server-query'
-import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import { getClerkSetupStatus } from '@/lib/clerk/setup-status'
 
 export default async function CandidateLayout({
@@ -29,26 +23,9 @@ export default async function CandidateLayout({
   children: ReactNode
 }) {
   await connection()
-  const [access, token] = await Promise.all([
-    requireCandidatePageAccess(),
-    getServerConvexAuthToken(),
-  ])
+  const access = await requireCandidatePageAccess()
   const clerkEnabled = hasClerkServerCredentials()
   const setupStatus = getClerkSetupStatus()
-
-  let linkError: string | null = null
-
-  if (hasConvexDeployment() && token) {
-    const linkResult = await serverConvexMutation(
-      api.interviews.candidatePortal.linkCandidateInviteByEmail,
-      {}
-    )
-    if (!linkResult.ok) {
-      linkError =
-        linkResult.message ??
-        'Unable to link screening invites to your account.'
-    }
-  }
 
   return (
     <SidebarProvider>
@@ -69,11 +46,9 @@ export default async function CandidateLayout({
             setupStatus={setupStatus}
             signInHref="/sign-in/candidate"
           >
+            <CandidateInviteEmailLinker />
             {access.preferredWorkspace === 'unassigned' ? (
               <WorkspacePromptBanner variant="candidate-default" />
-            ) : null}
-            {linkError ? (
-              <CandidateInviteLinkError message={linkError} />
             ) : null}
             <CandidateInviteLinkBanner />
             {children}

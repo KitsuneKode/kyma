@@ -165,7 +165,7 @@ export function InterviewWorkspace({
     initialSnapshot.state
   )
   const participantNameRef = useRef(participantName)
-  const [queryNowMs] = useState(() => Date.now())
+  const [queryNowMs, setQueryNowMs] = useState(() => Date.now())
   const shouldSubscribeToPersistedSession =
     view === 'meeting' ||
     view === 'processing' ||
@@ -187,6 +187,18 @@ export function InterviewWorkspace({
         }
       : 'skip'
   )
+
+  useEffect(() => {
+    if (view !== 'prejoin') {
+      return
+    }
+
+    const intervalId = window.setInterval(() => {
+      setQueryNowMs(Date.now())
+    }, 30_000)
+
+    return () => window.clearInterval(intervalId)
+  }, [view])
 
   const logger = useMemo(
     () =>
@@ -529,12 +541,13 @@ export function InterviewWorkspace({
           connectionError={connectionError}
           onRetrySubmission={handleSubmitInterview}
           sessionId={sessionIdRef.current ?? hydratedSession.sessionId ?? null}
+          sessionPurpose={hydratedSession.sessionPurpose}
         />
       ) : hydratedSession.accessState !== 'available' ? (
         <InviteAccessScreen
           accessMessage={hydratedSession.accessMessage}
           accessState={hydratedSession.accessState}
-          inviteId={hydratedSession.inviteId}
+          templateName={hydratedSession.templateName}
         />
       ) : (
         <InviteAuthGate
