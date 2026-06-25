@@ -70,6 +70,7 @@ test.describe('auth routing (public)', () => {
       '/recruiter/templates/new',
       '/recruiter/screenings/new',
       '/recruiter/candidates',
+      '/recruiter/health',
     ]) {
       const response = await page.goto(path)
       expect(response?.status() ?? 200).toBeLessThan(500)
