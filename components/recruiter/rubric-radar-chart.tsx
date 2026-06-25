@@ -1,17 +1,24 @@
 'use client'
 
 import {
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
   Radar,
   RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ResponsiveContainer,
 } from 'recharts'
 
+import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
+import { ChartEmptyState } from '@/components/recruiter/chart-states'
 import { formatDimensionLabel } from '@/lib/recruiter/format'
 import { isDefaultHardGateDimension } from '@/lib/rubric/constants'
-import { ChartEmptyState } from '@/components/recruiter/chart-states'
+
+const chartConfig = {
+  score: {
+    label: 'Score',
+    color: 'var(--chart-2)',
+  },
+} satisfies ChartConfig
 
 type RadarDatum = {
   dimension: string
@@ -57,32 +64,32 @@ export function RubricRadarChart({
 
   return (
     <div className="flex flex-col gap-2">
-      <ResponsiveContainer width="100%" height={260}>
+      <ChartContainer
+        config={chartConfig}
+        className="aspect-auto h-[260px] w-full"
+        initialDimension={{ width: 320, height: 260 }}
+      >
         <RadarChart
           data={data}
           margin={{ top: 10, right: 20, bottom: 10, left: 20 }}
         >
-          <PolarGrid gridType="polygon" stroke="hsl(var(--muted) / 0.3)" />
+          <PolarGrid gridType="polygon" />
           <PolarAngleAxis
             dataKey="label"
-            tick={{
-              fill: 'hsl(var(--muted-foreground))',
-              fontSize: 10,
-              fontWeight: 500,
-            }}
+            tick={{ fontSize: 10, fontWeight: 500 }}
           />
           <PolarRadiusAxis domain={[0, 5]} tick={false} axisLine={false} />
           <Radar
             name="Score"
             dataKey="score"
-            stroke="hsl(var(--primary))"
-            fill="hsl(var(--primary))"
+            stroke="var(--color-score)"
+            fill="var(--color-score)"
             fillOpacity={0.15}
             strokeWidth={1.5}
             dot={false}
           />
         </RadarChart>
-      </ResponsiveContainer>
+      </ChartContainer>
       {data.some((item) => item.isHardGate) ? (
         <p className="text-center text-[10px] text-muted-foreground">
           * Hard-gate dimension

@@ -1,70 +1,110 @@
+import Link from 'next/link'
+
 import { api } from '@/convex/_generated/api'
-import { PageHeader } from '@/components/admin/page-header'
+import { SettingsSubNav } from '@/components/admin/settings-sub-nav'
+import { WorkspacePageHeader } from '@/components/workspace/page-header'
 import {
   settingsFormKey,
   WorkspaceSettingsForms,
 } from '@/components/admin/workspace-settings-forms'
 import { TeamInviteForm } from '@/components/admin/team-invite-form'
+import { Button } from '@/components/ui/button'
+import { WorkspaceQueryState } from '@/components/workspace/query-state'
 import { WorkspaceSurface } from '@/components/workspace/surface'
+import { hasOrgPermission, requireRecruiterPageAccess } from '@/lib/auth/access'
 import { serverConvexQuery } from '@/lib/convex/server-query'
+import { signInPath } from '@/lib/auth/workspace-intent'
 
 export default async function SettingsPage() {
+  await requireRecruiterPageAccess()
+  const canEditSettings = await hasOrgPermission('recruiter:settings:write')
+
   const settingsResult = await serverConvexQuery(
     api.recruiter.workspace.getWorkspaceSettings,
     {}
   )
 
-  if (!settingsResult.ok) {
-    return (
-      <div className="flex w-full flex-col gap-8">
-        <PageHeader
-          eyebrow="Configuration"
-          title="Workspace Settings"
-          description="Manage BYOK provider keys and default models."
-        />
-        <WorkspaceSurface className="p-6">
-          <p className="text-sm text-muted-foreground">
-            {settingsResult.message ??
-              'Settings could not be loaded. Confirm your organization access and try again.'}
-          </p>
-        </WorkspaceSurface>
-      </div>
-    )
-  }
-
-  const settings = settingsResult.data
-
-  if (settings === null) {
-    return (
-      <div className="flex w-full flex-col gap-8">
-        <PageHeader
-          eyebrow="Configuration"
-          title="Workspace Settings"
-          description="Workspace settings are not available for this organization yet."
-        />
-        <WorkspaceSurface className="p-6">
-          <p className="text-sm text-muted-foreground">
-            Settings could not be loaded. Confirm your organization access and
-            try again.
-          </p>
-        </WorkspaceSurface>
-      </div>
-    )
-  }
+  const queryStatus = !settingsResult.ok
+    ? 'error'
+    : settingsResult.data === null
+      ? 'empty'
+      : 'ready'
 
   return (
     <div className="flex w-full flex-col gap-8">
-      <PageHeader
+      <WorkspacePageHeader
         eyebrow="Configuration"
         title="Workspace Settings"
         description="Manage BYOK provider keys, default models, and candidate release policy."
       />
 
-      <TeamInviteForm />
-      <WorkspaceSettingsForms
-        key={settingsFormKey(settings)}
-        settings={settings}
-      />
+      <SettingsSubNav />
+
+      <WorkspaceQueryState
+        status={queryStatus}
+        emptyTitle="Settings unavailable"
+        emptyDescription="Workspace settings are not available for this organization yet. Confirm your organization access and try again."
+        emptyAction={
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link href="/recruiter" />}
+          >
+            Back to recruiter
+          </Button>
+        }
+        errorTitle={
+          settingsResult.ok
+            ? 'Unable to load settings'
+            : settingsResult.kind === 'auth'
+              ? 'Sign in required'
+              : 'Unable to load settings'
+        }
+        errorDescription={
+          settingsResult.ok
+            ? ''
+            : (settingsResult.message ??
+              'Settings could not be loaded. Confirm your organization access and try again.')
+        }
+        errorAction={
+          settingsResult.ok ? undefined : settingsResult.kind === 'auth' ? (
+            <Button
+              nativeButton={false}
+              render={<Link href={signInPath('recruiter')} />}
+            >
+              Sign in again
+            </Button>
+          ) : (
+            <Button
+              nativeButton={false}
+              variant="outline"
+              render={<Link href="/recruiter" />}
+            >
+              Back to recruiter
+            </Button>
+          )
+        }
+      >
+        {settingsResult.ok && settingsResult.data ? (
+          <>
+            {!canEditSettings ? (
+              <WorkspaceSurface className="border-amber-500/30 bg-amber-500/5 p-4">
+                <p className="text-sm text-muted-foreground">
+                  You have view-only access to workspace settings. Ask an org
+                  admin to update provider keys, default models, or candidate
+                  release policy.
+                </p>
+              </WorkspaceSurface>
+            ) : null}
+            <TeamInviteForm />
+            <WorkspaceSettingsForms
+              key={settingsFormKey(settingsResult.data)}
+              settings={settingsResult.data}
+              readOnly={!canEditSettings}
+            />
+          </>
+        ) : null}
+      </WorkspaceQueryState>
     </div>
   )
 }

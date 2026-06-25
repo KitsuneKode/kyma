@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
-import { signInPath, signUpPath } from '@/lib/auth/workspace-intent'
+import {
+  authContinuePath,
+  signInPath,
+  signUpPath,
+} from '@/lib/auth/workspace-intent'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -65,10 +69,12 @@ export function MarketingCtaRow({
           pressable,
           'h-12 px-8 text-base ring-1 ring-border/40 hover:bg-muted/30'
         )}
-        render={<Link href={signUpPath('candidate')} />}
+        render={
+          <Link href={authContinuePath('candidate', '/candidate/practice')} />
+        }
         nativeButton={false}
       >
-        <span className="text-nowrap">Try the candidate flow</span>
+        <span className="text-nowrap">Try a practice interview</span>
       </Button>
 
       {isHero ? (

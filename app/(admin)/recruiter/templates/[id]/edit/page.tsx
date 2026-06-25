@@ -3,7 +3,8 @@ import type { Id } from '@/convex/_generated/dataModel'
 
 import { api } from '@/convex/_generated/api'
 import { TemplateEditForm } from '@/components/admin/template-edit-form'
-import { PageHeader } from '@/components/admin/page-header'
+import { WorkspacePageHeader } from '@/components/workspace/page-header'
+import { WorkspaceEmptyState } from '@/components/workspace/empty-state'
 import { Button } from '@/components/ui/button'
 import {
   hasConvexDeployment,
@@ -35,7 +36,7 @@ export default async function TemplateEditPage({
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-8">
-      <PageHeader
+      <WorkspacePageHeader
         eyebrow="Template library"
         title={template?.name ?? 'Edit template'}
         description="Update template metadata and interviewer prompts. Saving creates a new rubric version snapshot."
@@ -50,7 +51,19 @@ export default async function TemplateEditPage({
         }
       />
       {!template ? (
-        <p className="text-sm text-muted-foreground">Template not found.</p>
+        <WorkspaceEmptyState
+          title="Template not found"
+          description="This template may have been removed or you may not have access to edit it."
+          action={
+            <Button
+              nativeButton={false}
+              variant="outline"
+              render={<Link href="/recruiter/templates" />}
+            >
+              Back to templates
+            </Button>
+          }
+        />
       ) : (
         <TemplateEditForm template={template} />
       )}

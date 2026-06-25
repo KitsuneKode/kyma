@@ -43,6 +43,11 @@ function countWords(text: string) {
   return text.trim().split(/\s+/).filter(Boolean).length
 }
 
+const MAX_REVIEW_DECISIONS = 100
+const MAX_SESSION_RECORDINGS = 20
+const MAX_RECRUITER_NOTES = 200
+const MAX_CHAT_MESSAGES = 500
+
 export const addRecruiterNote = candidateWriteMutation({
   args: {
     sessionId: v.id('interviewSessions'),
@@ -200,23 +205,26 @@ export const getCandidateReviewDetail = query({
           .withIndex('by_session_and_created_at', (q) =>
             q.eq('sessionId', sessionId)
           )
-          .collect(),
+          .order('desc')
+          .take(MAX_REVIEW_DECISIONS),
         ctx.db
           .query('recordingArtifacts')
           .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-          .collect(),
+          .take(MAX_SESSION_RECORDINGS),
         ctx.db
           .query('recruiterNotes')
           .withIndex('by_session_and_created_at', (q) =>
             q.eq('sessionId', sessionId)
           )
-          .collect(),
+          .order('desc')
+          .take(MAX_RECRUITER_NOTES),
         ctx.db
           .query('reportChatMessages')
           .withIndex('by_session_and_created_at', (q) =>
             q.eq('sessionId', sessionId)
           )
-          .collect(),
+          .order('desc')
+          .take(MAX_CHAT_MESSAGES),
       ])
 
     const { transcript, events, evidence } = slices

@@ -1,12 +1,20 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useCallback, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { IconEye } from '@tabler/icons-react'
 
 import { Button } from '@/components/ui/button'
 import { DataTable, type ColumnDef } from '@/components/ui/data-table'
 import { StatusBadge } from '@/components/workspace/status-badge'
+import {
+  buildCandidateQueueSearchParams,
+  CANDIDATE_RECOMMENDATION_FILTERS,
+  CANDIDATE_STATUS_FILTERS,
+  parseCandidateQueueFilters,
+  type CandidateRecommendationFilter,
+  type CandidateStatusFilter,
+} from '@/lib/recruiter/candidate-queue-filters'
 import {
   formatConfidenceLabel,
   formatDateTime,
@@ -30,30 +38,56 @@ type CandidateRow = {
   latestDecision?: string
 }
 
-const STATUS_FILTERS = ['all', 'pending', 'completed', 'manual_review'] as const
-const RECOMMENDATION_FILTERS = [
-  'all',
-  'strong_yes',
-  'yes',
-  'mixed',
-  'no',
-] as const
-
 export function CandidatesTable({ data }: { data: CandidateRow[] }) {
   const router = useRouter()
-  const [statusFilter, setStatusFilter] =
-    useState<(typeof STATUS_FILTERS)[number]>('all')
-  const [recFilter, setRecFilter] =
-    useState<(typeof RECOMMENDATION_FILTERS)[number]>('all')
+  const searchParams = useSearchParams()
+  const initialFilters = useMemo(
+    () => parseCandidateQueueFilters(searchParams),
+    [searchParams]
+  )
 
-  const filtered = useMemo(() => {
-    return data.filter((row) => {
-      if (statusFilter !== 'all' && row.reportStatus !== statusFilter)
-        return false
-      if (recFilter !== 'all' && row.recommendation !== recFilter) return false
-      return true
-    })
-  }, [data, statusFilter, recFilter])
+  const [statusFilter, setStatusFilter] = useState<CandidateStatusFilter>(
+    initialFilters.status
+  )
+  const [recFilter, setRecFilter] = useState<CandidateRecommendationFilter>(
+    initialFilters.recommendation
+  )
+
+  const syncFiltersToUrl = useCallback(
+    (
+      nextStatus: CandidateStatusFilter,
+      nextRec: CandidateRecommendationFilter
+    ) => {
+      const params = buildCandidateQueueSearchParams({
+        status: nextStatus,
+        recommendation: nextRec,
+      })
+      const query = params.toString()
+      router.replace(
+        query ? `/recruiter/candidates?${query}` : '/recruiter/candidates',
+        { scroll: false }
+      )
+    },
+    [router]
+  )
+
+  const handleStatusChange = useCallback(
+    (value: CandidateStatusFilter) => {
+      setStatusFilter(value)
+      syncFiltersToUrl(value, recFilter)
+    },
+    [recFilter, syncFiltersToUrl]
+  )
+
+  const handleRecChange = useCallback(
+    (value: CandidateRecommendationFilter) => {
+      setRecFilter(value)
+      syncFiltersToUrl(statusFilter, value)
+    },
+    [statusFilter, syncFiltersToUrl]
+  )
+
+  const filtered = data
 
   const columns = useMemo<ColumnDef<CandidateRow>[]>(
     () => [
@@ -146,15 +180,15 @@ export function CandidatesTable({ data }: { data: CandidateRow[] }) {
         <FilterGroup
           label="Status"
           value={statusFilter}
-          options={STATUS_FILTERS}
-          onChange={setStatusFilter}
+          options={CANDIDATE_STATUS_FILTERS}
+          onChange={handleStatusChange}
         />
         <div className="mx-1 h-5 w-px bg-border/40" />
         <FilterGroup
           label="Rec"
           value={recFilter}
-          options={RECOMMENDATION_FILTERS}
-          onChange={setRecFilter}
+          options={CANDIDATE_RECOMMENDATION_FILTERS}
+          onChange={handleRecChange}
         />
       </div>
 
@@ -194,7 +228,7 @@ function FilterGroup<T extends string>({
           type="button"
           onClick={() => onChange(opt)}
           className={cn(
-            'rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors duration-150',
+            'rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors transition-transform duration-150 active:scale-[0.96]',
             value === opt
               ? 'bg-primary/10 text-primary'
               : 'text-muted-foreground hover:bg-muted/30 hover:text-foreground'

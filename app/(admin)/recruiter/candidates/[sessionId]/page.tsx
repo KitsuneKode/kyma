@@ -60,20 +60,19 @@ export default async function CandidateReviewPage({
   }
 
   return (
-    <>
-      <CandidateReviewWorkspace
-        detail={detail}
-        audioPlaybackUrl={audioPlaybackUrl}
-        visualObservations={visualObservations}
-      />
-
-      <RenderErrorBoundary title="Recruiter chat">
-        <RecruiterChat
-          sessionId={detail.session.id}
-          reportId={detail.report?.id}
-          initialMessages={detail.chatMessages}
-        />
-      </RenderErrorBoundary>
-    </>
+    <CandidateReviewWorkspace
+      detail={detail}
+      audioPlaybackUrl={audioPlaybackUrl}
+      visualObservations={visualObservations}
+      chatSlot={
+        <RenderErrorBoundary title="Recruiter chat">
+          <RecruiterChat
+            sessionId={detail.session.id}
+            reportId={detail.report?.id}
+            initialMessages={detail.chatMessages}
+          />
+        </RenderErrorBoundary>
+      }
+    />
   )
 }

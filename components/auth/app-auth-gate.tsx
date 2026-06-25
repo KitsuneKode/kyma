@@ -7,8 +7,9 @@ import { useConvexAuth } from 'convex/react'
 
 import { AuthSetupRequired } from '@/components/auth/auth-setup-required'
 import { ConvexAuthSetupPanel } from '@/components/auth/convex-auth-setup-panel'
+import { PageSkeleton } from '@/components/admin/page-skeleton'
 import { Button } from '@/components/ui/button'
-import { WorkspaceSurface } from '@/components/workspace/surface'
+import { WorkspaceEmptyState } from '@/components/workspace/empty-state'
 import { resolveAppAuthState } from '@/lib/auth/app-auth-state'
 import type { ClerkSetupStatus } from '@/lib/clerk/setup-status'
 
@@ -51,35 +52,50 @@ export function AppAuthGate({
 
   if (state.kind === 'signed-out') {
     return (
-      <WorkspaceSurface className="space-y-4 p-6">
-        <div>
-          <h2 className="text-lg font-semibold">Sign in required</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sign in again to continue. Your session is not active in this
-            workspace.
-          </p>
-        </div>
-        <Button nativeButton={false} render={<Link href={signInHref} />}>
-          Sign in
-        </Button>
-      </WorkspaceSurface>
+      <WorkspaceEmptyState
+        eyebrow="Workspace access"
+        title="Sign in required"
+        description="Sign in again to continue. Your session is not active in this workspace."
+        action={
+          <Button nativeButton={false} render={<Link href={signInHref} />}>
+            Sign in
+          </Button>
+        }
+      />
     )
   }
 
   if (state.kind === 'auth-unavailable') {
     return (
-      <ConvexAuthSetupPanel
-        title="Backend auth is not ready"
-        description="Clerk signed you in, but Convex did not receive a valid convex JWT. Refresh your session after syncing Clerk and Convex auth configuration."
-      />
+      <div className="space-y-6">
+        <WorkspaceEmptyState
+          eyebrow="Workspace access"
+          title="Backend auth is not ready"
+          description="Clerk signed you in, but Convex did not receive a valid JWT. Refresh your session after syncing Clerk and Convex auth configuration."
+          action={
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                onClick={() => {
+                  window.location.reload()
+                }}
+              >
+                Retry
+              </Button>
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={<Link href="/dev" />}
+              >
+                Open dev setup
+              </Button>
+            </div>
+          }
+        />
+        <ConvexAuthSetupPanel />
+      </div>
     )
   }
 
-  return (
-    <WorkspaceSurface className="p-6">
-      <p className="text-sm text-muted-foreground">
-        Checking your authenticated session…
-      </p>
-    </WorkspaceSurface>
-  )
+  return <PageSkeleton />
 }

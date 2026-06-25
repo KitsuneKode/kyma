@@ -10,6 +10,18 @@ import { ModelStageForm } from '@/components/providers/model-stage-form'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import {
   Select,
   SelectContent,
@@ -18,6 +30,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { resolveStageModels } from '@/lib/providers/resolve-model'
+
+const PROVIDER_OPTIONS = [
+  'openai',
+  'anthropic',
+  'google',
+  'deepgram',
+  'cartesia',
+] as const
 
 export type WorkspaceSettings = NonNullable<
   FunctionReturnType<typeof api.recruiter.workspace.getWorkspaceSettings>
@@ -52,8 +72,10 @@ type MutationFeedback = {
 
 export function WorkspaceSettingsForms({
   settings,
+  readOnly = false,
 }: {
   settings: WorkspaceSettings
+  readOnly?: boolean
 }) {
   const addProviderKey = useMutation(api.recruiter.workspace.addProviderKey)
   const removeProviderKey = useMutation(
@@ -116,89 +138,111 @@ export function WorkspaceSettingsForms({
 
   return (
     <>
-      <WorkspaceSurface className="p-6">
+      <WorkspaceSurface id="provider-keys" className="scroll-mt-24 p-6">
         <h2 className="text-lg font-semibold">Provider keys</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <Input
-            value={provider}
-            onChange={(event) => setProvider(event.target.value)}
-            placeholder="provider"
-          />
-          <Input
-            value={label}
-            onChange={(event) => setLabel(event.target.value)}
-            placeholder="label"
-          />
-          <Input
-            value={key}
-            type="password"
-            onChange={(event) => setKey(event.target.value)}
-            placeholder="api key"
-            className="font-mono"
-          />
-        </div>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <Button
-            type="button"
-            disabled={busyAction !== null || !key.trim()}
-            onClick={() =>
-              void runMutation(
-                'add-key',
-                async () => {
-                  await addProviderKey({
-                    provider,
-                    key,
-                    label: label || undefined,
-                  })
-                  setKey('')
-                },
-                setAddKeyFeedback,
-                'Provider key added.'
-              )
-            }
-          >
-            {busyAction === 'add-key' ? 'Adding…' : 'Add key'}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busyAction !== null}
-            onClick={() =>
-              void runMutation(
-                'test-provider',
-                async () => {
-                  await testProviderConnection({ provider })
-                },
-                setTestFeedback,
-                'Provider connection succeeded.'
-              )
-            }
-          >
-            {busyAction === 'test-provider' ? 'Testing…' : 'Test provider'}
-          </Button>
-        </div>
-        {addKeyFeedback ? (
-          <p
-            className={
-              addKeyFeedback.tone === 'success'
-                ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
-                : 'mt-3 text-sm text-destructive'
-            }
-          >
-            {addKeyFeedback.message}
+        {readOnly ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Masked keys configured for this workspace. Only org admins can add
+            or remove keys.
           </p>
-        ) : null}
-        {testFeedback ? (
-          <p
-            className={
-              testFeedback.tone === 'success'
-                ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
-                : 'mt-3 text-sm text-destructive'
-            }
-          >
-            {testFeedback.message}
-          </p>
-        ) : null}
+        ) : (
+          <>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="provider-name">Provider</Label>
+                <Select
+                  value={provider}
+                  onValueChange={(value) => value && setProvider(value)}
+                >
+                  <SelectTrigger id="provider-name">
+                    <SelectValue placeholder="Select provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROVIDER_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Input
+                value={label}
+                onChange={(event) => setLabel(event.target.value)}
+                placeholder="label"
+              />
+              <Input
+                value={key}
+                type="password"
+                onChange={(event) => setKey(event.target.value)}
+                placeholder="api key"
+                className="font-mono"
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <Button
+                type="button"
+                disabled={busyAction !== null || !key.trim()}
+                onClick={() =>
+                  void runMutation(
+                    'add-key',
+                    async () => {
+                      await addProviderKey({
+                        provider,
+                        key,
+                        label: label || undefined,
+                      })
+                      setKey('')
+                    },
+                    setAddKeyFeedback,
+                    'Provider key added.'
+                  )
+                }
+              >
+                {busyAction === 'add-key' ? 'Adding…' : 'Add key'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busyAction !== null}
+                onClick={() =>
+                  void runMutation(
+                    'test-provider',
+                    async () => {
+                      await testProviderConnection({ provider })
+                    },
+                    setTestFeedback,
+                    'Provider connection succeeded.'
+                  )
+                }
+              >
+                {busyAction === 'test-provider' ? 'Testing…' : 'Test provider'}
+              </Button>
+            </div>
+            {addKeyFeedback ? (
+              <p
+                className={
+                  addKeyFeedback.tone === 'success'
+                    ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
+                    : 'mt-3 text-sm text-destructive'
+                }
+              >
+                {addKeyFeedback.message}
+              </p>
+            ) : null}
+            {testFeedback ? (
+              <p
+                className={
+                  testFeedback.tone === 'success'
+                    ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
+                    : 'mt-3 text-sm text-destructive'
+                }
+              >
+                {testFeedback.message}
+              </p>
+            ) : null}
+          </>
+        )}
         <div className="mt-4 space-y-2">
           {settings.providerKeys?.length ? (
             settings.providerKeys.map((item) => (
@@ -210,27 +254,55 @@ export function WorkspaceSettingsForms({
                   {item.provider} {item.label ? `(${item.label})` : ''} - ****
                   {item.maskedKeyTail ?? '****'}
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={busyAction !== null}
-                  onClick={() =>
-                    void runMutation(
-                      `remove-${item.keyId}`,
-                      async () => {
-                        await removeProviderKey({
-                          provider: item.provider,
-                          keyId: item.keyId,
-                        })
-                      },
-                      setRemoveFeedback,
-                      'Provider key removed.'
-                    )
-                  }
-                >
-                  Remove
-                </Button>
+                {readOnly ? null : (
+                  <AlertDialog>
+                    <AlertDialogTrigger
+                      render={
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={busyAction !== null}
+                        />
+                      }
+                    >
+                      Remove
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Remove provider key?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Interviews using {item.provider} will fall back to
+                          platform defaults until you add a replacement key.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          variant="destructive"
+                          disabled={busyAction !== null}
+                          onClick={() =>
+                            void runMutation(
+                              `remove-${item.keyId}`,
+                              async () => {
+                                await removeProviderKey({
+                                  provider: item.provider,
+                                  keyId: item.keyId,
+                                })
+                              },
+                              setRemoveFeedback,
+                              'Provider key removed.'
+                            )
+                          }
+                        >
+                          Remove key
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
             ))
           ) : (
@@ -252,126 +324,153 @@ export function WorkspaceSettingsForms({
         ) : null}
       </WorkspaceSurface>
 
-      <WorkspaceSurface className="p-6">
+      <WorkspaceSurface id="models" className="scroll-mt-24 p-6">
         <h2 className="text-lg font-semibold">Default models</h2>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Choose models for each pipeline stage. Interview voice models power
           the live agent; scoring and review chat run after the session.
         </p>
-        <div className="mt-4">
-          <ModelStageForm
-            values={models}
-            onChange={(next) =>
-              setModels({
-                stt: next.stt ?? '',
-                llm: next.llm ?? '',
-                tts: next.tts ?? '',
-                reviewChat: next.reviewChat ?? '',
-                scoring: next.scoring ?? '',
-              })
-            }
-            providerKeys={settings.providerKeys}
-            inheritLabel="Platform default"
-          />
-        </div>
-        <div className="mt-4 rounded-lg border border-border/50 bg-muted/20 p-4">
-          <p className="text-sm font-medium">Effective defaults after save</p>
-          <p className="mt-1 font-mono text-xs text-muted-foreground">
-            STT {effectiveModels.stt} · LLM {effectiveModels.llm} · TTS{' '}
-            {effectiveModels.tts} · Scoring {effectiveModels.scoring} · Review{' '}
-            {effectiveModels.reviewChat}
-          </p>
-        </div>
-        <Button
-          type="button"
-          className="mt-4"
-          disabled={busyAction !== null}
-          onClick={() =>
-            void runMutation(
-              'save-models',
-              async () => {
-                await updateDefaultModels({
-                  models: {
-                    stt: models.stt || undefined,
-                    llm: models.llm || undefined,
-                    tts: models.tts || undefined,
-                    reviewChat: models.reviewChat || undefined,
-                    scoring: models.scoring || undefined,
+        {readOnly ? (
+          <div className="mt-4 rounded-lg border border-border/50 bg-muted/20 p-4">
+            <p className="text-sm font-medium">Current defaults</p>
+            <p className="mt-1 font-mono text-xs text-muted-foreground">
+              STT {effectiveModels.stt} · LLM {effectiveModels.llm} · TTS{' '}
+              {effectiveModels.tts} · Scoring {effectiveModels.scoring} · Review{' '}
+              {effectiveModels.reviewChat}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="mt-4">
+              <ModelStageForm
+                values={models}
+                onChange={(next) =>
+                  setModels({
+                    stt: next.stt ?? '',
+                    llm: next.llm ?? '',
+                    tts: next.tts ?? '',
+                    reviewChat: next.reviewChat ?? '',
+                    scoring: next.scoring ?? '',
+                  })
+                }
+                providerKeys={settings.providerKeys}
+                inheritLabel="Platform default"
+              />
+            </div>
+            <div className="mt-4 rounded-lg border border-border/50 bg-muted/20 p-4">
+              <p className="text-sm font-medium">
+                Effective defaults after save
+              </p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">
+                STT {effectiveModels.stt} · LLM {effectiveModels.llm} · TTS{' '}
+                {effectiveModels.tts} · Scoring {effectiveModels.scoring} ·
+                Review {effectiveModels.reviewChat}
+              </p>
+            </div>
+            <Button
+              type="button"
+              className="mt-4"
+              disabled={busyAction !== null}
+              onClick={() =>
+                void runMutation(
+                  'save-models',
+                  async () => {
+                    await updateDefaultModels({
+                      models: {
+                        stt: models.stt || undefined,
+                        llm: models.llm || undefined,
+                        tts: models.tts || undefined,
+                        reviewChat: models.reviewChat || undefined,
+                        scoring: models.scoring || undefined,
+                      },
+                    })
                   },
-                })
-              },
-              setModelsFeedback,
-              'Default models saved.'
-            )
-          }
-        >
-          {busyAction === 'save-models' ? 'Saving…' : 'Save model defaults'}
-        </Button>
-        {modelsFeedback ? (
-          <p
-            className={
-              modelsFeedback.tone === 'success'
-                ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
-                : 'mt-3 text-sm text-destructive'
-            }
-          >
-            {modelsFeedback.message}
-          </p>
-        ) : null}
+                  setModelsFeedback,
+                  'Default models saved.'
+                )
+              }
+            >
+              {busyAction === 'save-models' ? 'Saving…' : 'Save model defaults'}
+            </Button>
+            {modelsFeedback ? (
+              <p
+                className={
+                  modelsFeedback.tone === 'success'
+                    ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
+                    : 'mt-3 text-sm text-destructive'
+                }
+              >
+                {modelsFeedback.message}
+              </p>
+            ) : null}
+          </>
+        )}
       </WorkspaceSurface>
 
-      <WorkspaceSurface className="p-6">
+      <WorkspaceSurface id="release-policy" className="scroll-mt-24 p-6">
         <h2 className="text-lg font-semibold">Candidate results</h2>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Auto-release shares outcomes when recruiters choose Advance or Reject.
           Manual release requires an explicit action from the review console.
         </p>
-        <div className="mt-4 max-w-sm">
-          <Select
-            value={releaseMode}
-            onValueChange={(value) =>
-              setReleaseMode(value as 'auto' | 'manual')
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Release mode" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="auto">
-                Auto-release on Advance / Reject
-              </SelectItem>
-              <SelectItem value="manual">Manual release only</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Button
-          type="button"
-          className="mt-4"
-          disabled={busyAction !== null}
-          onClick={() =>
-            void runMutation(
-              'save-release',
-              async () => {
-                await updateCandidateReleaseMode({ mode: releaseMode })
-              },
-              setReleaseFeedback,
-              'Release policy saved.'
-            )
-          }
-        >
-          {busyAction === 'save-release' ? 'Saving…' : 'Save release policy'}
-        </Button>
-        {releaseFeedback ? (
-          <p
-            className={
-              releaseFeedback.tone === 'success'
-                ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
-                : 'mt-3 text-sm text-destructive'
-            }
-          >
-            {releaseFeedback.message}
+        {readOnly ? (
+          <p className="mt-4 text-sm font-medium">
+            {releaseMode === 'auto'
+              ? 'Auto-release on Advance / Reject'
+              : 'Manual release only'}
           </p>
-        ) : null}
+        ) : (
+          <>
+            <div className="mt-4 max-w-sm">
+              <Select
+                value={releaseMode}
+                onValueChange={(value) =>
+                  setReleaseMode(value as 'auto' | 'manual')
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Release mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">
+                    Auto-release on Advance / Reject
+                  </SelectItem>
+                  <SelectItem value="manual">Manual release only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              className="mt-4"
+              disabled={busyAction !== null}
+              onClick={() =>
+                void runMutation(
+                  'save-release',
+                  async () => {
+                    await updateCandidateReleaseMode({ mode: releaseMode })
+                  },
+                  setReleaseFeedback,
+                  'Release policy saved.'
+                )
+              }
+            >
+              {busyAction === 'save-release'
+                ? 'Saving…'
+                : 'Save release policy'}
+            </Button>
+            {releaseFeedback ? (
+              <p
+                className={
+                  releaseFeedback.tone === 'success'
+                    ? 'mt-3 text-sm text-emerald-600 dark:text-emerald-400'
+                    : 'mt-3 text-sm text-destructive'
+                }
+              >
+                {releaseFeedback.message}
+              </p>
+            ) : null}
+          </>
+        )}
       </WorkspaceSurface>
     </>
   )

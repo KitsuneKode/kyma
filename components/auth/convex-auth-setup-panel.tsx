@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 import { Button } from '@/components/ui/button'
 
@@ -14,10 +15,10 @@ export function ConvexAuthSetupPanel({
 }) {
   return (
     <WorkspaceSurface className="space-y-4 p-6">
-      <div>
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-      </div>
+      <Alert variant="destructive">
+        <AlertTitle>{title}</AlertTitle>
+        <AlertDescription>{description}</AlertDescription>
+      </Alert>
       <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
         <li>
           Run{' '}

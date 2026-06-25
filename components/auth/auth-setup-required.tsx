@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 import { Button } from '@/components/ui/button'
 import type { ClerkSetupMissingKey } from '@/lib/clerk/setup-status'
@@ -55,6 +56,17 @@ export function AuthSetupRequired({
           .
         </p>
       </header>
+
+      <Alert>
+        <AlertTitle>Local environment setup required</AlertTitle>
+        <AlertDescription>
+          Add the missing variables below to{' '}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">
+            .env.local
+          </code>{' '}
+          before signing in.
+        </AlertDescription>
+      </Alert>
 
       <WorkspaceSurface className="space-y-4 p-6">
         <h2 className="text-base font-semibold">Missing configuration</h2>

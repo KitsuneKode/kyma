@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
 
-import { requireOrgPermission } from '@/lib/auth/access'
+import { requireRecruiterPageAccess } from '@/lib/auth/access'
 
 export default async function RecruiterSettingsLayout({
   children,
 }: {
   children: ReactNode
 }) {
-  await requireOrgPermission('recruiter:settings:write')
+  await requireRecruiterPageAccess()
 
   return <>{children}</>
 }

@@ -17,7 +17,9 @@ import {
   IconSortDescending,
   IconSearch,
 } from '@tabler/icons-react'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence } from '@/components/motion/client-motion'
+import { pressScaleClass } from '@/lib/motion/presets'
+import { useMotionPresets } from '@/lib/motion/use-motion-presets'
 
 import { cn } from '@/lib/utils'
 
@@ -40,6 +42,7 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const { reduceMotion } = useMotionPresets()
 
   const table = useReactTable({
     data,
@@ -119,18 +122,25 @@ export function DataTable<TData, TValue>({
                 table.getRowModel().rows.map((row, index) => (
                   <motion.tr
                     key={row.id}
-                    layout="position"
-                    initial={{ opacity: 0, y: 15 }}
+                    layout={reduceMotion ? false : 'position'}
+                    initial={reduceMotion ? false : { opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{
-                      delay: Math.min(index * 0.04, 0.4),
-                      duration: 0.4,
-                      ease: [0.23, 1, 0.32, 1],
-                    }}
+                    exit={
+                      reduceMotion ? undefined : { opacity: 0, scale: 0.98 }
+                    }
+                    transition={
+                      reduceMotion
+                        ? { duration: 0.15 }
+                        : {
+                            delay: Math.min(index * 0.04, 0.4),
+                            duration: 0.4,
+                            ease: [0.23, 1, 0.32, 1],
+                          }
+                    }
                     className={cn(
-                      'group transition-colors duration-200',
-                      onRowClick && 'cursor-pointer hover:bg-muted/10'
+                      'group/row transition-colors duration-200',
+                      onRowClick && 'cursor-pointer hover:bg-muted/10',
+                      onRowClick && pressScaleClass
                     )}
                     onClick={() => onRowClick?.(row.original)}
                   >

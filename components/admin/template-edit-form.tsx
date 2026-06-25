@@ -1,19 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 import { api } from '@/convex/_generated/api'
 import type { Doc, Id } from '@/convex/_generated/dataModel'
 import { ModelStageForm } from '@/components/providers/model-stage-form'
 import { RubricConfigEditor } from '@/components/admin/rubric-config-editor'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { WorkspaceSurface } from '@/components/workspace/surface'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
 import {
   buildDefaultRubricConfig,
   type TemplateRubricConfig,
 } from '@/lib/templates/default-assessment-content'
+import {
+  getJobFamilyStarter,
+  JOB_FAMILIES,
+  JOB_FAMILY_LABELS,
+  SIMULATION_MODES,
+  type JobFamily,
+  type SimulationMode,
+} from '@/lib/templates/job-family-starters'
 
 function toModelOverrides(template: Doc<'assessmentTemplates'>) {
   return {
@@ -31,6 +51,10 @@ function toRubricConfig(
   return template.rubricConfig ?? buildDefaultRubricConfig()
 }
 
+function formatSimulationMode(mode: SimulationMode) {
+  return mode.replace('_', ' ')
+}
+
 export function TemplateEditForm({
   template,
 }: {
@@ -45,9 +69,15 @@ export function TemplateEditForm({
     {}
   )
   const [name, setName] = useState(template.name)
+  const [jobFamily, setJobFamily] = useState<JobFamily>(
+    template.jobFamily ?? 'tutor'
+  )
+  const [simulationMode, setSimulationMode] = useState<SimulationMode>(
+    template.simulationMode ?? 'teaching'
+  )
   const [systemPrompt, setSystemPrompt] = useState(template.systemPrompt ?? '')
-  const [childPersonaPrompt, setChildPersonaPrompt] = useState(
-    template.childPersonaPrompt ?? ''
+  const [simulationPersonaPrompt, setSimulationPersonaPrompt] = useState(
+    template.simulationPersonaPrompt ?? template.childPersonaPrompt ?? ''
   )
   const [wrapUpPrompt, setWrapUpPrompt] = useState(template.wrapUpPrompt ?? '')
   const [modelOverrides, setModelOverrides] = useState(
@@ -55,18 +85,36 @@ export function TemplateEditForm({
   )
   const [rubricConfig, setRubricConfig] = useState(toRubricConfig(template))
   const [saving, setSaving] = useState(false)
-  const [saveState, setSaveState] = useState<string | null>(null)
+
+  const starterPreview = useMemo(
+    () => getJobFamilyStarter(jobFamily),
+    [jobFamily]
+  )
+
+  function applyStarterDefaults() {
+    const starter = getJobFamilyStarter(jobFamily)
+    setSimulationMode(starter.simulationMode)
+    setSystemPrompt(starter.systemPrompt)
+    setSimulationPersonaPrompt(starter.simulationPersonaPrompt ?? '')
+    setWrapUpPrompt(starter.wrapUpPrompt)
+    setRubricConfig(starter.rubricConfig)
+    toast.message('Starter defaults loaded', {
+      description: 'Review prompts and rubric before saving.',
+    })
+  }
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault()
     setSaving(true)
-    setSaveState(null)
     try {
       await updateTemplate({
         templateId: template._id as Id<'assessmentTemplates'>,
         name,
+        jobFamily,
+        simulationMode,
         systemPrompt: systemPrompt.trim() || undefined,
-        childPersonaPrompt: childPersonaPrompt.trim() || undefined,
+        simulationPersonaPrompt: simulationPersonaPrompt.trim() || undefined,
+        childPersonaPrompt: simulationPersonaPrompt.trim() || undefined,
         wrapUpPrompt: wrapUpPrompt.trim() || undefined,
         modelOverrides: {
           stt: modelOverrides.stt.trim() || undefined,
@@ -77,10 +125,10 @@ export function TemplateEditForm({
         },
         rubricConfig,
       })
-      setSaveState('Saved')
+      toast.success('Template saved')
       router.refresh()
     } catch (error) {
-      setSaveState(
+      toast.error(
         error instanceof Error ? error.message : 'Unable to save template.'
       )
     } finally {
@@ -99,58 +147,119 @@ export function TemplateEditForm({
     : undefined
 
   return (
-    <form onSubmit={handleSave} className="space-y-4">
-      <div className="rounded-2xl bg-card p-6 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
+    <form onSubmit={handleSave} className="space-y-6">
+      <WorkspaceSurface className="space-y-4 p-6">
         <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           Template details
         </p>
-        <label className="mt-4 block space-y-2 text-sm">
-          <span>Name</span>
-          <input
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="template-name">Name</Label>
+          <Input
+            id="template-name"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="w-full rounded-xl border border-border/60 bg-background px-3 py-2"
           />
-        </label>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Rubric version: {template.rubricVersion} · Status: {template.status}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="job-family">Job family</Label>
+            <Select
+              value={jobFamily}
+              onValueChange={(value) =>
+                value && setJobFamily(value as JobFamily)
+              }
+            >
+              <SelectTrigger id="job-family">
+                <SelectValue placeholder="Job family" />
+              </SelectTrigger>
+              <SelectContent>
+                {JOB_FAMILIES.map((family) => (
+                  <SelectItem key={family} value={family}>
+                    {JOB_FAMILY_LABELS[family]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="simulation-mode">Simulation mode</Label>
+            <Select
+              value={simulationMode}
+              onValueChange={(value) =>
+                value && setSimulationMode(value as SimulationMode)
+              }
+            >
+              <SelectTrigger id="simulation-mode">
+                <SelectValue placeholder="Simulation mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {SIMULATION_MODES.map((mode) => (
+                  <SelectItem key={mode} value={mode}>
+                    {formatSimulationMode(mode)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Rubric version: {template.rubricVersion} · Status: {template.status}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={applyStarterDefaults}
+          >
+            Load {JOB_FAMILY_LABELS[jobFamily]} starter
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Starter includes {starterPreview.rubricConfig.dimensions.length}{' '}
+          dimensions and {formatSimulationMode(starterPreview.simulationMode)}{' '}
+          simulation defaults.
         </p>
-      </div>
+      </WorkspaceSurface>
 
-      <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
+      <WorkspaceSurface className="space-y-4 p-6">
         <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           Interview prompts
         </p>
-        <label className="mt-4 block space-y-2 text-sm">
-          <span>System prompt</span>
-          <textarea
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="system-prompt">System prompt</Label>
+          <Textarea
+            id="system-prompt"
             rows={4}
             value={systemPrompt}
             onChange={(event) => setSystemPrompt(event.target.value)}
-            className="w-full rounded-xl border border-border/60 bg-background px-3 py-2"
           />
-        </label>
-        <label className="block space-y-2 text-sm">
-          <span>Child persona prompt</span>
-          <textarea
-            rows={3}
-            value={childPersonaPrompt}
-            onChange={(event) => setChildPersonaPrompt(event.target.value)}
-            className="w-full rounded-xl border border-border/60 bg-background px-3 py-2"
-          />
-        </label>
-        <label className="block space-y-2 text-sm">
-          <span>Wrap-up prompt</span>
-          <textarea
+        </div>
+        {simulationMode !== 'none' ? (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="persona-prompt">Simulation persona prompt</Label>
+            <Textarea
+              id="persona-prompt"
+              rows={3}
+              value={simulationPersonaPrompt}
+              onChange={(event) =>
+                setSimulationPersonaPrompt(event.target.value)
+              }
+            />
+          </div>
+        ) : null}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="wrap-up-prompt">Wrap-up prompt</Label>
+          <Textarea
+            id="wrap-up-prompt"
             rows={3}
             value={wrapUpPrompt}
             onChange={(event) => setWrapUpPrompt(event.target.value)}
-            className="w-full rounded-xl border border-border/60 bg-background px-3 py-2"
           />
-        </label>
-      </div>
+        </div>
+      </WorkspaceSurface>
 
-      <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
+      <WorkspaceSurface className="space-y-4 p-6">
         <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           Rubric dimensions
         </p>
@@ -159,9 +268,9 @@ export function TemplateEditForm({
           assessment pipeline for this template.
         </p>
         <RubricConfigEditor value={rubricConfig} onChange={setRubricConfig} />
-      </div>
+      </WorkspaceSurface>
 
-      <div className="space-y-4 rounded-2xl bg-card p-6 shadow-[var(--shadow-sm)] ring-1 ring-border/60">
+      <WorkspaceSurface className="space-y-4 p-6">
         <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           Model overrides
         </p>
@@ -186,16 +295,11 @@ export function TemplateEditForm({
           showEffectiveSummary
           workspaceDefaults={workspaceDefaults}
         />
-      </div>
+      </WorkspaceSurface>
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={saving}>
-          {saving ? 'Saving...' : 'Save changes'}
-        </Button>
-        {saveState ? (
-          <p className="text-sm text-muted-foreground">{saveState}</p>
-        ) : null}
-      </div>
+      <Button type="submit" disabled={saving}>
+        {saving ? 'Saving…' : 'Save changes'}
+      </Button>
     </form>
   )
 }

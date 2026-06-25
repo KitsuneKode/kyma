@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 
+import { ChartErrorBoundary } from '@/components/recruiter/chart-error-boundary'
 import { ChartLoadingState } from '@/components/recruiter/chart-states'
 import type { RubricRadarChart } from '@/components/recruiter/rubric-radar-chart'
 
@@ -29,10 +30,12 @@ export function RubricRadar({
   hardGateDimensions,
 }: RubricRadarProps) {
   return (
-    <RubricRadarChartLazy
-      dimensionScores={dimensionScores}
-      hardGateDimensions={hardGateDimensions}
-    />
+    <ChartErrorBoundary height={260}>
+      <RubricRadarChartLazy
+        dimensionScores={dimensionScores}
+        hardGateDimensions={hardGateDimensions}
+      />
+    </ChartErrorBoundary>
   )
 }
 

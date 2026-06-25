@@ -7,8 +7,8 @@ import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { Button } from '@/components/ui/button'
+import { WorkspaceTextarea } from '@/components/workspace/textarea'
 import { formatDateTime } from '@/lib/recruiter/format'
-import { cn } from '@/lib/utils'
 
 type RecruiterNote = {
   id: string
@@ -83,15 +83,12 @@ export function RecruiterNotes({
       <label className="block text-sm font-medium" htmlFor="recruiter-note">
         New note
       </label>
-      <textarea
+      <WorkspaceTextarea
         id="recruiter-note"
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder="Capture your recruiter observations here."
-        className={cn(
-          'min-h-28 w-full rounded-lg border bg-background px-3 py-2 text-sm transition-colors outline-none',
-          'focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
-        )}
+        className="min-h-28"
       />
 
       <div className="flex justify-end">

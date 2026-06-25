@@ -41,16 +41,24 @@ export function VideoEvidencePanel({
   }
 
   if (observations.length === 0) {
-    return null
+    return (
+      <WorkspaceSurface className="p-6">
+        <p className="text-sm font-medium">No video evidence yet</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Visual notes from the interview room will appear here when the agent
+          records observations during the session.
+        </p>
+      </WorkspaceSurface>
+    )
   }
 
   return (
     <WorkspaceSurface className="p-0">
-      <div className="border-b border-amber-400/20 bg-amber-400/10 px-5 py-3">
-        <p className="text-sm font-medium text-amber-100">
+      <div className="border-b border-border/50 bg-muted/20 px-5 py-3">
+        <p className="text-sm font-medium text-foreground">
           Review evidence only — not a score
         </p>
-        <p className="mt-1 text-xs leading-relaxed text-amber-100/80">
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           Visual notes from the interview room are shown here for human review.
           They are not included in automated scoring or recommendations.
         </p>

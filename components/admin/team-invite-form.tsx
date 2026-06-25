@@ -41,7 +41,7 @@ export function TeamInviteForm() {
   }
 
   return (
-    <WorkspaceSurface className="p-6">
+    <WorkspaceSurface id="team" className="scroll-mt-24 p-6">
       <h2 className="text-lg font-semibold">Team invites</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Invite a recruiter teammate by email. They will join this organization

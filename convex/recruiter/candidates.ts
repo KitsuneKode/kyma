@@ -12,6 +12,44 @@ import {
 const INVITE_SEARCH_SAMPLE = 500
 const QUEUE_STATS_SESSION_SAMPLE = 1000
 const QUEUE_STATS_REPORT_SAMPLE = 1000
+const FILTERED_PAGE_SCAN_MULTIPLIER = 4
+const MAX_FILTERED_PAGE_SCANS = 8
+
+const candidateStatusFilterValidator = v.union(
+  v.literal('all'),
+  v.literal('pending'),
+  v.literal('completed'),
+  v.literal('manual_review')
+)
+
+const candidateRecommendationFilterValidator = v.union(
+  v.literal('all'),
+  v.literal('strong_yes'),
+  v.literal('yes'),
+  v.literal('mixed'),
+  v.literal('no')
+)
+
+type ReviewCandidateProjection = Awaited<
+  ReturnType<typeof projectReviewCandidate>
+>
+
+function matchesReviewCandidateFilters(
+  candidate: ReviewCandidateProjection,
+  statusFilter: 'all' | 'pending' | 'completed' | 'manual_review',
+  recommendationFilter: 'all' | 'strong_yes' | 'yes' | 'mixed' | 'no'
+) {
+  if (statusFilter !== 'all' && candidate.reportStatus !== statusFilter) {
+    return false
+  }
+  if (
+    recommendationFilter !== 'all' &&
+    candidate.recommendation !== recommendationFilter
+  ) {
+    return false
+  }
+  return true
+}
 
 export const searchCandidates = candidateReadQuery({
   args: {
@@ -83,23 +121,87 @@ async function projectReviewCandidate(
 }
 
 export const listReviewCandidates = candidateReadQuery({
-  args: { paginationOpts: paginationOptsValidator },
+  args: {
+    paginationOpts: paginationOptsValidator,
+    statusFilter: v.optional(candidateStatusFilterValidator),
+    recommendationFilter: v.optional(candidateRecommendationFilterValidator),
+  },
   handler: async (ctx, args) => {
     const { orgId } = ctx
+    const statusFilter = args.statusFilter ?? 'all'
+    const recommendationFilter = args.recommendationFilter ?? 'all'
+    const filtersActive =
+      statusFilter !== 'all' || recommendationFilter !== 'all'
 
-    // Cursor-paginated newest-first over the org's sessions. Ordering follows
-    // the index's `_creationTime` so cursors stay stable as new sessions land.
-    const result = await ctx.db
-      .query('interviewSessions')
-      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-      .order('desc')
-      .paginate(args.paginationOpts)
+    if (!filtersActive) {
+      const result = await ctx.db
+        .query('interviewSessions')
+        .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+        .order('desc')
+        .paginate(args.paginationOpts)
 
-    const page = await Promise.all(
-      result.page.map((session) => projectReviewCandidate(ctx, session))
-    )
+      const page = await Promise.all(
+        result.page.map((session) => projectReviewCandidate(ctx, session))
+      )
 
-    return { ...result, page }
+      return { ...result, page }
+    }
+
+    const filteredPage: ReviewCandidateProjection[] = []
+    let cursor = args.paginationOpts.cursor
+    let continueCursor = args.paginationOpts.cursor ?? ''
+    let isDone = false
+    let scans = 0
+
+    while (
+      filteredPage.length < args.paginationOpts.numItems &&
+      !isDone &&
+      scans < MAX_FILTERED_PAGE_SCANS
+    ) {
+      scans += 1
+      const scanSize = Math.max(
+        args.paginationOpts.numItems,
+        args.paginationOpts.numItems * FILTERED_PAGE_SCAN_MULTIPLIER
+      )
+      const result = await ctx.db
+        .query('interviewSessions')
+        .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+        .order('desc')
+        .paginate({ numItems: scanSize, cursor })
+
+      const projected = await Promise.all(
+        result.page.map((session) => projectReviewCandidate(ctx, session))
+      )
+
+      for (const candidate of projected) {
+        if (
+          matchesReviewCandidateFilters(
+            candidate,
+            statusFilter,
+            recommendationFilter
+          )
+        ) {
+          filteredPage.push(candidate)
+          if (filteredPage.length >= args.paginationOpts.numItems) {
+            break
+          }
+        }
+      }
+
+      isDone = result.isDone
+      continueCursor = result.continueCursor
+      cursor = result.continueCursor
+
+      if (result.page.length === 0) {
+        break
+      }
+    }
+
+    return {
+      page: filteredPage.slice(0, args.paginationOpts.numItems),
+      isDone: isDone && filteredPage.length < args.paginationOpts.numItems,
+      continueCursor: continueCursor ?? '',
+    }
   },
 })
 

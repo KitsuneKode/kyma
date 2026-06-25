@@ -54,6 +54,7 @@ type ReviewStoreState = {
   rateTransitioning: boolean
   activeDimensionOverride: string | null
   transcriptMode: 'all' | 'cited'
+  focusedEvidenceIndex: number
 }
 
 function createReviewStore() {
@@ -67,6 +68,7 @@ function createReviewStore() {
     rateTransitioning: false,
     activeDimensionOverride: null,
     transcriptMode: 'all',
+    focusedEvidenceIndex: 0,
   }))
 }
 
@@ -84,12 +86,14 @@ type ReviewActions = {
   cyclePlaybackRate: () => void
   setActiveDimension: (dimension: string | null) => void
   setTranscriptMode: (mode: 'all' | 'cited') => void
+  setFocusedEvidenceIndex: (index: number) => void
 }
 
 type ReviewData = {
   candidateName: string
   audioUrl?: string
   recordingStartTime?: string
+  sessionEvents: CandidateReviewDetail['events']
   transcriptWithTimes: TranscriptSegmentWithTiming[]
   evidenceWithTiming: EvidenceWithTiming[]
   dimensionScores: DimensionScore[]
@@ -151,6 +155,7 @@ type ReviewProviderProps = {
   transcript: TranscriptSegment[]
   evidence: Evidence[]
   dimensionScores: DimensionScore[]
+  sessionEvents?: CandidateReviewDetail['events']
   weightedScore?: number | null
   hardGateTriggered?: boolean
   audioUrl?: string
@@ -163,6 +168,7 @@ export function ReviewProvider({
   transcript,
   evidence,
   dimensionScores,
+  sessionEvents = [],
   weightedScore,
   hardGateTriggered = false,
   audioUrl,
@@ -323,7 +329,10 @@ export function ReviewProvider({
 
   const setActiveDimension = useCallback(
     (dimension: string | null) => {
-      store.setState({ activeDimensionOverride: dimension })
+      store.setState({
+        activeDimensionOverride: dimension,
+        focusedEvidenceIndex: 0,
+      })
     },
     [store]
   )
@@ -331,6 +340,13 @@ export function ReviewProvider({
   const setTranscriptMode = useCallback(
     (mode: 'all' | 'cited') => {
       store.setState({ transcriptMode: mode })
+    },
+    [store]
+  )
+
+  const setFocusedEvidenceIndex = useCallback(
+    (index: number) => {
+      store.setState({ focusedEvidenceIndex: index })
     },
     [store]
   )
@@ -350,6 +366,7 @@ export function ReviewProvider({
       cyclePlaybackRate,
       setActiveDimension,
       setTranscriptMode,
+      setFocusedEvidenceIndex,
     }),
     [
       togglePlay,
@@ -363,6 +380,7 @@ export function ReviewProvider({
       cyclePlaybackRate,
       setActiveDimension,
       setTranscriptMode,
+      setFocusedEvidenceIndex,
     ]
   )
 
@@ -371,6 +389,7 @@ export function ReviewProvider({
       candidateName,
       audioUrl,
       recordingStartTime,
+      sessionEvents,
       transcriptWithTimes,
       evidenceWithTiming,
       dimensionScores,
@@ -383,6 +402,7 @@ export function ReviewProvider({
       candidateName,
       audioUrl,
       recordingStartTime,
+      sessionEvents,
       transcriptWithTimes,
       evidenceWithTiming,
       dimensionScores,
@@ -412,7 +432,7 @@ function useReviewStoreApi() {
   return store
 }
 
-function useReviewStore<T>(selector: (state: ReviewStoreState) => T): T {
+export function useReviewStore<T>(selector: (state: ReviewStoreState) => T): T {
   return useStore(useReviewStoreApi(), selector)
 }
 

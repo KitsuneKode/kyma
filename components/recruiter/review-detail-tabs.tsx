@@ -1,26 +1,16 @@
 'use client'
 
-import { useState } from 'react'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 import { InfoRow } from '@/components/admin/info-row'
 import { RecruiterNotes } from '@/components/recruiter/recruiter-notes'
+import { ReviewTimelinePanel } from '@/components/recruiter/review-timeline-panel'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatDateTime, formatStatusLabel } from '@/lib/recruiter/format'
 import {
   formatOptionalDateTime,
   getTeachingSimulationStatusLabel,
   type TeachingSimulationSummary,
 } from '@/lib/recruiter/teaching-simulation'
-import { cn } from '@/lib/utils'
-
-const TABS = [
-  { id: 'notes', label: 'Notes' },
-  { id: 'session', label: 'Session' },
-  { id: 'timeline', label: 'Timeline' },
-  { id: 'recordings', label: 'Recordings' },
-  { id: 'decisions', label: 'Decisions' },
-] as const
-
-type TabId = (typeof TABS)[number]['id']
 
 type ReviewDetailTabsProps = {
   sessionId: string
@@ -73,57 +63,30 @@ export function ReviewDetailTabs({
   decisions,
   teachingSimulation,
 }: ReviewDetailTabsProps) {
-  const [activeTab, setActiveTab] = useState<TabId>('notes')
-
   return (
     <WorkspaceSurface className="p-0">
-      <div
-        role="tablist"
-        aria-label="Review details"
-        className="flex flex-wrap gap-1 border-b border-border/50 px-4 pt-4 pb-0"
-      >
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            id={`review-tab-${tab.id}`}
-            aria-selected={activeTab === tab.id}
-            aria-controls={`review-panel-${tab.id}`}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'rounded-t-xl px-3.5 py-2 text-sm font-medium transition-[color,background-color] duration-200 active:scale-[0.96]',
-              activeTab === tab.id
-                ? 'bg-muted/50 text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs defaultValue="notes" className="gap-0">
+        <TabsList
+          variant="line"
+          className="h-auto w-full justify-start rounded-none border-b border-border/50 bg-transparent px-4 pt-4"
+        >
+          <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="session">Session</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="recordings">Recordings</TabsTrigger>
+          <TabsTrigger value="decisions">Decisions</TabsTrigger>
+        </TabsList>
 
-      <div className="p-5">
-        {activeTab === 'notes' ? (
-          <div
-            role="tabpanel"
-            id="review-panel-notes"
-            aria-labelledby="review-tab-notes"
-          >
+        <div className="p-5">
+          <TabsContent value="notes">
             <RecruiterNotes
               sessionId={sessionId}
               reportId={reportId}
               notes={notes}
             />
-          </div>
-        ) : null}
+          </TabsContent>
 
-        {activeTab === 'session' ? (
-          <div
-            role="tabpanel"
-            id="review-panel-session"
-            aria-labelledby="review-tab-session"
-          >
+          <TabsContent value="session">
             <dl className="grid gap-4 sm:grid-cols-2">
               <InfoRow label="Template" value={template.name} />
               <InfoRow label="Role" value={template.role} />
@@ -153,40 +116,16 @@ export function ReviewDetailTabs({
                 value={formatOptionalDateTime(teachingSimulation.startedAt)}
               />
             </dl>
-          </div>
-        ) : null}
+          </TabsContent>
 
-        {activeTab === 'timeline' ? (
-          <div
-            role="tabpanel"
-            id="review-panel-timeline"
-            aria-labelledby="review-tab-timeline"
-          >
-            <div className="flex max-h-[420px] flex-col gap-3 overflow-y-auto pr-1">
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  className="rounded-2xl bg-muted/35 px-4 py-3 ring-1 ring-border/50"
-                >
-                  <p className="font-medium">{formatStatusLabel(event.type)}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {event.detail}
-                  </p>
-                  <p className="mt-2 font-mono text-xs text-muted-foreground tabular-nums">
-                    {formatDateTime(event.createdAt)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
+          <TabsContent value="timeline">
+            <ReviewTimelinePanel
+              events={events}
+              sessionStartAt={session.startedAt}
+            />
+          </TabsContent>
 
-        {activeTab === 'recordings' ? (
-          <div
-            role="tabpanel"
-            id="review-panel-recordings"
-            aria-labelledby="review-tab-recordings"
-          >
+          <TabsContent value="recordings">
             <div className="flex flex-col gap-3">
               {recordings.length ? (
                 recordings.map((artifact) => (
@@ -236,15 +175,9 @@ export function ReviewDetailTabs({
                 </p>
               )}
             </div>
-          </div>
-        ) : null}
+          </TabsContent>
 
-        {activeTab === 'decisions' ? (
-          <div
-            role="tabpanel"
-            id="review-panel-decisions"
-            aria-labelledby="review-tab-decisions"
-          >
+          <TabsContent value="decisions">
             <div className="flex flex-col gap-3">
               {decisions.length ? (
                 decisions.map((decision) => (
@@ -271,9 +204,9 @@ export function ReviewDetailTabs({
                 </p>
               )}
             </div>
-          </div>
-        ) : null}
-      </div>
+          </TabsContent>
+        </div>
+      </Tabs>
     </WorkspaceSurface>
   )
 }

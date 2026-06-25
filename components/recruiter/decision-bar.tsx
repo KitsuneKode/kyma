@@ -4,6 +4,11 @@ import Link from 'next/link'
 import { motion } from 'motion/react'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { ReviewActions } from '@/components/recruiter/review-actions'
 import { StatusBadge } from '@/components/workspace/status-badge'
 import {
@@ -36,6 +41,66 @@ function formatSessionDuration(
   return durationMin
     ? `Started ${startLabel} · Ended ${endLabel} · ${durationMin} min`
     : `Started ${startLabel} · Ended ${endLabel}`
+}
+
+function buildHeaderBadges(input: {
+  recommendation?: string | null
+  confidence?: string | null
+  reportStatus?: string | null
+  sessionState?: string | null
+  released: boolean
+  hardGateTriggered: boolean
+  scoringSource?: 'llm' | 'deterministic' | null
+  scoringModelId?: string | null
+}) {
+  const badges = [
+    {
+      key: 'recommendation',
+      status: input.recommendation ?? 'pending',
+      label: formatRecommendationLabel(input.recommendation),
+    },
+    {
+      key: 'confidence',
+      status: input.confidence ?? 'pending',
+      label: `${formatConfidenceLabel(input.confidence)} confidence`,
+    },
+    {
+      key: 'report',
+      status: input.reportStatus ?? 'pending',
+      label: formatStatusLabel(input.reportStatus ?? 'pending'),
+    },
+    {
+      key: 'session',
+      status: input.sessionState ?? 'pending',
+      label: formatStatusLabel(input.sessionState ?? 'unknown'),
+    },
+    {
+      key: 'release',
+      status: input.released ? 'released' : 'pending',
+      label: input.released ? 'Released' : 'Not released',
+    },
+  ]
+
+  if (input.hardGateTriggered) {
+    badges.push({
+      key: 'hard-gate',
+      status: 'failed',
+      label: 'Hard gate triggered',
+    })
+  }
+
+  if (input.scoringSource) {
+    badges.push({
+      key: 'scoring',
+      status: input.scoringSource === 'llm' ? 'completed' : 'manual_review',
+      label: formatScoringSourceLabel(
+        input.scoringSource,
+        input.scoringModelId
+      ),
+    })
+  }
+
+  return badges
 }
 
 export function ReviewCommandHeader({
@@ -80,6 +145,18 @@ export function ReviewCommandHeader({
   className?: string
 }) {
   const eyebrow = [templateName, templateRole].filter(Boolean).join(' · ')
+  const badges = buildHeaderBadges({
+    recommendation,
+    confidence,
+    reportStatus,
+    sessionState,
+    released,
+    hardGateTriggered,
+    scoringSource,
+    scoringModelId,
+  })
+  const summaryBadge = badges[0]
+  const overflowBadges = badges.slice(1)
 
   return (
     <motion.header
@@ -141,34 +218,36 @@ export function ReviewCommandHeader({
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge
-              status={recommendation ?? 'pending'}
-              label={formatRecommendationLabel(recommendation)}
-            />
-            <StatusBadge
-              status={confidence ?? 'pending'}
-              label={`${formatConfidenceLabel(confidence)} confidence`}
-            />
-            <StatusBadge
-              status={reportStatus ?? 'pending'}
-              label={formatStatusLabel(reportStatus ?? 'pending')}
-            />
-            <StatusBadge
-              status={sessionState ?? 'pending'}
-              label={formatStatusLabel(sessionState ?? 'unknown')}
-            />
-            <StatusBadge
-              status={released ? 'released' : 'pending'}
-              label={released ? 'Released' : 'Not released'}
-            />
-            {hardGateTriggered ? (
-              <StatusBadge status="failed" label="Hard gate triggered" />
-            ) : null}
-            {scoringSource ? (
+            {summaryBadge ? (
               <StatusBadge
-                status={scoringSource === 'llm' ? 'completed' : 'manual_review'}
-                label={formatScoringSourceLabel(scoringSource, scoringModelId)}
+                status={summaryBadge.status}
+                label={`Summary · ${summaryBadge.label}`}
               />
+            ) : null}
+            {overflowBadges.length > 0 ? (
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <Button type="button" variant="outline" size="sm">
+                      + {overflowBadges.length} more
+                    </Button>
+                  }
+                />
+                <PopoverContent className="w-80 space-y-2">
+                  <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                    Session signals
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {overflowBadges.map((badge) => (
+                      <StatusBadge
+                        key={badge.key}
+                        status={badge.status}
+                        label={badge.label}
+                      />
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             ) : null}
           </div>
 

@@ -1,6 +1,5 @@
 'use client'
 
-import { ReviewProvider } from '@/components/recruiter/review-context'
 import { ReviewConsolePlayback } from '@/components/recruiter/review-console-playback'
 import { ReviewConsoleTranscript } from '@/components/recruiter/review-console-transcript'
 import { RubricVerdict } from '@/components/recruiter/rubric-verdict'
@@ -9,22 +8,8 @@ import {
   useReviewActiveDimension,
   useReviewData,
 } from '@/components/recruiter/review-context'
-import type { CandidateReviewDetail } from '@/components/recruiter/candidate-review-workspace'
 
-type ReviewConsoleProps = {
-  candidateName: string
-  transcript: CandidateReviewDetail['transcript']
-  evidence: CandidateReviewDetail['evidence']
-  dimensionScores: NonNullable<
-    CandidateReviewDetail['report']
-  >['dimensionScores']
-  weightedScore?: number | null
-  hardGateTriggered?: boolean
-  audioUrl?: string
-  recordingStartTime?: string
-}
-
-function ReviewConsoleBody() {
+export function ReviewConsoleBody() {
   const {
     dimensionScores,
     evidenceWithTiming,
@@ -53,21 +38,5 @@ function ReviewConsoleBody() {
         />
       </div>
     </section>
-  )
-}
-
-export function ReviewConsole({
-  weightedScore,
-  hardGateTriggered,
-  ...props
-}: ReviewConsoleProps) {
-  return (
-    <ReviewProvider
-      {...props}
-      weightedScore={weightedScore}
-      hardGateTriggered={hardGateTriggered}
-    >
-      <ReviewConsoleBody />
-    </ReviewProvider>
   )
 }

@@ -1,35 +1,34 @@
 import Link from 'next/link'
 
 import { api } from '@/convex/_generated/api'
-import { AdminStatePanel } from '@/components/admin/admin-state-panel'
-import { PageHeader } from '@/components/admin/page-header'
+import { TemplatesTable } from '@/components/recruiter/templates-table'
+import { WorkspacePageHeader } from '@/components/workspace/page-header'
 import { Button } from '@/components/ui/button'
+import { WorkspaceQueryState } from '@/components/workspace/query-state'
 import {
   hasConvexDeployment,
   serverConvexMutation,
   serverConvexQuery,
 } from '@/lib/convex/server-query'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
+import { signInPath } from '@/lib/auth/workspace-intent'
 
 type TemplatesLoadResult =
   | { ok: true; templates: Awaited<ReturnType<typeof loadTemplates>> }
-  | { ok: false; error: string }
+  | { ok: false; error: string; auth?: boolean }
 
 async function loadTemplates() {
-  const bootstrapResult = await serverConvexMutation(
-    api.recruiter.templates.bootstrapOrgTemplates,
-    {}
-  )
+  const [bootstrapResult, templatesResult] = await Promise.all([
+    serverConvexMutation(api.recruiter.templates.bootstrapOrgTemplates, {}),
+    serverConvexQuery(api.recruiter.templates.listActiveTemplates, {}),
+  ])
+
   if (!bootstrapResult.ok) {
     throw new Error(
       bootstrapResult.message ?? 'Unable to bootstrap organization templates.'
     )
   }
 
-  const templatesResult = await serverConvexQuery(
-    api.recruiter.templates.listActiveTemplates,
-    {}
-  )
   if (!templatesResult.ok) {
     throw new Error(
       templatesResult.message ?? 'Unable to load screening templates.'
@@ -61,14 +60,20 @@ export default async function TemplatesPage() {
       ok: false,
       error:
         'Sign in with an active organization and ensure the Convex JWT template is configured.',
+      auth: true,
     }
   }
 
   const templates = result.ok ? result.templates : []
+  const queryStatus = !result.ok
+    ? 'error'
+    : templates.length === 0
+      ? 'empty'
+      : 'ready'
 
   return (
     <div className="flex w-full flex-col gap-8">
-      <PageHeader
+      <WorkspacePageHeader
         eyebrow="Template library"
         title="Screening Templates"
         description="Define rubric-backed interview templates for your organization. Each screening batch links to one active template."
@@ -91,55 +96,46 @@ export default async function TemplatesPage() {
         }
       />
 
-      {!result.ok ? (
-        <AdminStatePanel
-          title="Templates unavailable"
-          description={result.error}
-          action={
+      <WorkspaceQueryState
+        status={queryStatus}
+        emptyTitle="No templates yet"
+        emptyDescription="Create your first screening template or duplicate one from a job-family starter."
+        emptyAction={
+          <Button
+            nativeButton={false}
+            render={<Link href="/recruiter/templates/new" />}
+          >
+            Create template
+          </Button>
+        }
+        errorTitle={
+          result.ok
+            ? 'Unable to load templates'
+            : result.auth
+              ? 'Sign in required'
+              : 'Templates unavailable'
+        }
+        errorDescription={result.ok ? '' : result.error}
+        errorAction={
+          result.ok ? undefined : result.auth ? (
+            <Button
+              nativeButton={false}
+              render={<Link href={signInPath('recruiter')} />}
+            >
+              Sign in again
+            </Button>
+          ) : (
             <Button
               nativeButton={false}
               render={<Link href="/recruiter/setup" />}
             >
               Review organization setup
             </Button>
-          }
-        />
-      ) : null}
-
-      {result.ok && templates.length === 0 ? (
-        <AdminStatePanel
-          title="No templates yet"
-          description="Create your first screening template or use the default bootstrap template after refreshing this page."
-          action={
-            <Button
-              nativeButton={false}
-              render={<Link href="/recruiter/templates/new" />}
-            >
-              Create template
-            </Button>
-          }
-        />
-      ) : null}
-
-      {result.ok && templates.length > 0 ? (
-        <section className="grid gap-4">
-          {templates.map((template) => (
-            <Link
-              key={`${template.id}`}
-              className="block rounded-2xl bg-card p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)] transition-colors hover:bg-muted/20"
-              href={`/recruiter/templates/${template.id}/edit`}
-            >
-              <p className="font-medium">{template.name}</p>
-              <p className="text-sm text-muted-foreground">
-                {template.role} · {template.rubricVersion}
-                {template.targetDurationMinutes
-                  ? ` · ${template.targetDurationMinutes} min`
-                  : ''}
-              </p>
-            </Link>
-          ))}
-        </section>
-      ) : null}
+          )
+        }
+      >
+        <TemplatesTable data={templates} />
+      </WorkspaceQueryState>
     </div>
   )
 }

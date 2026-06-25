@@ -5,7 +5,6 @@ import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 import { RubricDimension } from './rubric-dimension'
-import { RubricRadar } from './rubric-radar'
 import { RubricScoreBars } from './rubric-score-bars'
 import {
   formatScoreValue,
@@ -96,10 +95,6 @@ export function RubricVerdict({
             {hardGateTriggered ? ' · Hard gate triggered' : ''}
           </p>
         </div>
-      </div>
-
-      <div className="mb-4">
-        <RubricRadar dimensionScores={dimensionScores} />
       </div>
 
       <div className="mb-5">

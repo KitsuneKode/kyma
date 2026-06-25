@@ -11,6 +11,7 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
+import { SessionActivityLiveline } from '@/components/recruiter/session-activity-liveline'
 import { formatTime } from '@/lib/format/time'
 import { cn } from '@/lib/utils'
 import { WorkspaceSurface } from '@/components/workspace/surface'
@@ -20,7 +21,7 @@ import {
 } from '@/components/recruiter/review-context'
 
 export function ReviewConsolePlayback() {
-  const { audioUrl } = useReviewData()
+  const { audioUrl, sessionEvents, recordingStartTime } = useReviewData()
   const playback = useReviewPlayback()
   const {
     isPlaying,
@@ -57,6 +58,12 @@ export function ReviewConsolePlayback() {
             className="hidden"
           />
           <div className="flex flex-col gap-3">
+            <SessionActivityLiveline
+              events={sessionEvents}
+              sessionStartAt={recordingStartTime}
+              currentTimeSec={currentTime}
+              onHoverTime={jumpToTime}
+            />
             <div className="flex items-center gap-3">
               <span className="w-10 text-right font-mono text-[11px] text-muted-foreground tabular-nums">
                 {formatTime(currentTime)}

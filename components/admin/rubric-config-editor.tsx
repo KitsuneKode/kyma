@@ -4,6 +4,8 @@ import type { TemplateRubricConfig } from '@/lib/templates/default-assessment-co
 import { DIMENSION_LABELS, isRubricDimension } from '@/lib/rubric/constants'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 
 type RubricConfigEditorProps = {
   value: TemplateRubricConfig
@@ -55,16 +57,21 @@ export function RubricConfigEditor({
                 }
               />
             </label>
-            <label className="flex items-end gap-2 pb-2 text-xs">
-              <input
-                type="checkbox"
+            <div className="flex items-end gap-2 pb-2">
+              <Checkbox
+                id={`hard-gate-${dimension.name}`}
                 checked={dimension.isHardGate}
-                onChange={(event) =>
-                  updateDimension(index, { isHardGate: event.target.checked })
+                onCheckedChange={(checked) =>
+                  updateDimension(index, { isHardGate: checked === true })
                 }
               />
-              <span>Hard gate</span>
-            </label>
+              <Label
+                htmlFor={`hard-gate-${dimension.name}`}
+                className="text-xs font-normal"
+              >
+                Hard gate
+              </Label>
+            </div>
             <label className="space-y-1 text-xs md:col-span-1">
               <span>Keywords (comma-separated)</span>
               <Input

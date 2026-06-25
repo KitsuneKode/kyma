@@ -1,19 +1,20 @@
 'use client'
 
 import { useMemo } from 'react'
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { Bar, BarChart, Cell, XAxis, YAxis } from 'recharts'
 
+import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
+import { ChartEmptyState } from '@/components/recruiter/chart-states'
 import { formatDimensionLabel } from '@/lib/recruiter/format'
 import { isDefaultHardGateDimension } from '@/lib/rubric/constants'
 import { scoreColor } from '@/lib/ui/score-format'
-import { ChartEmptyState } from '@/components/recruiter/chart-states'
+
+const chartConfig = {
+  score: {
+    label: 'Score',
+    color: 'var(--chart-2)',
+  },
+} satisfies ChartConfig
 
 type RubricScoreBarsChartProps = {
   dimensionScores: Array<{
@@ -59,11 +60,15 @@ export function RubricScoreBarsChart({
     )
   }
 
+  const chartHeight = Math.max(160, data.length * 28)
+
   return (
     <div className="flex flex-col gap-2">
-      <ResponsiveContainer
-        width="100%"
-        height={Math.max(160, data.length * 28)}
+      <ChartContainer
+        config={chartConfig}
+        className="aspect-auto w-full"
+        style={{ height: chartHeight }}
+        initialDimension={{ width: 320, height: chartHeight }}
       >
         <BarChart
           data={data}
@@ -75,11 +80,7 @@ export function RubricScoreBarsChart({
             type="category"
             dataKey="label"
             width={116}
-            tick={{
-              fill: 'hsl(var(--muted-foreground))',
-              fontSize: 11,
-              fontWeight: 500,
-            }}
+            tick={{ fontSize: 11, fontWeight: 500 }}
             axisLine={false}
             tickLine={false}
           />
@@ -88,17 +89,14 @@ export function RubricScoreBarsChart({
               <Cell
                 key={entry.dimension}
                 fill={scoreColor(entry.score, 'bar')}
-                stroke={
-                  entry.isHardGate
-                    ? 'hsl(var(--destructive) / 0.55)'
-                    : undefined
-                }
+                stroke={entry.isHardGate ? 'var(--destructive)' : undefined}
                 strokeWidth={entry.isHardGate ? 1.5 : 0}
+                strokeOpacity={entry.isHardGate ? 0.55 : undefined}
               />
             ))}
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+      </ChartContainer>
       {data.some((item) => item.isHardGate) ? (
         <p className="text-[10px] text-muted-foreground">
           * Hard-gate dimension

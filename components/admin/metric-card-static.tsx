@@ -1,5 +1,6 @@
 import { IconLayoutDashboard, IconUsers, IconFolder } from '@tabler/icons-react'
 
+import { WorkspaceSurface } from '@/components/workspace/surface'
 import { cn } from '@/lib/utils'
 
 const ICON_MAP = {
@@ -25,7 +26,7 @@ export function StaticMetricCard({
   const isZero = value.trim() === '0'
 
   return (
-    <div className="metric-card group animate-in duration-500 fade-in slide-in-from-bottom-2">
+    <WorkspaceSurface className="group animate-in p-7 duration-500 fade-in slide-in-from-bottom-2">
       <div className="flex h-full flex-col gap-7">
         <div className="flex items-start justify-between gap-3">
           <span className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
@@ -58,6 +59,6 @@ export function StaticMetricCard({
           ) : null}
         </div>
       </div>
-    </div>
+    </WorkspaceSurface>
   )
 }
