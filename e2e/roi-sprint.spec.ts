@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
 
 /**
- * ROI sprint smoke coverage — public routes and redirects.
- * With Clerk configured, candidate practice routes redirect to sign-in;
- * without Clerk, the hub renders directly. Backend logic is in Vitest
- * (convex/candidatePortal.practice.test.ts, convex/screenings.policy.test.ts).
+ * ROI sprint smoke coverage — practice routes stay auth-gated (not public).
+ * Unauthenticated: /practice and /candidate/practice redirect to sign-in when Clerk
+ * is configured. Without Clerk, /practice server-redirects to the practice hub.
+ * Backend logic is in Vitest (convex/candidatePortal.practice.test.ts, etc.).
  */
 
 function isSignInUrl(url: string) {
@@ -33,7 +33,9 @@ async function waitForPracticeDestination(page: Page) {
 }
 
 test.describe('ROI sprint — candidate practice', () => {
-  test('/practice redirects to practice hub or sign-in', async ({ page }) => {
+  test('/practice is auth-gated (sign-in or practice hub when signed in)', async ({
+    page,
+  }) => {
     await page.goto('/practice')
     await waitForPracticeDestination(page)
     const url = page.url()
