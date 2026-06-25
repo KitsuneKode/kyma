@@ -1,4 +1,6 @@
 {
   "*.{js,jsx,ts,tsx,mjs,cjs,json,md,mdx,css,scss,yml,yaml}": ["oxfmt --write"],
-  "*.{js,jsx,ts,tsx,mjs,cjs}": ["oxlint --nextjs-plugin --fix"]
+  "*.{js,jsx,ts,tsx,mjs,cjs}": [
+    "bash -c 'args=(); for f in \"$@\"; do [[ \"$f\" != *convex/_generated/* ]] && args+=(\"$f\"); done; if (( ${#args[@]} )); then oxlint --nextjs-plugin --fix \"${args[@]}\"; fi' --"
+  ]
 }
