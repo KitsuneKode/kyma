@@ -37,6 +37,8 @@ export type JobFamilyStarterContent = {
   defaultRole: string
   systemPrompt: string
   simulationPersonaPrompt?: string
+  /** Spoken once when the simulation persona enters; use {candidateName} placeholder. */
+  simulationIntroLine?: string
   wrapUpPrompt: string
   rubricConfig: TemplateRubricConfig
 }

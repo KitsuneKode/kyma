@@ -1,10 +1,7 @@
 'use client'
 
-import type { Preloaded } from 'convex/react'
 import Link from 'next/link'
-import { usePreloadedQuery } from 'convex/react'
 
-import { api } from '@/convex/_generated/api'
 import { StaticMetricCard } from '@/components/admin/metric-card-static'
 import { PageHeader } from '@/components/admin/page-header'
 import { RecruiterAccessState } from '@/components/recruiter/recruiter-access-state'
@@ -22,9 +19,6 @@ type QueueStats = {
 }
 
 type CandidateReviewPageClientProps = {
-  preloadedCandidates: Preloaded<
-    typeof api.recruiter.candidates.listReviewCandidates
-  >
   initialCandidates: ReviewCandidate[]
   filters: CandidateQueueFilters
   stats: QueueStats | null
@@ -33,17 +27,12 @@ type CandidateReviewPageClientProps = {
 }
 
 export function CandidateReviewPageClient({
-  preloadedCandidates,
   initialCandidates,
   filters,
   stats,
   statsFailed,
   statsErrorMessage,
 }: CandidateReviewPageClientProps) {
-  const candidatesResult = usePreloadedQuery(preloadedCandidates)
-  const hydratedCandidates =
-    candidatesResult.page.length > 0 ? candidatesResult.page : initialCandidates
-
   return (
     <div className="flex w-full flex-col gap-8">
       <PageHeader
@@ -97,7 +86,7 @@ export function CandidateReviewPageClient({
       <section className="space-y-4">
         <CandidateReviewQueue
           key={`${filters.status}-${filters.recommendation}`}
-          initialCandidates={hydratedCandidates}
+          initialCandidates={initialCandidates}
         />
       </section>
     </div>

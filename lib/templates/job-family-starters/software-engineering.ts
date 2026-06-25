@@ -53,6 +53,8 @@ export const softwareEngineeringStarter: JobFamilyStarterContent = {
   defaultRole: 'software_engineer',
   systemPrompt: SYSTEM_PROMPT,
   simulationPersonaPrompt: SIMULATION_PERSONA_PROMPT,
+  simulationIntroLine:
+    "Okay {candidateName}, let's switch into a short teaching exercise. I'm Alex, a junior on the team — walk me through a technical concept step by step like we're pairing.",
   wrapUpPrompt: WRAP_UP_PROMPT,
   rubricConfig: {
     dimensions: [

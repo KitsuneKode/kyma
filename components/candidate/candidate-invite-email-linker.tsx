@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import { useMutation } from 'convex/react'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { api } from '@/convex/_generated/api'
 import { CandidateInviteLinkError } from '@/components/candidate/candidate-invite-link-error'
@@ -13,34 +12,54 @@ export function CandidateInviteEmailLinker() {
   const linkInvites = useMutation(
     api.interviews.candidatePortal.linkCandidateInviteByEmail
   )
-  const startedRef = useRef(false)
+  const inFlightRef = useRef(false)
   const [linkError, setLinkError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (startedRef.current) {
-      return
-    }
-    startedRef.current = true
-
-    if (
-      typeof window !== 'undefined' &&
-      sessionStorage.getItem(LINK_SESSION_KEY)
-    ) {
+  const attemptLink = useCallback(async () => {
+    if (typeof window === 'undefined') {
       return
     }
 
-    void linkInvites({})
-      .then(() => {
+    if (sessionStorage.getItem(LINK_SESSION_KEY)) {
+      return
+    }
+
+    if (inFlightRef.current) {
+      return
+    }
+
+    inFlightRef.current = true
+    try {
+      const result = await linkInvites({})
+      if (result && result.linkedInvites > 0) {
         sessionStorage.setItem(LINK_SESSION_KEY, '1')
-      })
-      .catch((error) => {
-        setLinkError(
-          error instanceof Error
-            ? error.message
-            : 'Unable to link screening invites to your account.'
-        )
-      })
+      }
+      setLinkError(null)
+    } catch (error) {
+      setLinkError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to link screening invites to your account.'
+      )
+    } finally {
+      inFlightRef.current = false
+    }
   }, [linkInvites])
+
+  useEffect(() => {
+    void attemptLink()
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void attemptLink()
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [attemptLink])
 
   if (!linkError) {
     return null

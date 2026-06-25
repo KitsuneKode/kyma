@@ -83,6 +83,7 @@ This repo is building a horizontal AI voice screener platform (starting with tut
 - vendor and stack comparison: `.docs/stack-research.md`
 - interview and rubric design: `.docs/interview-system.md`
 - phased delivery plan: `.plans/mvp-plan.md`
+- implementation wave tracker (001–011): `.plans/implementation-wave/README.md`
 - decision grilling and open questions: `.plans/grill-me.md`
 - canonical routes + Next vs Convex boundaries: `.docs/route-and-api-architecture.md`
 - dated vendor/SDK research notes (not requirements): `.docs/vendor-and-research-log.md`

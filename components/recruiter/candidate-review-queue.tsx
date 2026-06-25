@@ -36,13 +36,11 @@ export function CandidateReviewQueue({
     PAGE_SIZE
   )
 
-  const filtersActive =
-    filters.status !== 'all' || filters.recommendation !== 'all'
-
-  // Render the SSR-provided first page until the reactive query has hydrated,
-  // so there is no empty flash on initial paint.
+  // Use SSR rows only until the reactive paginated query finishes its first load.
   const candidates =
-    results.length > 0 || filtersActive ? results : initialCandidates
+    status === 'LoadingFirstPage' && results.length === 0
+      ? initialCandidates
+      : results
 
   return (
     <div className="flex flex-col gap-4">

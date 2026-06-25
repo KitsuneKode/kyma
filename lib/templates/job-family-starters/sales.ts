@@ -36,6 +36,8 @@ export const salesStarter: JobFamilyStarterContent = {
   defaultRole: 'sales',
   systemPrompt: SYSTEM_PROMPT,
   simulationPersonaPrompt: SIMULATION_PERSONA_PROMPT,
+  simulationIntroLine:
+    "Thanks {candidateName}. Let's try a short sales roleplay — I'll be a skeptical prospect so you can show how you handle discovery and objections.",
   wrapUpPrompt: WRAP_UP_PROMPT,
   rubricConfig: {
     dimensions: [

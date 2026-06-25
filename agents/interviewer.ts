@@ -29,6 +29,7 @@ import {
   maxActiveDurationMs,
   resolveSessionBudget,
 } from '@/lib/interview/session-purpose'
+import { resolveSimulationIntroLine } from '@/lib/templates/resolve-simulation-intro'
 
 const DEFAULT_TARGET_DURATION_MINUTES = 18
 
@@ -110,6 +111,7 @@ type CandidateMetadata = {
 type AgentTemplateConfig = {
   templateName: string
   targetDurationMinutes: number
+  jobFamily?: string
   simulationMode: SimulationMode
   interviewerInstructions: string
   simulationPersonaInstructions: string
@@ -193,6 +195,7 @@ function buildAgentTemplateConfig(
     templateName: remoteConfig?.templateName ?? 'AI Voice Screener',
     targetDurationMinutes:
       remoteConfig?.targetDurationMinutes ?? DEFAULT_TARGET_DURATION_MINUTES,
+    jobFamily: remoteConfig?.jobFamily,
     simulationMode: remoteConfig?.simulationMode ?? 'teaching',
     interviewerInstructions:
       remoteConfig?.systemPrompt?.trim() || envConfig.interviewerInstructions,
@@ -332,8 +335,8 @@ class SimulationPersonaAgent extends voice.Agent<InterviewUserData> {
   constructor(
     instructions: string,
     private readonly port: AgentSessionPort,
-    private readonly candidateName: string,
     private readonly simulationMode: Exclude<SimulationMode, 'none'>,
+    private readonly simulationIntroLine: string,
     tools: llm.ToolContext,
     tts: string
   ) {
@@ -359,13 +362,7 @@ class SimulationPersonaAgent extends voice.Agent<InterviewUserData> {
       `Interviewer switched into the ${this.simulationMode} simulation.`
     )
 
-    const introByMode: Record<Exclude<SimulationMode, 'none'>, string> = {
-      teaching: `Okay ${this.candidateName}, let's do a short teaching simulation. I'm Mia, I'm eight, and I get confused easily. Can you teach me something simple like fractions or multiplication in a way I can really understand?`,
-      roleplay: `Thanks ${this.candidateName}. Let's try a short roleplay next so I can see how you handle it in the moment.`,
-      case_discussion: `Thanks ${this.candidateName}. Let's walk through a short case discussion so I can see how you think through the tradeoffs.`,
-    }
-
-    await this.session.say(introByMode[this.simulationMode], {
+    await this.session.say(this.simulationIntroLine, {
       addToChatCtx: true,
       allowInterruptions: true,
     })
@@ -749,8 +746,12 @@ async function runInterviewSession(args: {
       : new SimulationPersonaAgent(
           config.simulationPersonaInstructions,
           port,
-          candidateName,
           config.simulationMode,
+          resolveSimulationIntroLine({
+            jobFamily: config.jobFamily,
+            simulationMode: config.simulationMode,
+            candidateName,
+          }),
           {
             returnToInterviewer: llm.tool({
               description:
@@ -803,9 +804,6 @@ When live video is available, call recordVisualObservation at most once per mean
                 if (userData.simulationStarted) {
                   return 'The simulation is already in progress or has already happened.'
                 }
-
-                userData.phase = 'simulation'
-                userData.simulationStarted = true
 
                 return llm.handoff({
                   agent: personaAgent,

@@ -71,6 +71,8 @@ export const tutorStarter: JobFamilyStarterContent = {
   defaultRole: 'teacher',
   systemPrompt: TUTOR_SYSTEM_PROMPT,
   simulationPersonaPrompt: TUTOR_SIMULATION_PERSONA_PROMPT,
+  simulationIntroLine:
+    "Okay {candidateName}, let's do a short teaching simulation. I'm Mia, I'm eight, and I get confused easily. Can you teach me something simple like fractions or multiplication in a way I can really understand?",
   wrapUpPrompt: TUTOR_WRAP_UP_PROMPT,
   rubricConfig: {
     dimensions: RUBRIC_DIMENSIONS.map((dimension) => ({

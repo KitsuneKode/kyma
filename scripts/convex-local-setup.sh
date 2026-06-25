@@ -3,6 +3,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${1:-$ROOT_DIR/.env.local}"
+CONVEX_DEPLOY_FLAG=""
+
+if [[ "${1:-}" == "--prod" ]]; then
+  CONVEX_DEPLOY_FLAG="--prod"
+  ENV_FILE="${2:-$ROOT_DIR/.env.local}"
+elif [[ "${2:-}" == "--prod" ]]; then
+  CONVEX_DEPLOY_FLAG="--prod"
+fi
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "Missing env file: $ENV_FILE" >&2
@@ -74,8 +82,8 @@ sync_var() {
   local key="$1"
   local value="${!key-}"
   if [[ -n "${value// /}" ]]; then
-    echo "Setting Convex env: $key"
-    bunx convex env set "$key" "$value"
+    echo "Setting Convex env: $key${CONVEX_DEPLOY_FLAG:+ (prod)}"
+    bunx convex env set "$key" "$value" $CONVEX_DEPLOY_FLAG
   fi
 }
 

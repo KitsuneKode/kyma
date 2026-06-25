@@ -5,7 +5,6 @@ import {
 } from '@/components/recruiter/candidate-review-page-client'
 import type { ReviewCandidate } from '@/components/recruiter/candidate-review-queue'
 import { parseCandidateQueueFilters } from '@/lib/recruiter/candidate-queue-filters'
-import { serverPreloadConvexQuery } from '@/lib/convex/preload-query'
 import { serverConvexQuery } from '@/lib/convex/server-query'
 
 const QUEUE_PAGE_SIZE = 25
@@ -36,18 +35,10 @@ export default async function AdminCandidatesPage({
     recommendationFilter: filters.recommendation,
   }
 
-  const [preloadedCandidates, candidatesResult, statsResult] =
-    await Promise.all([
-      serverPreloadConvexQuery(
-        api.recruiter.candidates.listReviewCandidates,
-        queryArgs
-      ),
-      serverConvexQuery(
-        api.recruiter.candidates.listReviewCandidates,
-        queryArgs
-      ),
-      serverConvexQuery(api.recruiter.candidates.getCandidateQueueStats, {}),
-    ])
+  const [candidatesResult, statsResult] = await Promise.all([
+    serverConvexQuery(api.recruiter.candidates.listReviewCandidates, queryArgs),
+    serverConvexQuery(api.recruiter.candidates.getCandidateQueueStats, {}),
+  ])
 
   if (!candidatesResult.ok) {
     return (
@@ -58,21 +49,11 @@ export default async function AdminCandidatesPage({
     )
   }
 
-  if (!preloadedCandidates) {
-    return (
-      <CandidateReviewAccessFallback
-        kind="unknown"
-        message="Convex deployment URL is not configured."
-      />
-    )
-  }
-
   const initialCandidates = candidatesResult.data.page as ReviewCandidate[]
   const stats = statsResult.ok ? statsResult.data : null
 
   return (
     <CandidateReviewPageClient
-      preloadedCandidates={preloadedCandidates}
       initialCandidates={initialCandidates}
       filters={filters}
       stats={stats}

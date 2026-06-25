@@ -37,6 +37,8 @@ export const productStarter: JobFamilyStarterContent = {
   defaultRole: 'product_manager',
   systemPrompt: SYSTEM_PROMPT,
   simulationPersonaPrompt: SIMULATION_PERSONA_PROMPT,
+  simulationIntroLine:
+    "Thanks {candidateName}. Let's dig into a short product scenario — I'll push on tradeoffs, metrics, and user impact as we go.",
   wrapUpPrompt: WRAP_UP_PROMPT,
   rubricConfig: {
     dimensions: [

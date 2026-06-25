@@ -36,6 +36,8 @@ export const customerSupportStarter: JobFamilyStarterContent = {
   defaultRole: 'customer_support',
   systemPrompt: SYSTEM_PROMPT,
   simulationPersonaPrompt: SIMULATION_PERSONA_PROMPT,
+  simulationIntroLine:
+    "Thanks {candidateName}. Let's do a short support roleplay — I'll be a frustrated customer with a realistic issue.",
   wrapUpPrompt: WRAP_UP_PROMPT,
   rubricConfig: {
     dimensions: [
