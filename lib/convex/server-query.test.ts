@@ -38,7 +38,7 @@ describe('serverConvexQuery', () => {
 
     const result = await serverConvexQueryWithFallback(
       api.recruiter.screenings.listScreeningBatches,
-      {},
+      { nowMs: Date.now() },
       []
     )
 
@@ -61,7 +61,7 @@ describe('serverConvexQuery', () => {
 
     const result = await serverConvexQueryWithFallback(
       api.recruiter.screenings.listScreeningBatches,
-      {},
+      { nowMs: Date.now() },
       []
     )
 
@@ -78,7 +78,9 @@ describe('serverConvexQuery', () => {
     const { serverConvexQuery } = await import('./server-query')
     const { api } = await import('@/convex/_generated/api')
 
-    await serverConvexQuery(api.recruiter.screenings.listScreeningBatches, {})
+    await serverConvexQuery(api.recruiter.screenings.listScreeningBatches, {
+      nowMs: Date.now(),
+    })
 
     expect(connection).toHaveBeenCalled()
     expect(fetchQuery).toHaveBeenCalled()

@@ -123,3 +123,58 @@ export async function serverConvexQueryWithFallback<
 
   return serverConvexQuery(query, args, options)
 }
+
+export type PortalQueryResult<T, F> =
+  | { status: 'ok'; data: T }
+  | { status: 'empty'; data: F }
+  | {
+      status: 'error'
+      message: string
+      kind: Extract<FetchResult<never>, { ok: false }>['kind']
+    }
+
+/**
+ * Candidate portal query helper that distinguishes auth-empty fallback from
+ * real Convex failures.
+ */
+export async function serverConvexPortalQuery<
+  Query extends FunctionReference<'query'>,
+  Fallback,
+>(
+  query: Query,
+  args: FunctionArgs<Query>,
+  emptyFallback: Fallback,
+  options?: Omit<ServerConvexOptions, 'public'> & {
+    requireToken?: boolean
+  }
+): Promise<PortalQueryResult<FunctionReturnType<Query>, Fallback>> {
+  await ensureDynamicBoundary()
+
+  if (!hasConvexDeployment()) {
+    return { status: 'empty', data: emptyFallback }
+  }
+
+  const token =
+    options?.token !== undefined
+      ? options.token
+      : await getServerConvexAuthToken()
+
+  if (options?.requireToken !== false && !token) {
+    return { status: 'empty', data: emptyFallback }
+  }
+
+  const result = await serverConvexQuery(query, args, {
+    ...options,
+    token,
+  })
+
+  if (!result.ok) {
+    return {
+      status: 'error',
+      message: result.message ?? 'Unable to load data.',
+      kind: result.kind,
+    }
+  }
+
+  return { status: 'ok', data: result.data }
+}
