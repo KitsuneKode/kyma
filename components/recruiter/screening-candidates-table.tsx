@@ -5,6 +5,7 @@ import { IconCheck, IconCopy } from '@tabler/icons-react'
 
 import { DataTable, type ColumnDef } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { formatStatusLabel } from '@/lib/recruiter/format'
 
 type ScreeningCandidateRow = {
@@ -16,6 +17,7 @@ type ScreeningCandidateRow = {
   attemptCount: number
   allowedAttempts: number
   inviteToken?: string
+  isStuckProcessing?: boolean
 }
 
 function buildInviteUrl(token: string) {
@@ -85,7 +87,12 @@ export function ScreeningCandidatesTable({
         header: 'Eligibility',
         cell: ({ row }) => (
           <div>
-            <p>{formatStatusLabel(row.original.status)}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p>{formatStatusLabel(row.original.status)}</p>
+              {row.original.isStuckProcessing ? (
+                <Badge variant="destructive">Stuck</Badge>
+              ) : null}
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">
               Invite {formatStatusLabel(row.original.inviteStatus)}
             </p>

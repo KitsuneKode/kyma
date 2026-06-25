@@ -2,17 +2,22 @@
 
 import { useAuth } from '@clerk/nextjs'
 import { useMutation, useQuery } from 'convex/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PreJoin, type LocalUserChoices } from '@livekit/components-react'
 
 import { api } from '@/convex/_generated/api'
-import { formatDurationPolicy, formatExpiryLabel } from '@/lib/interview/policy'
+import {
+  formatDurationPolicy,
+  formatExpiryRelative,
+} from '@/lib/interview/policy'
 import { type InterviewSessionSnapshot } from '@/lib/interview/types'
 import {
   countPassingReadinessChecks,
   isReadinessPassing,
   runReadinessChecks,
+  type ReadinessChecks,
 } from '@/lib/candidate/readiness-checks'
+import { ReadinessCheckList } from '@/components/candidate/readiness-check-list'
 import { Logo } from '@/components/marketing/logo'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -23,6 +28,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { IconInfoCircle } from '@tabler/icons-react'
+import { WorkspaceSurface } from '@/components/workspace/surface'
 
 type InviteLobbyProps = {
   candidateName: string
@@ -56,6 +62,16 @@ export function InviteLobby({
   const [runningChecks, setRunningChecks] = useState(false)
   const [inlineChecksPassing, setInlineChecksPassing] = useState(false)
   const [inlineScore, setInlineScore] = useState<number | null>(null)
+  const [latestChecks, setLatestChecks] = useState<ReadinessChecks | null>(null)
+  const [nowMs, setNowMs] = useState(() => Date.now())
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now())
+    }, 30_000)
+
+    return () => window.clearInterval(intervalId)
+  }, [])
 
   const latestPersistedRun = readinessRuns?.[0] ?? null
   const persistedPassing = latestPersistedRun
@@ -82,6 +98,7 @@ export function InviteLobby({
     try {
       const checks = await runReadinessChecks()
       const passing = isReadinessPassing(checks)
+      setLatestChecks(checks)
       setInlineChecksPassing(passing)
       setInlineScore(countPassingReadinessChecks(checks))
       if (isSignedIn) {
@@ -145,9 +162,12 @@ export function InviteLobby({
 
           {isBootstrapping ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-background/60 backdrop-blur-md transition-all duration-300">
-              <div className="animate-pulse rounded-2xl bg-card px-6 py-4 text-sm font-semibold shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_10px_30px_rgba(0,0,0,0.35)]">
+              <WorkspaceSurface
+                as="div"
+                className="animate-pulse rounded-2xl bg-card px-6 py-4 text-sm font-semibold ring-white/10"
+              >
                 Preparing interview…
-              </div>
+              </WorkspaceSurface>
             </div>
           ) : null}
         </div>
@@ -194,7 +214,10 @@ export function InviteLobby({
             </p>
           </div>
 
-          <div className="rounded-2xl bg-card/80 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+          <WorkspaceSurface
+            as="div"
+            className="rounded-2xl bg-card/80 p-5 ring-white/10"
+          >
             <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
               Readiness gate
             </p>
@@ -216,9 +239,18 @@ export function InviteLobby({
                   ? 'Re-run readiness checks'
                   : 'Run readiness checks'}
             </Button>
-          </div>
+            {latestChecks || latestPersistedRun ? (
+              <ReadinessCheckList
+                checks={latestChecks ?? latestPersistedRun?.checks}
+                className="mt-4"
+              />
+            ) : null}
+          </WorkspaceSurface>
 
-          <div className="flex items-start gap-3 rounded-2xl bg-card/80 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+          <WorkspaceSurface
+            as="div"
+            className="flex items-start gap-3 rounded-2xl bg-card/80 p-5 ring-white/10"
+          >
             <Checkbox
               id="recording-consent"
               checked={recordingConsent}
@@ -234,9 +266,12 @@ export function InviteLobby({
               I understand this interview may be recorded for assessment and
               quality review.
             </label>
-          </div>
+          </WorkspaceSurface>
 
-          <div className="rounded-2xl bg-card/80 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)]">
+          <WorkspaceSurface
+            as="div"
+            className="rounded-2xl bg-card/80 p-5 ring-white/10"
+          >
             <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
               Next step
             </p>
@@ -246,10 +281,13 @@ export function InviteLobby({
               <span className="font-medium text-primary">Join interview</span>{' '}
               button to start the live interview.
             </p>
-          </div>
+          </WorkspaceSurface>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)] transition-colors hover:bg-muted/20">
+            <WorkspaceSurface
+              as="div"
+              className="rounded-2xl p-6 ring-white/10 transition-colors hover:bg-muted/20"
+            >
               <div className="flex items-center gap-2">
                 <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
                   Duration
@@ -273,25 +311,44 @@ export function InviteLobby({
               <p className="mt-3 text-2xl font-bold tracking-tight text-foreground tabular-nums">
                 {formatDurationPolicy(initialSnapshot.policy)}
               </p>
-            </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {initialSnapshot.policy.allowsResume
+                  ? 'Resume supported until you submit the interview.'
+                  : 'Single-pass interview — no resume once started.'}
+              </p>
+            </WorkspaceSurface>
 
-            <div className="rounded-2xl bg-card p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.2)] transition-colors hover:bg-muted/20">
+            <WorkspaceSurface
+              as="div"
+              className="rounded-2xl p-6 ring-white/10 transition-colors hover:bg-muted/20"
+            >
               <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
                 Valid Until
               </p>
               <p className="mt-3 text-2xl font-bold tracking-tight text-pretty text-foreground tabular-nums">
-                {formatExpiryLabel(initialSnapshot.policy.expiresAt)}
+                {formatExpiryRelative(initialSnapshot.policy.expiresAt, nowMs)}
               </p>
-            </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {formatExpiryRelative(
+                  initialSnapshot.policy.expiresAt,
+                  nowMs
+                ) === 'Expired'
+                  ? 'Request a new invite from your recruiter.'
+                  : 'Invite window updates while you stay on this page.'}
+              </p>
+            </WorkspaceSurface>
           </div>
 
-          <div className="flex items-center gap-4 rounded-2xl bg-muted/20 p-5 text-sm font-medium text-muted-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.2)]">
+          <WorkspaceSurface
+            as="div"
+            className="flex items-center gap-4 rounded-2xl bg-muted/20 p-5 text-sm font-medium text-muted-foreground ring-white/10"
+          >
             <IconInfoCircle className="h-5 w-5 shrink-0" />
             <p className="leading-relaxed">
               Please confirm your camera and microphone are working in the
               preview before joining.
             </p>
-          </div>
+          </WorkspaceSurface>
         </div>
       </section>
     </div>

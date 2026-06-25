@@ -23,6 +23,17 @@ export type DashboardNeedsAttention = {
   }>
 }
 
+export type DashboardLiveSlice = {
+  needsAttention: DashboardNeedsAttention
+  recentActivity: Array<{
+    id: string
+    type: string
+    detail: string
+    sessionId?: string
+    createdAt?: string
+  }>
+}
+
 export type DashboardSummary = {
   counts: {
     pendingReviews: number

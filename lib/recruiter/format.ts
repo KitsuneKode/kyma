@@ -21,6 +21,8 @@ const STATUS_LABELS: Record<string, string> = {
   live: 'Live',
   reconnecting: 'Reconnecting',
   interrupted: 'Interrupted',
+  'simulation-started': 'Simulation started',
+  'simulation-completed': 'Simulation completed',
   'teaching-simulation-started': 'Teaching simulation started',
   'teaching-simulation-completed': 'Teaching simulation completed',
   'candidate-screen-share-started': 'Candidate screen share started',

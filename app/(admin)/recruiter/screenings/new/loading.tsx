@@ -1,5 +1,5 @@
 import { PageSkeleton } from '@/components/admin/page-skeleton'
 
-export default function AdminScreeningsLoading() {
+export default function ScreeningCreateLoading() {
   return <PageSkeleton />
 }

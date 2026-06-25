@@ -25,14 +25,38 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
+import { fadeUp } from '@/lib/motion/presets'
+import {
+  clearScreeningCreationDraft,
+  DEFAULT_SCREENING_CREATION_DRAFT,
+  readScreeningCreationDraft,
+  resolveScreeningAllowsResume,
+  resolveScreeningDurationMinutes,
+  type ScreeningCreationDraft,
+  type ScreeningPolicyInheritMode,
+  writeScreeningCreationDraft,
+} from '@/lib/recruiter/screening-creation-draft'
+import { formatStatusLabel } from '@/lib/recruiter/format'
+import {
+  JOB_FAMILY_LABELS,
+  type JobFamily,
+} from '@/lib/templates/job-family-starters'
 
-const STAGGER_VARIANTS: any = {
-  hidden: { opacity: 0, y: 10 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease: [0.23, 1, 0.32, 1] },
-  },
+const STAGGER_VARIANTS = fadeUp
+
+const WIZARD_STEPS = [
+  { id: 0, label: 'Batch config' },
+  { id: 1, label: 'Candidates' },
+  { id: 2, label: 'Review & publish' },
+] as const
+
+type TemplateOption = {
+  id: string
+  name: string
+  rubricVersion: string
+  jobFamily?: JobFamily
+  targetDurationMinutes?: number
+  allowsResume?: boolean
 }
 
 type CandidateDraft = ScreeningCandidateDraft
@@ -45,28 +69,95 @@ function createCandidateDraft(): CandidateDraft {
   }
 }
 
-export function ScreeningCreationForm() {
+function buildDraftState(
+  draft: ScreeningCreationDraft,
+  templates: TemplateOption[]
+): ScreeningCreationDraft {
+  const templateId =
+    draft.templateId &&
+    templates.some((template) => template.id === draft.templateId)
+      ? draft.templateId
+      : (templates[0]?.id ?? '')
+
+  return {
+    ...draft,
+    templateId,
+    candidates:
+      draft.candidates.length > 0 ? draft.candidates : [createCandidateDraft()],
+  }
+}
+
+export function ScreeningCreationForm({
+  initialTemplates = [],
+}: {
+  initialTemplates?: TemplateOption[]
+}) {
   const router = useRouter()
   const {
-    data: templates,
+    data: clientTemplates,
     authLoading,
     isAuthenticated,
   } = useAuthenticatedQuery(api.recruiter.templates.listActiveTemplates, {})
+  const templates =
+    clientTemplates !== undefined ? clientTemplates : initialTemplates
   const createScreeningBatch = useMutation(
     api.recruiter.screenings.createScreeningBatch
   )
-  const [batchName, setBatchName] = useState('Primary tutor screening')
-  const [expiryDays, setExpiryDays] = useState('7')
-  const [allowedAttempts, setAllowedAttempts] = useState('1')
+
+  const [draftLoaded, setDraftLoaded] = useState(false)
+  const [step, setStep] = useState<0 | 1 | 2>(0)
+  const [batchName, setBatchName] = useState(
+    DEFAULT_SCREENING_CREATION_DRAFT.batchName
+  )
+  const [expiryDays, setExpiryDays] = useState(
+    DEFAULT_SCREENING_CREATION_DRAFT.expiryDays
+  )
+  const [allowedAttempts, setAllowedAttempts] = useState(
+    DEFAULT_SCREENING_CREATION_DRAFT.allowedAttempts
+  )
   const [candidateReleaseMode, setCandidateReleaseMode] = useState<
     'inherit' | 'auto' | 'manual'
-  >('inherit')
+  >(DEFAULT_SCREENING_CREATION_DRAFT.candidateReleaseMode)
+  const [durationMode, setDurationMode] = useState<ScreeningPolicyInheritMode>(
+    DEFAULT_SCREENING_CREATION_DRAFT.durationMode
+  )
+  const [targetDurationMinutes, setTargetDurationMinutes] = useState(
+    DEFAULT_SCREENING_CREATION_DRAFT.targetDurationMinutes
+  )
+  const [resumeMode, setResumeMode] = useState<ScreeningPolicyInheritMode>(
+    DEFAULT_SCREENING_CREATION_DRAFT.resumeMode
+  )
+  const [allowsResume, setAllowsResume] = useState(
+    DEFAULT_SCREENING_CREATION_DRAFT.allowsResume
+  )
   const [templateId, setTemplateId] = useState('')
   const [candidates, setCandidates] = useState<CandidateDraft[]>([
     createCandidateDraft(),
   ])
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    const stored = readScreeningCreationDraft()
+    if (stored) {
+      setStep(stored.step)
+      setBatchName(stored.batchName)
+      setExpiryDays(stored.expiryDays)
+      setAllowedAttempts(stored.allowedAttempts)
+      setCandidateReleaseMode(stored.candidateReleaseMode)
+      setDurationMode(stored.durationMode)
+      setTargetDurationMinutes(stored.targetDurationMinutes)
+      setResumeMode(stored.resumeMode)
+      setAllowsResume(stored.allowsResume)
+      setTemplateId(stored.templateId)
+      setCandidates(
+        stored.candidates.length > 0
+          ? stored.candidates
+          : [createCandidateDraft()]
+      )
+    }
+    setDraftLoaded(true)
+  }, [])
 
   useEffect(() => {
     if (!templates?.length) {
@@ -81,6 +172,39 @@ export function ScreeningCreationForm() {
     })
   }, [templates])
 
+  useEffect(() => {
+    if (!draftLoaded) {
+      return
+    }
+
+    writeScreeningCreationDraft({
+      step,
+      batchName,
+      expiryDays,
+      allowedAttempts,
+      candidateReleaseMode,
+      durationMode,
+      targetDurationMinutes,
+      resumeMode,
+      allowsResume,
+      templateId,
+      candidates,
+    })
+  }, [
+    draftLoaded,
+    step,
+    batchName,
+    expiryDays,
+    allowedAttempts,
+    candidateReleaseMode,
+    durationMode,
+    targetDurationMinutes,
+    resumeMode,
+    allowsResume,
+    templateId,
+    candidates,
+  ])
+
   const selectedTemplateId = useMemo(() => {
     if (!templates?.length) {
       return ''
@@ -93,6 +217,23 @@ export function ScreeningCreationForm() {
     }
     return templates[0].id
   }, [templates, templateId])
+
+  const selectedTemplate = useMemo(
+    () => templates.find((template) => template.id === selectedTemplateId),
+    [templates, selectedTemplateId]
+  )
+
+  const resolvedDurationMinutes = resolveScreeningDurationMinutes(
+    { durationMode, targetDurationMinutes },
+    selectedTemplate?.targetDurationMinutes
+  )
+  const resolvedAllowsResume = resolveScreeningAllowsResume(
+    { resumeMode, allowsResume },
+    selectedTemplate?.allowsResume
+  )
+  const resolvedJobFamilyLabel = selectedTemplate?.jobFamily
+    ? JOB_FAMILY_LABELS[selectedTemplate.jobFamily]
+    : 'Unassigned'
 
   const parsedCandidates = useMemo(() => {
     const next: Array<{
@@ -141,15 +282,12 @@ export function ScreeningCreationForm() {
     )
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError(null)
-
+  function validateCandidatesStep() {
     if (parsedCandidates.length === 0) {
       setError(
         'Add at least one eligible candidate before creating a screening.'
       )
-      return
+      return false
     }
 
     const missingEmail = parsedCandidates.find(
@@ -161,14 +299,71 @@ export function ScreeningCreationForm() {
       setError(
         `Enter a valid email for ${missingEmail.candidateName || 'each candidate'}. Invites are email-bound for account linking.`
       )
+      return false
+    }
+
+    setError(null)
+    return true
+  }
+
+  function validateConfigStep() {
+    if (!templates.length) {
+      setError('Create an active assessment template before continuing.')
+      return false
+    }
+    if (!batchName.trim()) {
+      setError('Enter a screening name before continuing.')
+      return false
+    }
+    setError(null)
+    return true
+  }
+
+  function handleNextStep() {
+    if (step === 0 && !validateConfigStep()) {
+      return
+    }
+    if (step === 1 && !validateCandidatesStep()) {
+      return
+    }
+    setError(null)
+    setStep((current) => (current < 2 ? ((current + 1) as 0 | 1 | 2) : current))
+  }
+
+  function handlePreviousStep() {
+    setError(null)
+    setStep((current) => (current > 0 ? ((current - 1) as 0 | 1 | 2) : current))
+  }
+
+  function handleResetDraft() {
+    clearScreeningCreationDraft()
+    const reset = buildDraftState(DEFAULT_SCREENING_CREATION_DRAFT, templates)
+    setStep(reset.step)
+    setBatchName(reset.batchName)
+    setExpiryDays(reset.expiryDays)
+    setAllowedAttempts(reset.allowedAttempts)
+    setCandidateReleaseMode(reset.candidateReleaseMode)
+    setDurationMode(reset.durationMode)
+    setTargetDurationMinutes(reset.targetDurationMinutes)
+    setResumeMode(reset.resumeMode)
+    setAllowsResume(reset.allowsResume)
+    setTemplateId(reset.templateId)
+    setCandidates(reset.candidates.map(() => createCandidateDraft()))
+    setError(null)
+  }
+
+  async function handleSubmit() {
+    if (!validateCandidatesStep()) {
+      setStep(1)
       return
     }
 
+    setError(null)
     setIsSubmitting(true)
 
     try {
       const batchId = await createScreeningBatch({
-        name: batchName.trim() || 'Tutor screening',
+        name: batchName.trim() || 'Screening batch',
         allowedAttempts: Math.max(1, Number.parseInt(allowedAttempts, 10) || 1),
         expiresAt: new Date(
           Date.now() +
@@ -178,16 +373,16 @@ export function ScreeningCreationForm() {
           ? (selectedTemplateId as Id<'assessmentTemplates'>)
           : undefined,
         candidateReleaseMode,
+        targetDurationMinutes: resolvedDurationMinutes,
+        allowsResume: resolvedAllowsResume,
         candidates: parsedCandidates,
       })
 
-      // Simulate a small delay for tactile success feeling before redirecting
-      setTimeout(() => {
-        startTransition(() => {
-          router.push(`/recruiter/screenings/${batchId}`)
-          router.refresh()
-        })
-      }, 400)
+      clearScreeningCreationDraft()
+      startTransition(() => {
+        router.push(`/recruiter/screenings/${batchId}`)
+        router.refresh()
+      })
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -226,8 +421,38 @@ export function ScreeningCreationForm() {
           </p>
         </header>
 
-        <motion.form
-          onSubmit={handleSubmit}
+        <ol className="mb-8 flex items-center justify-center gap-2">
+          {WIZARD_STEPS.map((wizardStep, index) => (
+            <li key={wizardStep.id} className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (wizardStep.id < step) {
+                    setStep(wizardStep.id)
+                    setError(null)
+                  }
+                }}
+                disabled={wizardStep.id > step}
+                className={cn(
+                  'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  step === wizardStep.id
+                    ? 'bg-primary/10 text-primary'
+                    : wizardStep.id < step
+                      ? 'text-foreground hover:bg-muted/30'
+                      : 'text-muted-foreground'
+                )}
+              >
+                <span className="font-mono tabular-nums">{index + 1}</span>
+                {wizardStep.label}
+              </button>
+              {index < WIZARD_STEPS.length - 1 ? (
+                <span className="text-muted-foreground/40">→</span>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+
+        <motion.div
           className="rounded-3xl bg-card p-8 shadow-[var(--shadow-md)] ring-1 ring-border/60 md:p-10"
           initial="hidden"
           animate="visible"
@@ -236,192 +461,434 @@ export function ScreeningCreationForm() {
           }}
         >
           <div className="flex flex-col gap-8">
-            <motion.div
-              variants={STAGGER_VARIANTS}
-              className="flex flex-col gap-3"
-            >
-              <Label
-                htmlFor="template"
-                className="text-xs font-bold tracking-widest text-muted-foreground uppercase"
-              >
-                Assessment template
-              </Label>
-              {templates === undefined ? (
-                <p className="text-sm text-muted-foreground">
-                  Loading templates...
-                </p>
-              ) : templates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No active templates yet.{' '}
-                  <Link
-                    href="/recruiter/templates/new"
-                    className="font-medium text-foreground underline-offset-4 hover:underline"
-                  >
-                    Create a template
-                  </Link>{' '}
-                  first.
-                </p>
-              ) : null}
-              {templates && templates.length > 0 ? (
-                <Select
-                  value={selectedTemplateId}
-                  onValueChange={(value) => setTemplateId(value ?? '')}
+            {step === 0 ? (
+              <>
+                <motion.div
+                  variants={STAGGER_VARIANTS}
+                  className="flex flex-col gap-3"
                 >
-                  <SelectTrigger
-                    id="template"
-                    className="h-12 rounded-xl border-border/40 bg-background px-4 text-base transition-[border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-muted/10 focus:ring-4 focus:ring-primary/10"
+                  <Label
+                    htmlFor="template"
+                    className="text-xs font-bold tracking-widest text-muted-foreground uppercase"
                   >
-                    <SelectValue placeholder="Select a template" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map((template) => (
-                      <SelectItem
-                        key={template.id}
-                        value={template.id}
-                        className="rounded-lg"
+                    Assessment template
+                  </Label>
+                  {templates.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No active templates yet.{' '}
+                      <Link
+                        href="/recruiter/templates/new"
+                        className="font-medium text-foreground underline-offset-4 hover:underline"
                       >
-                        {template.name}{' '}
-                        <span className="ml-2 text-xs opacity-50">
-                          · rubric {template.rubricVersion}
-                        </span>
+                        Create a template
+                      </Link>{' '}
+                      first.
+                    </p>
+                  ) : null}
+                  {templates.length > 0 ? (
+                    <Select
+                      value={selectedTemplateId}
+                      onValueChange={(value) => setTemplateId(value ?? '')}
+                    >
+                      <SelectTrigger
+                        id="template"
+                        className="h-12 rounded-xl border-border/40 bg-background px-4 text-base"
+                      >
+                        <SelectValue placeholder="Select a template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {templates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}{' '}
+                            <span className="ml-2 text-xs opacity-50">
+                              · rubric {template.rubricVersion}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : null}
+                </motion.div>
+
+                <motion.div
+                  variants={STAGGER_VARIANTS}
+                  className="flex flex-col gap-3"
+                >
+                  <Label
+                    htmlFor="batch"
+                    className="text-xs font-bold tracking-widest text-muted-foreground uppercase"
+                  >
+                    Screening name
+                  </Label>
+                  <Input
+                    id="batch"
+                    value={batchName}
+                    onChange={(event) => setBatchName(event.target.value)}
+                    className="h-12 rounded-xl border-border/40 bg-background px-4 text-base"
+                    placeholder="Screening batch"
+                  />
+                </motion.div>
+
+                {selectedTemplate ? (
+                  <motion.div
+                    variants={STAGGER_VARIANTS}
+                    className="rounded-2xl border border-border/40 bg-muted/10 p-4 text-sm"
+                  >
+                    <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
+                      Template policy
+                    </p>
+                    <dl className="mt-3 grid gap-2">
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted-foreground">Job family</dt>
+                        <dd className="font-medium">
+                          {resolvedJobFamilyLabel}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted-foreground">
+                          Default duration
+                        </dt>
+                        <dd className="font-mono tabular-nums">
+                          {selectedTemplate.targetDurationMinutes ?? 18} min
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted-foreground">Resume</dt>
+                        <dd>
+                          {selectedTemplate.allowsResume === false
+                            ? 'Single-pass'
+                            : 'Allowed'}
+                        </dd>
+                      </div>
+                    </dl>
+                  </motion.div>
+                ) : null}
+
+                <motion.div
+                  variants={STAGGER_VARIANTS}
+                  className="grid grid-cols-2 gap-4"
+                >
+                  <div className="col-span-2 flex flex-col gap-3">
+                    <Label className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
+                      Interview duration
+                    </Label>
+                    <Select
+                      value={durationMode}
+                      onValueChange={(value) =>
+                        setDurationMode(
+                          (value ?? 'inherit') as ScreeningPolicyInheritMode
+                        )
+                      }
+                    >
+                      <SelectTrigger className="h-12 rounded-xl border-border/40 bg-background px-4 text-base">
+                        <SelectValue placeholder="Duration policy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="inherit">
+                          Inherit from template (
+                          {selectedTemplate?.targetDurationMinutes ?? 18} min)
+                        </SelectItem>
+                        <SelectItem value="override">
+                          Override duration
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {durationMode === 'override' ? (
+                      <Input
+                        value={targetDurationMinutes}
+                        onChange={(event) =>
+                          setTargetDurationMinutes(event.target.value)
+                        }
+                        inputMode="numeric"
+                        className="h-12 rounded-xl border-border/40 bg-background px-4 text-base tabular-nums"
+                        placeholder="Minutes"
+                      />
+                    ) : null}
+                  </div>
+
+                  <div className="col-span-2 flex flex-col gap-3">
+                    <Label className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
+                      Resume policy
+                    </Label>
+                    <Select
+                      value={resumeMode}
+                      onValueChange={(value) =>
+                        setResumeMode(
+                          (value ?? 'inherit') as ScreeningPolicyInheritMode
+                        )
+                      }
+                    >
+                      <SelectTrigger className="h-12 rounded-xl border-border/40 bg-background px-4 text-base">
+                        <SelectValue placeholder="Resume policy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="inherit">
+                          Inherit from template (
+                          {selectedTemplate?.allowsResume === false
+                            ? 'single-pass'
+                            : 'resume allowed'}
+                          )
+                        </SelectItem>
+                        <SelectItem value="override">
+                          Override resume policy
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {resumeMode === 'override' ? (
+                      <Select
+                        value={allowsResume ? 'allow' : 'deny'}
+                        onValueChange={(value) =>
+                          setAllowsResume((value ?? 'allow') === 'allow')
+                        }
+                      >
+                        <SelectTrigger className="h-12 rounded-xl border-border/40 bg-background px-4 text-base">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="allow">Allow resume</SelectItem>
+                          <SelectItem value="deny">Single-pass only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : null}
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  variants={STAGGER_VARIANTS}
+                  className="grid grid-cols-2 gap-4"
+                >
+                  <div className="flex flex-col gap-3">
+                    <Label
+                      htmlFor="expiry"
+                      className="text-xs font-bold tracking-widest text-muted-foreground uppercase"
+                    >
+                      Expiry (days)
+                    </Label>
+                    <Input
+                      id="expiry"
+                      value={expiryDays}
+                      onChange={(event) => setExpiryDays(event.target.value)}
+                      inputMode="numeric"
+                      className="h-12 rounded-xl border-border/40 bg-background px-4 text-base tabular-nums"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <Label
+                      htmlFor="attempts"
+                      className="text-xs font-bold tracking-widest text-muted-foreground uppercase"
+                    >
+                      Attempts
+                    </Label>
+                    <Input
+                      id="attempts"
+                      value={allowedAttempts}
+                      onChange={(event) =>
+                        setAllowedAttempts(event.target.value)
+                      }
+                      inputMode="numeric"
+                      className="h-12 rounded-xl border-border/40 bg-background px-4 text-base tabular-nums"
+                    />
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  variants={STAGGER_VARIANTS}
+                  className="flex flex-col gap-3"
+                >
+                  <Label className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
+                    Candidate release
+                  </Label>
+                  <Select
+                    value={candidateReleaseMode}
+                    onValueChange={(value) =>
+                      setCandidateReleaseMode(
+                        (value ?? 'inherit') as 'inherit' | 'auto' | 'manual'
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-12 rounded-xl border-border/40 bg-background px-4 text-base">
+                      <SelectValue placeholder="Release policy" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inherit">
+                        Inherit workspace default
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : null}
-            </motion.div>
+                      <SelectItem value="auto">
+                        Auto-release on Advance / Reject
+                      </SelectItem>
+                      <SelectItem value="manual">
+                        Manual release only
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </motion.div>
+              </>
+            ) : null}
 
-            <motion.div
-              variants={STAGGER_VARIANTS}
-              className="flex flex-col gap-3"
-            >
-              <Label
-                htmlFor="batch"
-                className="text-xs font-bold tracking-widest text-muted-foreground uppercase"
-              >
-                Screening name
-              </Label>
-              <Input
-                id="batch"
-                value={batchName}
-                onChange={(event) => setBatchName(event.target.value)}
-                className="h-12 rounded-xl border-border/40 bg-background px-4 text-base transition-[border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-muted/10 focus-visible:ring-4 focus-visible:ring-primary/10"
-                placeholder="Primary tutor screening"
+            {step === 1 ? (
+              <ScreeningCandidateFields
+                candidates={candidates}
+                onAddCandidate={addCandidate}
+                onRemoveCandidate={removeCandidate}
+                onUpdateCandidate={updateCandidate}
+                staggerVariants={STAGGER_VARIANTS}
               />
-            </motion.div>
+            ) : null}
 
-            <motion.div
-              variants={STAGGER_VARIANTS}
-              className="grid grid-cols-2 gap-4"
-            >
-              <div className="flex flex-col gap-3">
-                <Label
-                  htmlFor="expiry"
-                  className="text-xs font-bold tracking-widest text-muted-foreground uppercase"
-                >
-                  Expiry (days)
-                </Label>
-                <Input
-                  id="expiry"
-                  value={expiryDays}
-                  onChange={(event) => setExpiryDays(event.target.value)}
-                  inputMode="numeric"
-                  className="h-12 rounded-xl border-border/40 bg-background px-4 text-base tabular-nums transition-[border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-muted/10 focus-visible:ring-4 focus-visible:ring-primary/10"
-                />
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <Label
-                  htmlFor="attempts"
-                  className="text-xs font-bold tracking-widest text-muted-foreground uppercase"
-                >
-                  Attempts
-                </Label>
-                <Input
-                  id="attempts"
-                  value={allowedAttempts}
-                  onChange={(event) => setAllowedAttempts(event.target.value)}
-                  inputMode="numeric"
-                  className="h-12 rounded-xl border-border/40 bg-background px-4 text-base tabular-nums transition-[border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-muted/10 focus-visible:ring-4 focus-visible:ring-primary/10"
-                />
-              </div>
-            </motion.div>
-
-            <motion.div
-              variants={STAGGER_VARIANTS}
-              className="flex flex-col gap-3"
-            >
-              <Label className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
-                Candidate release
-              </Label>
-              <Select
-                value={candidateReleaseMode}
-                onValueChange={(value) =>
-                  setCandidateReleaseMode(
-                    (value ?? 'inherit') as 'inherit' | 'auto' | 'manual'
-                  )
-                }
+            {step === 2 ? (
+              <motion.div
+                variants={STAGGER_VARIANTS}
+                className="flex flex-col gap-4 rounded-2xl border border-border/40 bg-muted/10 p-5"
               >
-                <SelectTrigger className="h-12 rounded-xl border-border/40 bg-background px-4 text-base">
-                  <SelectValue placeholder="Release policy" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="inherit">
-                    Inherit workspace default
-                  </SelectItem>
-                  <SelectItem value="auto">
-                    Auto-release on Advance / Reject
-                  </SelectItem>
-                  <SelectItem value="manual">Manual release only</SelectItem>
-                </SelectContent>
-              </Select>
-            </motion.div>
+                <div>
+                  <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
+                    Batch summary
+                  </p>
+                  <p className="mt-2 text-lg font-semibold">{batchName}</p>
+                </div>
+                <dl className="grid gap-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">Template</dt>
+                    <dd className="text-right font-medium">
+                      {selectedTemplate?.name ?? '—'}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">Job family</dt>
+                    <dd className="text-right font-medium">
+                      {resolvedJobFamilyLabel}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">Duration</dt>
+                    <dd className="font-mono tabular-nums">
+                      {resolvedDurationMinutes ?? '—'} min
+                      {durationMode === 'inherit'
+                        ? ' (template)'
+                        : ' (override)'}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">Resume</dt>
+                    <dd>
+                      {resolvedAllowsResume === false
+                        ? 'Single-pass'
+                        : 'Allowed'}
+                      {resumeMode === 'inherit' ? ' (template)' : ' (override)'}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">Expiry</dt>
+                    <dd className="font-mono tabular-nums">
+                      {expiryDays} days
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">Attempts</dt>
+                    <dd className="font-mono tabular-nums">
+                      {allowedAttempts}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">Release</dt>
+                    <dd>{formatStatusLabel(candidateReleaseMode)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">Candidates</dt>
+                    <dd className="font-mono tabular-nums">
+                      {parsedCandidates.length}
+                    </dd>
+                  </div>
+                </dl>
+                <div className="border-t border-border/40 pt-4">
+                  <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
+                    Invite list
+                  </p>
+                  <ul className="mt-3 flex flex-col gap-2">
+                    {parsedCandidates.map((candidate) => (
+                      <li
+                        key={`${candidate.candidateEmail}-${candidate.candidateName}`}
+                        className="rounded-lg bg-background px-3 py-2 text-sm"
+                      >
+                        <span className="font-medium">
+                          {candidate.candidateName}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {' '}
+                          · {candidate.candidateEmail}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </motion.div>
+            ) : null}
 
-            <ScreeningCandidateFields
-              candidates={candidates}
-              onAddCandidate={addCandidate}
-              onRemoveCandidate={removeCandidate}
-              onUpdateCandidate={updateCandidate}
-              staggerVariants={STAGGER_VARIANTS}
-            />
-
-            {error && (
+            {error ? (
               <motion.div variants={STAGGER_VARIANTS}>
                 <p className="rounded-lg bg-destructive/10 p-3 text-center text-sm font-medium text-destructive">
                   {error}
                 </p>
               </motion.div>
-            )}
+            ) : null}
 
             <motion.div
               variants={STAGGER_VARIANTS}
-              className="mt-4 flex justify-end"
+              className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <Button
-                type="submit"
+                type="button"
+                variant="ghost"
+                onClick={handleResetDraft}
                 disabled={isSubmitting}
-                className="group relative h-14 w-full overflow-hidden rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.96]"
               >
-                <div
-                  className={cn(
-                    'absolute inset-0 flex items-center justify-center transition-opacity duration-300',
-                    isSubmitting ? 'opacity-100' : 'opacity-0'
-                  )}
-                >
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                </div>
-                <span
-                  className={cn(
-                    'transition-opacity duration-300',
-                    isSubmitting ? 'opacity-0' : 'opacity-100'
-                  )}
-                >
-                  Create batch & generate links
-                </span>
+                Clear draft
               </Button>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                {step > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handlePreviousStep}
+                    disabled={isSubmitting}
+                  >
+                    Back
+                  </Button>
+                ) : null}
+                {step < 2 ? (
+                  <Button type="button" onClick={handleNextStep}>
+                    Continue
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => void handleSubmit()}
+                    className="group relative h-14 min-w-48 overflow-hidden"
+                  >
+                    <div
+                      className={cn(
+                        'absolute inset-0 flex items-center justify-center transition-opacity duration-300',
+                        isSubmitting ? 'opacity-100' : 'opacity-0'
+                      )}
+                    >
+                      <div className="size-6 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                    </div>
+                    <span
+                      className={cn(
+                        'transition-opacity duration-300',
+                        isSubmitting ? 'opacity-0' : 'opacity-100'
+                      )}
+                    >
+                      Create batch & generate links
+                    </span>
+                  </Button>
+                )}
+              </div>
             </motion.div>
           </div>
-        </motion.form>
+        </motion.div>
       </div>
     </div>
   )
