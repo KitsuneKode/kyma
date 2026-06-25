@@ -5,7 +5,7 @@ import { IconCheck, IconCopy } from '@tabler/icons-react'
 
 import { DataTable, type ColumnDef } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/workspace/status-badge'
 import { formatStatusLabel } from '@/lib/recruiter/format'
 
 type ScreeningCandidateRow = {
@@ -90,7 +90,11 @@ export function ScreeningCandidatesTable({
             <div className="flex flex-wrap items-center gap-2">
               <p>{formatStatusLabel(row.original.status)}</p>
               {row.original.isStuckProcessing ? (
-                <Badge variant="destructive">Stuck</Badge>
+                <StatusBadge
+                  status="processing"
+                  label="Stuck"
+                  className="text-xs"
+                />
               ) : null}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
