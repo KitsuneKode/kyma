@@ -1,11 +1,20 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { IconSparkles, IconX, IconSend2 } from '@tabler/icons-react'
 
-import { Message, MessageContent } from '@/components/ai-elements/message'
+import {
+  Message,
+  MessageContent,
+  MessageResponse,
+} from '@/components/ai-elements/message'
 import { CitationList } from '@/components/recruiter/citation-list'
+import { useReviewActions } from '@/components/recruiter/review-context'
+import { WorkspaceTextarea } from '@/components/workspace/textarea'
+import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
+import { api } from '@/convex/_generated/api'
 import { cn } from '@/lib/utils'
 
 type ChatMessage = {
@@ -15,6 +24,16 @@ type ChatMessage = {
   createdAt: string
   answerSource?: 'fallback' | 'model'
   citationsJson?: string
+}
+
+function formatAnswerSourceLabel(source?: 'fallback' | 'model') {
+  if (source === 'model') {
+    return 'Model-backed'
+  }
+  if (source === 'fallback') {
+    return 'Deterministic fallback'
+  }
+  return null
 }
 
 export function RecruiterChat({
@@ -31,6 +50,14 @@ export function RecruiterChat({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
+  const { jumpToTime } = useReviewActions()
+  const { data: workspaceSettings } = useAuthenticatedQuery(
+    api.recruiter.workspace.getWorkspaceSettings,
+    {}
+  )
+  const hasWorkspaceModels =
+    Boolean(workspaceSettings?.defaultModels?.reviewChat) ||
+    Boolean(workspaceSettings?.providerKeys?.length)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -202,6 +229,23 @@ export function RecruiterChat({
                 }}
               >
                 <div className="flex flex-col gap-6 pb-24">
+                  {!hasWorkspaceModels ? (
+                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-100">
+                      <p className="font-medium">
+                        Copilot runs in fallback mode
+                      </p>
+                      <p className="mt-1 text-xs opacity-90">
+                        Add provider keys or set default review-chat models in
+                        workspace settings for model-backed answers.
+                      </p>
+                      <Link
+                        href="/recruiter/settings#models"
+                        className="mt-3 inline-block text-xs font-medium underline underline-offset-4"
+                      >
+                        Open model settings
+                      </Link>
+                    </div>
+                  ) : null}
                   {messages.length ? (
                     messages.map((message, index) => (
                       <motion.div
@@ -237,14 +281,21 @@ export function RecruiterChat({
                             <p className="mb-2 text-[10px] font-medium tracking-widest uppercase opacity-50">
                               {message.role}
                               {message.answerSource
-                                ? ` • ${message.answerSource}`
+                                ? ` · ${formatAnswerSourceLabel(message.answerSource)}`
                                 : ''}
                             </p>
-                            <p>{message.content}</p>
+                            {message.role === 'assistant' ? (
+                              <MessageResponse>
+                                {message.content}
+                              </MessageResponse>
+                            ) : (
+                              <p>{message.content}</p>
+                            )}
                             {message.citationsJson ? (
                               <div className="mt-4 border-t border-border/50 pt-4">
                                 <CitationList
                                   citationsJson={message.citationsJson}
+                                  onJumpToTime={jumpToTime}
                                 />
                               </div>
                             ) : null}
@@ -291,14 +342,14 @@ export function RecruiterChat({
                   <p className="mb-3 px-2 text-xs text-red-400">{error}</p>
                 ) : null}
                 <div className="relative flex items-center">
-                  <textarea
+                  <WorkspaceTextarea
                     ref={inputRef}
                     value={question}
                     aria-label="Ask about this candidate"
                     onChange={(e) => setQuestion(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Ask a question..."
-                    className="min-h-[52px] w-full resize-none rounded-2xl border border-border/50 bg-foreground/5 pt-3.5 pr-12 pb-3 pl-4 text-sm text-foreground transition-[border-color,box-shadow] outline-none placeholder:text-muted-foreground/70 focus:border-border focus:ring-4 focus:ring-ring/20"
+                    className="min-h-[52px] resize-none rounded-2xl border-border/50 bg-foreground/5 pt-3.5 pr-12 pb-3 pl-4 text-sm text-foreground placeholder:text-muted-foreground/70 focus:border-border focus:ring-4 focus:ring-ring/20"
                     rows={1}
                     style={{ fieldSizing: 'content', maxHeight: '160px' }}
                   />
