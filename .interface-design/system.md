@@ -106,6 +106,18 @@ Floating `RecruiterChat` stays a sibling outside the workspace shell (`⌘K`).
 
 Rubric visualization: **radar + horizontal score bars + dimension list** only. Do not add a third ring/donut chart for the same `dimensionScores`.
 
+**Chart stack split:**
+
+- **Recharts + shadcn `ChartContainer`** — rubric radar and score bars (`components/recruiter/rubric-*-chart.tsx`)
+- **Liveline** — session activity / engagement time series from `sessionEvents` (Timeline tab, playback scrub)
+- **streamdown** — markdown in recruiter copilot (`MessageResponse`)
+
+### Focal panel exception
+
+Exactly **one Level-2 focal** per view. Default: `Surface elevation="raised"` or `shadow-[var(--shadow-md)]` on `WorkspaceSurface`.
+
+The recruiter dashboard **Needs attention** panel may use an amber accent ring (`ring-amber-500/20`) as the approved focal exception — it signals triage urgency without breaking the elevation ladder.
+
 ### Tab contract
 
 Metadata sections that were previously collapsible accordions belong in detail tabs. Notes is the default tab; session operational facts, events timeline, recordings, and recruiter decisions each get one tab panel inside `WorkspaceSurface`.

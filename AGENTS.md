@@ -12,12 +12,12 @@ Read this first, then use `.docs/` for architecture and `.plans/` for execution 
 
 ## Product Direction
 
-This repo is building the Cuemath-style `AI Tutor Screener`:
+This repo is building a horizontal AI voice screener platform (starting with tutor screening):
 
-- public candidate interview flow
-- realtime voice interviewer
-- structured tutor assessment with evidence
-- admin dashboard for links, sessions, reports, and review
+- public candidate interview flow across job families
+- realtime voice interviewer with optional simulation segments (teaching, roleplay, case discussion)
+- structured assessment with evidence-backed rubrics per template
+- admin dashboard for templates, links, sessions, reports, and review
 
 ## Stack Defaults
 

@@ -2,14 +2,14 @@
 
 ## Product Goal
 
-Build a premium AI interviewer for screening tutor candidates on soft skills:
+Build a horizontal AI voice screener for hiring teams, starting with tutor screening and expanding across job families (engineering, product, sales, support, and general professional roles).
+
+Core signals vary by template, but the platform consistently evaluates:
 
 - communication clarity
-- patience
-- warmth
-- ability to simplify
-- English fluency
-- spontaneous teaching ability
+- role-relevant judgment and adaptability
+- structured thinking under conversational pressure
+- optional live simulation segments (teaching, roleplay, or case discussion)
 
 The system should feel welcoming to candidates while producing an evaluation a hiring team can trust.
 
@@ -20,7 +20,7 @@ The system should feel welcoming to candidates while producing an evaluation a h
 - opens interview link
 - passes device and network checks
 - completes voice interview
-- optionally completes a teaching simulation
+- optionally completes a configured simulation segment (teaching, roleplay, or case discussion)
 - sees a graceful completion state
 
 ### Recruiter or Admin

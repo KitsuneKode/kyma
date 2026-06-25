@@ -44,7 +44,9 @@ This means the next phase should not rebuild foundations. It should improve the 
 
 ## Product Thesis For The Next Phase
 
-Kyma should feel like the system a tutoring company would rely on to screen candidates daily, not a clever demo.
+Kyma should feel like the system a hiring team would rely on to screen candidates daily across roles, not a single-role demo.
+
+The platform thesis is a **horizontal voice screener**: shared LiveKit + Convex interview infrastructure, job-family template starters, and configurable simulation modes while keeping evidence-backed rubrics reviewable by humans.
 
 The next phase should make the following feel obviously strong:
 
