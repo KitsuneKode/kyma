@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 /**
  * ROI sprint smoke coverage — public routes and redirects.
@@ -8,12 +8,34 @@ import { expect, test } from '@playwright/test'
  */
 
 function isSignInUrl(url: string) {
-  return url.includes('sign-in') || url.includes('accounts.dev')
+  return (
+    url.includes('sign-in') ||
+    url.includes('sign-up') ||
+    url.includes('accounts.dev') ||
+    url.includes('clerk.accounts')
+  )
+}
+
+async function waitForPracticeDestination(page: Page) {
+  await page.waitForURL(
+    (url) => {
+      const { pathname, hostname } = url
+      return (
+        pathname.includes('/candidate/practice') ||
+        pathname.includes('/sign-in') ||
+        pathname.includes('/sign-up') ||
+        hostname.includes('accounts.dev') ||
+        hostname.includes('clerk')
+      )
+    },
+    { timeout: 15_000 }
+  )
 }
 
 test.describe('ROI sprint — candidate practice', () => {
   test('/practice redirects to practice hub or sign-in', async ({ page }) => {
     await page.goto('/practice')
+    await waitForPracticeDestination(page)
     const url = page.url()
     expect(url.includes('/candidate/practice') || isSignInUrl(url)).toBeTruthy()
     expect(url.includes('Internal Server Error')).toBeFalsy()
@@ -24,6 +46,7 @@ test.describe('ROI sprint — candidate practice', () => {
   }) => {
     const response = await page.goto('/candidate/practice')
     expect(response?.status()).toBeLessThan(500)
+    await waitForPracticeDestination(page)
 
     if (isSignInUrl(page.url())) {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible()

@@ -18,6 +18,7 @@ const isAuthRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)'])
 const isDevPreviewRoute = createRouteMatcher(['/dev(.*)'])
 const isPublicRoute = createRouteMatcher([
   '/',
+  '/practice',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/interviews(.*)',
