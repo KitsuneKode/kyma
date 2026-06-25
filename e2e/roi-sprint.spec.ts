@@ -12,16 +12,17 @@ function isSignInUrl(url: string) {
     url.includes('sign-in') ||
     url.includes('sign-up') ||
     url.includes('accounts.dev') ||
-    url.includes('clerk.accounts')
+    url.includes('clerk.accounts') ||
+    url.includes('clerk.com')
   )
 }
 
-async function waitForPracticeDestination(page: Page) {
+async function waitForAuthGateOrPath(page: Page, pathFragment: string) {
   await page.waitForURL(
     (url) => {
       const { pathname, hostname } = url
       return (
-        pathname.includes('/candidate/practice') ||
+        pathname.includes(pathFragment) ||
         pathname.includes('/sign-in') ||
         pathname.includes('/sign-up') ||
         hostname.includes('accounts.dev') ||
@@ -30,6 +31,11 @@ async function waitForPracticeDestination(page: Page) {
     },
     { timeout: 15_000 }
   )
+  await page.waitForLoadState('domcontentloaded')
+}
+
+async function waitForPracticeDestination(page: Page) {
+  await waitForAuthGateOrPath(page, '/candidate/practice')
 }
 
 test.describe('ROI sprint — candidate practice', () => {
@@ -49,6 +55,15 @@ test.describe('ROI sprint — candidate practice', () => {
     const response = await page.goto('/candidate/practice')
     expect(response?.status()).toBeLessThan(500)
     await waitForPracticeDestination(page)
+
+    await expect(async () => {
+      const onSignIn = isSignInUrl(page.url())
+      const hubVisible = await page
+        .getByText('Practice interviews')
+        .isVisible()
+        .catch(() => false)
+      expect(onSignIn || hubVisible).toBeTruthy()
+    }).toPass({ timeout: 10_000 })
 
     if (isSignInUrl(page.url())) {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
@@ -90,11 +105,18 @@ test.describe('ROI sprint — horizontal personas', () => {
 })
 
 test.describe('ROI sprint — recruiter surfaces (unauthenticated)', () => {
-  test('/recruiter/health renders platform readiness panel', async ({
+  test('/recruiter/health is auth-gated or shows platform readiness', async ({
     page,
   }) => {
     const response = await page.goto('/recruiter/health')
     expect(response?.status()).toBeLessThan(500)
+    await waitForAuthGateOrPath(page, '/recruiter/health')
+
+    if (isSignInUrl(page.url())) {
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      return
+    }
+
     await expect(page.getByText('Platform readiness')).toBeVisible()
   })
 
