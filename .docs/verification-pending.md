@@ -5,21 +5,23 @@ This file is the unresolved execution queue only. For procedure steps, use
 
 Update rule: update this queue first; update the runbook only when procedure changes.
 
-| Item                                | Automated | Manual                          | Test file                            |
-| ----------------------------------- | --------- | ------------------------------- | ------------------------------------ |
-| 1 Clerk webhook sync                | —         | Yes                             | —                                    |
-| 2 RBAC denial matrix                | —         | Yes                             | —                                    |
-| 2.1 Org context enforcement         | —         | Yes                             | —                                    |
-| 2.2 Cross-org isolation             | —         | Yes                             | —                                    |
-| 3 LiveKit invite + identity         | —         | **Yes (owner + LiveKit creds)** | —                                    |
-| 4 Reconnect timer continuity        | —         | **Yes (owner + LiveKit creds)** | —                                    |
-| 5 Candidate dashboard result gating | Partial   | Yes                             | Vitest purpose filter + gating paths |
-| 6 BYOK provider validation          | —         | Yes                             | —                                    |
-| 7 Template version history          | —         | Yes                             | —                                    |
+| Item                                | Automated | Manual                          | Test file                                                                                     |
+| ----------------------------------- | --------- | ------------------------------- | --------------------------------------------------------------------------------------------- |
+| 1 Clerk webhook sync                | —         | Yes                             | —                                                                                             |
+| 2 RBAC denial matrix                | —         | Yes                             | —                                                                                             |
+| 2.1 Org context enforcement         | —         | Yes                             | —                                                                                             |
+| 2.2 Cross-org isolation             | —         | Yes                             | —                                                                                             |
+| 3 LiveKit invite + identity         | Partial   | **Yes (owner + LiveKit creds)** | `convex/bootstrap.test.ts`, `lib/livekit/token.test.ts`, `convex/livekit.test.ts`             |
+| 4 Reconnect timer continuity        | Partial   | **Yes (owner + LiveKit creds)** | `convex/bootstrap.test.ts`, `lib/interview/session-machine.test.ts`, `convex/livekit.test.ts` |
+| 5 Candidate dashboard result gating | Partial   | Yes                             | Vitest purpose filter + gating paths                                                          |
+| 6 BYOK provider validation          | —         | Yes                             | —                                                                                             |
+| 7 Template version history          | —         | Yes                             | —                                                                                             |
 
 **Agent environment note:** Items **3** and **4** require owner-run LiveKit credentials, a running agent worker (`bun run agent:start`), and webhook reachability. These cannot be fully executed or marked passed in an agent-only environment without those secrets and a live room session. Document pass/fail with evidence in this file after owner execution — do not claim pass without transcript/report artifacts.
 
-**Automation targets:** Item 5 routing/gating is partially covered by `convex/interviews/candidatePortal.practice.test.ts`. Practice vs screening list separation and rate-limit behavior are covered there. RBAC matrix (item 2.x) remains manual until Clerk CI test credentials exist.
+**Automation targets:** Item 5 routing/gating is partially covered by `convex/candidatePortal.practice.test.ts`. Practice vs screening list separation and rate-limit behavior are covered there. Items **3–4** have partial Vitest coverage (`convex/bootstrap.test.ts`, `lib/livekit/token.test.ts`, `convex/livekit.test.ts`, `lib/interview/session-machine.test.ts`); owner-run LiveKit session proof still required to mark passed. RBAC matrix (item 2.x) remains manual until Clerk CI test credentials exist.
+
+**Pre-flight script:** `bun run live-path:preflight` checks env + `/recruiter/health` readiness before owner-run items 3–4.
 
 ## Priority 1: Access and Identity
 
@@ -56,14 +58,16 @@ Update rule: update this queue first; update the runbook only when procedure cha
 
 - Blocker cleared: session takeover and token misuse risk.
 - Procedure: `.docs/backend-verification-runbook.md#item-3-livekit--session-continuity-02--continuity`
-- **Status:** Pending owner-run — requires LiveKit API keys, agent worker, and live invite session (cannot complete in agent env)
-- **Pre-flight:** `/recruiter/health` should show LiveKit + agent worker checks before each attempt.
+- **Automated:** Bootstrap identity/resume invariants, JWT `candidate-{sessionId}` identity, webhook candidate-prefix handling — see test files in table above.
+- **Status:** Partial — owner-run live session still required (cannot complete in agent env)
+- **Pre-flight:** `/recruiter/health` + `bun run live-path:preflight` before each attempt.
 
 ### 4) Reconnect timer continuity
 
 - Blocker cleared: broken interview timing and inconsistent final scoring context.
 - Procedure: `.docs/backend-verification-runbook.md#item-3-livekit--session-continuity-02--continuity`
-- **Status:** Pending owner-run — same LiveKit credential dependency as item 3
+- **Automated:** Interrupted resume path, reconnect FSM transitions, webhook duration accrual — see test files in table above.
+- **Status:** Partial — owner-run reconnect smoke still required (same LiveKit credential dependency as item 3)
 
 ## Priority 3: Data and Output Correctness
 

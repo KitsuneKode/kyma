@@ -172,13 +172,22 @@ async function stuckProcessingStatus(): Promise<HealthCheck> {
     if (!result.ok) {
       throw new Error(result.message)
     }
-    const { stuckCount, thresholdMinutes, scanned } = result.data
+    const { stuckCount, thresholdMinutes, scanned, recentReaperFailures } =
+      result.data
     if (stuckCount > 0) {
       return {
         id: 'stuck-processing',
         label,
         status: 'warn',
         detail: `${stuckCount} session(s) in processing longer than ${thresholdMinutes}m (scanned ${scanned}). Check processing reaper / Inngest.`,
+      }
+    }
+    if (recentReaperFailures > 0) {
+      return {
+        id: 'stuck-processing',
+        label,
+        status: 'warn',
+        detail: `${recentReaperFailures} session(s) failed by the processing reaper in the last 24h.`,
       }
     }
     return {

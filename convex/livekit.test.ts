@@ -57,7 +57,7 @@ describe('ingestWebhookEvent session transitions', () => {
       processingKey: PROCESSING_KEY,
       event: 'participant_left',
       roomName,
-      participantIdentity: 'candidate-1',
+      participantIdentity: 'candidate-session-1',
     })
 
     const session = await t.run((ctx) => ctx.db.get(sessionId))

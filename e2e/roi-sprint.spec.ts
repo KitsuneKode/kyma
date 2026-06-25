@@ -90,6 +90,14 @@ test.describe('ROI sprint — horizontal personas', () => {
 })
 
 test.describe('ROI sprint — recruiter surfaces (unauthenticated)', () => {
+  test('/recruiter/health renders platform readiness panel', async ({
+    page,
+  }) => {
+    const response = await page.goto('/recruiter/health')
+    expect(response?.status()).toBeLessThan(500)
+    await expect(page.getByText('Platform readiness')).toBeVisible()
+  })
+
   test('screening creation route does not 500', async ({ page }) => {
     const response = await page.goto('/recruiter/screenings/new')
     expect(response?.status()).toBeLessThan(500)

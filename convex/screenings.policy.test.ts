@@ -107,3 +107,99 @@ describe('createScreeningBatch policy persistence', () => {
     )
   })
 })
+
+describe('extendBatchExpiry', () => {
+  beforeEach(() => {
+    process.env.CLERK_SECRET_KEY = 'sk_test'
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test'
+    process.env.CLERK_JWT_ISSUER_DOMAIN = 'https://clerk.test'
+  })
+
+  test('extends batch expiry and cascades to open invites only', async () => {
+    const t = harness()
+    const asRecruiter = t.withIdentity(RECRUITER_IDENTITY)
+
+    const { batchId, openInviteId, completedInviteId } = await t.run(
+      async (ctx) => {
+        const templateId = await ctx.db.insert('assessmentTemplates', {
+          orgId: RECRUITER_IDENTITY.org_id as string,
+          name: 'Extend template',
+          role: 'engineer',
+          status: 'active',
+          createdBy: 'seed',
+          rubricVersion: 'v1',
+        })
+
+        const batchId = await ctx.db.insert('screeningBatches', {
+          orgId: RECRUITER_IDENTITY.org_id as string,
+          name: 'Extend batch',
+          templateId,
+          createdBy: 'seed',
+          status: 'active',
+          allowedAttempts: 1,
+          expiresAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+          createdAt: new Date().toISOString(),
+        })
+
+        const openInviteId = await ctx.db.insert('candidateInvites', {
+          orgId: RECRUITER_IDENTITY.org_id as string,
+          inviteToken: 'open-invite',
+          templateId,
+          batchId,
+          status: 'opened',
+          expiresAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+        })
+
+        await ctx.db.insert('candidateEligibility', {
+          orgId: RECRUITER_IDENTITY.org_id as string,
+          batchId,
+          inviteId: openInviteId,
+          candidateName: 'Open Candidate',
+          allowedAttempts: 1,
+          attemptCount: 0,
+          status: 'invited',
+          createdAt: new Date().toISOString(),
+        })
+
+        const completedInviteId = await ctx.db.insert('candidateInvites', {
+          orgId: RECRUITER_IDENTITY.org_id as string,
+          inviteToken: 'done-invite',
+          templateId,
+          batchId,
+          status: 'completed',
+          expiresAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+        })
+
+        await ctx.db.insert('candidateEligibility', {
+          orgId: RECRUITER_IDENTITY.org_id as string,
+          batchId,
+          inviteId: completedInviteId,
+          candidateName: 'Done Candidate',
+          allowedAttempts: 1,
+          attemptCount: 1,
+          status: 'submitted',
+          createdAt: new Date().toISOString(),
+        })
+
+        return { batchId, openInviteId, completedInviteId }
+      }
+    )
+
+    const result = await asRecruiter.mutation(
+      api.recruiter.screenings.extendBatchExpiry,
+      { batchId, extendDays: 7 }
+    )
+
+    expect(result.updatedInviteCount).toBe(1)
+    expect(Date.parse(result.expiresAt)).toBeGreaterThan(
+      Date.parse('2026-01-01T00:00:00.000Z')
+    )
+
+    const openInvite = await t.run((ctx) => ctx.db.get(openInviteId))
+    const completedInvite = await t.run((ctx) => ctx.db.get(completedInviteId))
+    expect(openInvite?.expiresAt).toBe(result.expiresAt)
+    expect(completedInvite?.expiresAt).toBe(
+      new Date('2026-01-01T00:00:00.000Z').toISOString()
+    )
+  })
+})

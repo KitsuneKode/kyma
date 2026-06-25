@@ -163,9 +163,11 @@ export const getStuckProcessingSummary = pipelineQuery({
     stuckCount: v.number(),
     thresholdMinutes: v.number(),
     scanned: v.number(),
+    recentReaperFailures: v.number(),
   }),
   handler: async (ctx) => {
     const now = Date.now()
+    const reaperFailureCutoffMs = now - 24 * 60 * 60 * 1000
     const sessions = await ctx.db
       .query('interviewSessions')
       .withIndex('by_state', (q) => q.eq('state', 'processing'))
@@ -183,10 +185,27 @@ export const getStuckProcessingSummary = pipelineQuery({
       }
     }
 
+    const failedSessions = await ctx.db
+      .query('interviewSessions')
+      .withIndex('by_state', (q) => q.eq('state', 'failed'))
+      .take(SCAN_BATCH)
+
+    let recentReaperFailures = 0
+    for (const session of failedSessions) {
+      if (session.failureReason !== 'processing-timeout') {
+        continue
+      }
+      const endedMs = session.endedAt ? Date.parse(session.endedAt) : NaN
+      if (Number.isFinite(endedMs) && endedMs >= reaperFailureCutoffMs) {
+        recentReaperFailures += 1
+      }
+    }
+
     return {
       stuckCount,
       thresholdMinutes: STUCK_AFTER_MS / (60 * 1000),
       scanned: sessions.length,
+      recentReaperFailures,
     }
   },
 })

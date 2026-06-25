@@ -20,7 +20,20 @@ describe('canTransitionSession', () => {
     expect(canTransitionSession('connecting', 'live')).toBe(true)
   })
 
+  it('allows live to reconnecting and back to live', () => {
+    expect(canTransitionSession('live', 'reconnecting')).toBe(true)
+    expect(canTransitionSession('reconnecting', 'live')).toBe(true)
+  })
+
+  it('allows reconnecting to interrupted', () => {
+    expect(canTransitionSession('reconnecting', 'interrupted')).toBe(true)
+  })
+
   it('disallows completed to live', () => {
     expect(canTransitionSession('completed', 'live')).toBe(false)
+  })
+
+  it('disallows reconnecting to processing', () => {
+    expect(canTransitionSession('reconnecting', 'processing')).toBe(false)
   })
 })

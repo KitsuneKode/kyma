@@ -4,14 +4,16 @@
 process.env.KYMA_PROCESSING_WRITE_KEY = 'test-processing-key'
 
 import { convexTest } from 'convex-test'
-import { describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test } from 'vitest'
 
-import { internal } from './_generated/api'
+import { internal, api } from './_generated/api'
 import type { Id } from './_generated/dataModel'
 import schema from './schema'
 import { seedInterview } from './lib/testSeed'
 
 const modules = import.meta.glob('./**/*.ts')
+
+const PROCESSING_KEY = 'test-processing-key'
 
 const STUCK_AGE_MS = 20 * 60 * 1000
 const GIVE_UP_AGE_MS = 2 * 60 * 60 * 1000
@@ -103,5 +105,57 @@ describe('reapStuckProcessingSessions', () => {
 
     const session = await t.run((ctx) => ctx.db.get(sessionId))
     expect(session?.state).toBe('processing')
+  })
+})
+
+describe('getStuckProcessingSummary', () => {
+  beforeEach(() => {
+    process.env.KYMA_PROCESSING_WRITE_KEY = PROCESSING_KEY
+  })
+
+  test('reports stuck sessions and recent reaper failures', async () => {
+    const t = harness()
+    await seedInterview(t, {
+      roomName: 'summary-stuck',
+      sessionState: 'processing',
+      endedAt: new Date(Date.now() - STUCK_AGE_MS).toISOString(),
+    })
+
+    await t.run(async (ctx) => {
+      const templateId = await ctx.db.insert('assessmentTemplates', {
+        orgId: 'org_test',
+        name: 'Failed template',
+        role: 'tutor',
+        status: 'active',
+        createdBy: 'seed',
+        rubricVersion: 'v1',
+      })
+      const inviteId = await ctx.db.insert('candidateInvites', {
+        orgId: 'org_test',
+        inviteToken: 'failed-invite',
+        templateId,
+        status: 'completed',
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      await ctx.db.insert('interviewSessions', {
+        orgId: 'org_test',
+        inviteId,
+        state: 'failed',
+        provider: 'livekit',
+        failureReason: 'processing-timeout',
+        endedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      })
+    })
+
+    const summary = await t.query(
+      api.processingReaper.getStuckProcessingSummary,
+      {
+        processingKey: PROCESSING_KEY,
+      }
+    )
+
+    expect(summary.stuckCount).toBeGreaterThanOrEqual(1)
+    expect(summary.recentReaperFailures).toBeGreaterThanOrEqual(1)
+    expect(summary.thresholdMinutes).toBe(10)
   })
 })
