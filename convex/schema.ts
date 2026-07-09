@@ -195,12 +195,26 @@ export default defineSchema({
     practiceJobFamily: v.optional(practiceJobFamilyValidator),
     practiceCreatedAt: v.optional(v.number()),
     expiresAt: v.string(),
+    /** Last invite-email delivery attempt (not invite lifecycle). */
+    emailDeliveryStatus: v.optional(
+      v.union(
+        v.literal('pending'),
+        v.literal('sent'),
+        v.literal('failed'),
+        v.literal('skipped')
+      )
+    ),
+    emailSentAt: v.optional(v.string()),
+    emailProvider: v.optional(v.string()),
+    emailProviderMessageId: v.optional(v.string()),
+    emailLastError: v.optional(v.string()),
   })
     .index('by_org_id', ['orgId'])
     .index('by_invite_token', ['inviteToken'])
     .index('by_status', ['status'])
     .index('by_candidate_email', ['candidateEmail'])
-    .index('by_user', ['userId']),
+    .index('by_user', ['userId'])
+    .index('by_email_delivery_status', ['emailDeliveryStatus']),
 
   interviewSessions: defineTable({
     orgId: v.string(),

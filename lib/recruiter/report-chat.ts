@@ -139,6 +139,26 @@ function fallbackAnswer(
     }
   }
 
+  if (
+    normalizedQuestion.includes('missing') ||
+    normalizedQuestion.includes('follow-up') ||
+    normalizedQuestion.includes('follow up') ||
+    normalizedQuestion.includes('gap')
+  ) {
+    const thinDimensions = (detail.report?.dimensionScores ?? [])
+      .filter((entry) => entry.score <= 2)
+      .map((entry) => entry.dimension)
+    const gaps =
+      thinDimensions.length > 0
+        ? thinDimensions.join(', ')
+        : detail.report?.topConcerns.join(', ') || 'not clearly identified yet'
+    return {
+      text: `Likely follow-up areas for ${detail.candidate.name}: ${gaps}. Ask for concrete examples in those dimensions and confirm whether the transcript already covers them before deciding.`,
+      source: 'fallback',
+      citations,
+    }
+  }
+
   const firstEvidence = detail.evidence[0]
 
   if (firstEvidence) {
@@ -175,7 +195,7 @@ export async function answerRecruiterQuestion(
       model: configuredModel,
       providerOptions: options?.providerOptions,
       system:
-        'You are a grounded recruiter copilot. Answer only from the provided interview report, evidence, and transcript. If the evidence is thin, say so plainly. Do not invent details. After your answer, add a line CITATIONS: followed by comma-separated refs like evidence:0:clarity or transcript:ISO timestamp for each claim you rely on most.',
+        'You are a grounded recruiter copilot. Answer only from the provided interview report, evidence, and transcript. Prefer recruiter-useful framing: strengths, risks, recommendation confidence, missing evidence, and follow-up areas. If the evidence is thin, say so plainly. Do not invent details. After your answer, add a line CITATIONS: followed by comma-separated refs like evidence:0:clarity or transcript:ISO timestamp for each claim you rely on most.',
       prompt: `Answer the recruiter question using only the context below.\n\n${buildContext(
         detail
       )}\n\nQuestion: ${question}`,

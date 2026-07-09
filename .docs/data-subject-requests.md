@@ -1,7 +1,12 @@
 # Data Subject Requests (GDPR / privacy ops)
 
-Manual runbook for export and deletion requests until automated tooling ships.
-Code scaffold: `lib/compliance/data-subject-requests.ts`.
+Manual intake + automated Convex fulfillment jobs.
+
+Code:
+
+- Scaffold: `lib/compliance/data-subject-requests.ts`
+- Export: `internal.compliance.exportSubjectData`
+- Delete/anonymize: `internal.compliance.deleteSubjectData`
 
 ## Intake
 
@@ -9,10 +14,34 @@ Code scaffold: `lib/compliance/data-subject-requests.ts`.
 2. Record the request type: **export**, **delete**, or **rectify**.
 3. Note whether the subject is a **candidate** (interview participant) or **recruiter/admin** (workspace user).
 4. Prefer written confirmation of scope (all orgs vs one employer workspace).
+5. Assign a `requestId` (UUID) and keep it in the ops ticket.
+
+## Automated export
+
+```bash
+npx convex run compliance:exportSubjectData \
+  '{"orgId":"<clerk_org_id>","subjectEmail":"candidate@example.com","requestId":"<uuid>"}'
+```
+
+Optional: pass `subjectUserId` (Convex `users` id) instead of/in addition to email.
+
+The package includes invite metadata (no invite tokens), session metadata, transcript text, and report summaries. Media files in object storage must still be collected separately when retained.
+
+## Automated delete / anonymize
+
+```bash
+npx convex run compliance:deleteSubjectData \
+  '{"orgId":"<clerk_org_id>","subjectEmail":"candidate@example.com","requestId":"<uuid>","actorId":"<ops_user>"}'
+```
+
+The job deletes session-scoped artifacts in batches and anonymizes invite/eligibility PII. It writes `data_subject.delete.completed` to `auditEvents` without storing the subject email.
+
+Also remove or anonymize:
+
+- Clerk user profile when appropriate
+- LiveKit / S3 recording objects referenced by `recordingArtifacts`
 
 ## Locate records (current Convex schema)
-
-Use Clerk ids and emails as join keys. Primary tables:
 
 | Area               | Tables / indexes                                                                                                               |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -28,38 +57,12 @@ Use Clerk ids and emails as join keys. Primary tables:
 | Eligibility        | `candidateEligibility` (org-scoped candidate rows)                                                                             |
 | Audit              | `auditEvents` (retain as needed for legal hold; redact PII where policy allows)                                                |
 
-Also check **Clerk** (user profile) and any **LiveKit / S3** recording buckets outside Convex.
-
-## Export (manual)
-
-1. Collect user profile fields from `users` + Clerk.
-2. For each related `interviewSessions` row, export:
-   - session metadata
-   - final transcript segments
-   - assessment report summaries and dimension evidence
-   - recording artifact metadata (and media files if retained)
-3. Package as JSON (+ media zip if recordings exist). Do not include other candidates’ data from shared org views.
-4. Deliver over a secure channel; log fulfillment date and operator.
-
-## Delete (manual)
-
-1. Confirm no legal hold / ongoing dispute for the org.
-2. Delete or anonymize in dependency order where possible:
-   - chat/notes/evidence/report rows for the subject’s sessions
-   - transcript segments and recording artifacts (+ storage objects)
-   - session events and session rows
-   - invites and eligibility rows keyed by the subject email/user
-   - candidate preferences / readiness runs
-   - finally the `users` row if no remaining memberships require it
-3. Remove or anonymize the Clerk user when appropriate.
-4. Retain minimal audit proof that deletion occurred (request id, timestamp, operator) without keeping the deleted content.
-
 ## Rectify
 
 Update incorrect profile fields in Clerk/`users` and any denormalized email fields on invites/eligibility. Do not silently rewrite assessment scores; note corrections in recruiter review notes if scores were based on wrong identity metadata.
 
 ## Future automation
 
-- Server intake API + Convex export/delete jobs
+- Public/admin intake API that creates a DSR ticket then schedules these jobs
 - Per-org retention policies on `recordingArtifacts` and transcripts
 - Entitlements/billing do not change DSR obligations; paid plans still require the same fulfillment path

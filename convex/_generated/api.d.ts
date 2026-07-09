@@ -10,6 +10,7 @@
 
 import type * as agentConfig from "../agentConfig.js";
 import type * as agentWorker from "../agentWorker.js";
+import type * as compliance from "../compliance.js";
 import type * as crons from "../crons.js";
 import type * as devSeed from "../devSeed.js";
 import type * as devSeedMutations from "../devSeedMutations.js";
@@ -25,6 +26,7 @@ import type * as helpers_interviewPolicy from "../helpers/interviewPolicy.js";
 import type * as helpers_interviewSession from "../helpers/interviewSession.js";
 import type * as helpers_orgAccess from "../helpers/orgAccess.js";
 import type * as helpers_orgContext from "../helpers/orgContext.js";
+import type * as helpers_orgPlan from "../helpers/orgPlan.js";
 import type * as helpers_processingAuth from "../helpers/processingAuth.js";
 import type * as helpers_releasePolicy from "../helpers/releasePolicy.js";
 import type * as helpers_sessionOps from "../helpers/sessionOps.js";
@@ -70,6 +72,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   agentConfig: typeof agentConfig;
   agentWorker: typeof agentWorker;
+  compliance: typeof compliance;
   crons: typeof crons;
   devSeed: typeof devSeed;
   devSeedMutations: typeof devSeedMutations;
@@ -85,6 +88,7 @@ declare const fullApi: ApiFromModules<{
   "helpers/interviewSession": typeof helpers_interviewSession;
   "helpers/orgAccess": typeof helpers_orgAccess;
   "helpers/orgContext": typeof helpers_orgContext;
+  "helpers/orgPlan": typeof helpers_orgPlan;
   "helpers/processingAuth": typeof helpers_processingAuth;
   "helpers/releasePolicy": typeof helpers_releasePolicy;
   "helpers/sessionOps": typeof helpers_sessionOps;

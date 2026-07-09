@@ -1,17 +1,19 @@
 # Email Notifications
 
-Scaffold for transactional product email. **Not wired into product flows yet** —
-call sites should import `sendEmail` from `lib/email` when invite / report-ready
-delivery is enabled.
+Transactional product email for candidate invites (and future report-ready mail).
+
+**Wired:** screening create + batch detail “Send / resend invite emails” call
+`lib/recruiter/send-batch-invite-emails.ts` → `sendEmail`.
 
 ## Module layout
 
-| Path                  | Role                                               |
-| --------------------- | -------------------------------------------------- |
-| `lib/email/types.ts`  | Payload types (`candidate_invite`, `report_ready`) |
-| `lib/email/send.ts`   | `sendEmail` entrypoint + provider selection        |
-| `lib/email/resend.ts` | Fetch-based Resend adapter (no SDK dependency)     |
-| `lib/email/index.ts`  | Public re-exports                                  |
+| Path                                        | Role                                               |
+| ------------------------------------------- | -------------------------------------------------- |
+| `lib/email/types.ts`                        | Payload types (`candidate_invite`, `report_ready`) |
+| `lib/email/send.ts`                         | `sendEmail` entrypoint + provider selection        |
+| `lib/email/resend.ts`                       | Fetch-based Resend adapter (no SDK dependency)     |
+| `lib/email/index.ts`                        | Public re-exports                                  |
+| `lib/recruiter/send-batch-invite-emails.ts` | Server action: send for a screening batch          |
 
 ## Provider behavior
 
@@ -29,12 +31,15 @@ Kyma <noreply@kyma.kitsunelabs.xyz>
 
 Verify the domain in Resend before enabling production sends.
 
+Delivery status is stored on `candidateInvites` (`emailDeliveryStatus`, `emailSentAt`, …) and summarized on `/recruiter/health`.
+
 ## Env keys
 
 Add to Vercel / `.env.local` (also listed in `.env.example`):
 
 - `RESEND_API_KEY` — optional until email is product-critical
 - `EMAIL_FROM` — optional From override
+- `NEXT_PUBLIC_APP_URL` — absolute invite link base
 
 Schema: `lib/env/shared.ts` → `serverEnv`.
 

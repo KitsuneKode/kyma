@@ -37,6 +37,7 @@ import {
   writeScreeningCreationDraft,
 } from '@/lib/recruiter/screening-creation-draft'
 import { formatStatusLabel } from '@/lib/recruiter/format'
+import { sendBatchInviteEmails } from '@/lib/recruiter/send-batch-invite-emails'
 import {
   JOB_FAMILY_LABELS,
   type JobFamily,
@@ -377,6 +378,11 @@ export function ScreeningCreationForm({
         allowsResume: resolvedAllowsResume,
         candidates: parsedCandidates,
       })
+
+      const emailResult = await sendBatchInviteEmails(batchId)
+      if (!emailResult.ok) {
+        console.warn('[screening] invite email send failed', emailResult.error)
+      }
 
       clearScreeningCreationDraft()
       startTransition(() => {

@@ -206,6 +206,47 @@ async function stuckProcessingStatus(): Promise<HealthCheck> {
   }
 }
 
+async function inviteEmailDeliveryStatus(): Promise<HealthCheck> {
+  try {
+    const result = await serverConvexQuery(
+      api.recruiter.screenings.getInviteEmailDeliverySummary,
+      { nowMs: Date.now() }
+    )
+    if (!result.ok || !result.data) {
+      return {
+        id: 'invite-email',
+        label: 'Invite email delivery',
+        status: 'unknown',
+        detail: 'Unable to load invite email delivery summary.',
+      }
+    }
+    const { failedLast24h, pending, scanned } = result.data
+    if (failedLast24h > 0) {
+      return {
+        id: 'invite-email',
+        label: 'Invite email delivery',
+        status: 'warn',
+        detail: `${failedLast24h} failed invite email(s) in the last 24h (${pending} pending; scanned ${scanned}).`,
+      }
+    }
+    return {
+      id: 'invite-email',
+      label: 'Invite email delivery',
+      status: isSet(serverEnv.RESEND_API_KEY) ? 'ok' : 'warn',
+      detail: isSet(serverEnv.RESEND_API_KEY)
+        ? `Resend configured · ${pending} pending · scanned ${scanned}.`
+        : 'RESEND_API_KEY unset — invites log/no-op instead of sending.',
+    }
+  } catch {
+    return {
+      id: 'invite-email',
+      label: 'Invite email delivery',
+      status: 'unknown',
+      detail: 'Invite email health check failed.',
+    }
+  }
+}
+
 export async function collectPlatformHealthChecks(): Promise<HealthCheck[]> {
   const isProd = serverEnv.NODE_ENV === 'production'
   const clerkConfigured =
@@ -217,6 +258,7 @@ export async function collectPlatformHealthChecks(): Promise<HealthCheck[]> {
 
   const agentWorkerLiveness = await agentWorkerLivenessStatus()
   const stuckProcessing = await stuckProcessingStatus()
+  const inviteEmail = await inviteEmailDeliveryStatus()
 
   return [
     {
@@ -328,6 +370,7 @@ export async function collectPlatformHealthChecks(): Promise<HealthCheck[]> {
     },
     agentWorkerLiveness,
     stuckProcessing,
+    inviteEmail,
     {
       id: 'recording-playback',
       label: 'Recording playback',

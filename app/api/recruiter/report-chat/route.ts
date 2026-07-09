@@ -14,10 +14,13 @@ import {
 } from '@/lib/recruiter/report-chat'
 import { requireOrgEntitlement } from '@/lib/auth/entitlements'
 import { assertServerRateLimit } from '@/lib/http/server-rate-limit'
+import { createRequestId } from '@/lib/interview/diagnostics'
+import { reportError } from '@/lib/ops/error-reporting'
 import { reportChatBodySchema } from '@/lib/validation/interview-api'
 import { serverEnv } from '@/lib/env/server'
 
 export async function POST(request: NextRequest) {
+  const requestId = createRequestId('report-chat')
   try {
     const token = await getServerConvexAuthToken()
     const clientIp =
@@ -116,15 +119,22 @@ export async function POST(request: NextRequest) {
       answer: answer.text,
       source: answer.source,
       citations: answer.citations,
+      requestId,
     })
   } catch (error) {
     const message =
       error instanceof Error
         ? error.message
         : 'Unable to answer the recruiter question.'
+    await reportError(error, {
+      route: '/api/recruiter/report-chat',
+      requestId,
+      tags: { surface: 'recruiter-report-chat' },
+    })
     return NextResponse.json(
       {
         error: message,
+        requestId,
       },
       { status: message.includes('Rate limit') ? 429 : 400 }
     )
