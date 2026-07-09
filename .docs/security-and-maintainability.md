@@ -82,6 +82,8 @@ Until that exists, keep BYOK out of the critical path.
 - **Webhook idempotency:** webhook event writes are deduped per session via `dedupeKey` to avoid duplicate timeline mutations from retries.
 - **Audit trail:** `auditEvents` table written via `convex/helpers/audit.ts` for review decisions and recruiter notes.
 - **Server model boundary stub:** `lib/providers/resolve-model.ts` — keep all future provider resolution server-side.
+- **Review reads are JWT-only:** `getCandidateReviewDetail` uses `candidateReadQuery` and never accepts a processing key. Pipeline session reads use `loadSessionReviewBaseForPipeline` inside `pipelineQuery` after the key is validated by the wrapper.
+- **Assessment writes are pipeline-only:** `processing/assessment.saveAssessmentReport` is the sole write path; the dual recruiter/dev write entry was removed.
 
 ## Current Maintainability Priorities
 

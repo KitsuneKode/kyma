@@ -8,7 +8,7 @@ import {
 import { resolveInterviewPolicyFromInvite } from '../helpers/interviewPolicy'
 import { requireSessionOrgId } from '../helpers/processingAuth'
 import {
-  loadSessionReviewBase,
+  loadSessionReviewBaseForPipeline,
   loadSessionReviewSlices,
   resolveTemplateName,
 } from '../helpers/sessionReview'
@@ -64,7 +64,7 @@ export const getSessionProcessingDetail = pipelineQuery({
     v.null()
   ),
   handler: async (ctx, { sessionId }) => {
-    const base = await loadSessionReviewBase(ctx, sessionId)
+    const base = await loadSessionReviewBaseForPipeline(ctx, sessionId)
 
     if (!base || !base.invite) {
       return null
