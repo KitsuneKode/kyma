@@ -104,6 +104,15 @@ Optional:
 If missing, recruiter chat should fall back to deterministic grounded answers
 instead of crashing.
 
+### Org plan entitlements (pre-billing)
+
+Optional temporary override until Stripe/org billing wires real plans:
+
+- `KYMA_ORG_PLAN_OVERRIDE` — `free` | `pro` | `enterprise`
+
+When unset or invalid, org entitlements default to `free`. See
+`lib/auth/entitlements.ts`.
+
 ### Recording and egress
 
 Only required when room recording is explicitly enabled:

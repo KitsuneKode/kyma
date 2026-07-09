@@ -41,6 +41,9 @@ export const serverSchema = {
   KYMA_PROCESSING_WRITE_KEY: z.string().min(1).optional(),
   KYMA_ADMIN_EMAILS: z.string().min(1).optional(),
   KYMA_AUTH_DEBUG: z.enum(['0', '1']).optional(),
+  // Temporary org plan override until Stripe/org billing wires real entitlements.
+  // Valid values: free | pro | enterprise. Defaults to free when unset/invalid.
+  KYMA_ORG_PLAN_OVERRIDE: z.enum(['free', 'pro', 'enterprise']).optional(),
   KYMA_ENCRYPTION_KEY: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
   GOOGLE_API_KEY: z.string().min(1).optional(),

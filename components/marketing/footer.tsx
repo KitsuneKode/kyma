@@ -95,7 +95,7 @@ export function MarketingFooter() {
             <ul className="mt-6 space-y-4 text-sm text-muted-foreground">
               <li>
                 <Link
-                  href="#"
+                  href="/privacy"
                   className="transition-colors hover:text-foreground"
                 >
                   Privacy Policy
@@ -103,18 +103,10 @@ export function MarketingFooter() {
               </li>
               <li>
                 <Link
-                  href="#"
+                  href="/terms"
                   className="transition-colors hover:text-foreground"
                 >
                   Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="#"
-                  className="transition-colors hover:text-foreground"
-                >
-                  Cookie Policy
                 </Link>
               </li>
             </ul>
