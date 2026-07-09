@@ -2,29 +2,56 @@ import { ConvexError } from 'convex/values'
 
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
-import { isConvexDevelopmentMode } from '../../lib/env/deployment-mode'
+import { isProductionDeployment } from '../../lib/env/deployment-mode'
 import { convexEnv } from '../../lib/env/convex'
 
 const DEV_PROCESSING_KEY = '__dev_preview__'
 
-function allowsLocalProcessingKeyFallback() {
+type ProcessingAuthEnv = {
+  NODE_ENV?: string
+  KYMA_DEPLOYMENT_ENV?: string
+  KYMA_PROCESSING_WRITE_KEY?: string
+}
+
+/**
+ * Local/dev empty-key bypass is allowed only when the deployment is clearly
+ * development. Production and any non-dev Convex deployment must never trust
+ * a missing `KYMA_PROCESSING_WRITE_KEY` (including empty caller keys).
+ */
+export function allowsLocalProcessingKeyFallback(env: ProcessingAuthEnv) {
+  if (
+    isProductionDeployment({
+      deploymentEnv: env.KYMA_DEPLOYMENT_ENV,
+      nodeEnv: env.NODE_ENV,
+    })
+  ) {
+    return false
+  }
+
+  // Require an explicit development NODE_ENV — `test` and unset production
+  // signals stay fail-closed.
   return (
-    convexEnv.NODE_ENV === 'development' &&
-    isConvexDevelopmentMode(convexEnv) &&
-    !convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+    env.NODE_ENV === 'development' && !env.KYMA_PROCESSING_WRITE_KEY?.trim()
   )
 }
 
-export function hasTrustedProcessingKey(processingKey?: string) {
-  const configured = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+export function hasTrustedProcessingKeyForEnv(
+  env: ProcessingAuthEnv,
+  processingKey?: string
+) {
+  const configured = env.KYMA_PROCESSING_WRITE_KEY?.trim()
   if (!configured) {
-    if (!allowsLocalProcessingKeyFallback()) {
+    if (!allowsLocalProcessingKeyFallback(env)) {
       return false
     }
     const normalized = processingKey?.trim() ?? ''
     return normalized === '' || normalized === DEV_PROCESSING_KEY
   }
   return processingKey?.trim() === configured
+}
+
+export function hasTrustedProcessingKey(processingKey?: string) {
+  return hasTrustedProcessingKeyForEnv(convexEnv, processingKey)
 }
 
 /**

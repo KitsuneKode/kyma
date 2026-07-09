@@ -61,6 +61,8 @@ Rules:
 - protect background report writes with `KYMA_PROCESSING_WRITE_KEY` in deployed environments
 - do not expose the processing key to the browser
 - if the key is unset, treat that as a local/dev convenience only, not the intended production posture
+- production / non-dev Convex deployments must never trust an empty or missing processing key; local empty-key fallback is limited to clear `NODE_ENV=development`
+- HTTP rate-limit helpers (`lib/http/server-rate-limit.ts`) throw in production when the processing key is missing — they must not silently no-op
 
 ### 4. BYOK must not leak tenant keys to our server runtime longer than necessary
 
@@ -76,7 +78,7 @@ Until that exists, keep BYOK out of the critical path.
 
 ### ADR: shipped hardening (Kyma next-phase)
 
-- **HTTP rate limits:** `lib/http/rate-limit.ts` (in-memory fixed window) guards `/api/interviews/bootstrap` and `/api/recruiter/report-chat`. Replace with Redis/Upstash when running multiple Next instances.
+- **HTTP rate limits:** `lib/http/server-rate-limit.ts` (Convex `@convex-dev/rate-limiter` via `assertServerRateLimit`) guards `/api/interviews/bootstrap`, `/api/interviews/process`, and `/api/recruiter/report-chat`. Production requires `KYMA_PROCESSING_WRITE_KEY` or the helper throws.
 - **Convex throttles:** `appendSessionEvent` and `upsertTranscriptSegment` reject excessive per-session write volume (rolling minute window).
 - **Capability-bound public writes:** candidate browser writes must include a matching `inviteToken` + `sessionId`; server paths use internal mutations.
 - **Webhook idempotency:** webhook event writes are deduped per session via `dedupeKey` to avoid duplicate timeline mutations from retries.
@@ -166,6 +168,6 @@ Only add model-based grading on top of that stable contract.
 1. Move more repeated validators/constants into shared domain modules.
 2. Add a dedicated workspace settings boundary before BYOK.
 3. Encrypt BYOK secrets at rest instead of storing them as ordinary records.
-4. Add rate limiting or abuse controls on public invite and recruiter chat routes.
+4. Extend abuse controls beyond bootstrap/process/report-chat (e.g. LiveKit token mint) and keep shared Convex rate-limit budgets tuned under load.
 5. Add a central audit trail for recruiter actions and sensitive admin changes.
 6. Keep strengthening the teaching-simulation evidence model so recruiter claims map cleanly to transcript and session events.

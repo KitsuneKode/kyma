@@ -49,6 +49,46 @@ export function isInviteExpired(expiresAt: string, nowMs?: number) {
   return parsed <= now
 }
 
+/** True when the invite is marked expired or past `expiresAt`. */
+export function isInviteExpiredOrMarkedExpired(
+  invite: Pick<Doc<'candidateInvites'>, 'status' | 'expiresAt'>,
+  nowMs?: number
+) {
+  return invite.status === 'expired' || isInviteExpired(invite.expiresAt, nowMs)
+}
+
+const PUBLIC_PROCESSING_SESSION_STATES = [
+  'live',
+  'reconnecting',
+  'interrupted',
+  'processing',
+] as const
+
+/**
+ * Capability check for public post-interview processing enqueue.
+ * Aligns invite expiry/status with {@link requireInviteSessionWriteAccess},
+ * but allows sessions already in `processing` (invite may be `completed`).
+ */
+export function canAuthorizePublicSessionProcessing(args: {
+  invite: Pick<Doc<'candidateInvites'>, 'status' | 'expiresAt' | '_id'> | null
+  session: Pick<Doc<'interviewSessions'>, 'state' | 'inviteId'> | null
+  nowMs?: number
+}) {
+  const { invite, session, nowMs } = args
+  if (!invite || !session) {
+    return false
+  }
+  if (`${session.inviteId}` !== `${invite._id}`) {
+    return false
+  }
+  if (isInviteExpiredOrMarkedExpired(invite, nowMs)) {
+    return false
+  }
+  return (PUBLIC_PROCESSING_SESSION_STATES as readonly string[]).includes(
+    session.state
+  )
+}
+
 export async function requireInviteSessionWriteAccess(
   ctx: MutationCtx,
   sessionId: Id<'interviewSessions'>,
@@ -69,8 +109,7 @@ export async function requireInviteSessionWriteAccess(
   }
 
   if (
-    invite.status === 'expired' ||
-    isInviteExpired(invite.expiresAt) ||
+    isInviteExpiredOrMarkedExpired(invite) ||
     ['completed', 'failed'].includes(session.state)
   ) {
     throw new ConvexError('Session is no longer writable.')
@@ -91,7 +130,7 @@ export function deriveAccessState(
     }
   }
 
-  if (invite.status === 'expired' || isInviteExpired(invite.expiresAt, nowMs)) {
+  if (isInviteExpiredOrMarkedExpired(invite, nowMs)) {
     return {
       accessState: 'expired' as const,
       accessMessage:

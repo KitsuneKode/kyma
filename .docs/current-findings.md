@@ -56,7 +56,7 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `/recruiter` is Clerk-protected when Clerk env is configured (`/admin` redirects here)
 - `bun run test` (Vitest) and `bun run test:e2e` (Playwright smoke) exercise core helpers and the home route
 - template-driven screening policy (duration, resume, attempts) is stored on templates and batches and resolved for the candidate lobby; completed reports store a `policySnapshot`
-- HTTP rate limits on interview bootstrap and recruiter chat; Convex-side throttles on hot candidate mutations; `auditEvents` for review decisions and recruiter notes
+- HTTP rate limits on interview bootstrap, process enqueue, and recruiter chat (Convex rate-limiter component); Convex-side throttles on hot candidate mutations; `auditEvents` for review decisions and recruiter notes
 - recruiter chat responses can include **citations** and persist **answerSource** / model metadata on `reportChatMessages`
 - legacy `/interviews` dashboard surface is now hard-cut (404), not an alias
 - candidate portal routes now functional:
