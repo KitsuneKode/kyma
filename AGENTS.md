@@ -78,6 +78,7 @@ This repo is building a horizontal AI voice screener platform (starting with tut
 - redesign risk register and mitigations: `.docs/redesign-risk-register.md`
 - recruiter review and evaluation product requirements: `.docs/recruiter-review-prd.md`
 - next implementation handoff and priorities: `.docs/next-phase-prd.md`
+- remaining PR merge + verification + commercial wrap: `.plans/remaining-work-execution-plan.md`
 - LiveKit, Convex, schema, and backend boundaries: `.docs/livekit-convex-implementation-guide.md`
 - security, maintainability, and BYOK guardrails: `.docs/security-and-maintainability.md`
 - vendor and stack comparison: `.docs/stack-research.md`

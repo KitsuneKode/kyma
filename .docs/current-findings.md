@@ -235,11 +235,20 @@ Use these first before re-researching the current implementation choices:
 
 ## Next Best Work
 
+Canonical execution plan for open PRs + remaining gaps: `.plans/remaining-work-execution-plan.md`.
+
+Immediate order:
+
+1. Merge security/SaaS draft PRs (#3–#15) per that plan’s Wave A→D order
+2. Owner-run `.docs/verification-pending.md` (especially LiveKit items 3–4)
+3. Entitlements enforcement, invite email, observability, GDPR jobs (Phase 3)
+4. Template policy E2E, copilot hardening, BYOK production path (Phase 4)
+
+Also still relevant:
+
 - validate the LiveKit Node agent against the chosen STT/LLM/TTS model strings in a live room
 - extend audit coverage (e.g. screening batch mutations) if compliance requires it
-- add model-backed recruiter chat once provider/BYOK boundaries are decided
 - replace in-memory HTTP rate limits with a shared store for multi-instance deploys
-- continue extracting shared domain constants and validators as the Convex surface grows
 
 ## Validation log
 
