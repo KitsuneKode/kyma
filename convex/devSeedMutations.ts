@@ -3,7 +3,7 @@ import type { TableNamesInDataModel } from 'convex/server'
 import { ConvexError, v } from 'convex/values'
 
 import type { DataModel } from './_generated/dataModel'
-import { mutation } from './_generated/server'
+import { internalMutation } from './_generated/server'
 import {
   DIMENSIONS,
   initDeterministicFaker,
@@ -11,6 +11,13 @@ import {
   seedFullSpectrumCohort,
   type SampleIndex,
 } from './helpers/devSeedSpectrum'
+import { convexEnv } from '../lib/env/convex'
+
+function assertDevelopmentMode() {
+  if (convexEnv.NODE_ENV === 'production') {
+    throw new ConvexError('Dev seed/reset is blocked in production mode.')
+  }
+}
 
 const SEED_TABLES = [
   'reportChatMessages',
@@ -58,12 +65,14 @@ function nowIso() {
 const SEED_ORG_ID = 'org_seed'
 const SEED_ORG_NAME = 'Kyma Seed Academy'
 
-export const clearTableChunk = mutation({
+export const clearTableChunk = internalMutation({
   args: {
     table: v.string(),
     limit: v.optional(v.number()),
   },
+  returns: v.object({ deleted: v.number() }),
   handler: async (ctx, args) => {
+    assertDevelopmentMode()
     const limit = Math.max(1, Math.min(args.limit ?? 200, 1000))
     if (!SEED_TABLES.includes(args.table as (typeof SEED_TABLES)[number])) {
       throw new ConvexError(`Table "${args.table}" is not allowed for reset.`)
@@ -77,7 +86,7 @@ export const clearTableChunk = mutation({
   },
 })
 
-export const seedData = mutation({
+export const seedData = internalMutation({
   args: {
     candidates: v.optional(v.number()),
     recruiters: v.optional(v.number()),
@@ -88,6 +97,7 @@ export const seedData = mutation({
     ownerName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    assertDevelopmentMode()
     initDeterministicFaker()
     const orgId = args.targetOrgId?.trim() || SEED_ORG_ID
     const orgName = args.targetOrgName?.trim() || SEED_ORG_NAME

@@ -2,7 +2,7 @@
 
 import { ConvexError, v } from 'convex/values'
 
-import { api } from './_generated/api'
+import { internal } from './_generated/api'
 import { action } from './_generated/server'
 import { clerkIdFromIdentity } from './helpers/clerkIdentity'
 import { getOrgContextFromIdentity } from './helpers/orgContext'
@@ -57,7 +57,7 @@ export const resetDevData = action({
     for (const table of SEED_TABLES) {
       while (true) {
         const result = await ctx.runMutation(
-          api.devSeedMutations.clearTableChunk,
+          internal.devSeedMutations.clearTableChunk,
           {
             table,
             limit: 200,
@@ -104,7 +104,7 @@ export const seedDevData = action({
     for (const table of SEED_TABLES) {
       while (true) {
         const result = await ctx.runMutation(
-          api.devSeedMutations.clearTableChunk,
+          internal.devSeedMutations.clearTableChunk,
           {
             table,
             limit: 200,
@@ -113,7 +113,7 @@ export const seedDevData = action({
         if (result.deleted === 0) break
       }
     }
-    return await ctx.runMutation(api.devSeedMutations.seedData, {
+    return await ctx.runMutation(internal.devSeedMutations.seedData, {
       candidates: args.candidates,
       recruiters: args.recruiters,
     })
@@ -172,7 +172,7 @@ export const seedDevDataForActiveOrg = action({
     for (const table of SEED_TABLES) {
       while (true) {
         const result = await ctx.runMutation(
-          api.devSeedMutations.clearTableChunk,
+          internal.devSeedMutations.clearTableChunk,
           {
             table,
             limit: 200,
@@ -182,7 +182,7 @@ export const seedDevDataForActiveOrg = action({
       }
     }
 
-    return await ctx.runMutation(api.devSeedMutations.seedData, {
+    return await ctx.runMutation(internal.devSeedMutations.seedData, {
       candidates: args.candidates,
       recruiters: args.recruiters,
       targetOrgId: orgId,

@@ -16,13 +16,15 @@ Programmatic dev data setup is implemented with Convex actions + Faker.
 - Seed/reset actions are blocked when `NODE_ENV=production`.
 - Reset requires explicit confirmation token.
 - Seed requires explicit confirmation token and always performs a reset first.
+- `clearTableChunk` and `seedData` are **internal mutations** only — not callable from clients. They also re-check `NODE_ENV !== production` inside the handler.
 
 ## Implemented Convex functions
 
 - `devSeed.resetDevData` (action)
 - `devSeed.seedDevData` (action)
-- `devSeedMutations.clearTableChunk` (mutation)
-- `devSeedMutations.seedData` (mutation)
+- `devSeed.seedDevDataForActiveOrg` (action)
+- `devSeedMutations.clearTableChunk` (internalMutation)
+- `devSeedMutations.seedData` (internalMutation)
 
 ## What reset clears
 
