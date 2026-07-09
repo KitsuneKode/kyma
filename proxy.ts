@@ -1,13 +1,18 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
+import {
+  CLERK_UNCONFIGURED_PRODUCTION_MESSAGE,
+  isAuthGatedPathWithoutClerk,
+  mustFailClosedWithoutClerk,
+} from '@/lib/auth/clerk-fail-closed'
 import {
   preferredWorkspaceFromSessionClaims,
   resolveRecruiterAccess,
 } from '@/lib/auth/clerk-role'
 import { resolveAppRoute } from '@/lib/auth/routing'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
-import { allowDevPreviewRoutes } from '@/lib/env/node-env'
+import { allowDevPreviewRoutes, isProductionNodeEnv } from '@/lib/env/node-env'
 
 const isRecruiterRoute = createRouteMatcher(['/recruiter(.*)', '/admin(.*)'])
 const isRecruiterSetupRoute = createRouteMatcher(['/recruiter/setup(.*)'])
@@ -25,6 +30,17 @@ const isPublicRoute = createRouteMatcher([
   '/api(.*)',
 ])
 const hasClerk = hasClerkServerCredentials()
+const failClosedWithoutClerk = mustFailClosedWithoutClerk({
+  hasClerk,
+  isProduction: isProductionNodeEnv(),
+})
+
+function denyUnconfiguredAuth() {
+  return new NextResponse(CLERK_UNCONFIGURED_PRODUCTION_MESSAGE, {
+    status: 503,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  })
+}
 
 export default hasClerk
   ? clerkMiddleware(async (auth, req) => {
@@ -87,7 +103,15 @@ export default hasClerk
         return NextResponse.redirect(new URL(redirectTarget, req.url))
       }
     })
-  : function proxy() {
+  : function proxy(req: NextRequest) {
+      // Local/dev without Clerk may still passthrough for public candidate flows.
+      // Production must fail closed on auth-gated routes.
+      if (
+        failClosedWithoutClerk &&
+        isAuthGatedPathWithoutClerk(req.nextUrl.pathname)
+      ) {
+        return denyUnconfiguredAuth()
+      }
       return NextResponse.next()
     }
 

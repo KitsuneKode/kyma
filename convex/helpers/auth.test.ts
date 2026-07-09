@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { mustFailClosedWithoutClerk } from '../../lib/auth/clerk-fail-closed'
 import { RECRUITER_PERMISSION_MAP } from './auth'
 
 describe('Convex recruiter permission map', () => {
@@ -13,5 +14,20 @@ describe('Convex recruiter permission map', () => {
       'recruiter:settings:write': 'org:recruiter:settings:write',
       'recruiter:billing:write': 'org:recruiter:billing:write',
     })
+  })
+})
+
+describe('Convex recruiter auth fail-closed policy', () => {
+  it('requires fail-closed when Clerk is unset in production', () => {
+    // Mirrors requireIdentity in auth.ts: missing Clerk + production => throw.
+    expect(
+      mustFailClosedWithoutClerk({ hasClerk: false, isProduction: true })
+    ).toBe(true)
+  })
+
+  it('allows null-identity bypass only outside production', () => {
+    expect(
+      mustFailClosedWithoutClerk({ hasClerk: false, isProduction: false })
+    ).toBe(false)
   })
 })
