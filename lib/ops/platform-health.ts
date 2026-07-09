@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { connection } from 'next/server'
+
 import { api } from '@/convex/_generated/api'
 import { serverEnv } from '@/lib/env/server'
 import { clientEnv } from '@/lib/env/client'
@@ -208,9 +210,13 @@ async function stuckProcessingStatus(): Promise<HealthCheck> {
 
 async function inviteEmailDeliveryStatus(): Promise<HealthCheck> {
   try {
+    // Cache Components: establish a dynamic boundary before Date.now().
+    // Args to serverConvexQuery are evaluated before its internal connection().
+    await connection()
+    const nowMs = Date.now()
     const result = await serverConvexQuery(
       api.recruiter.screenings.getInviteEmailDeliverySummary,
-      { nowMs: Date.now() }
+      { nowMs }
     )
     if (!result.ok || !result.data) {
       return {
