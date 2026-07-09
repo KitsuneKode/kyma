@@ -4,11 +4,16 @@ import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
 import { recruiterQuery, screeningWriteMutation } from '../lib/customFunctions'
 import { getRecruiterActorId } from '../helpers/auth'
-import { ensureDefaultTemplate } from '../helpers/templates'
 import { DEFAULT_INTERVIEW_DURATION_MINUTES } from '../helpers/interviewPolicy'
+import {
+  getSessionOpsWindows,
+  isInviteExpiringSoon,
+  isStaleSessionWithoutReport,
+  isStuckProcessing,
+} from '../helpers/sessionOps'
+import { resolveTemplateName } from '../helpers/sessionReview'
+import { ensureDefaultTemplate } from '../helpers/templates'
 import { slugify } from '../../lib/format/slug'
-
-const STUCK_PROCESSING_MS = 10 * 60 * 1000
 
 /** URL-safe invite token: optional name prefix + full UUID (128-bit entropy). */
 function buildInviteToken(candidateName: string) {
@@ -24,7 +29,7 @@ const MAX_BATCH_ELIGIBILITY = 500
 async function countStuckCandidatesForInvites(
   ctx: QueryCtx,
   inviteIds: Id<'candidateInvites'>[],
-  oneHourAgo: number
+  staleBeforeMs: number
 ) {
   let stuckCandidates = 0
 
@@ -44,11 +49,13 @@ async function countStuckCandidatesForInvites(
       .withIndex('by_session', (q) => q.eq('sessionId', session._id))
       .first()
 
-    if (report) {
-      continue
-    }
-
-    if (Date.parse(session.startedAt) < oneHourAgo) {
+    if (
+      isStaleSessionWithoutReport(
+        session.startedAt,
+        staleBeforeMs,
+        Boolean(report)
+      )
+    ) {
       stuckCandidates += 1
     }
   }
@@ -62,8 +69,7 @@ export const listScreeningBatches = recruiterQuery({
   },
   handler: async (ctx, { nowMs }) => {
     const { orgId } = ctx
-    const in24h = nowMs + 24 * 60 * 60 * 1000
-    const oneHourAgo = nowMs - 60 * 60 * 1000
+    const { expiringUntilMs, staleBeforeMs } = getSessionOpsWindows(nowMs)
 
     const batches = await ctx.db
       .query('screeningBatches')
@@ -89,13 +95,9 @@ export const listScreeningBatches = recruiterQuery({
             inviteIds.map((inviteId) => ctx.db.get(inviteId))
           )
 
-          const expiringInvites = invites.filter((invite) => {
-            if (!invite) {
-              return false
-            }
-            const expiry = Date.parse(invite.expiresAt)
-            return Number.isFinite(expiry) && expiry > nowMs && expiry <= in24h
-          }).length
+          const expiringInvites = invites.filter((invite) =>
+            isInviteExpiringSoon(invite?.expiresAt, nowMs, expiringUntilMs)
+          ).length
 
           const candidateCount = eligibility.length
           const completedCount = eligibility.filter(
@@ -108,7 +110,7 @@ export const listScreeningBatches = recruiterQuery({
           const stuckCandidates = await countStuckCandidatesForInvites(
             ctx,
             inviteIds,
-            oneHourAgo
+            staleBeforeMs
           )
 
           return {
@@ -118,7 +120,7 @@ export const listScreeningBatches = recruiterQuery({
             createdAt: batch.createdAt,
             expiresAt: batch.expiresAt,
             allowedAttempts: batch.allowedAttempts,
-            templateName: template?.name ?? 'AI Tutor Screener',
+            templateName: resolveTemplateName(template?.name),
             targetDurationMinutes: batch.targetDurationMinutes,
             allowsResume: batch.allowsResume,
             candidateCount,
@@ -164,11 +166,6 @@ export const getScreeningBatchDetail = recruiterQuery({
               .order('desc')
               .first()
           : null
-        const isStuckProcessing =
-          invite &&
-          session?.state === 'processing' &&
-          session.endedAt &&
-          nowMs - Date.parse(session.endedAt) >= STUCK_PROCESSING_MS
 
         return {
           id: item._id,
@@ -180,7 +177,9 @@ export const getScreeningBatchDetail = recruiterQuery({
           inviteToken: invite?.inviteToken,
           inviteStatus: invite?.status ?? 'created',
           expiresAt: invite?.expiresAt,
-          isStuckProcessing: Boolean(isStuckProcessing),
+          isStuckProcessing: Boolean(
+            invite && isStuckProcessing(session?.state, session?.endedAt, nowMs)
+          ),
         }
       })
     )
@@ -196,7 +195,7 @@ export const getScreeningBatchDetail = recruiterQuery({
         targetDurationMinutes: batch.targetDurationMinutes,
         allowsResume: batch.allowsResume,
         jobFamily: template?.jobFamily,
-        templateName: template?.name ?? 'AI Tutor Screener',
+        templateName: resolveTemplateName(template?.name),
       },
       candidates: candidates.toSorted((left, right) =>
         left.candidateName.localeCompare(right.candidateName)

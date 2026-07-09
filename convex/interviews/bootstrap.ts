@@ -7,6 +7,7 @@ import {
   isInviteExpired,
   resolveInviteSessionPurpose,
 } from '../helpers/interviewSession'
+import { resolveTemplateName } from '../helpers/sessionReview'
 
 export const getInviteBootstrapByokSummary = query({
   args: {
@@ -137,7 +138,7 @@ export const bootstrapPublicSession = mutation({
           inviteId: invite._id,
           sessionId: existingSession._id,
           roomName: reopenedRoomName,
-          templateName: template?.name ?? 'AI Tutor Screener',
+          templateName: resolveTemplateName(template?.name),
           targetDurationMinutes: policy.targetDurationMinutes,
         }
       }
@@ -146,7 +147,7 @@ export const bootstrapPublicSession = mutation({
         inviteId: invite._id,
         sessionId: existingSession._id,
         roomName: existingSession.roomName,
-        templateName: template?.name ?? 'AI Tutor Screener',
+        templateName: resolveTemplateName(template?.name),
         targetDurationMinutes: policy.targetDurationMinutes,
       }
     }
@@ -203,7 +204,7 @@ export const bootstrapPublicSession = mutation({
       inviteId: invite._id,
       sessionId,
       roomName,
-      templateName: template?.name ?? 'AI Tutor Screener',
+      templateName: resolveTemplateName(template?.name),
       targetDurationMinutes: policy.targetDurationMinutes,
     }
   },
