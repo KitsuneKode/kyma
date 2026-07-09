@@ -4,7 +4,7 @@ export const STALE_SESSION_MS = 60 * 60 * 1000
 /** Invites expiring within this window are flagged as expiring soon. */
 export const EXPIRING_INVITE_WINDOW_MS = 24 * 60 * 60 * 1000
 
-/** Processing sessions ended this long ago are treated as stuck. */
+/** Processing sessions that ended this long ago are treated as stuck. */
 export const STUCK_PROCESSING_MS = 10 * 60 * 1000
 
 export type SessionOpsWindows = {

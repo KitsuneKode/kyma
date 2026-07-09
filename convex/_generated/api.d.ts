@@ -27,6 +27,7 @@ import type * as helpers_orgAccess from "../helpers/orgAccess.js";
 import type * as helpers_orgContext from "../helpers/orgContext.js";
 import type * as helpers_processingAuth from "../helpers/processingAuth.js";
 import type * as helpers_releasePolicy from "../helpers/releasePolicy.js";
+import type * as helpers_sessionOps from "../helpers/sessionOps.js";
 import type * as helpers_sessionReview from "../helpers/sessionReview.js";
 import type * as helpers_systemTemplates from "../helpers/systemTemplates.js";
 import type * as helpers_templates from "../helpers/templates.js";
@@ -86,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   "helpers/orgContext": typeof helpers_orgContext;
   "helpers/processingAuth": typeof helpers_processingAuth;
   "helpers/releasePolicy": typeof helpers_releasePolicy;
+  "helpers/sessionOps": typeof helpers_sessionOps;
   "helpers/sessionReview": typeof helpers_sessionReview;
   "helpers/systemTemplates": typeof helpers_systemTemplates;
   "helpers/templates": typeof helpers_templates;
