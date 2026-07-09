@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       error,
     })
 
-await reportError(error, {
+    await reportError(error, {
       route: '/api/interviews/process',
       requestId,
       tags: { surface: 'interview-process' },
