@@ -7,42 +7,24 @@ import { convexEnv } from '../../lib/env/convex'
 
 const DEV_PROCESSING_KEY = '__dev_preview__'
 
-export type ProcessingAuthEnv = {
-  NODE_ENV?: string
-  KYMA_DEPLOYMENT_ENV?: string
-  KYMA_PROCESSING_WRITE_KEY?: string
-}
-
-/**
- * Local/dev empty-key bypass is allowed only when NODE_ENV is explicitly
- * `development` and the Convex deployment is not production-flagged.
- * Production and test must never trust a missing write key.
- */
-export function allowsLocalProcessingKeyFallback(env: ProcessingAuthEnv) {
+function allowsLocalProcessingKeyFallback() {
   return (
-    env.NODE_ENV === 'development' &&
-    isConvexDevelopmentMode(env) &&
-    !env.KYMA_PROCESSING_WRITE_KEY?.trim()
+    convexEnv.NODE_ENV === 'development' &&
+    isConvexDevelopmentMode(convexEnv) &&
+    !convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
   )
 }
 
-export function hasTrustedProcessingKeyForEnv(
-  env: ProcessingAuthEnv,
-  processingKey?: string
-) {
-  const configured = env.KYMA_PROCESSING_WRITE_KEY?.trim()
+export function hasTrustedProcessingKey(processingKey?: string) {
+  const configured = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
   if (!configured) {
-    if (!allowsLocalProcessingKeyFallback(env)) {
+    if (!allowsLocalProcessingKeyFallback()) {
       return false
     }
     const normalized = processingKey?.trim() ?? ''
     return normalized === '' || normalized === DEV_PROCESSING_KEY
   }
   return processingKey?.trim() === configured
-}
-
-export function hasTrustedProcessingKey(processingKey?: string) {
-  return hasTrustedProcessingKeyForEnv(convexEnv, processingKey)
 }
 
 /**
