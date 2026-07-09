@@ -112,6 +112,21 @@ test.describe('ROI sprint — recruiter surfaces (unauthenticated)', () => {
     expect(response?.status()).toBeLessThan(500)
     await waitForAuthGateOrPath(page, '/recruiter/health')
 
+    // Client-side auth redirects can land after the first URL settle; wait for
+    // either the sign-in gate or the authenticated health panel.
+    await expect(async () => {
+      const onSignIn = isSignInUrl(page.url())
+      const readinessVisible = await page
+        .getByText('Platform readiness')
+        .isVisible()
+        .catch(() => false)
+      const authSetupVisible = await page
+        .getByText(/Authentication is not configured|Sign in to Kyma/i)
+        .isVisible()
+        .catch(() => false)
+      expect(onSignIn || readinessVisible || authSetupVisible).toBeTruthy()
+    }).toPass({ timeout: 10_000 })
+
     if (isSignInUrl(page.url())) {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
       return
