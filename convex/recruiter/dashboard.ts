@@ -1,6 +1,11 @@
 import { v } from 'convex/values'
 
 import type { QueryCtx } from '../_generated/server'
+import {
+  getSessionOpsWindows,
+  isInviteExpiringSoon,
+  isStaleSessionWithoutReport,
+} from '../helpers/sessionOps'
 import { recruiterQuery } from '../lib/customFunctions'
 
 const ACTIVE_SESSION_STATES = ['connecting', 'live', 'reconnecting'] as const
@@ -16,8 +21,7 @@ async function buildDashboardPayload(
   orgId: string,
   nowMs: number
 ) {
-  const in24h = nowMs + 24 * 60 * 60 * 1000
-  const oneHourAgo = nowMs - 60 * 60 * 1000
+  const { expiringUntilMs, staleBeforeMs } = getSessionOpsWindows(nowMs)
   const todayDateString = new Date(nowMs).toDateString()
 
   const [
@@ -72,10 +76,9 @@ async function buildDashboardPayload(
   const activeSessions = activeSessionGroups.flat().length
 
   const pendingReviews = reports.length
-  const expiringInvites = invites.filter((invite) => {
-    const expiry = Date.parse(invite.expiresAt)
-    return Number.isFinite(expiry) && expiry > nowMs && expiry <= in24h
-  }).length
+  const expiringInvites = invites.filter((invite) =>
+    isInviteExpiringSoon(invite.expiresAt, nowMs, expiringUntilMs)
+  ).length
   const sessionsToday = sessions.filter((session) => {
     if (!session.startedAt) return false
     return new Date(session.startedAt).toDateString() === todayDateString
@@ -133,10 +136,9 @@ async function buildDashboardPayload(
     needsAttention: {
       manualReviewCandidates,
       invitesExpiringSoon: invites
-        .filter((invite) => {
-          const expiry = Date.parse(invite.expiresAt)
-          return Number.isFinite(expiry) && expiry > nowMs && expiry <= in24h
-        })
+        .filter((invite) =>
+          isInviteExpiringSoon(invite.expiresAt, nowMs, expiringUntilMs)
+        )
         .slice(0, MAX_ATTENTION_ITEMS)
         .map((invite) => ({
           inviteId: invite._id,
@@ -145,11 +147,13 @@ async function buildDashboardPayload(
           candidateName: invite.candidateName,
         })),
       staleSessions: sessions
-        .filter((session) => {
-          if (!session.startedAt) return false
-          if (reportBySession.has(`${session._id}`)) return false
-          return Date.parse(session.startedAt) < oneHourAgo
-        })
+        .filter((session) =>
+          isStaleSessionWithoutReport(
+            session.startedAt,
+            staleBeforeMs,
+            reportBySession.has(`${session._id}`)
+          )
+        )
         .slice(0, MAX_ATTENTION_ITEMS)
         .map((session) => ({
           sessionId: session._id,
