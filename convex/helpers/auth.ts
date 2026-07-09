@@ -1,17 +1,22 @@
 import { ConvexError } from 'convex/values'
 
 import type { MutationCtx, QueryCtx } from '../_generated/server'
-import { convexEnv } from '../../lib/env/convex'
-import { getOrgContextFromIdentity } from './orgContext'
+import { mustFailClosedWithoutClerk } from '../../lib/auth/clerk-fail-closed'
 import {
   RECRUITER_PERMISSION_MAP,
   type RecruiterCapability,
 } from '../../lib/auth/recruiter-capabilities'
+import { isConvexDevelopmentMode } from '../../lib/env/deployment-mode'
+import { convexEnv } from '../../lib/env/convex'
+import { getOrgContextFromIdentity } from './orgContext'
 
 export { RECRUITER_PERMISSION_MAP }
 export type { RecruiterCapability }
 
 const ORG_RECRUITER_ACCESS = RECRUITER_PERMISSION_MAP['recruiter:access']
+
+const CLERK_UNCONFIGURED_RECRUITER_MESSAGE =
+  'Clerk auth is not configured. Recruiter access is unavailable.'
 
 function hasRecruiterAuthConfig() {
   return Boolean(
@@ -20,6 +25,10 @@ function hasRecruiterAuthConfig() {
     (convexEnv.CLERK_FRONTEND_API_URL?.trim() ||
       convexEnv.CLERK_JWT_ISSUER_DOMAIN?.trim())
   )
+}
+
+function isConvexProductionMode() {
+  return !isConvexDevelopmentMode(convexEnv)
 }
 
 function getOrgContext(
@@ -81,6 +90,15 @@ export async function requireRecruiterCapability(
 
 async function requireIdentity(ctx: QueryCtx | MutationCtx) {
   if (!hasRecruiterAuthConfig()) {
+    // Dev may omit Clerk for local candidate-flow work; production must fail closed.
+    if (
+      mustFailClosedWithoutClerk({
+        hasClerk: false,
+        isProduction: isConvexProductionMode(),
+      })
+    ) {
+      throw new ConvexError(CLERK_UNCONFIGURED_RECRUITER_MESSAGE)
+    }
     return null
   }
   const identity = await ctx.auth.getUserIdentity()

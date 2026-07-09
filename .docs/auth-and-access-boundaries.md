@@ -29,6 +29,7 @@
 
 - [`proxy.ts`](../proxy.ts) delegates redirects to `resolveAppRoute` in [`lib/auth/routing.ts`](../lib/auth/routing.ts).
 - Protect recruiter, candidate, onboarding, and app-shell routes when Clerk credentials are present.
+- **Fail closed in production without Clerk:** if Clerk credentials are missing and `NODE_ENV` is production, middleware denies auth-gated paths (`/recruiter/*`, `/candidate/*`, `/onboarding/*`, app shell, `/join/*`, `/auth/continue`) with HTTP 503 instead of passthrough. Local/dev may still passthrough for public candidate-flow work. Policy helpers live in [`lib/auth/clerk-fail-closed.ts`](../lib/auth/clerk-fail-closed.ts).
 - Recruiter workspace routes except `/recruiter/setup` require an active org with `org:recruiter:access` or `org:admin` before the page resolves.
 - Redirect signed-in users away from auth pages via workspace routing.
 - Public at middleware: `/`, `/i/*`, `/interviews/*`, `/api/*`.
@@ -59,6 +60,7 @@
 - Clerk webhooks sync `users.preferredWorkspace` for analytics/queries.
 - Authorization in Convex recruiter functions uses JWT org claims via [`convex/helpers/auth.ts`](../convex/helpers/auth.ts).
 - `users.role` is not used for auth.
+- **Fail closed in production without Clerk:** `requireIdentity` throws when Clerk env is unset in a production Convex deployment (`NODE_ENV` / `KYMA_DEPLOYMENT_ENV`). In local/dev it may still return `null` so candidate-flow work can proceed without Clerk.
 
 ## Local troubleshooting
 
