@@ -5,6 +5,7 @@ import { api } from '@/convex/_generated/api'
 import {
   createDiagnosticLogger,
   createRequestId,
+  redactInviteToken,
 } from '@/lib/interview/diagnostics'
 import { assertServerRateLimit } from '@/lib/http/server-rate-limit'
 import {
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { inviteToken, participantName } = parsed.data
+  const inviteTokenForLog = redactInviteToken(inviteToken)
 
   try {
     await assertServerRateLimit('publicSnapshot', `bootstrap:${clientIp}`)
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
     logger.info({
       event: 'bootstrap.started',
       detail: 'Bootstrapping interview session.',
-      inviteToken,
+      inviteToken: inviteTokenForLog,
       participantIdentity: participantName,
     })
 
@@ -80,7 +82,7 @@ export async function POST(request: NextRequest) {
         logger.warn({
           event: 'bootstrap.byok.invalid',
           detail: validation.issues.join(' '),
-          inviteToken,
+          inviteToken: inviteTokenForLog,
           meta: { issues: validation.issues },
         })
         return NextResponse.json(
@@ -96,7 +98,7 @@ export async function POST(request: NextRequest) {
     logger.info({
       event: 'bootstrap.session.created',
       detail: 'Convex session bootstrap completed.',
-      inviteToken,
+      inviteToken: inviteTokenForLog,
       sessionId: `${session.sessionId}`,
       roomName: session.roomName,
       participantIdentity: participantName,
@@ -124,7 +126,7 @@ export async function POST(request: NextRequest) {
     logger.info({
       event: 'bootstrap.token.issued',
       detail: 'LiveKit token issued for candidate join.',
-      inviteToken,
+      inviteToken: inviteTokenForLog,
       sessionId: `${session.sessionId}`,
       roomName: session.roomName,
       participantIdentity: participantName,
@@ -148,7 +150,7 @@ export async function POST(request: NextRequest) {
     logger.error({
       event: 'bootstrap.failed',
       detail: message,
-      inviteToken,
+      inviteToken: inviteTokenForLog,
       participantIdentity: participantName,
       error,
     })
