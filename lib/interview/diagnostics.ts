@@ -1,5 +1,4 @@
 import { getRuntimeModeFromNodeEnv } from '@/lib/env/node-env'
-import { clientEnv } from '@/lib/env/client'
 
 type DiagnosticLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -27,11 +26,32 @@ export type DiagnosticLogger = {
   error: (payload: Omit<DiagnosticPayload, 'level'>) => void
 }
 
-function shouldLogDiagnostics() {
-  const runtimeMode = getRuntimeModeFromNodeEnv()
-  const devTraceEnabled = clientEnv.NEXT_PUBLIC_ENABLE_DEV_TRACE === '1'
+/**
+ * Diagnostics are for local/dev investigation only.
+ * `NEXT_PUBLIC_ENABLE_DEV_TRACE=1` must never enable logging in production
+ * (`NODE_ENV === 'production'` / runtime production mode).
+ */
+export function shouldLogDiagnostics() {
+  return getRuntimeModeFromNodeEnv() !== 'production'
+}
 
-  return runtimeMode !== 'production' || devTraceEnabled
+/** Redact invite tokens for logs — keep only the last 4 characters. */
+export function redactInviteToken(
+  token: string | undefined
+): string | undefined {
+  if (token === undefined) {
+    return undefined
+  }
+
+  if (token.length === 0) {
+    return undefined
+  }
+
+  if (token.length <= 4) {
+    return '****'
+  }
+
+  return `***${token.slice(-4)}`
 }
 
 function normalizeError(error: unknown) {
@@ -65,7 +85,7 @@ function writeDiagnostic(scope: string, payload: DiagnosticPayload) {
     detail: payload.detail,
     requestId: payload.requestId,
     sessionId: payload.sessionId,
-    inviteToken: payload.inviteToken,
+    inviteToken: redactInviteToken(payload.inviteToken),
     roomName: payload.roomName,
     actor: payload.actor,
     participantIdentity: payload.participantIdentity,
