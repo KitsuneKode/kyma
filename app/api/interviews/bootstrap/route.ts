@@ -15,6 +15,7 @@ import {
 import { validateProviderKeysForBootstrap } from '@/lib/agent/validate-provider-keys'
 import { bootstrapBodySchema } from '@/lib/validation/interview-api'
 import { serverEnv } from '@/lib/env/server'
+import { reportError } from '@/lib/ops/error-reporting'
 
 export async function POST(request: NextRequest) {
   const requestId = createRequestId('bootstrap')
@@ -154,6 +155,15 @@ export async function POST(request: NextRequest) {
       participantIdentity: participantName,
       error,
     })
+
+    if (status >= 500) {
+      await reportError(error, {
+        route: '/api/interviews/bootstrap',
+        requestId,
+        tags: { surface: 'interview-bootstrap' },
+        extra: { status },
+      })
+    }
 
     return NextResponse.json({ error: message }, { status })
   }

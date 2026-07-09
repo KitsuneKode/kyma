@@ -56,6 +56,11 @@ export const serverSchema = {
   // (https://inn.gs); override for the local dev server (http://localhost:8288)
   // when enqueueing from the Convex runtime, which cannot bundle the SDK.
   INNGEST_EVENT_API_BASE_URL: z.url().optional(),
+  // Optional transactional email (Resend). Absent → log in dev / no-op in prod.
+  RESEND_API_KEY: z.string().min(1).optional(),
+  EMAIL_FROM: z.string().min(1).optional(),
+  // Optional Sentry DSN when `@sentry/nextjs` is installed (see lib/ops/error-reporting.ts).
+  SENTRY_DSN: z.string().min(1).optional(),
   PLAYWRIGHT_BASE_URL: z.url().optional(),
   PLAYWRIGHT_SKIP_WEBSERVER: z.string().min(1).optional(),
   CI: z.string().min(1).optional(),

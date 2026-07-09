@@ -135,6 +135,14 @@ Only required for the deployed or fully wired background-job path:
 - `INNGEST_EVENT_KEY`
 - `INNGEST_SIGNING_KEY`
 
+### Optional SaaS ops (scaffolded)
+
+Not boot blockers. See [email-notifications.md](./email-notifications.md) and
+[deployment-runbook.md](./deployment-runbook.md).
+
+- `RESEND_API_KEY` / `EMAIL_FROM` — transactional email via `lib/email`
+- `SENTRY_DSN` — only after `@sentry/nextjs` is installed; capture via `lib/ops/error-reporting.ts`
+
 ## Convex auth config note
 
 Keep `convex/auth.config.ts` env usage intentionally narrow.
