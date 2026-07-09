@@ -59,6 +59,35 @@ export const interviewStyleModeValidator = v.union(
 
 export const sessionPurposeValidator = literalUnion(SESSION_PURPOSES)
 
+export const rubricConfigValidator = v.object({
+  dimensions: v.array(
+    v.object({
+      name: v.string(),
+      weight: v.number(),
+      isHardGate: v.boolean(),
+      keywords: v.optional(v.array(v.string())),
+    })
+  ),
+})
+
+export const interviewPolicyValidator = v.object({
+  durationMode: v.union(v.literal('timed'), v.literal('flexible')),
+  targetDurationMinutes: v.number(),
+  allowsResume: v.boolean(),
+  maxAttempts: v.number(),
+  expiresAt: v.optional(v.string()),
+  rubricVersion: v.string(),
+  templateName: v.optional(v.string()),
+  interviewStyleMode: v.optional(interviewStyleModeValidator),
+})
+
+export const inviteAccessStateValidator = v.union(
+  v.literal('available'),
+  v.literal('expired'),
+  v.literal('consumed'),
+  v.literal('unavailable')
+)
+
 export const jobFamilyValidator = literalUnion(JOB_FAMILIES)
 
 /** Practice packs exclude `custom` — matches PRACTICE_PACKS job families. */

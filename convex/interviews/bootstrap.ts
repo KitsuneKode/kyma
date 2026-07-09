@@ -49,6 +49,13 @@ export const bootstrapPublicSession = mutation({
     inviteToken: v.string(),
     participantName: v.string(),
   },
+  returns: v.object({
+    inviteId: v.id('candidateInvites'),
+    sessionId: v.id('interviewSessions'),
+    roomName: v.string(),
+    templateName: v.string(),
+    targetDurationMinutes: v.number(),
+  }),
   handler: async (ctx, { inviteToken, participantName }) => {
     const invite = await ensureInvite(ctx, inviteToken)
     const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite)

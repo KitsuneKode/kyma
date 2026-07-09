@@ -19,7 +19,9 @@ export function PracticeHub() {
   const router = useRouter()
   const { staggerChildren, listItem } = useMotionPresets()
   const packs = useQuery(api.interviews.candidatePortal.listPracticePacks)
-  const usage = useQuery(api.interviews.candidatePortal.getPracticeUsage)
+  const usage = useQuery(api.interviews.candidatePortal.getPracticeUsage, {
+    nowMs: Date.now(),
+  })
   const createPractice = useMutation(
     api.interviews.candidatePortal.createMockInterview
   )

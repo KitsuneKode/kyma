@@ -145,7 +145,7 @@ describe('candidatePortal practice flows', () => {
 
     const usage = await asCandidate.query(
       api.interviews.candidatePortal.getPracticeUsage,
-      {}
+      { nowMs: now }
     )
     expect(usage.sessionsUsed).toBe(0)
   })
@@ -165,7 +165,7 @@ describe('candidatePortal practice flows', () => {
 
     const usage = await asCandidate.query(
       api.interviews.candidatePortal.getPracticeUsage,
-      {}
+      { nowMs: now }
     )
     expect(usage.sessionsUsed).toBe(PRACTICE_SESSION_LIMIT)
   })

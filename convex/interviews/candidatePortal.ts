@@ -56,9 +56,10 @@ function resolvePracticeJobFamily(invite: {
 
 async function countRecentPracticeSessions(
   ctx: MutationCtx | QueryCtx,
-  userId: Id<'users'>
+  userId: Id<'users'>,
+  nowMs: number
 ) {
-  const cutoff = Date.now() - PRACTICE_SESSION_WINDOW_MS
+  const cutoff = nowMs - PRACTICE_SESSION_WINDOW_MS
   const invites = await ctx.db
     .query('candidateInvites')
     .withIndex('by_user', (q) => q.eq('userId', userId))
@@ -201,13 +202,15 @@ export const listPracticePacks = query({
 })
 
 export const getPracticeUsage = query({
-  args: {},
+  args: {
+    nowMs: v.number(),
+  },
   returns: v.object({
     sessionsUsed: v.number(),
     sessionsLimit: v.number(),
     windowHours: v.number(),
   }),
-  handler: async (ctx) => {
+  handler: async (ctx, { nowMs }) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) {
       return {
@@ -224,7 +227,7 @@ export const getPracticeUsage = query({
         windowHours: PRACTICE_SESSION_WINDOW_MS / (1000 * 60 * 60),
       }
     }
-    const sessionsUsed = await countRecentPracticeSessions(ctx, user._id)
+    const sessionsUsed = await countRecentPracticeSessions(ctx, user._id, nowMs)
     return {
       sessionsUsed,
       sessionsLimit: PRACTICE_SESSION_LIMIT,
@@ -253,7 +256,11 @@ export const createMockInterview = mutation({
       throw new ConvexError('User profile not found.')
     }
 
-    const recentCount = await countRecentPracticeSessions(ctx, user._id)
+    const recentCount = await countRecentPracticeSessions(
+      ctx,
+      user._id,
+      Date.now()
+    )
     if (recentCount >= PRACTICE_SESSION_LIMIT) {
       throw new ConvexError(
         `Practice limit reached (${PRACTICE_SESSION_LIMIT} sessions per 24 hours). Try again tomorrow.`
