@@ -16,6 +16,7 @@ import {
   INTERVIEW_PROCESSING_REQUESTED_EVENT,
   interviewProcessingEventId,
 } from '@/lib/inngest/events'
+import { reportError } from '@/lib/ops/error-reporting'
 
 const bodySchema = z.object({
   sessionId: z.string(),
@@ -100,6 +101,13 @@ export async function POST(request: NextRequest) {
       detail: message,
       sessionId: sessionIdForFailure,
       error,
+    })
+
+await reportError(error, {
+      route: '/api/interviews/process',
+      requestId,
+      tags: { surface: 'interview-process' },
+      extra: { sessionId: sessionIdForFailure },
     })
 
     const status = message === 'RATE_LIMITED' ? 429 : 400
