@@ -13,9 +13,14 @@ export const RECOMMENDATION_THRESHOLDS = {
   lowConfidenceMixed: 3.7,
 } as const
 
-export type Recommendation = 'strong_yes' | 'yes' | 'mixed' | 'no'
+export {
+  CONFIDENCE_LEVELS,
+  RECOMMENDATIONS,
+  type Confidence,
+  type Recommendation,
+} from '@/lib/domain/recommendation'
 
-export type Confidence = 'high' | 'medium' | 'low'
+import type { Confidence, Recommendation } from '@/lib/domain/recommendation'
 
 export function isHardGateDimension(dimension: string) {
   return isDefaultHardGateDimension(dimension)

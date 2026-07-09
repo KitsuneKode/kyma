@@ -1,13 +1,9 @@
-export const PRACTICE_JOB_FAMILIES = [
-  'software_engineering',
-  'product',
-  'customer_support',
-  'sales',
-  'tutor',
-  'general',
-] as const
+export {
+  PRACTICE_JOB_FAMILIES,
+  type PracticeJobFamily,
+} from '@/lib/domain/job-families'
 
-export type PracticeJobFamily = (typeof PRACTICE_JOB_FAMILIES)[number]
+import type { PracticeJobFamily } from '@/lib/domain/job-families'
 
 export type PracticePack = {
   id: PracticeJobFamily

@@ -2,10 +2,13 @@ import { ConvexError } from 'convex/values'
 
 import type { Doc } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
+import type { PracticeJobFamily } from '../../lib/domain/job-families'
 import {
   MOCK_INTERVIEW_DURATION_MINUTES,
   SYSTEM_ORG_ID,
 } from '../../lib/interview/session-purpose'
+
+export type { PracticeJobFamily }
 
 export const JS_JUNIOR_TEMPLATE_SLUG = 'javascript-junior-engineer'
 
@@ -233,14 +236,6 @@ async function ensureSystemTemplateByRole(
 
   return template
 }
-
-export type PracticeJobFamily =
-  | 'software_engineering'
-  | 'product'
-  | 'customer_support'
-  | 'sales'
-  | 'tutor'
-  | 'general'
 
 export async function ensureSystemPracticeTemplate(
   ctx: MutationCtx | QueryCtx,

@@ -4,11 +4,15 @@ import { mutation, query } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import { findUserByIdentity } from '../helpers/clerkIdentity'
+import { ensureSystemPracticeTemplate } from '../helpers/systemTemplates'
 import {
-  ensureSystemPracticeTemplate,
+  practiceJobFamilyValidator,
+  reportStatusValidator,
+} from '../validators'
+import {
+  isPracticeJobFamily,
   type PracticeJobFamily,
-} from '../helpers/systemTemplates'
-import { practiceJobFamilyValidator } from '../validators'
+} from '../../lib/domain/job-families'
 import { SYSTEM_ORG_ID } from '../../lib/interview/session-purpose'
 import { formatCandidateScoreBand } from '../../lib/candidate/result-copy'
 import {
@@ -16,15 +20,6 @@ import {
   PRACTICE_SESSION_LIMIT,
   PRACTICE_SESSION_WINDOW_MS,
 } from '../../lib/practice/packs'
-
-const PRACTICE_JOB_FAMILIES = new Set([
-  'software_engineering',
-  'product',
-  'customer_support',
-  'sales',
-  'tutor',
-  'general',
-])
 
 function resolvePracticeCreatedAt(invite: {
   practiceCreatedAt?: number
@@ -48,13 +43,13 @@ function resolvePracticeJobFamily(invite: {
 }): PracticeJobFamily | undefined {
   if (
     invite.practiceJobFamily &&
-    PRACTICE_JOB_FAMILIES.has(invite.practiceJobFamily)
+    isPracticeJobFamily(invite.practiceJobFamily)
   ) {
-    return invite.practiceJobFamily as PracticeJobFamily
+    return invite.practiceJobFamily
   }
   const tokenFamily = invite.inviteToken.split('-')[1]
-  if (tokenFamily && PRACTICE_JOB_FAMILIES.has(tokenFamily)) {
-    return tokenFamily as PracticeJobFamily
+  if (tokenFamily && isPracticeJobFamily(tokenFamily)) {
+    return tokenFamily
   }
   return undefined
 }
@@ -611,14 +606,7 @@ export const getCandidateInterviewResult = query({
         v.literal('processing'),
         v.literal('unavailable')
       ),
-      reportStatus: v.union(
-        v.literal('pending'),
-        v.literal('processing'),
-        v.literal('completed'),
-        v.literal('failed'),
-        v.literal('manual_review'),
-        v.null()
-      ),
+      reportStatus: v.union(reportStatusValidator, v.null()),
       reportReleased: v.boolean(),
       templateName: v.string(),
       startedAt: v.optional(v.string()),

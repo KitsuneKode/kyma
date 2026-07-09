@@ -10,6 +10,7 @@ import {
   practiceJobFamilyValidator,
   modelOverridesValidator,
   recommendationValidator,
+  reportStatusValidator,
   scoringDimensionValidator,
   sessionPurposeValidator,
   simulationModeValidator,
@@ -320,13 +321,7 @@ export default defineSchema({
   assessmentReports: defineTable({
     orgId: v.string(),
     sessionId: v.id('interviewSessions'),
-    status: v.union(
-      v.literal('pending'),
-      v.literal('processing'),
-      v.literal('completed'),
-      v.literal('failed'),
-      v.literal('manual_review')
-    ),
+    status: reportStatusValidator,
     overallRecommendation: v.optional(recommendationValidator),
     confidence: v.optional(confidenceValidator),
     summary: v.optional(v.string()),

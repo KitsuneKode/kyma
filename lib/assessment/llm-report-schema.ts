@@ -1,15 +1,20 @@
 import { z } from 'zod'
 
+import {
+  CONFIDENCE_LEVELS,
+  RECOMMENDATIONS,
+  type Confidence,
+  type Recommendation,
+} from '@/lib/domain/recommendation'
 import { RUBRIC_DIMENSIONS } from '../rubric/constants'
 
-export type Recommendation = 'strong_yes' | 'yes' | 'mixed' | 'no'
-export type Confidence = 'high' | 'medium' | 'low'
+export type { Recommendation, Confidence }
 
 export const rubricDimensionSchema = z.enum(RUBRIC_DIMENSIONS)
 
-export const recommendationSchema = z.enum(['strong_yes', 'yes', 'mixed', 'no'])
+export const recommendationSchema = z.enum(RECOMMENDATIONS)
 
-export const confidenceSchema = z.enum(['high', 'medium', 'low'])
+export const confidenceSchema = z.enum(CONFIDENCE_LEVELS)
 
 export const rubricConfigSchema = z.object({
   dimensions: z.array(
