@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const authMock = vi.fn()
-const serverEnvMock = {
-  KYMA_ORG_PLAN_OVERRIDE: undefined as string | undefined,
-}
+const { authMock, serverEnvMock } = vi.hoisted(() => ({
+  authMock: vi.fn(),
+  serverEnvMock: {
+    KYMA_ORG_PLAN_OVERRIDE: undefined as string | undefined,
+  },
+}))
 
 vi.mock('@clerk/nextjs/server', () => ({
   auth: (...args: unknown[]) => authMock(...args),
