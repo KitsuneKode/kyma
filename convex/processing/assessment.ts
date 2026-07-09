@@ -8,13 +8,18 @@ import {
 import { resolveInterviewPolicyFromInvite } from '../helpers/interviewPolicy'
 import { requireSessionOrgId } from '../helpers/processingAuth'
 import {
+  DEFAULT_SESSION_EVENTS_LIMIT,
+  DEFAULT_SESSION_TRANSCRIPT_LIMIT,
   loadSessionReviewBaseForPipeline,
   loadSessionReviewSlices,
   resolveTemplateName,
 } from '../helpers/sessionReview'
-
-const MAX_PROCESSING_TRANSCRIPT_SEGMENTS = 500
-const MAX_PROCESSING_EVENTS = 200
+import {
+  interviewPolicySnapshotValidator,
+  modelOverridesValidator,
+  rubricConfigValidator,
+  workspaceProviderKeyValidator,
+} from '../validators'
 
 export const getSessionProcessingDetail = pipelineQuery({
   args: {
@@ -26,17 +31,17 @@ export const getSessionProcessingDetail = pipelineQuery({
       candidate: v.object({ name: v.string() }),
       template: v.object({
         name: v.string(),
-        rubricConfig: v.optional(v.any()),
-        modelOverrides: v.optional(v.any()),
+        rubricConfig: v.optional(rubricConfigValidator),
+        modelOverrides: v.optional(modelOverridesValidator),
       }),
       workspace: v.union(
         v.object({
-          defaultModels: v.optional(v.any()),
-          providerKeys: v.optional(v.any()),
+          defaultModels: v.optional(modelOverridesValidator),
+          providerKeys: v.optional(v.array(workspaceProviderKeyValidator)),
         }),
         v.null()
       ),
-      policySnapshot: v.any(),
+      policySnapshot: interviewPolicySnapshotValidator,
       report: v.union(
         v.object({
           id: v.id('assessmentReports'),
@@ -86,8 +91,8 @@ export const getSessionProcessingDetail = pipelineQuery({
       sessionId,
       undefined,
       {
-        transcriptLimit: MAX_PROCESSING_TRANSCRIPT_SEGMENTS,
-        eventsLimit: MAX_PROCESSING_EVENTS,
+        transcriptLimit: DEFAULT_SESSION_TRANSCRIPT_LIMIT,
+        eventsLimit: DEFAULT_SESSION_EVENTS_LIMIT,
       }
     )
 

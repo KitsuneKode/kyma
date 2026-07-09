@@ -11,11 +11,22 @@ import {
   deriveAccessState,
 } from '../helpers/interviewSession'
 import {
+  DEFAULT_SESSION_EVENTS_LIMIT,
+  DEFAULT_SESSION_RECORDINGS_LIMIT,
+  DEFAULT_SESSION_TRANSCRIPT_LIMIT,
+  DEFAULT_TEMPLATE_NAME,
+  loadSessionReviewSlices,
+} from '../helpers/sessionReview'
+import {
+  interviewPolicyValidator,
+  interviewSessionStateValidator,
+  inviteAccessStateValidator,
+  sessionPurposeValidator,
+} from '../validators'
+import {
   resolveSessionPurpose,
   type SessionPurpose,
 } from '../../lib/interview/session-purpose'
-
-const DEFAULT_TEMPLATE_NAME = 'AI Tutor Screener'
 
 type PublicSessionBase =
   | { kind: 'not-found' }
@@ -28,6 +39,70 @@ type PublicSessionBase =
       policy: InterviewPolicy
       sessionPurpose: SessionPurpose
     }
+
+const publicSessionEventValidator = v.object({
+  type: v.string(),
+  detail: v.string(),
+  createdAt: v.string(),
+})
+
+const publicTranscriptSegmentValidator = v.object({
+  id: v.string(),
+  speaker: v.union(
+    v.literal('agent'),
+    v.literal('candidate'),
+    v.literal('system')
+  ),
+  text: v.string(),
+  status: v.union(v.literal('partial'), v.literal('final')),
+  startedAt: v.string(),
+  endedAt: v.optional(v.string()),
+})
+
+const publicRecordingArtifactValidator = v.object({
+  id: v.string(),
+  provider: v.literal('livekit'),
+  egressId: v.string(),
+  artifactKey: v.string(),
+  roomName: v.string(),
+  artifactType: v.union(
+    v.literal('audio'),
+    v.literal('video'),
+    v.literal('composite'),
+    v.literal('segments')
+  ),
+  status: v.union(
+    v.literal('starting'),
+    v.literal('active'),
+    v.literal('complete'),
+    v.literal('failed')
+  ),
+  filename: v.optional(v.string()),
+  location: v.optional(v.string()),
+  manifestLocation: v.optional(v.string()),
+  startedAt: v.optional(v.string()),
+  endedAt: v.optional(v.string()),
+  durationMs: v.optional(v.number()),
+  sizeBytes: v.optional(v.number()),
+  error: v.optional(v.string()),
+})
+
+const publicSessionDetailValidator = v.object({
+  inviteId: v.id('candidateInvites'),
+  sessionId: v.optional(v.id('interviewSessions')),
+  candidateName: v.string(),
+  templateName: v.string(),
+  state: interviewSessionStateValidator,
+  sessionPurpose: sessionPurposeValidator,
+  accessState: inviteAccessStateValidator,
+  accessMessage: v.optional(v.string()),
+  policy: interviewPolicyValidator,
+  roomName: v.optional(v.string()),
+  activeDurationMs: v.number(),
+  events: v.array(publicSessionEventValidator),
+  transcript: v.array(publicTranscriptSegmentValidator),
+  recordings: v.array(publicRecordingArtifactValidator),
+})
 
 /**
  * Single resolver for the public candidate read model. Both the lightweight SSR
@@ -85,6 +160,7 @@ export const getPublicSessionDetail = query({
     inviteToken: v.string(),
     nowMs: v.number(),
   },
+  returns: v.union(publicSessionDetailValidator, v.null()),
   handler: async (ctx, { inviteToken, nowMs }) => {
     const base = await resolvePublicSessionBase(ctx, inviteToken, nowMs)
 
@@ -130,19 +206,15 @@ export const getPublicSessionDetail = query({
       }
     }
 
-    const [events, transcript, recordings] = await Promise.all([
-      ctx.db
-        .query('sessionEvents')
-        .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-        .collect(),
-      ctx.db
-        .query('transcriptSegments')
-        .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-        .collect(),
+    const [{ events, transcript }, recordings] = await Promise.all([
+      loadSessionReviewSlices(ctx, session._id, undefined, {
+        transcriptLimit: DEFAULT_SESSION_TRANSCRIPT_LIMIT,
+        eventsLimit: DEFAULT_SESSION_EVENTS_LIMIT,
+      }),
       ctx.db
         .query('recordingArtifacts')
         .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-        .collect(),
+        .take(DEFAULT_SESSION_RECORDINGS_LIMIT),
     ])
 
     return {
@@ -156,27 +228,19 @@ export const getPublicSessionDetail = query({
       policy,
       roomName: session.roomName,
       activeDurationMs: session.activeDurationMs ?? 0,
-      events: events
-        .toSorted((left, right) =>
-          left.createdAt.localeCompare(right.createdAt)
-        )
-        .map((event) => ({
-          type: event.type,
-          detail: event.detail,
-          createdAt: event.createdAt,
-        })),
-      transcript: transcript
-        .toSorted((left, right) =>
-          left.startedAt.localeCompare(right.startedAt)
-        )
-        .map((segment) => ({
-          id: `${segment._id}`,
-          speaker: segment.speaker,
-          text: segment.text,
-          status: segment.status,
-          startedAt: segment.startedAt,
-          endedAt: segment.endedAt,
-        })),
+      events: events.map((event) => ({
+        type: event.type,
+        detail: event.detail,
+        createdAt: event.createdAt,
+      })),
+      transcript: transcript.map((segment) => ({
+        id: `${segment._id}`,
+        speaker: segment.speaker,
+        text: segment.text,
+        status: segment.status,
+        startedAt: segment.startedAt,
+        endedAt: segment.endedAt,
+      })),
       recordings: recordings
         .toSorted((left, right) =>
           left.updatedAt.localeCompare(right.updatedAt)

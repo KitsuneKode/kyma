@@ -5,6 +5,11 @@ import { requireSessionOrgId } from './processingAuth'
 
 export const DEFAULT_TEMPLATE_NAME = 'AI Tutor Screener'
 
+/** Shared caps for session slice reads (processing + public candidate detail). */
+export const DEFAULT_SESSION_TRANSCRIPT_LIMIT = 500
+export const DEFAULT_SESSION_EVENTS_LIMIT = 200
+export const DEFAULT_SESSION_RECORDINGS_LIMIT = 20
+
 export function resolveTemplateName(name: string | null | undefined) {
   return name ?? DEFAULT_TEMPLATE_NAME
 }
