@@ -25,16 +25,11 @@ export default async function DevReviewPage({ params }: DevReviewPageProps) {
   }
 
   const { sessionId } = await params
+  // Requires a signed-in recruiter JWT — processing-key bypass was removed.
   const detailResult = hasConvexDeployment()
-    ? await serverConvexQuery(
-        api.recruiter.reviews.getCandidateReviewDetail,
-        {
-          sessionId: sessionId as Id<'interviewSessions'>,
-          processingKey:
-            serverEnv.KYMA_PROCESSING_WRITE_KEY ?? '__dev_preview__',
-        },
-        { public: true }
-      )
+    ? await serverConvexQuery(api.recruiter.reviews.getCandidateReviewDetail, {
+        sessionId: sessionId as Id<'interviewSessions'>,
+      })
     : { ok: false as const, kind: 'not_found' as const }
   const detail = detailResult.ok ? detailResult.data : null
 
@@ -44,7 +39,7 @@ export default async function DevReviewPage({ params }: DevReviewPageProps) {
         <AdminStatePanel
           eyebrow="Development preview"
           title="Seeded review not found"
-          description="Run bun run db:seed:dev and open one of the returned sampleReviewSessionIds."
+          description="Sign in with a recruiter org, run bun run db:seed:dev, then open one of the returned sampleReviewSessionIds."
         />
       </main>
     )
@@ -63,7 +58,7 @@ export default async function DevReviewPage({ params }: DevReviewPageProps) {
       <AdminStatePanel
         eyebrow="Development preview"
         title="Seeded recruiter review"
-        description="Read-only local view for validating loaded review data without a Clerk session. Production uses the protected recruiter route."
+        description="Local view for validating loaded review data with a Clerk recruiter session. Production uses the protected recruiter route."
       />
 
       <CandidateReviewWorkspace

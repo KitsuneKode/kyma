@@ -1,10 +1,7 @@
 import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
 import { requireOrgId, requireRecruiterCapability } from './auth'
-import {
-  hasTrustedProcessingKey,
-  resolveOrgIdForPipelineWrite,
-} from './processingAuth'
+import { requireSessionOrgId } from './processingAuth'
 
 export const DEFAULT_TEMPLATE_NAME = 'AI Tutor Screener'
 
@@ -34,35 +31,20 @@ export async function getLatestReviewDecision(
 }
 
 /**
- * Resolves the caller's org scope for review/processing reads. Trusted pipeline
- * callers (with a valid processing key) resolve the org from the session; human
- * recruiters fall back to authenticated admin identity + org membership.
+ * Resolves org scope for authenticated recruiter review reads.
+ * Pipeline callers must use {@link loadSessionReviewBaseForPipeline} instead —
+ * never pass a processing key into this path.
  */
-export async function resolveReviewScopeOrgId(
-  ctx: QueryCtx,
-  sessionId: Id<'interviewSessions'>,
-  processingKey?: string
-) {
-  if (hasTrustedProcessingKey(processingKey)) {
-    return await resolveOrgIdForPipelineWrite(ctx, sessionId, processingKey)
-  }
+export async function resolveReviewScopeOrgId(ctx: QueryCtx) {
   await requireRecruiterCapability(ctx, 'recruiter:candidates:read')
   return await requireOrgId(ctx)
 }
 
-/**
- * Shared base loader for the session processing + recruiter review detail
- * queries. Centralizes auth scoping, the org-ownership guard, and the common
- * session/invite/template/report fetch so both read paths stay in sync. Returns
- * null when the session is missing or not owned by the caller's org.
- */
-export async function loadSessionReviewBase(
+async function loadSessionOwnedReviewBase(
   ctx: QueryCtx,
   sessionId: Id<'interviewSessions'>,
-  processingKey?: string
+  orgId: string
 ) {
-  const orgId = await resolveReviewScopeOrgId(ctx, sessionId, processingKey)
-
   const session = await ctx.db.get(sessionId)
   if (!session || session.orgId !== orgId) {
     return null
@@ -76,6 +58,32 @@ export async function loadSessionReviewBase(
     .first()
 
   return { orgId, session, invite, template, report }
+}
+
+/**
+ * Shared base loader for recruiter review detail queries. Requires recruiter
+ * JWT + candidates:read. Returns null when the session is missing or not owned
+ * by the caller's org.
+ */
+export async function loadSessionReviewBase(
+  ctx: QueryCtx,
+  sessionId: Id<'interviewSessions'>
+) {
+  const orgId = await resolveReviewScopeOrgId(ctx)
+  return await loadSessionOwnedReviewBase(ctx, sessionId, orgId)
+}
+
+/**
+ * Shared base loader for trusted pipeline reads. Call only from
+ * `pipelineQuery` handlers after the processing key has already been validated
+ * by the wrapper — this resolves org from the session without re-checking the key.
+ */
+export async function loadSessionReviewBaseForPipeline(
+  ctx: QueryCtx,
+  sessionId: Id<'interviewSessions'>
+) {
+  const orgId = await requireSessionOrgId(ctx, sessionId)
+  return await loadSessionOwnedReviewBase(ctx, sessionId, orgId)
 }
 
 /**

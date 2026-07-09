@@ -1,15 +1,10 @@
 import { ConvexError, v } from 'convex/values'
 
-import { mutation, query } from '../_generated/server'
 import {
   candidateReadQuery,
   candidateWriteMutation,
 } from '../lib/customFunctions'
-import {
-  getRecruiterActorId,
-  requireOrgId,
-  requireRecruiterCapability,
-} from '../helpers/auth'
+import { getRecruiterActorId } from '../helpers/auth'
 import { logAuditEvent } from '../helpers/audit'
 import {
   assertOrgOwnsReport,
@@ -22,22 +17,12 @@ import {
   shouldAutoRelease,
 } from '../helpers/releasePolicy'
 import {
-  hasTrustedProcessingKey,
-  resolveOrgIdForPipelineWrite,
-} from '../helpers/processingAuth'
-import {
   loadSessionReviewBase,
   loadSessionReviewSlices,
   resolveTemplateName,
   sortByIsoAsc,
 } from '../helpers/sessionReview'
-import { isConvexDevelopmentMode } from '../../lib/env/deployment-mode'
-import { convexEnv } from '../../lib/env/convex'
 import { reviewDecisionValidator } from '../validators'
-import {
-  persistAssessmentReport,
-  saveAssessmentReportFields,
-} from '../helpers/assessmentReports'
 
 function countWords(text: string) {
   return text.trim().split(/\s+/).filter(Boolean).length
@@ -183,13 +168,12 @@ export const getReportChatGrounding = candidateReadQuery({
   },
 })
 
-export const getCandidateReviewDetail = query({
+export const getCandidateReviewDetail = candidateReadQuery({
   args: {
     sessionId: v.id('interviewSessions'),
-    processingKey: v.optional(v.string()),
   },
-  handler: async (ctx, { sessionId, processingKey }) => {
-    const base = await loadSessionReviewBase(ctx, sessionId, processingKey)
+  handler: async (ctx, { sessionId }) => {
+    const base = await loadSessionReviewBase(ctx, sessionId)
 
     if (!base) {
       return null
@@ -370,49 +354,6 @@ export const getCandidateReviewDetail = query({
         error: artifact.error,
       })),
     }
-  },
-})
-
-export const saveAssessmentReport = mutation({
-  args: {
-    ...saveAssessmentReportFields,
-    processingKey: v.optional(v.string()),
-  },
-  returns: v.id('assessmentReports'),
-  handler: async (ctx, args) => {
-    const pipelineWrite = hasTrustedProcessingKey(args.processingKey)
-    let orgId: string
-    if (pipelineWrite) {
-      orgId = await resolveOrgIdForPipelineWrite(
-        ctx,
-        args.sessionId,
-        args.processingKey
-      )
-    } else if (!isConvexDevelopmentMode(convexEnv)) {
-      throw new ConvexError(
-        'Assessment reports must be written via the processing pipeline in production.'
-      )
-    } else {
-      await requireRecruiterCapability(ctx, 'recruiter:candidates:write')
-      orgId = await requireOrgId(ctx)
-      await assertOrgOwnsSession(ctx, orgId, args.sessionId)
-    }
-
-    if (
-      pipelineWrite &&
-      !convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim() &&
-      !isConvexDevelopmentMode(convexEnv)
-    ) {
-      throw new Error(
-        'KYMA_PROCESSING_WRITE_KEY must be configured outside development.'
-      )
-    }
-
-    const { processingKey: _processingKey, ...reportArgs } = args
-
-    return await persistAssessmentReport(ctx, orgId, reportArgs, {
-      rateLimit: !pipelineWrite,
-    })
   },
 })
 
