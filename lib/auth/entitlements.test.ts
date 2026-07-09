@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const authMock = vi.fn()
+const serverEnvMock = {
+  KYMA_ORG_PLAN_OVERRIDE: undefined as string | undefined,
+}
+
 vi.mock('@clerk/nextjs/server', () => ({
-  auth: vi.fn(),
+  auth: (...args: unknown[]) => authMock(...args),
 }))
 
 vi.mock('@/lib/env/server', () => ({
-  serverEnv: {
-    KYMA_ORG_PLAN_OVERRIDE: undefined as string | undefined,
-  },
+  serverEnv: serverEnvMock,
 }))
-
-import { auth } from '@clerk/nextjs/server'
-import { serverEnv } from '@/lib/env/server'
 
 import {
   DEFAULT_ORG_PLAN,
@@ -71,14 +71,12 @@ describe('orgPlanAllowsFeature', () => {
 
 describe('requireOrgEntitlement', () => {
   beforeEach(() => {
-    vi.mocked(auth).mockReset()
-    serverEnv.KYMA_ORG_PLAN_OVERRIDE = undefined
+    authMock.mockReset()
+    serverEnvMock.KYMA_ORG_PLAN_OVERRIDE = undefined
   })
 
   it('requires an active organization', async () => {
-    vi.mocked(auth).mockResolvedValue({ orgId: null } as Awaited<
-      ReturnType<typeof auth>
-    >)
+    authMock.mockResolvedValue({ orgId: null })
 
     await expect(
       requireOrgEntitlement('recruiter:ai-report-chat')
@@ -86,9 +84,7 @@ describe('requireOrgEntitlement', () => {
   })
 
   it('allows report chat on the default free plan', async () => {
-    vi.mocked(auth).mockResolvedValue({ orgId: 'org_123' } as Awaited<
-      ReturnType<typeof auth>
-    >)
+    authMock.mockResolvedValue({ orgId: 'org_123' })
 
     await expect(
       requireOrgEntitlement('recruiter:ai-report-chat')
@@ -100,9 +96,7 @@ describe('requireOrgEntitlement', () => {
   })
 
   it('denies premium screening on free', async () => {
-    vi.mocked(auth).mockResolvedValue({ orgId: 'org_123' } as Awaited<
-      ReturnType<typeof auth>
-    >)
+    authMock.mockResolvedValue({ orgId: 'org_123' })
 
     await expect(
       requireOrgEntitlement('recruiter:premium-screening')
@@ -110,10 +104,8 @@ describe('requireOrgEntitlement', () => {
   })
 
   it('allows premium screening when plan override is pro', async () => {
-    serverEnv.KYMA_ORG_PLAN_OVERRIDE = 'pro'
-    vi.mocked(auth).mockResolvedValue({ orgId: 'org_456' } as Awaited<
-      ReturnType<typeof auth>
-    >)
+    serverEnvMock.KYMA_ORG_PLAN_OVERRIDE = 'pro'
+    authMock.mockResolvedValue({ orgId: 'org_456' })
 
     await expect(
       requireOrgEntitlement('recruiter:premium-screening')
