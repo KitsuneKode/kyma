@@ -85,6 +85,48 @@ async function countRecentPracticeSessions(
   }).length
 }
 
+type InviteLinkResult = 'linked' | 'already_linked' | 'owned_by_other'
+
+async function linkInviteToCandidateUser(
+  ctx: MutationCtx,
+  invite: {
+    _id: Id<'candidateInvites'>
+    userId?: Id<'users'>
+    candidateEmail?: string
+  },
+  userId: Id<'users'>,
+  options?: { candidateEmailFallback?: string }
+): Promise<InviteLinkResult> {
+  if (invite.userId && invite.userId !== userId) {
+    return 'owned_by_other'
+  }
+  if (invite.userId === userId) {
+    return 'already_linked'
+  }
+
+  const patch: {
+    userId: Id<'users'>
+    candidateEmail?: string
+  } = { userId }
+
+  if (!invite.candidateEmail && options?.candidateEmailFallback) {
+    patch.candidateEmail = options.candidateEmailFallback
+  }
+
+  await ctx.db.patch(invite._id, patch)
+
+  const session = await ctx.db
+    .query('interviewSessions')
+    .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
+    .first()
+
+  if (session) {
+    await ctx.db.patch(session._id, { candidateUserId: userId })
+  }
+
+  return 'linked'
+}
+
 export const claimCandidateInviteByToken = mutation({
   args: {
     inviteToken: v.string(),
@@ -115,27 +157,32 @@ export const claimCandidateInviteByToken = mutation({
     }
 
     const normalizedEmail = identity.email.trim().toLowerCase()
-    if (
-      invite.candidateEmail &&
-      invite.candidateEmail.trim().toLowerCase() !== normalizedEmail
-    ) {
+    const inviteEmail = invite.candidateEmail?.trim().toLowerCase()
+
+    // Screening invites are created with candidateEmail; require a match when set.
+    if (inviteEmail && inviteEmail !== normalizedEmail) {
       throw new ConvexError(
         'Your account email does not match this screening invite.'
       )
     }
 
-    await ctx.db.patch(invite._id, {
-      userId: user._id,
-      candidateEmail: invite.candidateEmail ?? identity.email,
+    // Prefer email-bound screening invites: reject unscoped screening claims.
+    const isScreeningInvite =
+      invite.sessionPurpose === 'screening' ||
+      invite.sessionPurpose === undefined ||
+      invite.batchId !== undefined
+    if (isScreeningInvite && !inviteEmail) {
+      throw new ConvexError(
+        'This screening invite is missing a candidate email and cannot be claimed.'
+      )
+    }
+
+    const result = await linkInviteToCandidateUser(ctx, invite, user._id, {
+      candidateEmailFallback: normalizedEmail,
     })
 
-    const session = await ctx.db
-      .query('interviewSessions')
-      .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
-      .first()
-
-    if (session) {
-      await ctx.db.patch(session._id, { candidateUserId: user._id })
+    if (result === 'owned_by_other') {
+      throw new ConvexError('This invite is already linked to another account.')
     }
 
     return { linked: true }
@@ -398,21 +445,17 @@ export const linkCandidateInviteByEmail = mutation({
         q.eq('candidateEmail', normalizedEmail)
       )
       .collect()
-    await Promise.all(
-      invites.map(async (invite) => {
-        await ctx.db.patch(invite._id, {
-          userId: user._id,
-        })
-        const session = await ctx.db
-          .query('interviewSessions')
-          .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
-          .first()
-        if (session) {
-          await ctx.db.patch(session._id, { candidateUserId: user._id })
-        }
-      })
-    )
-    return { linkedInvites: invites.length }
+
+    let linkedInvites = 0
+    for (const invite of invites) {
+      const result = await linkInviteToCandidateUser(ctx, invite, user._id)
+      // Skip invites already owned by a different user (no overwrite hijack).
+      if (result === 'linked' || result === 'already_linked') {
+        linkedInvites += 1
+      }
+    }
+
+    return { linkedInvites }
   },
 })
 

@@ -106,6 +106,58 @@ describe('createScreeningBatch policy persistence', () => {
       DEFAULT_INTERVIEW_DURATION_MINUTES
     )
   })
+
+  test('invite tokens use full UUID entropy (not 8-char slice)', async () => {
+    const t = harness()
+    const asRecruiter = t.withIdentity(RECRUITER_IDENTITY)
+
+    const templateId = await t.run(async (ctx) =>
+      ctx.db.insert('assessmentTemplates', {
+        orgId: RECRUITER_IDENTITY.org_id as string,
+        name: 'Token entropy template',
+        role: 'engineer',
+        status: 'active',
+        createdBy: 'seed',
+        rubricVersion: 'v1',
+      })
+    )
+
+    const batchId = await asRecruiter.mutation(
+      api.recruiter.screenings.createScreeningBatch,
+      {
+        name: 'Token entropy batch',
+        allowedAttempts: 1,
+        templateId,
+        candidates: [
+          {
+            candidateName: 'Alex Rivera',
+            candidateEmail: 'alex.rivera@example.com',
+          },
+        ],
+      }
+    )
+
+    const invite = await t.run(async (ctx) => {
+      const invites = await ctx.db
+        .query('candidateInvites')
+        .withIndex('by_org_id', (q) =>
+          q.eq('orgId', RECRUITER_IDENTITY.org_id as string)
+        )
+        .collect()
+      return invites.find((row) => row.batchId === batchId) ?? null
+    })
+
+    expect(invite?.inviteToken).toBeTruthy()
+    const token = invite!.inviteToken
+    // Optional name prefix + full UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+    const uuidMatch = token.match(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    )
+    expect(uuidMatch).not.toBeNull()
+    // Reject legacy 8-char hex suffix pattern (prefix-abcdefgh)
+    expect(token).not.toMatch(/^[a-z0-9]+-[0-9a-f]{8}$/i)
+    expect(token.length).toBeGreaterThan(36)
+  })
 })
 
 describe('extendBatchExpiry', () => {

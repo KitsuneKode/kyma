@@ -10,14 +10,12 @@ import { slugify } from '../../lib/format/slug'
 
 const STUCK_PROCESSING_MS = 10 * 60 * 1000
 
+/** URL-safe invite token: optional name prefix + full UUID (128-bit entropy). */
 function buildInviteToken(candidateName: string) {
   const prefix = slugify(candidateName) || 'candidate'
-  const suffix =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID().slice(0, 8)
-      : `${Date.now()}`
-
-  return `${prefix}-${suffix}`
+  // Full UUID — do not slice; timestamp must not be the primary secret.
+  const secret = crypto.randomUUID()
+  return `${prefix}-${secret}`
 }
 
 const MAX_SCREENING_BATCHES = 100
