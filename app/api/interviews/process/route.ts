@@ -8,6 +8,7 @@ import {
   createDiagnosticLogger,
   createRequestId,
 } from '@/lib/interview/diagnostics'
+import { assertServerRateLimit } from '@/lib/http/server-rate-limit'
 import { runInterviewProcessingPipeline } from '@/lib/processing/run-interview-processing-pipeline'
 import { serverEnv } from '@/lib/env/server'
 import { inngest } from '@/inngest/client'
@@ -28,8 +29,14 @@ export async function POST(request: NextRequest) {
     requestId,
   })
   let sessionIdForFailure: string | undefined
+  const clientIp =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    request.headers.get('x-real-ip') ??
+    'unknown'
 
   try {
+    await assertServerRateLimit('publicSnapshot', `process:${clientIp}`)
+
     const json = await request.json()
     const { sessionId, inviteToken } = bodySchema.parse(json)
     sessionIdForFailure = sessionId
@@ -95,6 +102,8 @@ export async function POST(request: NextRequest) {
       error,
     })
 
-    return NextResponse.json({ error: message }, { status: 400 })
+    const status = message === 'RATE_LIMITED' ? 429 : 400
+
+    return NextResponse.json({ error: message }, { status })
   }
 }

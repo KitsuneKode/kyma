@@ -6,7 +6,10 @@ import {
   resolveInterviewPolicyFromInvite,
   type InterviewPolicy,
 } from '../helpers/interviewPolicy'
-import { deriveAccessState } from '../helpers/interviewSession'
+import {
+  canAuthorizePublicSessionProcessing,
+  deriveAccessState,
+} from '../helpers/interviewSession'
 import {
   resolveSessionPurpose,
   type SessionPurpose,
@@ -204,20 +207,13 @@ export const verifyPublicSessionProcessingAccess = query({
     inviteToken: v.string(),
     sessionId: v.id('interviewSessions'),
   },
+  returns: v.boolean(),
   handler: async (ctx, { inviteToken, sessionId }) => {
     const invite = await ctx.db
       .query('candidateInvites')
       .withIndex('by_invite_token', (q) => q.eq('inviteToken', inviteToken))
       .first()
-    if (!invite) {
-      return false
-    }
     const session = await ctx.db.get(sessionId)
-    if (!session || `${session.inviteId}` !== `${invite._id}`) {
-      return false
-    }
-    return ['live', 'reconnecting', 'interrupted', 'processing'].includes(
-      session.state
-    )
+    return canAuthorizePublicSessionProcessing({ invite, session })
   },
 })

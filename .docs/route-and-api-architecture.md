@@ -98,4 +98,4 @@ Marketing CTAs use path-based auth URLs via [`lib/auth/workspace-intent.ts`](../
 
 ## Rate limits (HTTP)
 
-Shared helper: `lib/http/rate-limit.ts` — used by bootstrap and report-chat routes (in-memory buckets; replace with Redis/Upstash in production if needed).
+Shared helper: `lib/http/server-rate-limit.ts` (`assertServerRateLimit`) — used by bootstrap, process, and report-chat routes. Backed by Convex `@convex-dev/rate-limiter`; requires `KYMA_PROCESSING_WRITE_KEY` in production (throws if missing).
