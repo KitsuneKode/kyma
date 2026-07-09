@@ -16,14 +16,14 @@ This plan consolidates:
 
 ## Success criteria
 
-| Gate | Done when |
-| ---- | --------- |
-| G1 Security merged | PRs #3–#8 (+ #10) on `main`, CI green, no processing-key IDOR / public seed / fail-open Clerk |
-| G2 Maintainability merged | #12–#14 on `main` (or #14 slimmed), domain contracts + session ops shared |
-| G3 SaaS scaffolds merged | #9 + #11 on `main` as scaffolds only (no fake “billing complete”) |
-| G4 Owner verification | Items 1–7 in `.docs/verification-pending.md` marked pass with evidence |
-| G5 Commercial MVP | Real plan gates, invite email, Sentry, GDPR export/delete path, BYOK design locked |
-| G6 Launch bar | One real LiveKit session completes invite → room → transcript → report → recruiter review |
+| Gate                      | Done when                                                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| G1 Security merged        | PRs #3–#8 (+ #10) on `main`, CI green, no processing-key IDOR / public seed / fail-open Clerk |
+| G2 Maintainability merged | #12–#14 on `main` (or #14 slimmed), domain contracts + session ops shared                     |
+| G3 SaaS scaffolds merged  | #9 + #11 on `main` as scaffolds only (no fake “billing complete”)                             |
+| G4 Owner verification     | Items 1–7 in `.docs/verification-pending.md` marked pass with evidence                        |
+| G5 Commercial MVP         | Real plan gates, invite email, Sentry, GDPR export/delete path, BYOK design locked            |
+| G6 Launch bar             | One real LiveKit session completes invite → room → transcript → report → recruiter review     |
 
 ---
 
@@ -68,21 +68,21 @@ Close when redundant
 
 ### 0.3 Per-PR acceptance before merge
 
-| PR | Must verify before merge | Notes |
-| -- | ----------------------- | ----- |
-| #6 | Unset Clerk in `production` fails closed; local/dev still usable | Watch `NODE_ENV` vs `KYMA_DEPLOYMENT_ENV` |
-| #3 | Seed mutations not callable from client; internal path still works for `db:seed:dev` | Add/keep regression if missing |
-| #5 | Invite tokens never appear in logs; prod diagnostics gated | |
-| #8 | `/api/interviews/process` rate-limited; processing auth tightened | Merge before #14 |
-| #4 | Review reads reject processing-key-only access; unit IDOR regression present | Highest priority |
-| #7 | Stronger tokens; claim cannot hijack another user’s invite | Rebase after #13 if `screenings.ts` conflicts |
-| #10 | Public session reads bounded; no `Date.now()` in queries | Rebase after #8 on `public.ts` |
-| #13 | `convex/_generated` committed; session ops shared | Conflict hotspot: `screenings.ts` |
-| #14 | Prefer tests-only unique files (`interviewSession.access`, `scoring-policy`); retitle if needed | Drop duplicated #7/#8 hunks |
-| #11 | Legal pages ship; entitlements are **structure only** — document as scaffold | Do not claim billing done |
-| #9 | Sentry/email/deploy docs are scaffolds; email not required on product paths yet | Same honesty bar |
-| #12 | Rebase last; resolve enum import conflicts across 19+ files | Highest conflict surface |
-| #15 | Close if Wave A already includes e2e fix | Avoid double-merge noise |
+| PR  | Must verify before merge                                                                        | Notes                                         |
+| --- | ----------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| #6  | Unset Clerk in `production` fails closed; local/dev still usable                                | Watch `NODE_ENV` vs `KYMA_DEPLOYMENT_ENV`     |
+| #3  | Seed mutations not callable from client; internal path still works for `db:seed:dev`            | Add/keep regression if missing                |
+| #5  | Invite tokens never appear in logs; prod diagnostics gated                                      |                                               |
+| #8  | `/api/interviews/process` rate-limited; processing auth tightened                               | Merge before #14                              |
+| #4  | Review reads reject processing-key-only access; unit IDOR regression present                    | Highest priority                              |
+| #7  | Stronger tokens; claim cannot hijack another user’s invite                                      | Rebase after #13 if `screenings.ts` conflicts |
+| #10 | Public session reads bounded; no `Date.now()` in queries                                        | Rebase after #8 on `public.ts`                |
+| #13 | `convex/_generated` committed; session ops shared                                               | Conflict hotspot: `screenings.ts`             |
+| #14 | Prefer tests-only unique files (`interviewSession.access`, `scoring-policy`); retitle if needed | Drop duplicated #7/#8 hunks                   |
+| #11 | Legal pages ship; entitlements are **structure only** — document as scaffold                    | Do not claim billing done                     |
+| #9  | Sentry/email/deploy docs are scaffolds; email not required on product paths yet                 | Same honesty bar                              |
+| #12 | Rebase last; resolve enum import conflicts across 19+ files                                     | Highest conflict surface                      |
+| #15 | Close if Wave A already includes e2e fix                                                        | Avoid double-merge noise                      |
 
 ### 0.4 Conflict hotspots (rebase checklist)
 
@@ -119,27 +119,27 @@ Required env: Clerk, Convex, LiveKit (`NEXT_PUBLIC_LIVEKIT_URL`, API key/secret)
 
 ### 1.2 Access and identity (items 1–2.2)
 
-| Item | Action | Pass evidence |
-| ---- | ------ | ------------- |
-| 1 Clerk webhook sync | Create/update org + membership in Clerk; confirm Convex mirrors | Screenshot or Convex row IDs + timestamps |
-| 2 RBAC denial | User without `org:recruiter:access` cannot call recruiter APIs / open `/recruiter/*` | Denied responses logged |
-| 2.1 Org context | Missing `orgId` → recruiter denial; candidate routes still work | Matrix table filled in verification-pending |
-| 2.2 Cross-org | Two orgs; no cross-read of candidates, batches, settings | Explicit “no leak” note |
+| Item                 | Action                                                                               | Pass evidence                               |
+| -------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------- |
+| 1 Clerk webhook sync | Create/update org + membership in Clerk; confirm Convex mirrors                      | Screenshot or Convex row IDs + timestamps   |
+| 2 RBAC denial        | User without `org:recruiter:access` cannot call recruiter APIs / open `/recruiter/*` | Denied responses logged                     |
+| 2.1 Org context      | Missing `orgId` → recruiter denial; candidate routes still work                      | Matrix table filled in verification-pending |
+| 2.2 Cross-org        | Two orgs; no cross-read of candidates, batches, settings                             | Explicit “no leak” note                     |
 
 ### 1.3 Interview session safety (items 3–4)
 
-| Item | Action | Pass evidence |
-| ---- | ------ | ------------- |
-| 3 LiveKit invite + identity | Full invite → prejoin → room → agent join → transcript | Session ID, transcript segments, room events |
-| 4 Reconnect continuity | Disconnect mid-session; rejoin; timer/scoring context intact | Before/after duration + status timeline |
+| Item                        | Action                                                       | Pass evidence                                |
+| --------------------------- | ------------------------------------------------------------ | -------------------------------------------- |
+| 3 LiveKit invite + identity | Full invite → prejoin → room → agent join → transcript       | Session ID, transcript segments, room events |
+| 4 Reconnect continuity      | Disconnect mid-session; rejoin; timer/scoring context intact | Before/after duration + status timeline      |
 
 ### 1.4 Data and output (items 5–7)
 
-| Item | Action | Pass evidence |
-| ---- | ------ | ------------- |
-| 5 Candidate result gating | Practice vs screening lists; no premature report | UI smoke notes |
-| 6 BYOK validation | Settings path rejects bad keys; no client leak (even if BYOK not production-ready) | Follow runbook item 5 |
-| 7 Template version history | Rubric/prompt change leaves audit trail | Version IDs on report/policySnapshot |
+| Item                       | Action                                                                             | Pass evidence                        |
+| -------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------ |
+| 5 Candidate result gating  | Practice vs screening lists; no premature report                                   | UI smoke notes                       |
+| 6 BYOK validation          | Settings path rejects bad keys; no client leak (even if BYOK not production-ready) | Follow runbook item 5                |
+| 7 Template version history | Rubric/prompt change leaves audit trail                                            | Version IDs on report/policySnapshot |
 
 ### 1.5 Exit
 
@@ -232,10 +232,10 @@ Execute in this order; each subsection can be its own PR.
 
 Choose one before building Stripe deeply:
 
-| Option | When to choose |
-| ------ | -------------- |
-| A. Clerk Billing / Stripe seats | Paid SMB launch soon |
-| B. Manual invoicing + plan override | Design-partner only |
+| Option                                      | When to choose        |
+| ------------------------------------------- | --------------------- |
+| A. Clerk Billing / Stripe seats             | Paid SMB launch soon  |
+| B. Manual invoicing + plan override         | Design-partner only   |
 | C. Defer billing UI; keep hard entitlements | Soft launch with caps |
 
 Record the choice in `.docs/current-findings.md` and `.plans/grill-me.md`. Do not implement full Stripe until A is chosen.
@@ -293,28 +293,28 @@ Do not schedule these ahead of Phases 0–4:
 
 ## Workstream ownership map
 
-| Workstream | Primary artifacts | Depends on |
-| ---------- | ----------------- | ---------- |
-| PR merge Wave A–D | GitHub #3–#15 | — |
-| Owner verification | `.docs/verification-pending.md` | Wave A on deployed env |
-| Live-path fixes | LiveKit/Convex/Inngest paths | Phase 1 failures |
-| Entitlements | `lib/saas/*`, screening/bootstrap gates | #11 |
-| Invite email | `lib/email/*`, screening create | #9, #5 |
-| Observability | Sentry, health panel | #9 |
-| GDPR jobs | internal mutations + runbook | #11 |
-| Policy E2E | templates, lobby, reports | Phase 1 item 7 |
-| Copilot | `lib/recruiter/report-chat.ts`, UI | Model keys optional |
-| BYOK | settings + secret layer | Security guide ADR |
+| Workstream         | Primary artifacts                       | Depends on             |
+| ------------------ | --------------------------------------- | ---------------------- |
+| PR merge Wave A–D  | GitHub #3–#15                           | —                      |
+| Owner verification | `.docs/verification-pending.md`         | Wave A on deployed env |
+| Live-path fixes    | LiveKit/Convex/Inngest paths            | Phase 1 failures       |
+| Entitlements       | `lib/saas/*`, screening/bootstrap gates | #11                    |
+| Invite email       | `lib/email/*`, screening create         | #9, #5                 |
+| Observability      | Sentry, health panel                    | #9                     |
+| GDPR jobs          | internal mutations + runbook            | #11                    |
+| Policy E2E         | templates, lobby, reports               | Phase 1 item 7         |
+| Copilot            | `lib/recruiter/report-chat.ts`, UI      | Model keys optional    |
+| BYOK               | settings + secret layer                 | Security guide ADR     |
 
 ---
 
 ## Suggested agent / human split
 
-| Who | Does |
-| --- | ---- |
-| Human | Merge order decisions, Clerk/LiveKit secrets, owner-run items 1–4, billing option A/B/C |
-| Agent | Rebases, conflict resolution, CI fixes, Phase 2 bugfixes, Phase 3 implementation PRs, tests, doc updates |
-| Either | Phase 4 product depth once G1–G4 clear |
+| Who    | Does                                                                                                     |
+| ------ | -------------------------------------------------------------------------------------------------------- |
+| Human  | Merge order decisions, Clerk/LiveKit secrets, owner-run items 1–4, billing option A/B/C                  |
+| Agent  | Rebases, conflict resolution, CI fixes, Phase 2 bugfixes, Phase 3 implementation PRs, tests, doc updates |
+| Either | Phase 4 product depth once G1–G4 clear                                                                   |
 
 ---
 
