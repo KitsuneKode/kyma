@@ -1,16 +1,12 @@
-export const SESSION_STATES = [
-  'created',
-  'ready',
-  'connecting',
-  'live',
-  'reconnecting',
-  'interrupted',
-  'processing',
-  'completed',
-  'failed',
-] as const
+export {
+  SESSION_STATES,
+  type InterviewSessionState,
+  type SessionState,
+} from '@/lib/domain/session-states'
+export type { SessionPurpose } from '@/lib/interview/session-purpose'
 
-export type InterviewSessionState = (typeof SESSION_STATES)[number]
+import type { InterviewSessionState } from '@/lib/domain/session-states'
+import type { SessionPurpose } from '@/lib/interview/session-purpose'
 
 export type InviteAccessState =
   | 'available'
@@ -21,8 +17,6 @@ export type InviteAccessState =
 export type InterviewDurationMode = 'timed' | 'flexible'
 
 export type InterviewStyleMode = 'standard' | 'intensive'
-
-export type SessionPurpose = 'screening' | 'demo' | 'mock'
 
 /**
  * Single source of truth for the resolved interview policy. The Convex policy

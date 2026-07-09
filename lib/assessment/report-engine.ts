@@ -22,12 +22,9 @@ export {
   type RubricDimension,
 } from '../rubric/constants'
 export type { Recommendation, Confidence } from './scoring-policy'
-export type ReportStatus =
-  | 'pending'
-  | 'processing'
-  | 'completed'
-  | 'failed'
-  | 'manual_review'
+export { REPORT_STATUSES, type ReportStatus } from '@/lib/domain/report-status'
+
+import type { ReportStatus } from '@/lib/domain/report-status'
 
 export type TranscriptEntry = {
   speaker: 'agent' | 'candidate' | 'system'

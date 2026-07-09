@@ -1,28 +1,32 @@
 import { v } from 'convex/values'
 
+import { literalUnion } from '../lib/domain/convex-literals'
+import {
+  JOB_FAMILIES,
+  PRACTICE_JOB_FAMILIES,
+  SIMULATION_MODES,
+} from '../lib/domain/job-families'
+import {
+  CONFIDENCE_LEVELS,
+  RECOMMENDATIONS,
+} from '../lib/domain/recommendation'
+export { reviewDecisionValidator } from '../lib/domain/review-decision'
+import { REPORT_STATUSES } from '../lib/domain/report-status'
+import { SESSION_STATES } from '../lib/domain/session-states'
+import { SESSION_PURPOSES } from '../lib/interview/session-purpose'
+import {
+  CANDIDATE_RECOMMENDATION_FILTERS,
+  CANDIDATE_STATUS_FILTERS,
+} from '../lib/recruiter/candidate-queue-filters'
 import { RUBRIC_DIMENSIONS } from '../lib/rubric/constants'
 
-export { reviewDecisionValidator } from '../lib/domain/review-decision'
+export const recommendationValidator = literalUnion(RECOMMENDATIONS)
 
-export const recommendationValidator = v.union(
-  v.literal('strong_yes'),
-  v.literal('yes'),
-  v.literal('mixed'),
-  v.literal('no')
-)
+export const confidenceValidator = literalUnion(CONFIDENCE_LEVELS)
 
-export const confidenceValidator = v.union(
-  v.literal('high'),
-  v.literal('medium'),
-  v.literal('low')
-)
+export const reportStatusValidator = literalUnion(REPORT_STATUSES)
 
-export const rubricDimensionValidator = v.union(
-  ...(RUBRIC_DIMENSIONS.map((dimension) => v.literal(dimension)) as [
-    ReturnType<typeof v.literal<(typeof RUBRIC_DIMENSIONS)[number]>>,
-    ...ReturnType<typeof v.literal<(typeof RUBRIC_DIMENSIONS)[number]>>[],
-  ])
-)
+export const rubricDimensionValidator = literalUnion(RUBRIC_DIMENSIONS)
 
 /** Stored on assessment reports/evidence; supports custom template dimension names. */
 export const scoringDimensionValidator = v.string()
@@ -46,54 +50,28 @@ export const workspaceProviderKeyValidator = v.object({
   maskedKeyTail: v.optional(v.string()),
 })
 
-export const interviewSessionStateValidator = v.union(
-  v.literal('created'),
-  v.literal('ready'),
-  v.literal('connecting'),
-  v.literal('live'),
-  v.literal('reconnecting'),
-  v.literal('interrupted'),
-  v.literal('processing'),
-  v.literal('completed'),
-  v.literal('failed')
-)
+export const interviewSessionStateValidator = literalUnion(SESSION_STATES)
 
 export const interviewStyleModeValidator = v.union(
   v.literal('standard'),
   v.literal('intensive')
 )
 
-export const sessionPurposeValidator = v.union(
-  v.literal('screening'),
-  v.literal('demo'),
-  v.literal('mock')
-)
+export const sessionPurposeValidator = literalUnion(SESSION_PURPOSES)
 
-export const jobFamilyValidator = v.union(
-  v.literal('tutor'),
-  v.literal('software_engineering'),
-  v.literal('product'),
-  v.literal('sales'),
-  v.literal('customer_support'),
-  v.literal('general'),
-  v.literal('custom')
-)
+export const jobFamilyValidator = literalUnion(JOB_FAMILIES)
 
 /** Practice packs exclude `custom` — matches PRACTICE_PACKS job families. */
-export const practiceJobFamilyValidator = v.union(
-  v.literal('software_engineering'),
-  v.literal('product'),
-  v.literal('customer_support'),
-  v.literal('sales'),
-  v.literal('tutor'),
-  v.literal('general')
+export const practiceJobFamilyValidator = literalUnion(PRACTICE_JOB_FAMILIES)
+
+export const simulationModeValidator = literalUnion(SIMULATION_MODES)
+
+export const candidateStatusFilterValidator = literalUnion(
+  CANDIDATE_STATUS_FILTERS
 )
 
-export const simulationModeValidator = v.union(
-  v.literal('teaching'),
-  v.literal('roleplay'),
-  v.literal('case_discussion'),
-  v.literal('none')
+export const candidateRecommendationFilterValidator = literalUnion(
+  CANDIDATE_RECOMMENDATION_FILTERS
 )
 
 export const interviewPolicySnapshotValidator = v.object({

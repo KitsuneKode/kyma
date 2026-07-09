@@ -8,6 +8,14 @@ import {
   getLatestReviewDecision,
   resolveTemplateName,
 } from '../helpers/sessionReview'
+import type {
+  CandidateRecommendationFilter,
+  CandidateStatusFilter,
+} from '../../lib/recruiter/candidate-queue-filters'
+import {
+  candidateRecommendationFilterValidator,
+  candidateStatusFilterValidator,
+} from '../validators'
 
 const INVITE_SEARCH_SAMPLE = 500
 const QUEUE_STATS_SESSION_SAMPLE = 1000
@@ -15,29 +23,14 @@ const QUEUE_STATS_REPORT_SAMPLE = 1000
 const FILTERED_PAGE_SCAN_MULTIPLIER = 4
 const MAX_FILTERED_PAGE_SCANS = 8
 
-const candidateStatusFilterValidator = v.union(
-  v.literal('all'),
-  v.literal('pending'),
-  v.literal('completed'),
-  v.literal('manual_review')
-)
-
-const candidateRecommendationFilterValidator = v.union(
-  v.literal('all'),
-  v.literal('strong_yes'),
-  v.literal('yes'),
-  v.literal('mixed'),
-  v.literal('no')
-)
-
 type ReviewCandidateProjection = Awaited<
   ReturnType<typeof projectReviewCandidate>
 >
 
 function matchesReviewCandidateFilters(
   candidate: ReviewCandidateProjection,
-  statusFilter: 'all' | 'pending' | 'completed' | 'manual_review',
-  recommendationFilter: 'all' | 'strong_yes' | 'yes' | 'mixed' | 'no'
+  statusFilter: CandidateStatusFilter,
+  recommendationFilter: CandidateRecommendationFilter
 ) {
   if (statusFilter !== 'all' && candidate.reportStatus !== statusFilter) {
     return false

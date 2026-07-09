@@ -1,4 +1,4 @@
-import { v } from 'convex/values'
+import { literalUnion } from './convex-literals'
 
 export const REVIEW_DECISIONS = [
   'advance',
@@ -9,12 +9,7 @@ export const REVIEW_DECISIONS = [
 
 export type ReviewDecision = (typeof REVIEW_DECISIONS)[number]
 
-export const reviewDecisionValidator = v.union(
-  v.literal('advance'),
-  v.literal('reject'),
-  v.literal('manual_review'),
-  v.literal('hold')
-)
+export const reviewDecisionValidator = literalUnion(REVIEW_DECISIONS)
 
 export const REVIEW_DECISION_LABELS: Record<ReviewDecision, string> = {
   advance: 'Advance',

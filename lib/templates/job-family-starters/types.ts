@@ -9,26 +9,15 @@ export type TemplateRubricConfig = {
   dimensions: TemplateRubricDimension[]
 }
 
-export const JOB_FAMILIES = [
-  'tutor',
-  'software_engineering',
-  'product',
-  'sales',
-  'customer_support',
-  'general',
-  'custom',
-] as const
+export {
+  JOB_FAMILIES,
+  JOB_FAMILY_LABELS,
+  SIMULATION_MODES,
+  type JobFamily,
+  type SimulationMode,
+} from '@/lib/domain/job-families'
 
-export type JobFamily = (typeof JOB_FAMILIES)[number]
-
-export const SIMULATION_MODES = [
-  'teaching',
-  'roleplay',
-  'case_discussion',
-  'none',
-] as const
-
-export type SimulationMode = (typeof SIMULATION_MODES)[number]
+import type { JobFamily, SimulationMode } from '@/lib/domain/job-families'
 
 export type JobFamilyStarterContent = {
   jobFamily: JobFamily
@@ -41,14 +30,4 @@ export type JobFamilyStarterContent = {
   simulationIntroLine?: string
   wrapUpPrompt: string
   rubricConfig: TemplateRubricConfig
-}
-
-export const JOB_FAMILY_LABELS: Record<JobFamily, string> = {
-  tutor: 'Tutor',
-  software_engineering: 'Software Engineering',
-  product: 'Product',
-  sales: 'Sales',
-  customer_support: 'Customer Support',
-  general: 'General',
-  custom: 'Custom',
 }
