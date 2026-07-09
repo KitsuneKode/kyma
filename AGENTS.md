@@ -87,6 +87,7 @@ This repo is building a horizontal AI voice screener platform (starting with tut
 - decision grilling and open questions: `.plans/grill-me.md`
 - canonical routes + Next vs Convex boundaries: `.docs/route-and-api-architecture.md`
 - dated vendor/SDK research notes (not requirements): `.docs/vendor-and-research-log.md`
+- GDPR / data-subject request ops (manual for now): `.docs/data-subject-requests.md`
 
 <!-- convex-ai-start -->
 
