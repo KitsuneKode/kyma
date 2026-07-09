@@ -235,11 +235,23 @@ Use these first before re-researching the current implementation choices:
 
 ## Next Best Work
 
+**Phase 0 (security/SaaS PR stack): DONE on main** — #3–#15 merged (2026-07-09).
+
+**Phase 3 commercial wrap:** see PR #17 (`cursor/phase3-commercial-ops-wrap-2663`) —
+plan quotas, invite email, GDPR jobs, health/report-chat observability, policy snapshot UI.
+
+Immediate owner work still required:
+
+1. Owner-run `.docs/verification-pending.md` (especially LiveKit items 3–4)
+2. Choose billing option A/B/C before Stripe
+3. Set `RESEND_API_KEY` + `NEXT_PUBLIC_APP_URL` for real invite delivery
+
+Also still relevant:
+
 - validate the LiveKit Node agent against the chosen STT/LLM/TTS model strings in a live room
-- extend audit coverage (e.g. screening batch mutations) if compliance requires it
-- add model-backed recruiter chat once provider/BYOK boundaries are decided
 - replace in-memory HTTP rate limits with a shared store for multi-instance deploys
-- continue extracting shared domain constants and validators as the Convex surface grows
+- production BYOK encryption path (design exists; keep off critical path until KMS)
+- merge plan docs PR #16 if still open
 
 ## Validation log
 
