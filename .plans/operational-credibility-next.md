@@ -103,6 +103,17 @@ Phase A will surface the real reliability gaps. Fix those before product expansi
 - Convex remains product source of truth; normalize provider state into product state
 - Inngest steps must be idempotent and recoverable
 
+### Code-only progress (2026-07-10)
+
+| Item                                                                              | Status                          |
+| --------------------------------------------------------------------------------- | ------------------------------- |
+| B1 Honest finalize + normalize connecting/reconnecting → interrupted → processing | Done                            |
+| B4 Stale pre-processing reaper (`connecting`/`live`/`interrupted`)                | Done                            |
+| B5 `markAssessmentProcessing` idempotent for in-flight/completed/manual_review    | Done                            |
+| B6 `/api/interviews/process` goes through finalize before enqueue                 | Done                            |
+| B2/B3 reconnect persistence + client→server live promotion                        | Open (needs LiveKit validation) |
+| Agent/STT/recording live quality                                                  | Open (Phase A owner-run)        |
+
 ### Exit criteria
 
 - Repeat Phase A checklist twice in a row with pass
@@ -129,13 +140,13 @@ Some policy is already stored (`policySnapshot`, template/batch fields), but cre
 
 ### Work breakdown
 
-| Task                                             | Where                                          | Done when                                    |
-| ------------------------------------------------ | ---------------------------------------------- | -------------------------------------------- |
-| C1 Audit defaults vs template/batch fields       | `convex/schema.ts`, screening create UI, lobby | Gap list written                             |
-| C2 Expose policy inputs on screening create      | `/recruiter/screenings/new`, admin mutations   | Recruiter can set policy without code change |
-| C3 Resolve policy for candidate lobby + session  | invite snapshot, bootstrap                     | Lobby/session use configured values          |
-| C4 Persist `policySnapshot` on completed reports | assessment pipeline                            | Recruiter sees which policy version applied  |
-| C5 Tests for resolution + snapshot               | Vitest                                         | Defaults vs override cases covered           |
+| Task                                             | Where                                          | Done when                                    | Status                                                                              |
+| ------------------------------------------------ | ---------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------- |
+| C1 Audit defaults vs template/batch fields       | `convex/schema.ts`, screening create UI, lobby | Gap list written                             | Done (explore)                                                                      |
+| C2 Expose policy inputs on screening create      | `/recruiter/screenings/new`, admin mutations   | Recruiter can set policy without code change | Already shipped; template create/edit now expose duration/resume/style              |
+| C3 Resolve policy for candidate lobby + session  | invite snapshot, bootstrap                     | Lobby/session use configured values          | Done — lobby shows attempts/resume; meeting cap uses `policy.targetDurationMinutes` |
+| C4 Persist `policySnapshot` on completed reports | assessment pipeline                            | Recruiter sees which policy version applied  | Done — review UI renders snapshot                                                   |
+| C5 Tests for resolution + snapshot               | Vitest                                         | Defaults vs override cases covered           | Done — `interviewPolicy.test.ts`                                                    |
 
 ### Exit criteria
 
@@ -153,13 +164,13 @@ Chat exists with citations and fallback. It is not yet trustworthy enough as a d
 
 ### Work breakdown
 
-| Task                                | Where                                           | Done when                                                             |
-| ----------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
-| D1 Provenance UX                    | `components/recruiter/recruiter-chat.tsx`       | Citations jump to transcript/evidence; visible fallback vs model mode |
-| D2 Guardrails                       | `lib/recruiter/report-chat.ts`                  | Unsupported questions refuse conservatively                           |
-| D3 Durable metadata                 | `reportChatMessages`                            | `answerSource`, model, citations persisted and reviewable             |
-| D4 Recruiter prompts                | report-chat prompts                             | Strengths / risks / recommendation / missing evidence / follow-ups    |
-| D5 Model path (after E design gate) | provider resolve + `/api/recruiter/report-chat` | Model-backed answers when keys configured; fallback otherwise         |
+| Task                                | Where                                           | Done when                                                             | Status                                                              |
+| ----------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| D1 Provenance UX                    | `components/recruiter/recruiter-chat.tsx`       | Citations jump to transcript/evidence; visible fallback vs model mode | Done — `citation-resolve.ts` + CitationList jumps                   |
+| D2 Guardrails                       | `lib/recruiter/report-chat.ts`                  | Unsupported questions refuse conservatively                           | Done — classify + refuse unmatched                                  |
+| D3 Durable metadata                 | `reportChatMessages`                            | `answerSource`, model, citations persisted and reviewable             | Partial — persisted; UI shows source/modelId; chat audit still open |
+| D4 Recruiter prompts                | report-chat prompts                             | Strengths / risks / recommendation / missing evidence / follow-ups    | Done — fallback handlers + stronger prompts                         |
+| D5 Model path (after E design gate) | provider resolve + `/api/recruiter/report-chat` | Model-backed answers when keys configured; fallback otherwise         | Done — explicit config + credentials gating                         |
 
 ### Exit criteria
 

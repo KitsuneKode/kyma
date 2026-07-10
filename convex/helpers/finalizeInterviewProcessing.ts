@@ -110,7 +110,8 @@ export async function finalizeInterviewForProcessing(
   }
 
   const reachedProcessing = working.state === 'processing'
-  const transitioned = reachedProcessing && currentState !== 'processing'
+  // `currentState` is already narrowed away from `processing` above.
+  const transitioned = reachedProcessing
 
   if (!reachedProcessing) {
     return { queued: false, transitioned: false }
