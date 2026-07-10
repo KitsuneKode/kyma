@@ -1,15 +1,18 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { IconCheck, IconCopy } from '@tabler/icons-react'
+import { useMemo, useState, useTransition } from 'react'
+import { IconCheck, IconCopy, IconMail } from '@tabler/icons-react'
+import { useRouter } from 'next/navigation'
 
 import { DataTable, type ColumnDef } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/workspace/status-badge'
 import { formatStatusLabel } from '@/lib/recruiter/format'
+import { sendBatchInviteEmails } from '@/lib/recruiter/send-batch-invite-emails'
 
 type ScreeningCandidateRow = {
   id: string
+  inviteId?: string
   candidateName: string
   candidateEmail?: string
   status: string
@@ -18,6 +21,8 @@ type ScreeningCandidateRow = {
   allowedAttempts: number
   inviteToken?: string
   isStuckProcessing?: boolean
+  emailDeliveryStatus?: string
+  emailSentAt?: string
 }
 
 function buildInviteUrl(token: string) {
@@ -63,11 +68,24 @@ function CopyInviteButton({ inviteUrl }: { inviteUrl: string }) {
   )
 }
 
+function emailStatusLabel(status?: string) {
+  if (!status) {
+    return 'Not sent'
+  }
+  return formatStatusLabel(status)
+}
+
 export function ScreeningCandidatesTable({
   data,
+  batchId,
 }: {
   data: ScreeningCandidateRow[]
+  batchId?: string
 }) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [sendMessage, setSendMessage] = useState<string | null>(null)
+
   const columns = useMemo<ColumnDef<ScreeningCandidateRow>[]>(
     () => [
       {
@@ -101,6 +119,15 @@ export function ScreeningCandidatesTable({
               Invite {formatStatusLabel(row.original.inviteStatus)}
             </p>
           </div>
+        ),
+      },
+      {
+        accessorKey: 'emailDeliveryStatus',
+        header: 'Email',
+        cell: ({ row }) => (
+          <p className="text-xs text-muted-foreground">
+            {emailStatusLabel(row.original.emailDeliveryStatus)}
+          </p>
         ),
       },
       {
@@ -139,13 +166,50 @@ export function ScreeningCandidatesTable({
     []
   )
 
+  function handleResend() {
+    if (!batchId) {
+      return
+    }
+    setSendMessage(null)
+    startTransition(async () => {
+      const result = await sendBatchInviteEmails(batchId)
+      if (!result.ok) {
+        setSendMessage(result.error)
+        return
+      }
+      setSendMessage(
+        `Email: ${result.sent} sent, ${result.skipped} skipped, ${result.failed} failed.`
+      )
+      router.refresh()
+    })
+  }
+
   return (
-    <DataTable
-      columns={columns}
-      data={data}
-      searchKey="candidateName"
-      searchPlaceholder="Search candidates"
-      emptyMessage="No candidates are in this batch yet. Add candidates to issue invite links."
-    />
+    <div className="flex flex-col gap-3">
+      {batchId ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isPending}
+            onClick={handleResend}
+          >
+            <IconMail className="size-3.5" />
+            {isPending ? 'Sending…' : 'Send / resend invite emails'}
+          </Button>
+          {sendMessage ? (
+            <p className="text-xs text-muted-foreground">{sendMessage}</p>
+          ) : null}
+        </div>
+      ) : null}
+      <DataTable
+        columns={columns}
+        data={data}
+        searchKey="candidateName"
+        searchPlaceholder="Search candidates"
+        emptyMessage="No candidates are in this batch yet. Add candidates to issue invite links."
+      />
+    </div>
   )
 }

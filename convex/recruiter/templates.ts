@@ -213,6 +213,11 @@ export const updateAssessmentTemplate = templateWriteMutation({
     name: v.optional(v.string()),
     jobFamily: v.optional(jobFamilyValidator),
     simulationMode: v.optional(simulationModeValidator),
+    targetDurationMinutes: v.optional(v.number()),
+    allowsResume: v.optional(v.boolean()),
+    interviewStyleMode: v.optional(
+      v.union(v.literal('standard'), v.literal('intensive'))
+    ),
     systemPrompt: v.optional(v.string()),
     childPersonaPrompt: v.optional(v.string()),
     simulationPersonaPrompt: v.optional(v.string()),
@@ -228,6 +233,14 @@ export const updateAssessmentTemplate = templateWriteMutation({
     if (!template || template.orgId !== orgId) {
       throw new ConvexError('Template not found.')
     }
+    if (
+      args.targetDurationMinutes !== undefined &&
+      (args.targetDurationMinutes < 5 || args.targetDurationMinutes > 120)
+    ) {
+      throw new ConvexError(
+        'Target duration must be between 5 and 120 minutes.'
+      )
+    }
     const nextVersion = Number.parseInt(
       template.rubricVersion.replace(/[^\d]/g, ''),
       10
@@ -241,6 +254,15 @@ export const updateAssessmentTemplate = templateWriteMutation({
       ...(args.name?.trim() ? { name: args.name.trim() } : {}),
       ...(args.jobFamily ? { jobFamily: args.jobFamily } : {}),
       ...(args.simulationMode ? { simulationMode: args.simulationMode } : {}),
+      ...(args.targetDurationMinutes !== undefined
+        ? { targetDurationMinutes: args.targetDurationMinutes }
+        : {}),
+      ...(args.allowsResume !== undefined
+        ? { allowsResume: args.allowsResume }
+        : {}),
+      ...(args.interviewStyleMode
+        ? { interviewStyleMode: args.interviewStyleMode }
+        : {}),
       systemPrompt: args.systemPrompt,
       childPersonaPrompt: simulationPersonaPrompt,
       simulationPersonaPrompt,

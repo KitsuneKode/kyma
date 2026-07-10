@@ -19,6 +19,8 @@ Update rule: update this queue first; update the runbook only when procedure cha
 
 **Agent environment note:** Items **3** and **4** require owner-run LiveKit credentials, a running agent worker (`bun run agent:start`), and webhook reachability. These cannot be fully executed or marked passed in an agent-only environment without those secrets and a live room session. Document pass/fail with evidence in this file after owner execution — do not claim pass without transcript/report artifacts.
 
+**2026-07-09 agent preflight:** `bun run live-path:preflight` failed — missing `NEXT_PUBLIC_CONVEX_URL`, `KYMA_PROCESSING_WRITE_KEY`, `NEXT_PUBLIC_LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`. Owner must run with production-like env.
+
 **Automation targets:** Item 5 routing/gating is partially covered by `convex/candidatePortal.practice.test.ts`. Practice vs screening list separation and rate-limit behavior are covered there. Items **3–4** have partial Vitest coverage (`convex/bootstrap.test.ts`, `lib/livekit/token.test.ts`, `convex/livekit.test.ts`, `lib/interview/session-machine.test.ts`); owner-run LiveKit session proof still required to mark passed. RBAC matrix (item 2.x) remains manual until Clerk CI test credentials exist.
 
 **Pre-flight script:** `bun run live-path:preflight` checks env + `/recruiter/health` readiness before owner-run items 3–4.

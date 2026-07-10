@@ -75,6 +75,15 @@ export function TemplateEditForm({
   const [simulationMode, setSimulationMode] = useState<SimulationMode>(
     template.simulationMode ?? 'teaching'
   )
+  const [targetDurationMinutes, setTargetDurationMinutes] = useState(
+    template.targetDurationMinutes ?? 20
+  )
+  const [allowsResume, setAllowsResume] = useState(
+    template.allowsResume ?? true
+  )
+  const [interviewStyleMode, setInterviewStyleMode] = useState<
+    'standard' | 'intensive'
+  >(template.interviewStyleMode ?? 'standard')
   const [systemPrompt, setSystemPrompt] = useState(template.systemPrompt ?? '')
   const [simulationPersonaPrompt, setSimulationPersonaPrompt] = useState(
     template.simulationPersonaPrompt ?? template.childPersonaPrompt ?? ''
@@ -112,6 +121,9 @@ export function TemplateEditForm({
         name,
         jobFamily,
         simulationMode,
+        targetDurationMinutes,
+        allowsResume,
+        interviewStyleMode,
         systemPrompt: systemPrompt.trim() || undefined,
         simulationPersonaPrompt: simulationPersonaPrompt.trim() || undefined,
         childPersonaPrompt: simulationPersonaPrompt.trim() || undefined,
@@ -202,6 +214,60 @@ export function TemplateEditForm({
             </Select>
           </div>
         </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="template-duration">Target duration (minutes)</Label>
+            <Input
+              id="template-duration"
+              type="number"
+              min={5}
+              max={120}
+              value={targetDurationMinutes}
+              onChange={(event) =>
+                setTargetDurationMinutes(Number(event.target.value) || 20)
+              }
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="template-resume">Resume policy</Label>
+            <Select
+              value={allowsResume ? 'allow' : 'deny'}
+              onValueChange={(value) =>
+                value && setAllowsResume(value === 'allow')
+              }
+            >
+              <SelectTrigger id="template-resume">
+                <SelectValue placeholder="Resume policy" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="allow">Allow resume</SelectItem>
+                <SelectItem value="deny">Single attempt only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="template-style">Interview style</Label>
+            <Select
+              value={interviewStyleMode}
+              onValueChange={(value) =>
+                value &&
+                setInterviewStyleMode(value as 'standard' | 'intensive')
+              }
+            >
+              <SelectTrigger id="template-style">
+                <SelectValue placeholder="Interview style" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="standard">Standard</SelectItem>
+                <SelectItem value="intensive">Intensive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Screening batches inherit these defaults unless overridden at create
+          time. Completed reports store a policy snapshot for audit.
+        </p>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
             Rubric version: {template.rubricVersion} · Status: {template.status}

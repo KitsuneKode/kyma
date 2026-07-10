@@ -172,7 +172,10 @@ export default async function ScreeningDetailPage({
         />
       ) : (
         <section className="space-y-4">
-          <ScreeningCandidatesTable data={detail.candidates} />
+          <ScreeningCandidatesTable
+            data={detail.candidates}
+            batchId={detail.batch.id}
+          />
         </section>
       )}
     </div>

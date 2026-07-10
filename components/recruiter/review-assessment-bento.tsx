@@ -26,6 +26,14 @@ type ReviewAssessmentBentoProps = {
     topStrengths: string[]
     topConcerns: string[]
     dimensionScores: Array<{ dimension: string; score: number }>
+    policySnapshot?: {
+      targetDurationMinutes: number
+      allowsResume: boolean
+      maxAttempts: number
+      rubricVersion: string
+      templateName?: string
+      interviewStyleMode?: string
+    } | null
   } | null
   teachingSimulation: TeachingSimulationSummary
 }
@@ -112,6 +120,20 @@ export function ReviewAssessmentBento({
             {report.transcriptQualityNote ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 Transcript quality: {report.transcriptQualityNote}
+              </p>
+            ) : null}
+            {report.policySnapshot ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Policy: {report.policySnapshot.targetDurationMinutes} min ·{' '}
+                {report.policySnapshot.allowsResume
+                  ? 'resume allowed'
+                  : 'single-pass'}{' '}
+                · {report.policySnapshot.maxAttempts} attempt
+                {report.policySnapshot.maxAttempts === 1 ? '' : 's'} · rubric{' '}
+                {report.policySnapshot.rubricVersion}
+                {report.policySnapshot.templateName
+                  ? ` · ${report.policySnapshot.templateName}`
+                  : ''}
               </p>
             ) : null}
           </div>

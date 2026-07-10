@@ -66,15 +66,21 @@ Rules:
 
 ### 4. BYOK must not leak tenant keys to our server runtime longer than necessary
 
-Target architecture for BYOK:
+Shipped BYOK posture:
 
-- workspace admin provides provider credentials through a dedicated server-only settings flow
-- credentials are encrypted at rest with a KMS-managed envelope key or equivalent secret-management layer
-- runtime retrieves decrypted credentials only when needed for the request/job
-- decrypted credentials are never shipped to the client
+- workspace admin provides provider credentials through `/recruiter/settings` (server mutations only)
+- credentials are encrypted at rest with AES-256-GCM via `KYMA_ENCRYPTION_KEY` (`convex/helpers/encryption.ts`)
+- runtime decrypts only in server/job paths (`lib/providers/resolve-model.ts`, agent worker, report-chat)
+- decrypted credentials are never shipped to the client; UI shows masked tails only
 - redact keys from logs, traces, and error messages
+- adding BYOK keys requires Pro/Enterprise (Dodo billing or `KYMA_ORG_PLAN_OVERRIDE`)
 
-Until that exists, keep BYOK out of the critical path.
+### 4b. Billing (Dodo Payments)
+
+- Checkout + customer portal: `/api/billing/checkout`, `/api/billing/portal`
+- Webhooks: `/api/webhooks/dodo` (signature-verified via `@dodopayments/nextjs`)
+- Org plan mirrored on `organizations` and applied to quotas / entitlements
+- Manual override remains `KYMA_ORG_PLAN_OVERRIDE` for design partners
 
 ### ADR: shipped hardening (Kyma next-phase)
 

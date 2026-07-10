@@ -41,9 +41,32 @@ export default defineSchema({
     name: v.string(),
     slug: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    /** Effective Kyma plan from Dodo (or free). Override via KYMA_ORG_PLAN_OVERRIDE. */
+    plan: v.optional(
+      v.union(v.literal('free'), v.literal('pro'), v.literal('enterprise'))
+    ),
+    billingStatus: v.optional(v.string()),
+    dodoCustomerId: v.optional(v.string()),
+    dodoSubscriptionId: v.optional(v.string()),
+    dodoProductId: v.optional(v.string()),
+    billingCurrentPeriodEnd: v.optional(v.number()),
+    billingCancelAtPeriodEnd: v.optional(v.boolean()),
+    billingUpdatedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index('by_clerk_org_id', ['clerkOrgId']),
+  })
+    .index('by_clerk_org_id', ['clerkOrgId'])
+    .index('by_dodo_customer_id', ['dodoCustomerId'])
+    .index('by_dodo_subscription_id', ['dodoSubscriptionId']),
+
+  /** Idempotent Dodo webhook event log (dedupe by event id / composite key). */
+  billingWebhookEvents: defineTable({
+    eventKey: v.string(),
+    eventType: v.string(),
+    clerkOrgId: v.optional(v.string()),
+    subscriptionId: v.optional(v.string()),
+    processedAt: v.number(),
+  }).index('by_event_key', ['eventKey']),
 
   orgMemberships: defineTable({
     clerkMembershipId: v.string(),
@@ -195,12 +218,26 @@ export default defineSchema({
     practiceJobFamily: v.optional(practiceJobFamilyValidator),
     practiceCreatedAt: v.optional(v.number()),
     expiresAt: v.string(),
+    /** Last invite-email delivery attempt (not invite lifecycle). */
+    emailDeliveryStatus: v.optional(
+      v.union(
+        v.literal('pending'),
+        v.literal('sent'),
+        v.literal('failed'),
+        v.literal('skipped')
+      )
+    ),
+    emailSentAt: v.optional(v.string()),
+    emailProvider: v.optional(v.string()),
+    emailProviderMessageId: v.optional(v.string()),
+    emailLastError: v.optional(v.string()),
   })
     .index('by_org_id', ['orgId'])
     .index('by_invite_token', ['inviteToken'])
     .index('by_status', ['status'])
     .index('by_candidate_email', ['candidateEmail'])
-    .index('by_user', ['userId']),
+    .index('by_user', ['userId'])
+    .index('by_email_delivery_status', ['emailDeliveryStatus']),
 
   interviewSessions: defineTable({
     orgId: v.string(),

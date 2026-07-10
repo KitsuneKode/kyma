@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 
 const SETTINGS_SECTIONS = [
+  { id: 'billing', label: 'Billing' },
   { id: 'team', label: 'Team' },
   { id: 'models', label: 'Models' },
   { id: 'provider-keys', label: 'Provider keys' },
