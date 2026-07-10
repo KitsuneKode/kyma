@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { useAction } from 'convex/react'
+import { ConvexError } from 'convex/values'
 import { motion, AnimatePresence } from 'motion/react'
 import { IconSparkles, IconX } from '@tabler/icons-react'
 
@@ -22,6 +24,7 @@ import {
 } from '@/components/recruiter/review-context'
 import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
 import { api } from '@/convex/_generated/api'
+import type { Id } from '@/convex/_generated/dataModel'
 import type { CitationJumpTarget } from '@/lib/recruiter/citation-resolve'
 import { cn } from '@/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -71,6 +74,7 @@ export function RecruiterChat({
     api.recruiter.workspace.getWorkspaceSettings,
     {}
   )
+  const askReportChat = useAction(api.recruiter.reportChat.askReportChat)
 
   const citationResolveContext = useMemo(
     () => ({
@@ -169,31 +173,11 @@ export function RecruiterChat({
     setQuestion('')
 
     try {
-      const response = await fetch('/api/recruiter/report-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          reportId,
-          question: currentQuestion,
-        }),
+      const payload = await askReportChat({
+        sessionId: sessionId as Id<'interviewSessions'>,
+        reportId: reportId as Id<'assessmentReports'> | undefined,
+        question: currentQuestion,
       })
-
-      const payload = (await response.json()) as {
-        answer?: string
-        error?: string
-        source?: 'fallback' | 'model'
-        modelId?: string
-        degradedReason?: string
-        citations?: Array<{ ref: string; label: string; kind: string }>
-      }
-      const answer = payload.answer
-
-      if (!response.ok || !answer) {
-        throw new Error(
-          payload.error ?? 'Unable to answer the recruiter question.'
-        )
-      }
 
       if (payload.degradedReason) {
         setSessionDegradedReason(payload.degradedReason)
@@ -206,21 +190,23 @@ export function RecruiterChat({
         {
           id: `local-assistant-${Date.now()}`,
           role: 'assistant',
-          content: answer,
+          content: payload.answer,
           createdAt: new Date().toISOString(),
           answerSource: payload.source,
           modelId: payload.modelId,
           citationsJson:
-            payload.citations && payload.citations.length > 0
+            payload.citations.length > 0
               ? JSON.stringify(payload.citations)
               : undefined,
         },
       ])
     } catch (submitError) {
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : 'Unable to answer the recruiter question.'
+        submitError instanceof ConvexError
+          ? String(submitError.data ?? submitError.message)
+          : submitError instanceof Error
+            ? submitError.message
+            : 'Unable to answer the recruiter question.'
       )
     } finally {
       setIsSubmitting(false)

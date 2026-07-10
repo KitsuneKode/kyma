@@ -13,13 +13,13 @@
 
 ## Deployment matrix
 
-| Runtime                              | Module                | Owns                                                                       |
-| ------------------------------------ | --------------------- | -------------------------------------------------------------------------- |
-| Next.js server (RSC, route handlers) | `lib/env/server.ts`   | Clerk secrets, LiveKit server keys, Inngest, provider keys, processing key |
-| Next.js client                       | `lib/env/client.ts`   | `NEXT_PUBLIC_*` only                                                       |
-| Convex functions                     | `lib/env/convex.ts`   | Processing key, encryption, admin emails, Clerk subset, deployment mode    |
-| Agent worker / scripts               | `lib/env/runtime.ts`  | Full standalone stack including agent tuning and provider keys             |
-| Middleware / client diagnostics      | `lib/env/node-env.ts` | Narrow `NODE_ENV` adapter when t3-env modules are unavailable              |
+| Runtime                             | Module                | Owns                                                                                                             |
+| ----------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Next.js server (RSC, Inngest route) | `lib/env/server.ts`   | Clerk secrets, LiveKit (agent/UI), Inngest serve, provider keys, processing key                                  |
+| Next.js client                      | `lib/env/client.ts`   | `NEXT_PUBLIC_*` only                                                                                             |
+| Convex functions                    | `lib/env/convex.ts`   | Processing key, encryption, admin emails, Clerk + LiveKit webhook/token keys, review chat model, deployment mode |
+| Agent worker / scripts              | `lib/env/runtime.ts`  | Full standalone stack including agent tuning and provider keys                                                   |
+| Middleware / client diagnostics     | `lib/env/node-env.ts` | Narrow `NODE_ENV` adapter when t3-env modules are unavailable                                                    |
 
 Templates:
 
@@ -69,7 +69,7 @@ Only required when testing recruiter/admin auth surfaces:
 
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
-- `CLERK_WEBHOOK_SIGNING_SECRET` (required when using `/api/webhooks/clerk`)
+- `CLERK_WEBHOOK_SIGNING_SECRET` (required when using Convex `{CONVEX_SITE_URL}/webhooks/clerk`)
 - one of:
   - `CLERK_FRONTEND_API_URL`
   - `CLERK_JWT_ISSUER_DOMAIN`

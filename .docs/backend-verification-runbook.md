@@ -14,7 +14,7 @@ Update rule: update pending queue first; update this runbook only when procedure
 
 ## Item 1: Clerk Sync (2.1)
 
-Route: `POST /api/webhooks/clerk`
+Route: `POST {CONVEX_SITE_URL}/webhooks/clerk`
 
 Expected behavior:
 
@@ -24,7 +24,7 @@ Expected behavior:
 
 Procedure:
 
-- Configure Clerk webhook endpoint to `https://<host>/api/webhooks/clerk`.
+- Configure Clerk webhook endpoint to `https://<CONVEX_SITE_HOST>/webhooks/clerk`.
 - Subscribe to `user.created`, `user.updated`, `user.deleted`.
 - Trigger each event from Clerk dashboard test UI.
 - Confirm corresponding changes in Convex `users` table.

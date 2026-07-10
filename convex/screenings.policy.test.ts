@@ -60,7 +60,7 @@ describe('createScreeningBatch policy persistence', () => {
       }
     )
 
-    const batch = await t.run((ctx) => ctx.db.get(batchId))
+    const batch = await t.run((ctx) => ctx.db.get('screeningBatches', batchId))
     expect(batch?.targetDurationMinutes).toBe(25)
     expect(batch?.allowsResume).toBe(false)
   })
@@ -99,7 +99,7 @@ describe('createScreeningBatch policy persistence', () => {
       }
     )
 
-    const batch = await t.run((ctx) => ctx.db.get(batchId))
+    const batch = await t.run((ctx) => ctx.db.get('screeningBatches', batchId))
     expect(batch?.targetDurationMinutes).toBe(30)
     expect(batch?.allowsResume).toBe(false)
     expect(batch?.targetDurationMinutes).not.toBe(

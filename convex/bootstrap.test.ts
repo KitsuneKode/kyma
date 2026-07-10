@@ -98,7 +98,9 @@ describe('bootstrapPublicSession', () => {
     expect(result.roomName).not.toContain('bootstrap-invite-token')
     expect(result.targetDurationMinutes).toBe(20)
 
-    const session = await t.run((ctx) => ctx.db.get(result.sessionId))
+    const session = await t.run((ctx) =>
+      ctx.db.get('interviewSessions', result.sessionId)
+    )
     expect(session?.state).toBe('connecting')
     expect(session?.participantName).toBe(participantName)
     expect(session?.reconnectCount).toBe(0)
