@@ -139,7 +139,13 @@ export function WorkspaceSettingsForms({
   return (
     <>
       <WorkspaceSurface id="provider-keys" className="scroll-mt-24 p-6">
-        <h2 className="text-lg font-semibold">Provider keys</h2>
+        <h2 className="text-lg font-semibold">Provider keys (BYOK)</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Keys are encrypted at rest with{' '}
+          <code className="text-xs">KYMA_ENCRYPTION_KEY</code> and decrypted
+          only on the server for interview, scoring, and review-chat jobs.
+          Workspace BYOK requires Pro or Enterprise.
+        </p>
         {readOnly ? (
           <p className="mt-2 text-sm text-muted-foreground">
             Masked keys configured for this workspace. Only org admins can add

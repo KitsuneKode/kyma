@@ -80,6 +80,7 @@ This repo is building a horizontal AI voice screener platform (starting with tut
 - next implementation handoff and priorities: `.docs/next-phase-prd.md`
 - LiveKit, Convex, schema, and backend boundaries: `.docs/livekit-convex-implementation-guide.md`
 - security, maintainability, and BYOK guardrails: `.docs/security-and-maintainability.md`
+- Dodo Payments billing: `.docs/dodo-billing.md`
 - vendor and stack comparison: `.docs/stack-research.md`
 - interview and rubric design: `.docs/interview-system.md`
 - phased delivery plan: `.plans/mvp-plan.md`

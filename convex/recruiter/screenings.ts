@@ -6,7 +6,7 @@ import { recruiterQuery, screeningWriteMutation } from '../lib/customFunctions'
 import { getRecruiterActorId } from '../helpers/auth'
 import { logAuditEvent } from '../helpers/audit'
 import { DEFAULT_INTERVIEW_DURATION_MINUTES } from '../helpers/interviewPolicy'
-import { quotasForPlan, resolveOrgPlanFromEnv } from '../helpers/orgPlan'
+import { quotasForPlan, resolveOrgPlanForOrg } from '../helpers/orgPlan'
 import {
   getSessionOpsWindows,
   isInviteExpiringSoon,
@@ -232,7 +232,7 @@ export const createScreeningBatch = screeningWriteMutation({
   handler: async (ctx, args) => {
     const { orgId } = ctx
     const createdBy = await getRecruiterActorId(ctx)
-    const plan = resolveOrgPlanFromEnv()
+    const plan = await resolveOrgPlanForOrg(ctx, orgId)
     const quotas = quotasForPlan(plan)
 
     if (args.candidates.length > quotas.maxCandidatesPerBatch) {

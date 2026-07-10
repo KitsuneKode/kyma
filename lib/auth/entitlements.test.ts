@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { authMock, serverEnvMock } = vi.hoisted(() => ({
+const { authMock, serverEnvMock, fetchQueryMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   serverEnvMock: {
     KYMA_ORG_PLAN_OVERRIDE: undefined as string | undefined,
   },
+  fetchQueryMock: vi.fn(),
 }))
 
 vi.mock('@clerk/nextjs/server', () => ({
@@ -13,6 +14,14 @@ vi.mock('@clerk/nextjs/server', () => ({
 
 vi.mock('@/lib/env/server', () => ({
   serverEnv: serverEnvMock,
+}))
+
+vi.mock('convex/nextjs', () => ({
+  fetchQuery: (...args: unknown[]) => fetchQueryMock(...args),
+}))
+
+vi.mock('@/lib/clerk/server-token', () => ({
+  getServerConvexAuthToken: vi.fn(async () => 'test-token'),
 }))
 
 import {
@@ -38,6 +47,15 @@ describe('resolveOrgPlan', () => {
     expect(resolveOrgPlan('pro')).toBe('pro')
     expect(resolveOrgPlan('enterprise')).toBe('enterprise')
   })
+
+  it('uses billing snapshot when override is unset', () => {
+    expect(resolveOrgPlan(undefined, { plan: 'pro', status: 'active' })).toBe(
+      'pro'
+    )
+    expect(resolveOrgPlan(undefined, { plan: 'pro', status: 'on_hold' })).toBe(
+      'free'
+    )
+  })
 })
 
 describe('orgPlanAllowsFeature', () => {
@@ -53,12 +71,14 @@ describe('orgPlanAllowsFeature', () => {
     expect(orgPlanAllowsFeature('free', 'recruiter:advanced-analytics')).toBe(
       false
     )
+    expect(orgPlanAllowsFeature('free', 'recruiter:byok')).toBe(false)
   })
 
-  it('allows premium screening on pro and enterprise', () => {
+  it('allows premium screening and BYOK on pro and enterprise', () => {
     expect(orgPlanAllowsFeature('pro', 'recruiter:premium-screening')).toBe(
       true
     )
+    expect(orgPlanAllowsFeature('pro', 'recruiter:byok')).toBe(true)
     expect(
       orgPlanAllowsFeature('enterprise', 'recruiter:premium-screening')
     ).toBe(true)
@@ -74,7 +94,9 @@ describe('orgPlanAllowsFeature', () => {
 describe('requireOrgEntitlement', () => {
   beforeEach(() => {
     authMock.mockReset()
+    fetchQueryMock.mockReset()
     serverEnvMock.KYMA_ORG_PLAN_OVERRIDE = undefined
+    fetchQueryMock.mockResolvedValue({ plan: 'free', status: undefined })
   })
 
   it('requires an active organization', async () => {
@@ -113,6 +135,17 @@ describe('requireOrgEntitlement', () => {
       requireOrgEntitlement('recruiter:premium-screening')
     ).resolves.toEqual({
       orgId: 'org_456',
+      allowed: true,
+      plan: 'pro',
+    })
+  })
+
+  it('allows BYOK when Dodo billing reports active pro', async () => {
+    authMock.mockResolvedValue({ orgId: 'org_789' })
+    fetchQueryMock.mockResolvedValue({ plan: 'pro', status: 'active' })
+
+    await expect(requireOrgEntitlement('recruiter:byok')).resolves.toEqual({
+      orgId: 'org_789',
       allowed: true,
       plan: 'pro',
     })

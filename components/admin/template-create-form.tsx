@@ -33,6 +33,10 @@ export function TemplateCreateForm() {
   const [name, setName] = useState('')
   const [jobFamily, setJobFamily] = useState<JobFamily>('software_engineering')
   const [duration, setDuration] = useState(20)
+  const [allowsResume, setAllowsResume] = useState(true)
+  const [interviewStyleMode, setInterviewStyleMode] = useState<
+    'standard' | 'intensive'
+  >('standard')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -50,8 +54,8 @@ export function TemplateCreateForm() {
         name: name.trim() || starterPreview.defaultName,
         jobFamily,
         targetDurationMinutes: duration,
-        allowsResume: true,
-        interviewStyleMode: 'standard',
+        allowsResume,
+        interviewStyleMode,
       })
       router.push(`/recruiter/templates/${templateId}/edit`)
       router.refresh()
@@ -105,16 +109,55 @@ export function TemplateCreateForm() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="template-duration">Target duration (minutes)</Label>
-          <Input
-            id="template-duration"
-            type="number"
-            min={10}
-            max={60}
-            value={duration}
-            onChange={(event) => setDuration(Number(event.target.value) || 20)}
-          />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="template-duration">Target duration (minutes)</Label>
+            <Input
+              id="template-duration"
+              type="number"
+              min={5}
+              max={120}
+              value={duration}
+              onChange={(event) =>
+                setDuration(Number(event.target.value) || 20)
+              }
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="template-resume">Resume policy</Label>
+            <Select
+              value={allowsResume ? 'allow' : 'deny'}
+              onValueChange={(value) =>
+                value && setAllowsResume(value === 'allow')
+              }
+            >
+              <SelectTrigger id="template-resume">
+                <SelectValue placeholder="Resume policy" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="allow">Allow resume</SelectItem>
+                <SelectItem value="deny">Single attempt only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="template-style">Interview style</Label>
+            <Select
+              value={interviewStyleMode}
+              onValueChange={(value) =>
+                value &&
+                setInterviewStyleMode(value as 'standard' | 'intensive')
+              }
+            >
+              <SelectTrigger id="template-style">
+                <SelectValue placeholder="Interview style" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="standard">Standard</SelectItem>
+                <SelectItem value="intensive">Intensive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </WorkspaceSurface>
 

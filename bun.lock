@@ -10,6 +10,7 @@
         "@base-ui/react": "^1.5.0",
         "@clerk/nextjs": "^7.4.3",
         "@convex-dev/rate-limiter": "^0.3.2",
+        "@dodopayments/nextjs": "^0.3.6",
         "@livekit/agents": "^1.4.5",
         "@livekit/agents-plugin-google": "^1.4.8",
         "@livekit/agents-plugin-openai": "^1.4.8",
@@ -30,6 +31,7 @@
         "convex": "^1.40.0",
         "convex-helpers": "^0.1.119",
         "date-fns": "^4.4.0",
+        "dodopayments": "^2.42.2",
         "inngest": "^4.5.0",
         "livekit-client": "^2.19.2",
         "livekit-server-sdk": "^2.15.4",
@@ -264,6 +266,10 @@
     "@convex-dev/rate-limiter": ["@convex-dev/rate-limiter@0.3.2", "", { "peerDependencies": { "convex": "^1.24.8", "react": "^18.2.0 || ^19.0.0" }, "optionalPeers": ["react"] }, "sha512-+oBPsBfFbzdxiF/9XaaTQmVnvDlvEfg/c69/v8LxTbw4VLuiflIKlfnPQL8OS0azXQQ11hcPWHmU8ytFmHKDXA=="],
 
     "@datastructures-js/deque": ["@datastructures-js/deque@1.0.8", "", {}, "sha512-PSBhJ2/SmeRPRHuBv7i/fHWIdSC3JTyq56qb+Rq0wjOagi0/fdV5/B/3Md5zFZus/W6OkSPMaxMKKMNMrSmubg=="],
+
+    "@dodopayments/core": ["@dodopayments/core@0.3.12", "", { "dependencies": { "dodopayments": "^2.31.2", "standardwebhooks": "^1.0.0" }, "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" } }, "sha512-cahX0AmZI9QN6PhXDE24vUa/UBD4qU21iCgyJRC0L7jxX3dQNMwQSfP2ow9xovnrBQxrsebnwwlDoKi5wl20dA=="],
+
+    "@dodopayments/nextjs": ["@dodopayments/nextjs@0.3.6", "", { "dependencies": { "@dodopayments/core": "^0.3.10" }, "peerDependencies": { "next": "^14.0.0 || ^15.0.0 || ^16.0.0", "zod": "^3.25.0 || ^4.0.0" } }, "sha512-y+lLkeVLwSvxNW0RRorJMVxOZbzrJ4FAdTEHPVwnKISNjCPja3R9ZyGHJGzcjwd8LfTon6Ml/Ge3tcMVxXKvug=="],
 
     "@dotenvx/dotenvx": ["@dotenvx/dotenvx@1.61.1", "", { "dependencies": { "commander": "^11.1.0", "dotenv": "^17.2.1", "eciesjs": "^0.4.10", "execa": "^5.1.1", "fdir": "^6.2.0", "ignore": "^5.3.0", "object-treeify": "1.1.33", "picomatch": "^4.0.4", "which": "^4.0.0", "yocto-spinner": "^1.1.0" }, "bin": { "dotenvx": "src/cli/dotenvx.js" } }, "sha512-2OUX4KDKvQA6oa7oESG8eNcV4K/2C5jgrbxUcT0VoH9Zelg6dT+rDYew4w2GmXRV3db0tUaM4QZG3MyJL3fU5Q=="],
 
@@ -1398,6 +1404,8 @@
     "devlop": ["devlop@1.1.0", "", { "dependencies": { "dequal": "^2.0.0" } }, "sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA=="],
 
     "diff": ["diff@8.0.4", "", {}, "sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw=="],
+
+    "dodopayments": ["dodopayments@2.42.2", "", { "dependencies": { "standardwebhooks": "^1.0.0" }, "bin": { "dodopayments": "bin/cli" } }, "sha512-XBF8zrnfkjAhX7OyrR3KauK6bH+oW3yZ+uqy6RBWI5XdZvrEtASabvvfHrBX3UGR3Bbxl3t1rkpcao+riKSOuw=="],
 
     "dompurify": ["dompurify@3.4.1", "", { "optionalDependencies": { "@types/trusted-types": "^2.0.7" } }, "sha512-JahakDAIg1gyOm7dlgWSDjV4n7Ip2PKR55NIT6jrMfIgLFgWo81vdr1/QGqWtFNRqXP9UV71oVePtjqS2ebnPw=="],
 

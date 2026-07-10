@@ -1,11 +1,11 @@
 /**
  * Plan tiers and hard quotas for SaaS entitlements.
  *
- * Billing is not wired yet — effective plan comes from
- * `KYMA_ORG_PLAN_OVERRIDE` (see `lib/auth/entitlements.ts`) until Stripe/Clerk Billing attaches.
+ * Effective plan comes from Dodo Payments (org billing row) or
+ * `KYMA_ORG_PLAN_OVERRIDE` — see `lib/auth/entitlements.ts`.
  */
 
-import type { OrgPlanTier } from '@/lib/auth/entitlements'
+import type { OrgPlanTier } from '@/lib/billing/resolve-plan'
 
 export type PlanQuotas = {
   /** Max candidates per screening batch create. */

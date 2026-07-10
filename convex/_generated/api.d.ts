@@ -10,6 +10,7 @@
 
 import type * as agentConfig from "../agentConfig.js";
 import type * as agentWorker from "../agentWorker.js";
+import type * as billing from "../billing.js";
 import type * as compliance from "../compliance.js";
 import type * as crons from "../crons.js";
 import type * as devSeed from "../devSeed.js";
@@ -72,6 +73,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   agentConfig: typeof agentConfig;
   agentWorker: typeof agentWorker;
+  billing: typeof billing;
   compliance: typeof compliance;
   crons: typeof crons;
   devSeed: typeof devSeed;

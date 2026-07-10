@@ -1,8 +1,9 @@
 /**
  * Resolve org plan inside Convex (no Next.js serverEnv).
- * Mirrors `lib/auth/entitlements.resolveOrgPlan` for mutation-side quota checks.
+ * Priority: KYMA_ORG_PLAN_OVERRIDE → organizations.plan (Dodo) → free.
  */
 
+import type { QueryCtx, MutationCtx } from '../_generated/server'
 import { convexEnv } from '../../lib/env/convex'
 
 export const ORG_PLAN_TIERS = ['free', 'pro', 'enterprise'] as const
@@ -21,6 +22,33 @@ export function resolveOrgPlanFromEnv(
   if (typeof override === 'string' && isOrgPlanTier(override)) {
     return override
   }
+  return DEFAULT_ORG_PLAN
+}
+
+/**
+ * Prefer env override, then org billing row from Dodo webhooks.
+ */
+export async function resolveOrgPlanForOrg(
+  ctx: QueryCtx | MutationCtx,
+  clerkOrgId: string
+): Promise<OrgPlanTier> {
+  const fromEnv = resolveOrgPlanFromEnv()
+  if (
+    typeof convexEnv.KYMA_ORG_PLAN_OVERRIDE === 'string' &&
+    isOrgPlanTier(convexEnv.KYMA_ORG_PLAN_OVERRIDE)
+  ) {
+    return fromEnv
+  }
+
+  const org = await ctx.db
+    .query('organizations')
+    .withIndex('by_clerk_org_id', (q) => q.eq('clerkOrgId', clerkOrgId))
+    .unique()
+
+  if (org?.plan && isOrgPlanTier(org.plan)) {
+    return org.plan
+  }
+
   return DEFAULT_ORG_PLAN
 }
 

@@ -41,9 +41,18 @@ export const serverSchema = {
   KYMA_PROCESSING_WRITE_KEY: z.string().min(1).optional(),
   KYMA_ADMIN_EMAILS: z.string().min(1).optional(),
   KYMA_AUTH_DEBUG: z.enum(['0', '1']).optional(),
-  // Temporary org plan override until Stripe/org billing wires real entitlements.
+  // Manual org plan override (design partners / emergencies). Prefer Dodo billing.
   // Valid values: free | pro | enterprise. Defaults to free when unset/invalid.
   KYMA_ORG_PLAN_OVERRIDE: z.enum(['free', 'pro', 'enterprise']).optional(),
+  // Dodo Payments (https://docs.dodopayments.com) — subscription billing.
+  DODO_PAYMENTS_API_KEY: z.string().min(1).optional(),
+  DODO_PAYMENTS_WEBHOOK_KEY: z.string().min(1).optional(),
+  DODO_PAYMENTS_ENVIRONMENT: z.enum(['test_mode', 'live_mode']).optional(),
+  DODO_PAYMENTS_RETURN_URL: z.url().optional(),
+  DODO_PAYMENTS_PRODUCT_PRO_MONTHLY: z.string().min(1).optional(),
+  DODO_PAYMENTS_PRODUCT_PRO_YEARLY: z.string().min(1).optional(),
+  DODO_PAYMENTS_PRODUCT_ENTERPRISE_MONTHLY: z.string().min(1).optional(),
+  DODO_PAYMENTS_PRODUCT_ENTERPRISE_YEARLY: z.string().min(1).optional(),
   KYMA_ENCRYPTION_KEY: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
   GOOGLE_API_KEY: z.string().min(1).optional(),

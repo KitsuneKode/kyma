@@ -41,9 +41,32 @@ export default defineSchema({
     name: v.string(),
     slug: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    /** Effective Kyma plan from Dodo (or free). Override via KYMA_ORG_PLAN_OVERRIDE. */
+    plan: v.optional(
+      v.union(v.literal('free'), v.literal('pro'), v.literal('enterprise'))
+    ),
+    billingStatus: v.optional(v.string()),
+    dodoCustomerId: v.optional(v.string()),
+    dodoSubscriptionId: v.optional(v.string()),
+    dodoProductId: v.optional(v.string()),
+    billingCurrentPeriodEnd: v.optional(v.number()),
+    billingCancelAtPeriodEnd: v.optional(v.boolean()),
+    billingUpdatedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index('by_clerk_org_id', ['clerkOrgId']),
+  })
+    .index('by_clerk_org_id', ['clerkOrgId'])
+    .index('by_dodo_customer_id', ['dodoCustomerId'])
+    .index('by_dodo_subscription_id', ['dodoSubscriptionId']),
+
+  /** Idempotent Dodo webhook event log (dedupe by event id / composite key). */
+  billingWebhookEvents: defineTable({
+    eventKey: v.string(),
+    eventType: v.string(),
+    clerkOrgId: v.optional(v.string()),
+    subscriptionId: v.optional(v.string()),
+    processedAt: v.number(),
+  }).index('by_event_key', ['eventKey']),
 
   orgMemberships: defineTable({
     clerkMembershipId: v.string(),

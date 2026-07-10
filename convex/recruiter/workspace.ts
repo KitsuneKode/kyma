@@ -6,6 +6,7 @@ import { action, internalQuery, query } from '../_generated/server'
 import { orgAdminMutation, recruiterQuery } from '../lib/customFunctions'
 import { requireAdmin, requireOrgId } from '../helpers/auth'
 import { decryptProviderKey, encryptProviderKey } from '../helpers/encryption'
+import { resolveOrgPlanForOrg } from '../helpers/orgPlan'
 import { convexEnv } from '../../lib/env/convex'
 import {
   modelOverridesValidator,
@@ -53,17 +54,32 @@ export const addProviderKey = orgAdminMutation({
   returns: v.id('workspaceSettings'),
   handler: async (ctx, args) => {
     const { orgId, actor } = ctx
+    const plan = await resolveOrgPlanForOrg(ctx, orgId)
+    if (plan === 'free') {
+      throw new ConvexError(
+        'Workspace BYOK requires Pro or Enterprise. Upgrade billing to add provider keys.'
+      )
+    }
+    if (!convexEnv.KYMA_ENCRYPTION_KEY?.trim()) {
+      throw new ConvexError(
+        'KYMA_ENCRYPTION_KEY is required before storing provider keys.'
+      )
+    }
+    const trimmedKey = args.key.trim()
+    if (trimmedKey.length < 8) {
+      throw new ConvexError('Provider key looks too short.')
+    }
     const now = Date.now()
     const keyId =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
         : `${now}`
-    const maskedKeyTail = args.key.slice(-4)
+    const maskedKeyTail = trimmedKey.slice(-4)
     const settings = await ctx.db
       .query('workspaceSettings')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
       .first()
-    const encrypted = await encryptProviderKey(args.key)
+    const encrypted = await encryptProviderKey(trimmedKey)
     const entry = {
       keyId,
       provider: normalizeProvider(args.provider),
