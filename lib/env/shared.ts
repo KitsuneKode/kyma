@@ -113,6 +113,9 @@ export const convexClientSchema = {
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
     clientSchema.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
   NEXT_PUBLIC_LIVEKIT_URL: clientSchema.NEXT_PUBLIC_LIVEKIT_URL,
+  // Needed when assessment processing runs inside Convex and bridges via
+  // `convex/nextjs` (`lib/assessment/process-session.ts`).
+  NEXT_PUBLIC_CONVEX_URL: clientSchema.NEXT_PUBLIC_CONVEX_URL,
 } as const
 
 export const clientRuntimeEnv = {

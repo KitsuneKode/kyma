@@ -13,6 +13,7 @@ const allowedProcessEnvPaths = new Set([
   'lib/env/node-env.ts',
   'convex/auth.config.ts',
   'scripts/clerk-setup-kyma-auth.ts',
+  'scripts/verify-convex-integration.ts',
   'agents/worker.ts',
   'instrumentation.ts',
   'proxy.ts',

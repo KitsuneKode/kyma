@@ -36,7 +36,16 @@ import type * as helpers_sessionReview from "../helpers/sessionReview.js";
 import type * as helpers_systemTemplates from "../helpers/systemTemplates.js";
 import type * as helpers_templates from "../helpers/templates.js";
 import type * as helpers_transcriptSegments from "../helpers/transcriptSegments.js";
+<<<<<<< HEAD
 import type * as helpers_usageRollup from "../helpers/usageRollup.js";
+||||||| parent of 46297bc (test(convex): add real local integration verification harness)
+import type * as http from "../http.js";
+import type * as httpWebhooks from "../httpWebhooks.js";
+=======
+import type * as http from "../http.js";
+import type * as httpWebhooks from "../httpWebhooks.js";
+import type * as integrationSeed from "../integrationSeed.js";
+>>>>>>> 46297bc (test(convex): add real local integration verification harness)
 import type * as interviews_bootstrap from "../interviews/bootstrap.js";
 import type * as interviews_candidatePortal from "../interviews/candidatePortal.js";
 import type * as interviews_processing from "../interviews/processing.js";
@@ -101,7 +110,16 @@ declare const fullApi: ApiFromModules<{
   "helpers/systemTemplates": typeof helpers_systemTemplates;
   "helpers/templates": typeof helpers_templates;
   "helpers/transcriptSegments": typeof helpers_transcriptSegments;
+<<<<<<< HEAD
   "helpers/usageRollup": typeof helpers_usageRollup;
+||||||| parent of 46297bc (test(convex): add real local integration verification harness)
+  http: typeof http;
+  httpWebhooks: typeof httpWebhooks;
+=======
+  http: typeof http;
+  httpWebhooks: typeof httpWebhooks;
+  integrationSeed: typeof integrationSeed;
+>>>>>>> 46297bc (test(convex): add real local integration verification harness)
   "interviews/bootstrap": typeof interviews_bootstrap;
   "interviews/candidatePortal": typeof interviews_candidatePortal;
   "interviews/processing": typeof interviews_processing;

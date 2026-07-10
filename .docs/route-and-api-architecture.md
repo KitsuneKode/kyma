@@ -108,3 +108,13 @@ Marketing CTAs use path-based auth URLs via [`lib/auth/workspace-intent.ts`](../
 ## Rate limits
 
 Bootstrap, processing recovery, and report-chat rate limits run inside Convex actions via `@convex-dev/rate-limiter` (`convex/rateLimiter.ts`). The Next helper `lib/http/server-rate-limit.ts` remains for any residual Next-hosted surfaces that need a trusted-server check.
+
+## Local integration verification (non-mock)
+
+Against a live local Convex deployment + Inngest event sink:
+
+```bash
+bun run test:convex-integration
+```
+
+This seeds real invite/session rows, calls `bootstrapInterviewSession` (LiveKit JWT mint), POSTs cryptographically signed LiveKit + Clerk webhooks to `{CONVEX_SITE_URL}`, and exercises `requeueInterviewProcessing` enqueue against a local Inngest sink on `:8799`.
