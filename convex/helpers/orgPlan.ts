@@ -1,28 +1,37 @@
 /**
  * Resolve org plan inside Convex (no Next.js serverEnv).
  * Priority: KYMA_ORG_PLAN_OVERRIDE → organizations.plan (Dodo) → free.
+ *
+ * Quotas and tier types live in shared lib modules — do not re-declare here.
  */
 
 import type { QueryCtx, MutationCtx } from '../_generated/server'
 import { convexEnv } from '../../lib/env/convex'
+import {
+  DEFAULT_ORG_PLAN,
+  isOrgPlanTier,
+  resolveEffectiveOrgPlan,
+  type OrgPlanTier,
+} from '../../lib/billing/resolve-plan'
+import {
+  PLAN_QUOTAS,
+  quotasForPlan,
+  type PlanQuotas,
+} from '../../lib/saas/plans'
 
-export const ORG_PLAN_TIERS = ['free', 'pro', 'enterprise'] as const
-
-export type OrgPlanTier = (typeof ORG_PLAN_TIERS)[number]
-
-export const DEFAULT_ORG_PLAN: OrgPlanTier = 'free'
-
-export function isOrgPlanTier(value: string): value is OrgPlanTier {
-  return (ORG_PLAN_TIERS as readonly string[]).includes(value)
+export {
+  DEFAULT_ORG_PLAN,
+  isOrgPlanTier,
+  PLAN_QUOTAS,
+  quotasForPlan,
+  type OrgPlanTier,
+  type PlanQuotas,
 }
 
 export function resolveOrgPlanFromEnv(
   override: string | undefined | null = convexEnv.KYMA_ORG_PLAN_OVERRIDE
 ): OrgPlanTier {
-  if (typeof override === 'string' && isOrgPlanTier(override)) {
-    return override
-  }
-  return DEFAULT_ORG_PLAN
+  return resolveEffectiveOrgPlan({ override })
 }
 
 /**
@@ -32,12 +41,11 @@ export async function resolveOrgPlanForOrg(
   ctx: QueryCtx | MutationCtx,
   clerkOrgId: string
 ): Promise<OrgPlanTier> {
-  const fromEnv = resolveOrgPlanFromEnv()
   if (
     typeof convexEnv.KYMA_ORG_PLAN_OVERRIDE === 'string' &&
     isOrgPlanTier(convexEnv.KYMA_ORG_PLAN_OVERRIDE)
   ) {
-    return fromEnv
+    return resolveOrgPlanFromEnv()
   }
 
   const org = await ctx.db
@@ -45,37 +53,12 @@ export async function resolveOrgPlanForOrg(
     .withIndex('by_clerk_org_id', (q) => q.eq('clerkOrgId', clerkOrgId))
     .unique()
 
-  if (org?.plan && isOrgPlanTier(org.plan)) {
-    return org.plan
-  }
-
-  return DEFAULT_ORG_PLAN
-}
-
-export type PlanQuotas = {
-  maxCandidatesPerBatch: number
-  maxBatchesPer30Days: number
-  maxActiveInvites: number
-}
-
-export const PLAN_QUOTAS: Record<OrgPlanTier, PlanQuotas> = {
-  free: {
-    maxCandidatesPerBatch: 10,
-    maxBatchesPer30Days: 5,
-    maxActiveInvites: 25,
-  },
-  pro: {
-    maxCandidatesPerBatch: 50,
-    maxBatchesPer30Days: 50,
-    maxActiveInvites: 500,
-  },
-  enterprise: {
-    maxCandidatesPerBatch: 200,
-    maxBatchesPer30Days: 500,
-    maxActiveInvites: 5_000,
-  },
-} as const
-
-export function quotasForPlan(plan: OrgPlanTier): PlanQuotas {
-  return PLAN_QUOTAS[plan]
+  return resolveEffectiveOrgPlan({
+    billing: org?.plan
+      ? {
+          plan: isOrgPlanTier(org.plan) ? org.plan : DEFAULT_ORG_PLAN,
+          status: org.billingStatus ?? null,
+        }
+      : null,
+  })
 }

@@ -3,8 +3,8 @@ import { ConvexError, v } from 'convex/values'
 import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
 import { recruiterQuery, screeningWriteMutation } from '../lib/customFunctions'
-import { getRecruiterActorId } from '../helpers/auth'
 import { logAuditEvent } from '../helpers/audit'
+import { getRecruiterActorId } from '../helpers/auth'
 import { DEFAULT_INTERVIEW_DURATION_MINUTES } from '../helpers/interviewPolicy'
 import { quotasForPlan, resolveOrgPlanForOrg } from '../helpers/orgPlan'
 import {
@@ -357,9 +357,16 @@ export const createScreeningBatch = screeningWriteMutation({
       action: 'screening_batch.created',
       resource: `screeningBatches:${batchId}`,
       metadata: {
-        candidateCount: args.candidates.length,
+        batchId,
+        name: args.name,
         plan,
         templateId: template._id,
+        candidateCount: args.candidates.length,
+        allowedAttempts: args.allowedAttempts,
+        expiresAt: args.expiresAt ?? null,
+        targetDurationMinutes: resolvedDuration,
+        allowsResume: resolvedAllowsResume,
+        candidateReleaseMode: args.candidateReleaseMode ?? 'inherit',
       },
     })
 
@@ -492,6 +499,20 @@ export const extendBatchExpiry = screeningWriteMutation({
       await ctx.db.patch(invite._id, { expiresAt })
       updatedInviteCount += 1
     }
+
+    const actorId = (await getRecruiterActorId(ctx)) ?? 'admin'
+    await logAuditEvent(ctx, {
+      orgId,
+      actorId,
+      action: 'screening_batch.expiry_extended',
+      resource: `screening_batch:${args.batchId}`,
+      metadata: {
+        batchId: args.batchId,
+        extendDays: args.extendDays,
+        expiresAt,
+        updatedInviteCount,
+      },
+    })
 
     return { expiresAt, updatedInviteCount }
   },

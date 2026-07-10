@@ -12,6 +12,18 @@ const TRANSITIONS: Record<InterviewSessionState, InterviewSessionState[]> = {
   failed: [],
 }
 
+/**
+ * States that may enter post-call processing. `connecting` / `reconnecting`
+ * are not direct edges to `processing`; callers must normalize through
+ * {@link resolveProcessingTransitionPath} first.
+ */
+export const PROCESSING_ENTRY_STATES = [
+  'live',
+  'reconnecting',
+  'interrupted',
+  'connecting',
+] as const satisfies readonly InterviewSessionState[]
+
 export function canTransitionSession(
   current: InterviewSessionState,
   next: InterviewSessionState
@@ -35,6 +47,34 @@ export function transitionSessionSafely(
   next: InterviewSessionState
 ) {
   return canTransitionSession(current, next) ? next : current
+}
+
+/**
+ * Legal hop sequence from `from` into `processing`.
+ * - Direct when the edge exists (`live` / `interrupted`).
+ * - Via `interrupted` when the source is `connecting` or `reconnecting`
+ *   (disconnect / abandon before a clean live→processing handoff).
+ * - Empty when already `processing` or when no legal path exists.
+ */
+export function resolveProcessingTransitionPath(
+  from: InterviewSessionState
+): InterviewSessionState[] {
+  if (from === 'processing') {
+    return []
+  }
+
+  if (canTransitionSession(from, 'processing')) {
+    return ['processing']
+  }
+
+  if (
+    canTransitionSession(from, 'interrupted') &&
+    canTransitionSession('interrupted', 'processing')
+  ) {
+    return ['interrupted', 'processing']
+  }
+
+  return []
 }
 
 export function getSessionStateLabel(state: InterviewSessionState) {

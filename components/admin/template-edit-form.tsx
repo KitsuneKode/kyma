@@ -26,6 +26,8 @@ import {
   buildDefaultRubricConfig,
   type TemplateRubricConfig,
 } from '@/lib/templates/default-assessment-content'
+import { DEFAULT_INTERVIEW_POLICY } from '@/lib/interview/policy'
+import type { InterviewStyleMode } from '@/lib/interview/types'
 import {
   getJobFamilyStarter,
   JOB_FAMILIES,
@@ -75,15 +77,6 @@ export function TemplateEditForm({
   const [simulationMode, setSimulationMode] = useState<SimulationMode>(
     template.simulationMode ?? 'teaching'
   )
-  const [targetDurationMinutes, setTargetDurationMinutes] = useState(
-    template.targetDurationMinutes ?? 20
-  )
-  const [allowsResume, setAllowsResume] = useState(
-    template.allowsResume ?? true
-  )
-  const [interviewStyleMode, setInterviewStyleMode] = useState<
-    'standard' | 'intensive'
-  >(template.interviewStyleMode ?? 'standard')
   const [systemPrompt, setSystemPrompt] = useState(template.systemPrompt ?? '')
   const [simulationPersonaPrompt, setSimulationPersonaPrompt] = useState(
     template.simulationPersonaPrompt ?? template.childPersonaPrompt ?? ''
@@ -93,6 +86,15 @@ export function TemplateEditForm({
     toModelOverrides(template)
   )
   const [rubricConfig, setRubricConfig] = useState(toRubricConfig(template))
+  const [targetDurationMinutes, setTargetDurationMinutes] = useState(
+    template.targetDurationMinutes ??
+      DEFAULT_INTERVIEW_POLICY.targetDurationMinutes
+  )
+  const [allowsResume, setAllowsResume] = useState(
+    template.allowsResume ?? true
+  )
+  const [interviewStyleMode, setInterviewStyleMode] =
+    useState<InterviewStyleMode>(template.interviewStyleMode ?? 'standard')
   const [saving, setSaving] = useState(false)
 
   const starterPreview = useMemo(
@@ -224,7 +226,10 @@ export function TemplateEditForm({
               max={120}
               value={targetDurationMinutes}
               onChange={(event) =>
-                setTargetDurationMinutes(Number(event.target.value) || 20)
+                setTargetDurationMinutes(
+                  Number(event.target.value) ||
+                    DEFAULT_INTERVIEW_POLICY.targetDurationMinutes
+                )
               }
             />
           </div>
@@ -250,8 +255,7 @@ export function TemplateEditForm({
             <Select
               value={interviewStyleMode}
               onValueChange={(value) =>
-                value &&
-                setInterviewStyleMode(value as 'standard' | 'intensive')
+                value && setInterviewStyleMode(value as InterviewStyleMode)
               }
             >
               <SelectTrigger id="template-style">

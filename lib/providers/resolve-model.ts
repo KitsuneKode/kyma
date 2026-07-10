@@ -1,6 +1,10 @@
 import { createDecipheriv } from 'node:crypto'
 
 import {
+  getPlatformProviderKey,
+  type ProviderKeyEnv,
+} from '@/lib/env/providers'
+import {
   DEFAULT_MODELS,
   latestProviderKey,
   providerFromModelId,
@@ -17,6 +21,12 @@ export {
 type WorkspaceModelOverrides = Partial<Record<ModelKind, string | undefined>>
 
 export type { WorkspaceModelOverrides }
+
+export type ReviewChatModelResolution = {
+  modelId?: string
+  canAttemptModel: boolean
+  degradedReason?: string
+}
 
 const MODEL_KINDS: ModelKind[] = ['stt', 'llm', 'tts', 'reviewChat', 'scoring']
 
@@ -52,17 +62,119 @@ export function resolveModelId(
   )
 }
 
+/**
+ * Explicit review-chat model only — never falls back to DEFAULT_MODELS.reviewChat.
+ * Prefer template → workspace → env (e.g. KYMA_REVIEW_CHAT_MODEL).
+ */
+export function resolveExplicitReviewChatModelId(
+  workspaceDefaults?: WorkspaceModelOverrides,
+  templateOverrides?: WorkspaceModelOverrides,
+  envFallbacks?: WorkspaceModelOverrides
+): string | undefined {
+  return (
+    templateOverrides?.reviewChat?.trim() ||
+    workspaceDefaults?.reviewChat?.trim() ||
+    envFallbacks?.reviewChat?.trim() ||
+    undefined
+  )
+}
+
+/**
+ * @deprecated Prefer resolveExplicitReviewChatModelId for chat gating.
+ * Kept for scoring fallback chains that still want an optional reviewChat id
+ * without DEFAULT_MODELS — same behavior as explicit resolution.
+ */
 export function resolveReviewChatModelId(
   workspaceDefaults?: WorkspaceModelOverrides,
   templateOverrides?: WorkspaceModelOverrides,
   envFallbacks?: WorkspaceModelOverrides
 ): string | undefined {
-  return resolveModelId(
-    'reviewChat',
+  return resolveExplicitReviewChatModelId(
     workspaceDefaults,
     templateOverrides,
     envFallbacks
   )
+}
+
+export function hasReviewChatCredentials(args: {
+  modelId: string
+  providerKeys?: WorkspaceProviderKey[]
+  encryptionKey?: string
+  platformEnv?: ProviderKeyEnv
+}): boolean {
+  const provider = providerFromModelId(args.modelId)
+  if (!provider) return false
+
+  if (
+    args.platformEnv &&
+    getPlatformProviderKey(provider, args.platformEnv)?.trim()
+  ) {
+    return true
+  }
+
+  const keyRecord = latestProviderKey(args.providerKeys, provider)
+  if (!keyRecord || !args.encryptionKey?.trim()) {
+    return false
+  }
+
+  try {
+    const apiKey = decryptWorkspaceKey({
+      encryptedKey: keyRecord.encryptedKey,
+      iv: keyRecord.iv,
+      encryptionKey: args.encryptionKey,
+    }).trim()
+    return Boolean(apiKey)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Honest review-chat gating: only attempt a model when an explicit model id is
+ * configured AND credentials exist (platform env key or decryptable BYOK).
+ */
+export function resolveReviewChatAttempt(args: {
+  workspaceDefaults?: WorkspaceModelOverrides
+  templateOverrides?: WorkspaceModelOverrides
+  envFallbacks?: WorkspaceModelOverrides
+  providerKeys?: WorkspaceProviderKey[]
+  encryptionKey?: string
+  platformEnv?: ProviderKeyEnv
+}): ReviewChatModelResolution {
+  const modelId = resolveExplicitReviewChatModelId(
+    args.workspaceDefaults,
+    args.templateOverrides,
+    args.envFallbacks
+  )
+
+  if (!modelId) {
+    return {
+      canAttemptModel: false,
+      degradedReason:
+        'No explicit review-chat model configured (workspace, template, or KYMA_REVIEW_CHAT_MODEL).',
+    }
+  }
+
+  if (
+    !hasReviewChatCredentials({
+      modelId,
+      providerKeys: args.providerKeys,
+      encryptionKey: args.encryptionKey,
+      platformEnv: args.platformEnv,
+    })
+  ) {
+    return {
+      modelId,
+      canAttemptModel: false,
+      degradedReason:
+        'Review-chat model is configured but no platform or workspace credentials are available for its provider.',
+    }
+  }
+
+  return {
+    modelId,
+    canAttemptModel: true,
+  }
 }
 
 export function resolveScoringModelId(

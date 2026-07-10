@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { IconSparkles, IconX, IconSend2 } from '@tabler/icons-react'
 
@@ -11,10 +11,14 @@ import {
   MessageResponse,
 } from '@/components/ai-elements/message'
 import { CitationList } from '@/components/recruiter/citation-list'
-import { useReviewActions } from '@/components/recruiter/review-context'
+import {
+  useReviewActions,
+  useReviewData,
+} from '@/components/recruiter/review-context'
 import { WorkspaceTextarea } from '@/components/workspace/textarea'
 import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
 import { api } from '@/convex/_generated/api'
+import type { CitationJumpTarget } from '@/lib/recruiter/citation-resolve'
 import { cn } from '@/lib/utils'
 
 type ChatMessage = {
@@ -23,6 +27,7 @@ type ChatMessage = {
   content: string
   createdAt: string
   answerSource?: 'fallback' | 'model'
+  modelId?: string
   citationsJson?: string
 }
 
@@ -50,14 +55,41 @@ export function RecruiterChat({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
-  const { jumpToTime } = useReviewActions()
+  const [sessionDegradedReason, setSessionDegradedReason] = useState<
+    string | null
+  >(null)
+  const { jumpToTime, setFocusedEvidenceIndex, setActiveDimension } =
+    useReviewActions()
+  const { transcriptWithTimes, evidenceWithTiming, recordingStartTime } =
+    useReviewData()
   const { data: workspaceSettings } = useAuthenticatedQuery(
     api.recruiter.workspace.getWorkspaceSettings,
     {}
   )
-  const hasWorkspaceModels =
-    Boolean(workspaceSettings?.defaultModels?.reviewChat) ||
-    Boolean(workspaceSettings?.providerKeys?.length)
+
+  const citationResolveContext = useMemo(
+    () => ({
+      recordingStartTime,
+      transcript: transcriptWithTimes.map((segment) => ({
+        startedAt: segment.startedAt,
+        startSec: segment.startSec,
+      })),
+      evidence: evidenceWithTiming.map((item) => ({
+        dimension: item.dimension,
+        startedAt: item.startedAt,
+        startedAtSec: item.startedAtSec,
+      })),
+    }),
+    [evidenceWithTiming, recordingStartTime, transcriptWithTimes]
+  )
+
+  const hasExplicitReviewChatModel = Boolean(
+    workspaceSettings?.defaultModels?.reviewChat?.trim()
+  )
+  const showFallbackBanner =
+    sessionDegradedReason !== null ||
+    messages.some((message) => message.answerSource === 'fallback') ||
+    !hasExplicitReviewChatModel
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -86,6 +118,34 @@ export function RecruiterChat({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen])
+
+  function handleCitationJump(target: CitationJumpTarget) {
+    const evidenceItem =
+      target.evidenceIndex !== undefined
+        ? evidenceWithTiming[target.evidenceIndex]
+        : undefined
+    const dimension = target.dimension ?? evidenceItem?.dimension
+
+    if (dimension) {
+      setActiveDimension(dimension)
+    }
+
+    if (target.evidenceIndex !== undefined && dimension) {
+      const withinDimensionIndex = evidenceWithTiming
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => item.dimension === dimension)
+        .findIndex(({ index }) => index === target.evidenceIndex)
+      if (withinDimensionIndex >= 0) {
+        setFocusedEvidenceIndex(withinDimensionIndex)
+      }
+    }
+
+    if (target.timeSec !== undefined) {
+      jumpToTime(target.timeSec)
+    } else if (evidenceItem?.startedAtSec !== undefined) {
+      jumpToTime(evidenceItem.startedAtSec)
+    }
+  }
 
   async function handleSubmit() {
     if (!question.trim()) return
@@ -118,6 +178,8 @@ export function RecruiterChat({
         answer?: string
         error?: string
         source?: 'fallback' | 'model'
+        modelId?: string
+        degradedReason?: string
         citations?: Array<{ ref: string; label: string; kind: string }>
       }
       const answer = payload.answer
@@ -128,6 +190,12 @@ export function RecruiterChat({
         )
       }
 
+      if (payload.degradedReason) {
+        setSessionDegradedReason(payload.degradedReason)
+      } else if (payload.source === 'model') {
+        setSessionDegradedReason(null)
+      }
+
       setMessages((current) => [
         ...current,
         {
@@ -136,6 +204,7 @@ export function RecruiterChat({
           content: answer,
           createdAt: new Date().toISOString(),
           answerSource: payload.source,
+          modelId: payload.modelId,
           citationsJson:
             payload.citations && payload.citations.length > 0
               ? JSON.stringify(payload.citations)
@@ -229,14 +298,14 @@ export function RecruiterChat({
                 }}
               >
                 <div className="flex flex-col gap-6 pb-24">
-                  {!hasWorkspaceModels ? (
+                  {showFallbackBanner ? (
                     <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-100">
                       <p className="font-medium">
                         Copilot runs in fallback mode
                       </p>
                       <p className="mt-1 text-xs opacity-90">
-                        Add provider keys or set default review-chat models in
-                        workspace settings for model-backed answers.
+                        {sessionDegradedReason ??
+                          'Set an explicit review-chat model and ensure platform or workspace credentials are available for model-backed answers.'}
                       </p>
                       <Link
                         href="/recruiter/settings#models"
@@ -283,6 +352,7 @@ export function RecruiterChat({
                               {message.answerSource
                                 ? ` · ${formatAnswerSourceLabel(message.answerSource)}`
                                 : ''}
+                              {message.modelId ? ` · ${message.modelId}` : ''}
                             </p>
                             {message.role === 'assistant' ? (
                               <MessageResponse>
@@ -295,7 +365,8 @@ export function RecruiterChat({
                               <div className="mt-4 border-t border-border/50 pt-4">
                                 <CitationList
                                   citationsJson={message.citationsJson}
-                                  onJumpToTime={jumpToTime}
+                                  resolveContext={citationResolveContext}
+                                  onJump={handleCitationJump}
                                 />
                               </div>
                             ) : null}

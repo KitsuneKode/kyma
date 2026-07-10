@@ -4,6 +4,7 @@ import { api, internal } from '../_generated/api'
 import type { Doc } from '../_generated/dataModel'
 import { action, internalQuery, query } from '../_generated/server'
 import { orgAdminMutation, recruiterQuery } from '../lib/customFunctions'
+import { logAuditEvent } from '../helpers/audit'
 import { requireAdmin, requireOrgId } from '../helpers/auth'
 import { decryptProviderKey, encryptProviderKey } from '../helpers/encryption'
 import { resolveOrgPlanForOrg } from '../helpers/orgPlan'
@@ -90,20 +91,37 @@ export const addProviderKey = orgAdminMutation({
       addedBy: actor,
       maskedKeyTail,
     }
-    if (!settings) {
-      return await ctx.db.insert('workspaceSettings', {
-        orgId,
-        providerKeys: [entry],
+    // Audit metadata must never include plaintext keys — provider/keyId/label only.
+    const settingsId = settings
+      ? settings._id
+      : await ctx.db.insert('workspaceSettings', {
+          orgId,
+          providerKeys: [entry],
+          updatedAt: now,
+          updatedBy: actor,
+        })
+    if (settings) {
+      await ctx.db.patch(settings._id, {
+        providerKeys: [...(settings.providerKeys ?? []), entry],
         updatedAt: now,
         updatedBy: actor,
       })
     }
-    await ctx.db.patch(settings._id, {
-      providerKeys: [...(settings.providerKeys ?? []), entry],
-      updatedAt: now,
-      updatedBy: actor,
+
+    await logAuditEvent(ctx, {
+      orgId,
+      actorId: actor,
+      action: 'workspace.provider_key.added',
+      resource: `workspace_settings:${settingsId}`,
+      metadata: {
+        provider: entry.provider,
+        keyId: entry.keyId,
+        label: entry.label ?? null,
+        maskedKeyTail: entry.maskedKeyTail,
+      },
     })
-    return settings._id
+
+    return settingsId
   },
 })
 
@@ -120,14 +138,30 @@ export const removeProviderKey = orgAdminMutation({
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
       .first()
     if (!settings) return null
+    const provider = normalizeProvider(args.provider)
+    const removed = (settings.providerKeys ?? []).find(
+      (item) => item.provider === provider && item.keyId === args.keyId
+    )
     await ctx.db.patch(settings._id, {
       providerKeys: (settings.providerKeys ?? []).filter(
-        (item) =>
-          !(item.provider === args.provider && item.keyId === args.keyId)
+        (item) => !(item.provider === provider && item.keyId === args.keyId)
       ),
       updatedAt: Date.now(),
       updatedBy: actor,
     })
+
+    await logAuditEvent(ctx, {
+      orgId,
+      actorId: actor,
+      action: 'workspace.provider_key.removed',
+      resource: `workspace_settings:${settings._id}`,
+      metadata: {
+        provider,
+        keyId: args.keyId,
+        label: removed?.label ?? null,
+      },
+    })
+
     return settings._id
   },
 })
@@ -144,20 +178,33 @@ export const updateDefaultModels = orgAdminMutation({
       .query('workspaceSettings')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
       .first()
-    if (!settings) {
-      return await ctx.db.insert('workspaceSettings', {
-        orgId,
+    const settingsId = settings
+      ? settings._id
+      : await ctx.db.insert('workspaceSettings', {
+          orgId,
+          defaultModels: args.models,
+          updatedAt: now,
+          updatedBy: actor,
+        })
+    if (settings) {
+      await ctx.db.patch(settings._id, {
         defaultModels: args.models,
         updatedAt: now,
         updatedBy: actor,
       })
     }
-    await ctx.db.patch(settings._id, {
-      defaultModels: args.models,
-      updatedAt: now,
-      updatedBy: actor,
+
+    await logAuditEvent(ctx, {
+      orgId,
+      actorId: actor,
+      action: 'workspace.default_models.updated',
+      resource: `workspace_settings:${settingsId}`,
+      metadata: {
+        models: args.models,
+      },
     })
-    return settings._id
+
+    return settingsId
   },
 })
 
@@ -173,20 +220,33 @@ export const updateCandidateReleaseMode = orgAdminMutation({
       .query('workspaceSettings')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
       .first()
-    if (!settings) {
-      return await ctx.db.insert('workspaceSettings', {
-        orgId,
+    const settingsId = settings
+      ? settings._id
+      : await ctx.db.insert('workspaceSettings', {
+          orgId,
+          candidateReleaseMode: args.mode,
+          updatedAt: now,
+          updatedBy: actor,
+        })
+    if (settings) {
+      await ctx.db.patch(settings._id, {
         candidateReleaseMode: args.mode,
         updatedAt: now,
         updatedBy: actor,
       })
     }
-    await ctx.db.patch(settings._id, {
-      candidateReleaseMode: args.mode,
-      updatedAt: now,
-      updatedBy: actor,
+
+    await logAuditEvent(ctx, {
+      orgId,
+      actorId: actor,
+      action: 'workspace.candidate_release_mode.updated',
+      resource: `workspace_settings:${settingsId}`,
+      metadata: {
+        mode: args.mode,
+      },
     })
-    return settings._id
+
+    return settingsId
   },
 })
 

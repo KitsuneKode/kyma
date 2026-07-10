@@ -235,7 +235,9 @@ export const updateAssessmentTemplate = templateWriteMutation({
     }
     if (
       args.targetDurationMinutes !== undefined &&
-      (args.targetDurationMinutes < 5 || args.targetDurationMinutes > 120)
+      (!Number.isFinite(args.targetDurationMinutes) ||
+        args.targetDurationMinutes < 5 ||
+        args.targetDurationMinutes > 120)
     ) {
       throw new ConvexError(
         'Target duration must be between 5 and 120 minutes.'
@@ -288,6 +290,26 @@ export const updateAssessmentTemplate = templateWriteMutation({
       rubricConfig: args.rubricConfig,
       modelOverrides: args.modelOverrides,
     })
+
+    await logAuditEvent(ctx, {
+      orgId,
+      actorId: actor,
+      action: 'template.updated',
+      resource: `template:${template._id}`,
+      metadata: {
+        rubricVersion: nextRubricVersion,
+        ...(args.targetDurationMinutes !== undefined
+          ? { targetDurationMinutes: args.targetDurationMinutes }
+          : {}),
+        ...(args.allowsResume !== undefined
+          ? { allowsResume: args.allowsResume }
+          : {}),
+        ...(args.interviewStyleMode
+          ? { interviewStyleMode: args.interviewStyleMode }
+          : {}),
+      },
+    })
+
     return template._id
   },
 })

@@ -6,6 +6,7 @@ import { action } from './_generated/server'
 import { hasTrustedProcessingKey } from './helpers/processingAuth'
 
 export const rateLimiter = new RateLimiter(components.rateLimiter, {
+  /** LiveKit participant token mint (bootstrap) — tighter than publicSnapshot. */
   livekitToken: { kind: 'fixed window', period: MINUTE, rate: 5 },
   publicSnapshot: {
     kind: 'token bucket',

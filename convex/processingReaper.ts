@@ -6,6 +6,8 @@ import { pipelineQuery } from './lib/pipelineFunctions'
 import { interviewProcessingEventId } from '../lib/inngest/events'
 import { transitionSessionSafely } from '../lib/interview/session-machine'
 import type { InterviewSessionState } from '../lib/interview/types'
+import { STALE_SESSION_MS } from './helpers/sessionOps'
+import { finalizeInterviewForProcessing } from './helpers/finalizeInterviewProcessing'
 
 // Sessions still in `processing` after this window are re-enqueued.
 export const STUCK_AFTER_MS = 10 * 60 * 1000
@@ -13,6 +15,13 @@ export const STUCK_AFTER_MS = 10 * 60 * 1000
 // sticks in `processing` forever.
 const GIVE_UP_AFTER_MS = 60 * 60 * 1000
 const SCAN_BATCH = 50
+
+/** Pre-processing states that can hang without ever reaching `processing`. */
+const STALE_PRE_PROCESSING_STATES = [
+  'connecting',
+  'live',
+  'interrupted',
+] as const satisfies readonly InterviewSessionState[]
 
 /**
  * Reconcile interview sessions wedged in `processing`. The post-call pipeline is
@@ -154,6 +163,83 @@ export const reapStuckProcessingSessions = internalMutation({
     }
 
     return { scanned: sessions.length, reconciled, reEnqueued, failed }
+  },
+})
+
+/**
+ * Reap sessions stuck in pre-processing states (`connecting` / `live` /
+ * `interrupted`) past {@link STALE_SESSION_MS}. Prefer finalize into
+ * processing when a legal path exists; otherwise mark failed.
+ */
+export const reapStalePreProcessingSessions = internalMutation({
+  args: {},
+  returns: v.object({
+    scanned: v.number(),
+    finalized: v.number(),
+    failed: v.number(),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now()
+    const nowIso = new Date(now).toISOString()
+    let scanned = 0
+    let finalized = 0
+    let failed = 0
+
+    for (const state of STALE_PRE_PROCESSING_STATES) {
+      const sessions = await ctx.db
+        .query('interviewSessions')
+        .withIndex('by_state', (q) => q.eq('state', state))
+        .take(SCAN_BATCH)
+
+      for (const session of sessions) {
+        scanned += 1
+        const anchorMs = session.startedAt
+          ? Date.parse(session.startedAt)
+          : session._creationTime
+        const ageMs =
+          now - (Number.isFinite(anchorMs) ? anchorMs : session._creationTime)
+
+        if (ageMs < STALE_SESSION_MS) {
+          continue
+        }
+
+        const result = await finalizeInterviewForProcessing(ctx, session, {
+          detail:
+            'Stale pre-processing session finalized by the reaper after the idle window.',
+          source: 'processing-reaper',
+          dedupeKey: `stale-pre-processing-finalize:${session._id}`,
+          allowedStates: [...STALE_PRE_PROCESSING_STATES],
+        })
+
+        if (result.queued) {
+          finalized += 1
+          continue
+        }
+
+        await ctx.db.insert('sessionEvents', {
+          orgId: session.orgId,
+          sessionId: session._id,
+          type: 'session-failed',
+          detail:
+            'Stale pre-processing session marked failed by the reaper; finalize was not possible.',
+          source: 'processing-reaper',
+          dedupeKey: `stale-pre-processing-failed:${session._id}`,
+          createdAt: nowIso,
+        })
+
+        await ctx.db.patch(session._id, {
+          state: transitionSessionSafely(
+            session.state as InterviewSessionState,
+            'failed'
+          ),
+          failureReason: 'stale-session',
+          endedAt: session.endedAt ?? nowIso,
+        })
+        failed += 1
+      }
+    }
+
+    return { scanned, finalized, failed }
   },
 })
 

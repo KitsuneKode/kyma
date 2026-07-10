@@ -50,6 +50,11 @@ export async function POST(request: NextRequest) {
 
   try {
     await assertServerRateLimit('publicSnapshot', `bootstrap:${clientIp}`)
+    // Token mint is the expensive/abuse-sensitive step; budget is tighter than snapshot.
+    await assertServerRateLimit(
+      'livekitToken',
+      `livekit:${clientIp}:${inviteToken}`
+    )
 
     logger.info({
       event: 'bootstrap.started',

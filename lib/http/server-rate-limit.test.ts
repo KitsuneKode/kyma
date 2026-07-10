@@ -64,4 +64,26 @@ describe('assertServerRateLimit', () => {
       })
     )
   })
+
+  test('accepts livekitToken budget name for bootstrap token mint', async () => {
+    serverEnvState.NODE_ENV = 'production'
+    serverEnvState.KYMA_PROCESSING_WRITE_KEY = 'prod-secret'
+    fetchAction.mockResolvedValue({ ok: true })
+
+    const { assertServerRateLimit } = await import('./server-rate-limit')
+
+    await assertServerRateLimit(
+      'livekitToken',
+      'livekit:127.0.0.1:invite-token-abc'
+    )
+
+    expect(fetchAction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        name: 'livekitToken',
+        key: 'livekit:127.0.0.1:invite-token-abc',
+        writeKey: 'prod-secret',
+      })
+    )
+  })
 })

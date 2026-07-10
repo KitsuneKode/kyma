@@ -66,14 +66,17 @@ Rules:
 
 ### 4. BYOK must not leak tenant keys to our server runtime longer than necessary
 
+Canonical design: **[`.docs/byok-architecture.md`](./byok-architecture.md)** (encrypt at rest, decrypt only in server/job/agent, never client, log redaction, platform vs BYOK).
+
 Shipped BYOK posture:
 
 - workspace admin provides provider credentials through `/recruiter/settings` (server mutations only)
-- credentials are encrypted at rest with AES-256-GCM via `KYMA_ENCRYPTION_KEY` (`convex/helpers/encryption.ts`)
+- credentials are encrypted at rest with AES-256-GCM via `KYMA_ENCRYPTION_KEY` (`convex/helpers/encryption.ts`; longer-term KMS/envelope rotation still open)
 - runtime decrypts only in server/job paths (`lib/providers/resolve-model.ts`, agent worker, report-chat)
 - decrypted credentials are never shipped to the client; UI shows masked tails only
 - redact keys from logs, traces, and error messages
 - adding BYOK keys requires Pro/Enterprise (Dodo billing or `KYMA_ORG_PLAN_OVERRIDE`)
+- until remaining BYOK gaps in that doc are closed, keep expanding BYOK off the critical path; platform env keys remain fine for fallbacks
 
 ### 4b. Billing (Dodo Payments)
 
@@ -84,12 +87,13 @@ Shipped BYOK posture:
 
 ### ADR: shipped hardening (Kyma next-phase)
 
-- **HTTP rate limits:** `lib/http/server-rate-limit.ts` (Convex `@convex-dev/rate-limiter` via `assertServerRateLimit`) guards `/api/interviews/bootstrap`, `/api/interviews/process`, and `/api/recruiter/report-chat`. Production requires `KYMA_PROCESSING_WRITE_KEY` or the helper throws.
+- **HTTP rate limits:** `lib/http/server-rate-limit.ts` (Convex `@convex-dev/rate-limiter` via `assertServerRateLimit`) guards `/api/interviews/bootstrap` (`publicSnapshot` + `livekitToken`), `/api/interviews/process`, and `/api/recruiter/report-chat`. Production requires `KYMA_PROCESSING_WRITE_KEY` or the helper throws.
 - **Convex throttles:** `appendSessionEvent` and `upsertTranscriptSegment` reject excessive per-session write volume (rolling minute window).
 - **Capability-bound public writes:** candidate browser writes must include a matching `inviteToken` + `sessionId`; server paths use internal mutations.
 - **Webhook idempotency:** webhook event writes are deduped per session via `dedupeKey` to avoid duplicate timeline mutations from retries.
-- **Audit trail:** `auditEvents` table written via `convex/helpers/audit.ts` for review decisions and recruiter notes.
-- **Server model boundary stub:** `lib/providers/resolve-model.ts` — keep all future provider resolution server-side.
+- **Audit trail:** `auditEvents` table written via `convex/helpers/audit.ts` for review decisions, recruiter notes, screening batch create/expiry extend, and workspace BYOK/settings changes (never raw keys).
+- **BYOK design:** `.docs/byok-architecture.md` — encrypt at rest, server-only decrypt, platform vs org keys.
+- **Server model boundary:** `lib/providers/resolve-model.ts` — keep all provider resolution server-side.
 - **Review reads are JWT-only:** `getCandidateReviewDetail` uses `candidateReadQuery` and never accepts a processing key. Pipeline session reads use `loadSessionReviewBaseForPipeline` inside `pipelineQuery` after the key is validated by the wrapper.
 - **Assessment writes are pipeline-only:** `processing/assessment.saveAssessmentReport` is the sole write path; the dual recruiter/dev write entry was removed.
 
@@ -174,8 +178,7 @@ Only add model-based grading on top of that stable contract.
 ## Best Next Hardening Steps
 
 1. Move more repeated validators/constants into shared domain modules.
-2. Add a dedicated workspace settings boundary before BYOK.
-3. Encrypt BYOK secrets at rest instead of storing them as ordinary records.
-4. Extend abuse controls beyond bootstrap/process/report-chat (e.g. LiveKit token mint) and keep shared Convex rate-limit budgets tuned under load.
-5. Add a central audit trail for recruiter actions and sensitive admin changes.
-6. Keep strengthening the teaching-simulation evidence model so recruiter claims map cleanly to transcript and session events.
+2. Close remaining BYOK gaps in `.docs/byok-architecture.md` (KMS rotation, owner-run item 6) before broadening provider UI.
+3. Keep shared Convex rate-limit budgets tuned under load (`livekitToken` / `publicSnapshot` / chat / report).
+4. Extend audit coverage to any new sensitive admin mutations as they land.
+5. Keep strengthening the teaching-simulation evidence model so recruiter claims map cleanly to transcript and session events.

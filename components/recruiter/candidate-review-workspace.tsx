@@ -117,6 +117,7 @@ export function CandidateReviewWorkspace({
           recordings={detail.recordings}
           decisions={detail.decisions}
           teachingSimulation={teachingSimulation}
+          policySnapshot={detail.report?.policySnapshot}
         />
 
         {chatSlot}

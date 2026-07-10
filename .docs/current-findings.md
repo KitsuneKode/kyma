@@ -235,26 +235,27 @@ Use these first before re-researching the current implementation choices:
 
 ## Next Best Work
 
-**Phase 0 (security/SaaS PR stack): DONE on main** — #3–#15 merged (2026-07-09).
+**Shipped on main (usable ship):** security/SaaS stack #3–#15; commercial #18 (Dodo, quotas, invite email, GDPR, BYOK gate, template policy); operational credibility #20 (finalize honesty, reaper, copilot guardrails, audits).
 
-**Phase 3 commercial wrap:** see PR #17 (`cursor/phase3-commercial-ops-wrap-2663`) —
-plan quotas, invite email, GDPR jobs, health/report-chat observability, policy snapshot UI.
+Immediate owner work:
 
-Immediate owner work still required:
+1. **Phase A (owner-run):** full LiveKit path with `bun run live-path:preflight` + `bun run dev:full` (see `.plans/operational-credibility-next.md`)
+2. Owner-run `.docs/verification-pending.md` items 1–4 / 6
+3. Set `RESEND_API_KEY` + `NEXT_PUBLIC_APP_URL` for real invite delivery (log-only without Resend)
+4. Live Dodo products/webhooks when ready for paid plans (override path works via `KYMA_ORG_PLAN_OVERRIDE`)
 
-1. Owner-run `.docs/verification-pending.md` (especially LiveKit items 3–4)
-2. Choose billing option A/B/C before Stripe
-3. Set `RESEND_API_KEY` + `NEXT_PUBLIC_APP_URL` for real invite delivery
+Still open product/tech debt:
 
-Also still relevant:
-
-- validate the LiveKit Node agent against the chosen STT/LLM/TTS model strings in a live room
+- persist/reconcile `reconnecting` server-side and promote `connecting → live` without waiting solely on webhooks
+- freeze policy snapshot at invite/session start (today recomputed at report time)
+- wire `interviewStyleMode` into agent behavior (`convex/agentConfig.ts` / `agents/interviewer.ts`)
+- Convex API cutover (#19): port #20 Next-route hardening into Convex actions/http before merge
 - replace in-memory HTTP rate limits with a shared store for multi-instance deploys
-- production BYOK encryption path (design exists; keep off critical path until KMS)
-- merge plan docs PR #16 if still open
+- BYOK KMS rotation + broader lifecycle (`.docs/byok-architecture.md`)
 
 ## Validation log
 
+- 2026-07-10 — Code-only Phase B/C/D/E slice landed (finalize honesty, policy UI, copilot guardrails/citations/gating, livekitToken rate limit, screening/BYOK audits, BYOK design doc). Live room E2E still pending owner credentials.
 - _Append dated rows here after manual LiveKit / end-to-end runs (same PR as behavior changes when possible)._
 
 ## Local Developer Experience
