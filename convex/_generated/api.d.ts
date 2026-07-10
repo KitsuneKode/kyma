@@ -34,6 +34,7 @@ import type * as helpers_templates from "../helpers/templates.js";
 import type * as helpers_transcriptSegments from "../helpers/transcriptSegments.js";
 import type * as http from "../http.js";
 import type * as httpWebhooks from "../httpWebhooks.js";
+import type * as integrationSeed from "../integrationSeed.js";
 import type * as interviews_bootstrap from "../interviews/bootstrap.js";
 import type * as interviews_bootstrapActions from "../interviews/bootstrapActions.js";
 import type * as interviews_candidatePortal from "../interviews/candidatePortal.js";
@@ -98,6 +99,7 @@ declare const fullApi: ApiFromModules<{
   "helpers/transcriptSegments": typeof helpers_transcriptSegments;
   http: typeof http;
   httpWebhooks: typeof httpWebhooks;
+  integrationSeed: typeof integrationSeed;
   "interviews/bootstrap": typeof interviews_bootstrap;
   "interviews/bootstrapActions": typeof interviews_bootstrapActions;
   "interviews/candidatePortal": typeof interviews_candidatePortal;
