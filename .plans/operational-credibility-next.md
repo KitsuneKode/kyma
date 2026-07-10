@@ -25,14 +25,14 @@ One hiring team can:
 
 ## Phase map (do in order)
 
-| Phase | Name | Outcome | Depends on |
-| ----- | ---- | ------- | ---------- |
-| A | Live-path proof | One real session completes invite → report | Env + agent worker |
-| B | Runtime gap fixes | No hanging sessions; artifacts land reliably | A findings |
-| C | Template-driven policy | Screening behavior from template/batch, not defaults | B stable |
-| D | Recruiter copilot trust | Grounded, model-backed chat with provenance | C optional |
-| E | Security + BYOK boundaries | Abuse controls + safe provider design | D design gate |
-| F | Expand only after A–E | Richer eval / sim / polish | A–E solid |
+| Phase | Name                       | Outcome                                              | Depends on         |
+| ----- | -------------------------- | ---------------------------------------------------- | ------------------ |
+| A     | Live-path proof            | One real session completes invite → report           | Env + agent worker |
+| B     | Runtime gap fixes          | No hanging sessions; artifacts land reliably         | A findings         |
+| C     | Template-driven policy     | Screening behavior from template/batch, not defaults | B stable           |
+| D     | Recruiter copilot trust    | Grounded, model-backed chat with provenance          | C optional         |
+| E     | Security + BYOK boundaries | Abuse controls + safe provider design                | D design gate      |
+| F     | Expand only after A–E      | Richer eval / sim / polish                           | A–E solid          |
 
 ---
 
@@ -53,19 +53,19 @@ Code compiles and the product loop exists. Proof still depends on real LiveKit c
 
 Use `.docs/current-findings.md` → Testing Path and `.docs/backend-verification-runbook.md` items 3–4.
 
-| # | Step | Pass criteria |
-| - | ---- | ------------- |
-| A1 | Open invite `/i/[token]` or mock from `/candidate` | Lobby shows policy (duration, single-use, expiry) |
-| A2 | PreJoin → Join interview | Room connects; selected devices publish |
-| A3 | Agent joins | Interviewer present in same room |
-| A4 | Welcome + readiness → screening → teaching sim | Handoff to child persona works |
-| A5 | Optional screen share | Event appears in session timeline |
-| A6 | Speak | Transcript segments appear in rail / Convex |
-| A7 | Submit interview | Invite locks; no second start |
-| A8 | Processing | Session → `processing` → `completed` or `manual_review` |
-| A9 | Recruiter detail | Report, evidence, teaching/sim signals, notes, chat |
-| A10 | Webhook + recording (if configured) | `sessionEvents` + recording artifacts on detail page |
-| A11 | Reconnect smoke | Timer continuity; identity preserved (verification item 4) |
+| #   | Step                                               | Pass criteria                                              |
+| --- | -------------------------------------------------- | ---------------------------------------------------------- |
+| A1  | Open invite `/i/[token]` or mock from `/candidate` | Lobby shows policy (duration, single-use, expiry)          |
+| A2  | PreJoin → Join interview                           | Room connects; selected devices publish                    |
+| A3  | Agent joins                                        | Interviewer present in same room                           |
+| A4  | Welcome + readiness → screening → teaching sim     | Handoff to child persona works                             |
+| A5  | Optional screen share                              | Event appears in session timeline                          |
+| A6  | Speak                                              | Transcript segments appear in rail / Convex                |
+| A7  | Submit interview                                   | Invite locks; no second start                              |
+| A8  | Processing                                         | Session → `processing` → `completed` or `manual_review`    |
+| A9  | Recruiter detail                                   | Report, evidence, teaching/sim signals, notes, chat        |
+| A10 | Webhook + recording (if configured)                | `sessionEvents` + recording artifacts on detail page       |
+| A11 | Reconnect smoke                                    | Timer continuity; identity preserved (verification item 4) |
 
 ### Deliverables
 
@@ -87,14 +87,14 @@ Phase A will surface the real reliability gaps. Fix those before product expansi
 
 ### Likely work areas (confirm from A)
 
-| Area | Key files | Fix until |
-| ---- | --------- | --------- |
-| Agent join / STT-LLM-TTS | `agents/interviewer.ts`, `agents/worker.ts`, env model strings | Agent joins every time; transcript quality usable |
-| Session state machine | `lib/interview/session-machine.ts`, `convex/interviews/*`, `convex/livekit.ts` | No ambiguous hanging states after disconnect/submit |
-| Webhook ingestion | `app/api/livekit/webhook/route.ts`, `convex/livekit.ts` | Events deduped; room lifecycle reflected in Convex |
-| Recording egress | `lib/livekit/recording.ts`, storage env | Artifact rows + playable URLs when enabled |
-| Processing pipeline | `lib/assessment/process-session.ts`, Inngest `/api/inngest` | Idempotent; report + evidence always appear |
-| Room lifecycle / media | `components/interview/*` | No duplicate media acquisition; clean leave |
+| Area                     | Key files                                                                      | Fix until                                           |
+| ------------------------ | ------------------------------------------------------------------------------ | --------------------------------------------------- |
+| Agent join / STT-LLM-TTS | `agents/interviewer.ts`, `agents/worker.ts`, env model strings                 | Agent joins every time; transcript quality usable   |
+| Session state machine    | `lib/interview/session-machine.ts`, `convex/interviews/*`, `convex/livekit.ts` | No ambiguous hanging states after disconnect/submit |
+| Webhook ingestion        | `app/api/livekit/webhook/route.ts`, `convex/livekit.ts`                        | Events deduped; room lifecycle reflected in Convex  |
+| Recording egress         | `lib/livekit/recording.ts`, storage env                                        | Artifact rows + playable URLs when enabled          |
+| Processing pipeline      | `lib/assessment/process-session.ts`, Inngest `/api/inngest`                    | Idempotent; report + evidence always appear         |
+| Room lifecycle / media   | `components/interview/*`                                                       | No duplicate media acquisition; clean leave         |
 
 ### Rules
 
@@ -129,13 +129,13 @@ Some policy is already stored (`policySnapshot`, template/batch fields), but cre
 
 ### Work breakdown
 
-| Task | Where | Done when |
-| ---- | ----- | --------- |
-| C1 Audit defaults vs template/batch fields | `convex/schema.ts`, screening create UI, lobby | Gap list written |
-| C2 Expose policy inputs on screening create | `/recruiter/screenings/new`, admin mutations | Recruiter can set policy without code change |
-| C3 Resolve policy for candidate lobby + session | invite snapshot, bootstrap | Lobby/session use configured values |
-| C4 Persist `policySnapshot` on completed reports | assessment pipeline | Recruiter sees which policy version applied |
-| C5 Tests for resolution + snapshot | Vitest | Defaults vs override cases covered |
+| Task                                             | Where                                          | Done when                                    |
+| ------------------------------------------------ | ---------------------------------------------- | -------------------------------------------- |
+| C1 Audit defaults vs template/batch fields       | `convex/schema.ts`, screening create UI, lobby | Gap list written                             |
+| C2 Expose policy inputs on screening create      | `/recruiter/screenings/new`, admin mutations   | Recruiter can set policy without code change |
+| C3 Resolve policy for candidate lobby + session  | invite snapshot, bootstrap                     | Lobby/session use configured values          |
+| C4 Persist `policySnapshot` on completed reports | assessment pipeline                            | Recruiter sees which policy version applied  |
+| C5 Tests for resolution + snapshot               | Vitest                                         | Defaults vs override cases covered           |
 
 ### Exit criteria
 
@@ -153,13 +153,13 @@ Chat exists with citations and fallback. It is not yet trustworthy enough as a d
 
 ### Work breakdown
 
-| Task | Where | Done when |
-| ---- | ----- | --------- |
-| D1 Provenance UX | `components/recruiter/recruiter-chat.tsx` | Citations jump to transcript/evidence; visible fallback vs model mode |
-| D2 Guardrails | `lib/recruiter/report-chat.ts` | Unsupported questions refuse conservatively |
-| D3 Durable metadata | `reportChatMessages` | `answerSource`, model, citations persisted and reviewable |
-| D4 Recruiter prompts | report-chat prompts | Strengths / risks / recommendation / missing evidence / follow-ups |
-| D5 Model path (after E design gate) | provider resolve + `/api/recruiter/report-chat` | Model-backed answers when keys configured; fallback otherwise |
+| Task                                | Where                                           | Done when                                                             |
+| ----------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
+| D1 Provenance UX                    | `components/recruiter/recruiter-chat.tsx`       | Citations jump to transcript/evidence; visible fallback vs model mode |
+| D2 Guardrails                       | `lib/recruiter/report-chat.ts`                  | Unsupported questions refuse conservatively                           |
+| D3 Durable metadata                 | `reportChatMessages`                            | `answerSource`, model, citations persisted and reviewable             |
+| D4 Recruiter prompts                | report-chat prompts                             | Strengths / risks / recommendation / missing evidence / follow-ups    |
+| D5 Model path (after E design gate) | provider resolve + `/api/recruiter/report-chat` | Model-backed answers when keys configured; fallback otherwise         |
 
 ### Exit criteria
 
@@ -177,21 +177,22 @@ Provider flexibility without boundaries becomes insecure and unmaintainable.
 
 ### Already shipped (do not rebuild)
 
-- HTTP rate limits on bootstrap / process / report-chat (Convex rate-limiter)
+- HTTP rate limits on bootstrap (`publicSnapshot` + `livekitToken`) / process / report-chat (Convex rate-limiter)
 - Processing write key enforcement
-- Audit events for review decisions and notes
+- Audit events for review decisions, notes, screening batch create/expiry extend, and workspace BYOK/settings (no raw keys)
 - Org-scoped recruiter access (owner-run verification still pending)
+- BYOK design note: `.docs/byok-architecture.md`
 
 ### Remaining work
 
-| Task | Done when |
-| ---- | --------- |
-| E1 Owner-run verification items 1–2, 2.1, 2.2 | Clerk sync + RBAC + cross-org isolation marked in `.docs/verification-pending.md` |
-| E2 Extend audit coverage | Screening batch create/update/delete audited if compliance needs it |
-| E3 Rate-limit coverage gaps | Hot paths (e.g. token mint) covered; budgets tuned |
-| E4 BYOK architecture note (design before code) | Doc: encrypt at rest, decrypt only in server/job, never client, redact logs |
-| E5 BYOK implementation only after E4 | Settings + KMS/envelope; `testProviderConnection`; no plaintext keys |
-| E6 Owner-run item 6 | BYOK provider validation pass |
+| Task                                           | Done when                                                                         | Status                                                                                                                            |
+| ---------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| E1 Owner-run verification items 1–2, 2.1, 2.2  | Clerk sync + RBAC + cross-org isolation marked in `.docs/verification-pending.md` | Open (owner-run)                                                                                                                  |
+| E2 Extend audit coverage                       | Screening batch create/update/delete audited if compliance needs it               | Done — `createScreeningBatch` + `extendBatchExpiry`; workspace provider key add/remove + model/release settings (no raw keys)     |
+| E3 Rate-limit coverage gaps                    | Hot paths (e.g. token mint) covered; budgets tuned                                | Done — bootstrap asserts `livekitToken` (invite+IP) in addition to `publicSnapshot`                                               |
+| E4 BYOK architecture note (design before code) | Doc: encrypt at rest, decrypt only in server/job, never client, redact logs       | Done — `.docs/byok-architecture.md`                                                                                               |
+| E5 BYOK implementation only after E4           | Settings + KMS/envelope; `testProviderConnection`; no plaintext keys              | Partial / deferred — encrypt + settings + test connection already exist; KMS rotation + broader lifecycle still open per BYOK doc |
+| E6 Owner-run item 6                            | BYOK provider validation pass                                                     | Open (owner-run)                                                                                                                  |
 
 ### BYOK principles (non-negotiable)
 
@@ -201,7 +202,7 @@ Provider flexibility without boundaries becomes insecure and unmaintainable.
 - all provider resolution through shared server boundaries
 - logs/errors redact secrets
 
-Until E4–E5 exist, keep BYOK out of the critical path; platform env keys are fine for D5 fallback.
+Until remaining E5 gaps (KMS rotation, broader lifecycle) and E6 owner-run validation are closed, keep expanding BYOK off the critical path; platform env keys are fine for D5 fallback.
 
 ### Exit criteria
 
@@ -227,15 +228,15 @@ Only after A–E:
 
 From `.docs/verification-pending.md` — agents cannot fully close these without secrets:
 
-| Item | Priority | Blocks |
-| ---- | -------- | ------ |
-| 1 Clerk webhook sync | P1 | Identity trust |
-| 2 / 2.1 / 2.2 RBAC + org isolation | P1 | Recruiter trust |
-| 3 LiveKit invite + identity | P0 | Phase A |
-| 4 Reconnect timer continuity | P0 | Phase A/B |
-| 5 Candidate result gating | P2 | Candidate portal trust |
-| 6 BYOK provider validation | P1 | Phase E |
-| 7 Template version history | P2 | Phase C depth |
+| Item                               | Priority | Blocks                 |
+| ---------------------------------- | -------- | ---------------------- |
+| 1 Clerk webhook sync               | P1       | Identity trust         |
+| 2 / 2.1 / 2.2 RBAC + org isolation | P1       | Recruiter trust        |
+| 3 LiveKit invite + identity        | P0       | Phase A                |
+| 4 Reconnect timer continuity       | P0       | Phase A/B              |
+| 5 Candidate result gating          | P2       | Candidate portal trust |
+| 6 BYOK provider validation         | P1       | Phase E                |
+| 7 Template version history         | P2       | Phase C depth          |
 
 Pre-flight: `bun run live-path:preflight` + `/recruiter/health`.
 
@@ -264,14 +265,14 @@ Pre-flight: `bun run live-path:preflight` + `/recruiter/health`.
 
 ## Key files
 
-| Concern | Paths |
-| ------- | ----- |
-| Candidate live | `components/interview/*`, `app/api/interviews/bootstrap`, `agents/*` |
-| Webhooks / recording | `app/api/livekit/webhook`, `convex/livekit.ts`, `lib/livekit/*` |
-| Processing | `lib/assessment/*`, `convex/processing/assessment.ts`, `/api/inngest` |
-| Policy | `convex/schema.ts`, screening create under `app/(admin)/recruiter/screenings/*`, invite snapshot |
-| Recruiter | `components/recruiter/*`, `lib/recruiter/report-chat.ts`, `convex/recruiter/*` |
-| Security | `convex/helpers/auth.ts`, `lib/http/server-rate-limit.ts`, `.docs/security-and-maintainability.md` |
+| Concern              | Paths                                                                                              |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
+| Candidate live       | `components/interview/*`, `app/api/interviews/bootstrap`, `agents/*`                               |
+| Webhooks / recording | `app/api/livekit/webhook`, `convex/livekit.ts`, `lib/livekit/*`                                    |
+| Processing           | `lib/assessment/*`, `convex/processing/assessment.ts`, `/api/inngest`                              |
+| Policy               | `convex/schema.ts`, screening create under `app/(admin)/recruiter/screenings/*`, invite snapshot   |
+| Recruiter            | `components/recruiter/*`, `lib/recruiter/report-chat.ts`, `convex/recruiter/*`                     |
+| Security             | `convex/helpers/auth.ts`, `lib/http/server-rate-limit.ts`, `.docs/security-and-maintainability.md` |
 
 ---
 
