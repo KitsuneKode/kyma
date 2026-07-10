@@ -1,6 +1,10 @@
 import type { Doc, Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import { internal } from '../_generated/api'
+import {
+  PROCESSING_ENTRY_STATES,
+  resolveProcessingTransitionPath,
+} from '../../lib/interview/session-machine'
 import type { InterviewSessionState } from '../../lib/interview/types'
 import { applySessionStateTransition } from './interviewSession'
 
@@ -11,26 +15,72 @@ type FinalizeInterviewOptions = {
   allowedStates?: InterviewSessionState[]
 }
 
+async function findFinalizeEvent(
+  ctx: MutationCtx,
+  sessionId: Id<'interviewSessions'>,
+  dedupeKey: string
+) {
+  return await ctx.db
+    .query('sessionEvents')
+    .withIndex('by_session_and_dedupe_key', (q) =>
+      q.eq('sessionId', sessionId).eq('dedupeKey', dedupeKey)
+    )
+    .first()
+}
+
+/**
+ * Moves a session into `processing` and schedules the post-call pipeline.
+ *
+ * `transitioned` is honest: it is true only when the session state actually
+ * changed into `processing` during this call. Illegal direct edges
+ * (`connecting` / `reconnecting` → `processing`) are normalized through
+ * `interrupted` first via {@link resolveProcessingTransitionPath}.
+ *
+ * Enqueue happens when the transition succeeded, or when the session was
+ * already in `processing` (idempotent re-entry via the finalize dedupe key).
+ */
 export async function finalizeInterviewForProcessing(
   ctx: MutationCtx,
   session: Doc<'interviewSessions'>,
   options: FinalizeInterviewOptions
 ): Promise<{ queued: boolean; transitioned: boolean }> {
-  const allowedStates = options.allowedStates ?? [
-    'live',
-    'reconnecting',
-    'interrupted',
-    'connecting',
-  ]
+  const allowedStates = options.allowedStates ?? [...PROCESSING_ENTRY_STATES]
   const now = new Date().toISOString()
+  const currentState = session.state as InterviewSessionState
 
-  if (!allowedStates.includes(session.state as InterviewSessionState)) {
-    const existingFinalize = await ctx.db
-      .query('sessionEvents')
-      .withIndex('by_session_and_dedupe_key', (q) =>
-        q.eq('sessionId', session._id).eq('dedupeKey', options.dedupeKey)
-      )
-      .first()
+  if (currentState === 'processing') {
+    const existingFinalize = await findFinalizeEvent(
+      ctx,
+      session._id,
+      options.dedupeKey
+    )
+    if (existingFinalize) {
+      return { queued: true, transitioned: false }
+    }
+
+    await ctx.db.insert('sessionEvents', {
+      orgId: session.orgId,
+      sessionId: session._id,
+      type: 'processing-started',
+      detail: options.detail,
+      source: options.source,
+      dedupeKey: options.dedupeKey,
+      createdAt: now,
+    })
+
+    await ctx.scheduler.runAfter(0, internal.processingPipeline.run, {
+      sessionId: session._id,
+    })
+
+    return { queued: true, transitioned: false }
+  }
+
+  if (!allowedStates.includes(currentState)) {
+    const existingFinalize = await findFinalizeEvent(
+      ctx,
+      session._id,
+      options.dedupeKey
+    )
 
     if (existingFinalize) {
       return { queued: true, transitioned: false }
@@ -39,20 +89,41 @@ export async function finalizeInterviewForProcessing(
     return { queued: false, transitioned: false }
   }
 
-  // Reuse the shared transition so duration accounting, endedAt, and invite/
-  // eligibility completion stay on one path with the candidate and webhook
-  // session-event writes.
-  await applySessionStateTransition(ctx, session, session._id, 'processing')
+  const path = resolveProcessingTransitionPath(currentState)
+  if (path.length === 0) {
+    return { queued: false, transitioned: false }
+  }
 
-  const existingFinalize = await ctx.db
-    .query('sessionEvents')
-    .withIndex('by_session_and_dedupe_key', (q) =>
-      q.eq('sessionId', session._id).eq('dedupeKey', options.dedupeKey)
-    )
-    .first()
+  let working: Doc<'interviewSessions'> = session
+  for (const next of path) {
+    const before = working.state as InterviewSessionState
+    await applySessionStateTransition(ctx, working, working._id, next)
+    const after = await ctx.db.get(working._id)
+    if (!after) {
+      return { queued: false, transitioned: false }
+    }
+    // Illegal hop: applySessionStateTransition is a no-op via transitionSessionSafely.
+    if ((after.state as InterviewSessionState) === before && before !== next) {
+      return { queued: false, transitioned: false }
+    }
+    working = after
+  }
+
+  const reachedProcessing = working.state === 'processing'
+  const transitioned = reachedProcessing && currentState !== 'processing'
+
+  if (!reachedProcessing) {
+    return { queued: false, transitioned: false }
+  }
+
+  const existingFinalize = await findFinalizeEvent(
+    ctx,
+    session._id,
+    options.dedupeKey
+  )
 
   if (existingFinalize) {
-    return { queued: true, transitioned: true }
+    return { queued: true, transitioned }
   }
 
   await ctx.db.insert('sessionEvents', {
@@ -69,7 +140,7 @@ export async function finalizeInterviewForProcessing(
     sessionId: session._id,
   })
 
-  return { queued: true, transitioned: true }
+  return { queued: true, transitioned }
 }
 
 export type InterviewSessionId = Id<'interviewSessions'>

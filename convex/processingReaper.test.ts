@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, test } from 'vitest'
 import { internal, api } from './_generated/api'
 import type { Id } from './_generated/dataModel'
 import schema from './schema'
+import { STALE_SESSION_MS } from './helpers/sessionOps'
 import { seedInterview } from './lib/testSeed'
 
 const modules = import.meta.glob('./**/*.ts')
@@ -17,6 +18,7 @@ const PROCESSING_KEY = 'test-processing-key'
 
 const STUCK_AGE_MS = 20 * 60 * 1000
 const GIVE_UP_AGE_MS = 2 * 60 * 60 * 1000
+const STALE_AGE_MS = STALE_SESSION_MS + 60_000
 
 function harness() {
   return convexTest(schema, modules)
@@ -105,6 +107,63 @@ describe('reapStuckProcessingSessions', () => {
 
     const session = await t.run((ctx) => ctx.db.get(sessionId))
     expect(session?.state).toBe('processing')
+  })
+})
+
+describe('reapStalePreProcessingSessions', () => {
+  test('finalizes a stale live session into processing', async () => {
+    const t = harness()
+    const { sessionId } = await seedInterview(t, {
+      roomName: 'stale-live',
+      sessionState: 'live',
+      startedAt: new Date(Date.now() - STALE_AGE_MS).toISOString(),
+    })
+
+    const result = await t.mutation(
+      internal.processingReaper.reapStalePreProcessingSessions,
+      {}
+    )
+
+    expect(result.finalized).toBeGreaterThanOrEqual(1)
+    const session = await t.run((ctx) => ctx.db.get(sessionId))
+    expect(session?.state).toBe('processing')
+  })
+
+  test('finalizes a stale connecting session via interrupted → processing', async () => {
+    const t = harness()
+    const { sessionId } = await seedInterview(t, {
+      roomName: 'stale-connecting',
+      sessionState: 'connecting',
+      startedAt: new Date(Date.now() - STALE_AGE_MS).toISOString(),
+    })
+
+    const result = await t.mutation(
+      internal.processingReaper.reapStalePreProcessingSessions,
+      {}
+    )
+
+    expect(result.finalized).toBeGreaterThanOrEqual(1)
+    const session = await t.run((ctx) => ctx.db.get(sessionId))
+    expect(session?.state).toBe('processing')
+  })
+
+  test('leaves a fresh live session untouched', async () => {
+    const t = harness()
+    const { sessionId } = await seedInterview(t, {
+      roomName: 'fresh-live',
+      sessionState: 'live',
+      startedAt: new Date().toISOString(),
+    })
+
+    const result = await t.mutation(
+      internal.processingReaper.reapStalePreProcessingSessions,
+      {}
+    )
+
+    expect(result.finalized).toBe(0)
+    expect(result.failed).toBe(0)
+    const session = await t.run((ctx) => ctx.db.get(sessionId))
+    expect(session?.state).toBe('live')
   })
 })
 

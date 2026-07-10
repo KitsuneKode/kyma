@@ -13,4 +13,12 @@ crons.interval(
   {}
 )
 
+// Finalize or fail sessions that never left connecting/live/interrupted.
+crons.interval(
+  'reap-stale-pre-processing-sessions',
+  { minutes: 15 },
+  internal.processingReaper.reapStalePreProcessingSessions,
+  {}
+)
+
 export default crons

@@ -28,7 +28,13 @@ export async function markAssessmentProcessing(sessionId: SessionId) {
     }
   )
 
-  if (detail?.report?.status === 'completed') {
+  const reportStatus = detail?.report?.status
+  // Idempotent: do not overwrite completed or in-flight reports.
+  if (
+    reportStatus === 'completed' ||
+    reportStatus === 'manual_review' ||
+    reportStatus === 'processing'
+  ) {
     return
   }
 

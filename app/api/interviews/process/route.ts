@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { fetchQuery } from 'convex/nextjs'
+import { fetchMutation, fetchQuery } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
@@ -23,6 +23,13 @@ const bodySchema = z.object({
   inviteToken: z.string().min(1),
 })
 
+/**
+ * Public processing entry. After invite/session access checks, always goes
+ * through finalize (`requestInterviewProcessing`) so the session machine owns
+ * the transition before any assessment enqueue. Fresh transitions rely on the
+ * Convex-scheduled pipeline; already-`processing` sessions re-enter via the
+ * shared Inngest/inline helper.
+ */
 export async function POST(request: NextRequest) {
   const requestId = createRequestId('process')
   const logger = createDiagnosticLogger('processing-route', {
@@ -56,6 +63,47 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Trusted finalize path (same helper as agent complete). Uses the
+    // processing key so recovery still works after the invite is completed.
+    const finalize = await fetchMutation(
+      api.agentConfig.requestInterviewProcessing,
+      {
+        processingKey: serverEnv.KYMA_PROCESSING_WRITE_KEY,
+        sessionId: typedSessionId,
+        detail:
+          'Public process route requested post-call processing after access check.',
+      }
+    )
+
+    if (!finalize.queued && !finalize.transitioned) {
+      return NextResponse.json(
+        { error: 'Interview cannot be submitted from its current state.' },
+        { status: 409 }
+      )
+    }
+
+    // Fresh transition: finalize already scheduled `processingPipeline.run`.
+    if (finalize.transitioned) {
+      logger.info({
+        event: 'processing.finalized',
+        detail:
+          'Session transitioned to processing; Convex pipeline was scheduled by finalize.',
+        sessionId,
+        meta: {
+          finalizeQueued: finalize.queued,
+          finalizeTransitioned: finalize.transitioned,
+        },
+      })
+
+      return NextResponse.json({
+        ok: true,
+        queued: true,
+        fallback: false,
+        transitioned: true,
+      })
+    }
+
+    // Recovery for sessions already in `processing`.
     const result = await runInterviewProcessingPipeline(
       typedSessionId,
       {
@@ -81,6 +129,8 @@ export async function POST(request: NextRequest) {
       sessionId,
       meta: {
         eventIds: result.eventIds,
+        finalizeQueued: finalize.queued,
+        finalizeTransitioned: finalize.transitioned,
       },
     })
 
@@ -89,6 +139,7 @@ export async function POST(request: NextRequest) {
       queued: result.queued,
       fallback: result.fallback,
       eventIds: result.eventIds,
+      transitioned: false,
     })
   } catch (error) {
     const message =
