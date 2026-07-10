@@ -10,7 +10,7 @@ import 'server-only'
  */
 
 export type ErrorReportContext = {
-  /** Stable route or job name, e.g. `/api/interviews/bootstrap`. */
+  /** Stable route, Convex action, or job name, e.g. `bootstrapInterviewSession`. */
   route?: string
   requestId?: string
   tags?: Record<string, string>

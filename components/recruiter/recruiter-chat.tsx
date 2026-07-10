@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
+import { useAction } from 'convex/react'
+import { ConvexError } from 'convex/values'
 import { motion, AnimatePresence } from 'motion/react'
 import { IconSparkles, IconX, IconSend2 } from '@tabler/icons-react'
 
@@ -15,6 +17,7 @@ import { useReviewActions } from '@/components/recruiter/review-context'
 import { WorkspaceTextarea } from '@/components/workspace/textarea'
 import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
 import { api } from '@/convex/_generated/api'
+import type { Id } from '@/convex/_generated/dataModel'
 import { cn } from '@/lib/utils'
 
 type ChatMessage = {
@@ -55,6 +58,7 @@ export function RecruiterChat({
     api.recruiter.workspace.getWorkspaceSettings,
     {}
   )
+  const askReportChat = useAction(api.recruiter.reportChat.askReportChat)
   const hasWorkspaceModels =
     Boolean(workspaceSettings?.defaultModels?.reviewChat) ||
     Boolean(workspaceSettings?.providerKeys?.length)
@@ -104,49 +108,33 @@ export function RecruiterChat({
     setQuestion('')
 
     try {
-      const response = await fetch('/api/recruiter/report-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          reportId,
-          question: currentQuestion,
-        }),
+      const payload = await askReportChat({
+        sessionId: sessionId as Id<'interviewSessions'>,
+        reportId: reportId as Id<'assessmentReports'> | undefined,
+        question: currentQuestion,
       })
-
-      const payload = (await response.json()) as {
-        answer?: string
-        error?: string
-        source?: 'fallback' | 'model'
-        citations?: Array<{ ref: string; label: string; kind: string }>
-      }
-      const answer = payload.answer
-
-      if (!response.ok || !answer) {
-        throw new Error(
-          payload.error ?? 'Unable to answer the recruiter question.'
-        )
-      }
 
       setMessages((current) => [
         ...current,
         {
           id: `local-assistant-${Date.now()}`,
           role: 'assistant',
-          content: answer,
+          content: payload.answer,
           createdAt: new Date().toISOString(),
           answerSource: payload.source,
           citationsJson:
-            payload.citations && payload.citations.length > 0
+            payload.citations.length > 0
               ? JSON.stringify(payload.citations)
               : undefined,
         },
       ])
     } catch (submitError) {
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : 'Unable to answer the recruiter question.'
+        submitError instanceof ConvexError
+          ? String(submitError.data ?? submitError.message)
+          : submitError instanceof Error
+            ? submitError.message
+            : 'Unable to answer the recruiter question.'
       )
     } finally {
       setIsSubmitting(false)

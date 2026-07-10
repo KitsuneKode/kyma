@@ -29,18 +29,18 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `bun run check` mirrors CI (`fmt:check`, `lint`, `test`, `convex:ci`, typecheck, build)
 - invite flow renders at `/i/[token]` and `/interviews/[inviteId]`
 - candidate flow now uses `LiveKit PreJoin` plus a composed meeting shell built from LiveKit React components
-- candidate join triggers a real backend bootstrap route
-- bootstrap route creates or reuses an interview session in Convex
-- bootstrap route returns a real LiveKit token
+- candidate join triggers Convex bootstrap action (`interviews.bootstrapActions.bootstrapInterviewSession`)
+- bootstrap action creates or reuses an interview session in Convex
+- bootstrap action returns a real LiveKit token
 - candidate page connects to a LiveKit room using the selected prejoin device IDs
 - candidate page listens to LiveKit transcription events; the **interview agent** persists transcript segments into Convex (not the browser)
-- LiveKit webhook intake now exists at `/api/livekit/webhook`
+- LiveKit webhook intake lives at `{CONVEX_SITE_URL}/livekit/webhook`
 - LiveKit egress recording artifacts are now stored in Convex and surfaced on recruiter detail pages
-- interview processing can now be triggered through `/api/interviews/process`
+- interview processing is triggered by `submitInterviewForProcessing` (Convex); ops recovery uses `requeueInterviewProcessing`
 - Inngest is now wired at `/api/inngest`, with an inline fallback processor when enqueueing is unavailable
 - recruiter-side review surfaces at `/recruiter/candidates` and `/recruiter/candidates/[sessionId]`
 - screening batch flows at `/recruiter/screenings`, `/recruiter/screenings/new`, and `/recruiter/screenings/[batchId]`
-- recruiter detail now supports human notes and grounded recruiter chat
+- recruiter detail now supports human notes and grounded recruiter chat (Convex action `recruiter.reportChat.askReportChat`)
 - hybrid assessment pipeline (`lib/assessment/process-session.ts`) attempts LLM scoring with deterministic fallback to `manual_review`
 - report, dimension-evidence, and review-decision data models now exist in Convex
 - invite links now surface explicit `expired`, `consumed`, and `unavailable` states in the candidate flow
@@ -88,20 +88,19 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `/candidate/readiness`
 - `/candidate/profile`
 - `/api/inngest`
-- `/api/interviews/bootstrap`
-- `/api/interviews/process`
-- `/api/livekit/webhook`
-- `/api/recruiter/report-chat`
+- Convex HTTP: `{CONVEX_SITE_URL}/livekit/webhook`, `{CONVEX_SITE_URL}/webhooks/clerk`
+- Convex actions: `interviews.bootstrapActions.*`, `recruiter.reportChat.askReportChat`
 
 ## Important Files
 
 - `convex/schema.ts`: current schema
+- `convex/http.ts` / `convex/httpWebhooks.ts`: LiveKit + Clerk webhook ingress
 - `convex/interviews/*`: public snapshot, bootstrap, session events, candidate portal
+- `convex/interviews/bootstrapActions.ts`: bootstrap + LiveKit token + processing recovery
 - `convex/processing/assessment.ts`: pipeline-only assessment read/write (`getSessionProcessingDetail`, `saveAssessmentReport`)
 - `convex/recruiter/*`: recruiter workspace queries and review surfaces
+- `convex/recruiter/reportChat.ts`: grounded recruiter chat action
 - `convex/admin.ts`: screening creation, eligibility, recruiter notes, and recruiter chat persistence
-- `app/api/interviews/bootstrap/route.ts`: canonical server bootstrap + LiveKit token path
-- `app/api/recruiter/report-chat/route.ts`: grounded recruiter chat endpoint
 - `components/interview/interview-workspace.tsx`: candidate-side join flow
 - `convex/recruiter.ts`: recruiter-side read models, report persistence, review decisions
 - `convex/livekit.ts`: webhook-driven room/event and recording-artifact ingestion

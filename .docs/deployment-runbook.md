@@ -24,32 +24,32 @@ Production host: `https://kyma.kitsunelabs.xyz`
 
 ### Core (required for interview loop)
 
-| Variable                                 | Where           | Notes                                                            |
-| ---------------------------------------- | --------------- | ---------------------------------------------------------------- |
-| `NEXT_PUBLIC_CONVEX_URL`                 | Vercel          | Convex HTTP URL for the **prod** deployment                      |
-| `NEXT_PUBLIC_LIVEKIT_URL`                | Vercel          | LiveKit Cloud / self-hosted WS URL                               |
-| `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | Vercel + agent  | Token mint + room APIs                                           |
-| `KYMA_PROCESSING_WRITE_KEY`              | Vercel + Convex | **Required in production** for report writes / worker heartbeats |
-| `KYMA_DEPLOYMENT_ENV`                    | Vercel / Convex | Prefer `production` on the live site                             |
+| Variable                                 | Where                   | Notes                                                            |
+| ---------------------------------------- | ----------------------- | ---------------------------------------------------------------- |
+| `NEXT_PUBLIC_CONVEX_URL`                 | Vercel                  | Convex HTTP URL for the **prod** deployment                      |
+| `NEXT_PUBLIC_LIVEKIT_URL`                | Vercel                  | LiveKit Cloud / self-hosted WS URL                               |
+| `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | Vercel + Convex + agent | Token mint + room APIs + webhook verify                          |
+| `KYMA_PROCESSING_WRITE_KEY`              | Vercel + Convex         | **Required in production** for report writes / worker heartbeats |
+| `KYMA_DEPLOYMENT_ENV`                    | Vercel / Convex         | Prefer `production` on the live site                             |
 
 ### Clerk (recruiter / admin)
 
-| Variable                                              | Where           | Notes                 |
-| ----------------------------------------------------- | --------------- | --------------------- |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`                   | Vercel          | Production Clerk app  |
-| `CLERK_SECRET_KEY`                                    | Vercel          | Server                |
-| `CLERK_FRONTEND_API_URL` or `CLERK_JWT_ISSUER_DOMAIN` | Vercel + Convex | Convex JWT validation |
-| `CLERK_WEBHOOK_SIGNING_SECRET`                        | Vercel          | `/api/webhooks/clerk` |
+| Variable                                              | Where           | Notes                              |
+| ----------------------------------------------------- | --------------- | ---------------------------------- |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`                   | Vercel          | Production Clerk app               |
+| `CLERK_SECRET_KEY`                                    | Vercel          | Server                             |
+| `CLERK_FRONTEND_API_URL` or `CLERK_JWT_ISSUER_DOMAIN` | Vercel + Convex | Convex JWT validation              |
+| `CLERK_WEBHOOK_SIGNING_SECRET`                        | Vercel + Convex | `{CONVEX_SITE_URL}/webhooks/clerk` |
 
 Sync Clerk-related keys into Convex with `bun run convex:sync-env:prod` (or dashboard).
 
 ### Provider / scoring
 
-| Variable                                                  | Where          | Notes                                                          |
-| --------------------------------------------------------- | -------------- | -------------------------------------------------------------- |
-| `OPENAI_API_KEY` / `GOOGLE_API_KEY` / `ANTHROPIC_API_KEY` | Vercel + agent | Platform fallbacks; org BYOK still needs `KYMA_ENCRYPTION_KEY` |
-| `KYMA_SCORING_MODEL` / `KYMA_REVIEW_CHAT_MODEL`           | Vercel         | Optional overrides                                             |
-| `LIVEKIT_AGENT_*_MODEL`                                   | Agent worker   | STT / LLM / TTS                                                |
+| Variable                                                  | Where           | Notes                                                          |
+| --------------------------------------------------------- | --------------- | -------------------------------------------------------------- |
+| `OPENAI_API_KEY` / `GOOGLE_API_KEY` / `ANTHROPIC_API_KEY` | Vercel + agent  | Platform fallbacks; org BYOK still needs `KYMA_ENCRYPTION_KEY` |
+| `KYMA_SCORING_MODEL` / `KYMA_REVIEW_CHAT_MODEL`           | Vercel + Convex | Optional overrides (review chat model used by Convex action)   |
+| `LIVEKIT_AGENT_*_MODEL`                                   | Agent worker    | STT / LLM / TTS                                                |
 
 ### Background jobs
 
@@ -80,11 +80,13 @@ Set `LIVEKIT_RECORDING_ENABLED=1` plus storage + template vars from `.env.exampl
 ## 3. Deploy sequence
 
 1. **Convex functions** — deploy schema/functions to the production Convex deployment (`npx convex deploy` from CI or an owner-run prod pipeline; agents should not deploy prod casually).
-2. **Sync Convex env** — `bun run convex:sync-env:prod` or set keys in the Convex dashboard (`KYMA_PROCESSING_WRITE_KEY`, Clerk JWT issuer, Inngest event key, encryption key).
+2. **Sync Convex env** — `bun run convex:sync-env:prod` or set keys in the Convex dashboard (`KYMA_PROCESSING_WRITE_KEY`, Clerk JWT issuer, Clerk webhook secret, LiveKit keys, Inngest event key, encryption key).
 3. **Vercel** — promote / deploy the Next.js app; confirm Production env vars.
 4. **Inngest** — ensure the app points at `https://kyma.kitsunelabs.xyz/api/inngest` (or the Vercel production URL) with matching signing keys.
 5. **LiveKit agent** — start/restart `bun run agent:start` (or your process manager) with production LiveKit + provider env; confirm `LIVEKIT_AGENT_NAME` matches token dispatch.
-6. **Clerk webhook** — production endpoint `https://kyma.kitsunelabs.xyz/api/webhooks/clerk`.
+6. **Webhooks** — point LiveKit and Clerk at the Convex site URL:
+   - LiveKit: `https://<CONVEX_SITE_HOST>/livekit/webhook`
+   - Clerk: `https://<CONVEX_SITE_HOST>/webhooks/clerk`
 
 ---
 
@@ -107,15 +109,16 @@ Run in order; stop on first hard failure.
 ### C. Interview path
 
 - [ ] Create or reuse a screening invite
-- [ ] Open `/i/<token>` → bootstrap succeeds (network: `POST /api/interviews/bootstrap` 200)
+- [ ] Open `/i/<token>` → bootstrap succeeds (Convex action `bootstrapInterviewSession`)
 - [ ] Join LiveKit room; agent joins within ~30s
 - [ ] Speak briefly; transcript segments appear
-- [ ] Submit / end session → `POST /api/interviews/process` succeeds (queued or inline fallback)
+- [ ] Submit / end session → `submitInterviewForProcessing` succeeds (queued or inline fallback)
 - [ ] Report appears on recruiter session detail; scores are structured + evidence-backed
 
 ### D. Webhooks / jobs
 
-- [ ] LiveKit webhook deliveries succeed (`/api/livekit/webhook`)
+- [ ] LiveKit webhook deliveries succeed (`{CONVEX_SITE_URL}/livekit/webhook`)
+- [ ] Clerk webhook deliveries succeed (`{CONVEX_SITE_URL}/webhooks/clerk`)
 - [ ] Inngest dashboard shows processing events (or confirm intentional inline fallback in logs)
 
 ---

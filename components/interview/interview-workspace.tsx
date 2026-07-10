@@ -28,7 +28,7 @@ import {
   type WorkspaceState,
   type WorkspaceStore,
 } from '@/components/interview/interview-workspace-store'
-import { bootstrapInterviewSession } from '@/lib/interview/bootstrap'
+import { useBootstrapInterviewSession } from '@/lib/interview/bootstrap'
 import {
   createDiagnosticLogger,
   createRequestId,
@@ -178,6 +178,7 @@ export function InterviewWorkspace({
   const submitInterviewForProcessing = useMutation(
     api.interviews.processing.submitInterviewForProcessing
   )
+  const bootstrapInterviewSession = useBootstrapInterviewSession()
   const persistedSession = useQuery(
     api.interviews.public.getPublicSessionDetail,
     shouldSubscribeToPersistedSession

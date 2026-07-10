@@ -4,7 +4,11 @@ import { api, internal } from '../_generated/api'
 import type { Doc } from '../_generated/dataModel'
 import { action, internalQuery, query } from '../_generated/server'
 import { orgAdminMutation, recruiterQuery } from '../lib/customFunctions'
-import { requireAdmin, requireOrgId } from '../helpers/auth'
+import {
+  requireAdmin,
+  requireOrgId,
+  requireRecruiterContext,
+} from '../helpers/auth'
 import { decryptProviderKey, encryptProviderKey } from '../helpers/encryption'
 import { convexEnv } from '../../lib/env/convex'
 import {
@@ -180,6 +184,18 @@ export const assertAdminForAction = query({
   handler: async (ctx) => {
     await requireAdmin(ctx)
     const orgId = await requireOrgId(ctx)
+    return { orgId }
+  },
+})
+
+export const assertCandidateReadForAction = query({
+  args: {},
+  returns: v.object({ orgId: v.string() }),
+  handler: async (ctx) => {
+    const { orgId } = await requireRecruiterContext(
+      ctx,
+      'recruiter:candidates:read'
+    )
     return { orgId }
   },
 })

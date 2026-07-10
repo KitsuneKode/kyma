@@ -22,9 +22,10 @@ Rules:
 
 ### 2. Treat webhook routes as hostile input
 
-The following routes must remain server-only and signature-validated:
+The following ingress points must remain server-only and signature-validated:
 
-- `/api/livekit/webhook`
+- `{CONVEX_SITE_URL}/livekit/webhook` (`convex/http.ts`)
+- `{CONVEX_SITE_URL}/webhooks/clerk` (`convex/http.ts`)
 - `/api/inngest`
 - future third-party callback routes
 
@@ -78,7 +79,7 @@ Until that exists, keep BYOK out of the critical path.
 
 ### ADR: shipped hardening (Kyma next-phase)
 
-- **HTTP rate limits:** `lib/http/server-rate-limit.ts` (Convex `@convex-dev/rate-limiter` via `assertServerRateLimit`) guards `/api/interviews/bootstrap`, `/api/interviews/process`, and `/api/recruiter/report-chat`. Production requires `KYMA_PROCESSING_WRITE_KEY` or the helper throws.
+- **Action rate limits:** Convex `@convex-dev/rate-limiter` guards interview bootstrap, processing recovery, and recruiter report chat inside Convex actions. Residual Next helpers (`lib/http/server-rate-limit.ts`) still require `KYMA_PROCESSING_WRITE_KEY` in production when used.
 - **Convex throttles:** `appendSessionEvent` and `upsertTranscriptSegment` reject excessive per-session write volume (rolling minute window).
 - **Capability-bound public writes:** candidate browser writes must include a matching `inviteToken` + `sessionId`; server paths use internal mutations.
 - **Webhook idempotency:** webhook event writes are deduped per session via `dedupeKey` to avoid duplicate timeline mutations from retries.

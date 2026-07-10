@@ -97,11 +97,11 @@ Next.js handles:
 
 #### Client state and data libraries
 
-- Server state is owned by Convex (`useQuery`/`useMutation`): reactive, cached,
-  subscription-based. We deliberately do **not** add TanStack Query — it would be
-  a redundant second data layer on top of Convex. The only non-Convex calls are
-  one-shot POSTs to Next routes (interview bootstrap/process, report-chat), which
-  are imperative actions and not cache-worthy.
+- Server state is owned by Convex (`useQuery`/`useMutation`/`useAction`): reactive,
+  cached, subscription-based. We deliberately do **not** add TanStack Query — it
+  would be a redundant second data layer on top of Convex. Imperative product
+  flows (interview bootstrap, recruiter report chat) use Convex actions, not
+  Next `/api` routes. The remaining Next route is Inngest serve.
 - Local/UI state for the two complex client surfaces uses per-mount `zustand`
   stores (`components/interview/interview-workspace-store.ts`, the review console
   store in `components/recruiter/review-context.tsx`) so consumers subscribe to
