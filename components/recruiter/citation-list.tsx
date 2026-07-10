@@ -5,6 +5,12 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
+import {
+  isCitationJumpable,
+  resolveCitationRef,
+  type CitationJumpTarget,
+  type CitationResolveContext,
+} from '@/lib/recruiter/citation-resolve'
 
 type Citation = {
   ref: string
@@ -35,20 +41,14 @@ function parseCitations(citationsJson: string): Citation[] {
   }
 }
 
-function parseCitationTimeSec(ref: string): number | null {
-  const numeric = Number.parseFloat(ref)
-  if (!Number.isFinite(numeric) || numeric < 0) {
-    return null
-  }
-  return numeric
-}
-
 export function CitationList({
   citationsJson,
-  onJumpToTime,
+  resolveContext,
+  onJump,
 }: {
   citationsJson: string
-  onJumpToTime?: (timeSec: number) => void
+  resolveContext?: CitationResolveContext
+  onJump?: (target: CitationJumpTarget) => void
 }) {
   const citations = parseCitations(citationsJson)
 
@@ -59,10 +59,17 @@ export function CitationList({
   return (
     <div className="mt-3 flex flex-col gap-2">
       {citations.map((citation) => {
-        const timeSec = parseCitationTimeSec(citation.ref)
-        const isJumpable = timeSec !== null && Boolean(onJumpToTime)
+        const target = resolveContext
+          ? resolveCitationRef(citation.ref, resolveContext)
+          : resolveCitationRef(citation.ref, {
+              transcript: [],
+              evidence: [],
+            })
+        const jumpable = isCitationJumpable(target) && Boolean(onJump)
         const formattedTime =
-          timeSec !== null ? formatCitationTime(timeSec) : citation.ref
+          target?.timeSec !== undefined
+            ? formatCitationTime(target.timeSec)
+            : citation.ref
 
         return (
           <HoverCard key={`${citation.kind}-${citation.ref}-${citation.label}`}>
@@ -70,10 +77,10 @@ export function CitationList({
               render={
                 <button
                   type="button"
-                  disabled={!isJumpable}
+                  disabled={!jumpable}
                   onClick={() => {
-                    if (timeSec !== null) {
-                      onJumpToTime?.(timeSec)
+                    if (target && jumpable) {
+                      onJump?.(target)
                     }
                   }}
                   className="flex w-full flex-wrap items-center gap-2 rounded-lg bg-muted/30 px-3 py-2 text-left text-xs transition-transform active:scale-[0.98] disabled:cursor-default disabled:active:scale-100"
@@ -103,9 +110,9 @@ export function CitationList({
                 <p className="text-sm leading-relaxed text-foreground">
                   {citation.label}
                 </p>
-                {isJumpable ? (
+                {jumpable ? (
                   <p className="text-xs text-muted-foreground">
-                    Click to jump to this moment in the transcript.
+                    Click to jump to this moment in the review console.
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">

@@ -1,5 +1,8 @@
 import { generateText } from 'ai'
-import { serverEnv } from '@/lib/env/server'
+import {
+  buildRecruiterChatUserPrompt,
+  RECRUITER_CHAT_SYSTEM_PROMPT,
+} from '@/lib/recruiter/report-chat-prompts'
 
 export type RecruiterCitation = {
   kind: 'evidence' | 'transcript' | 'dimension'
@@ -12,7 +15,17 @@ export type RecruiterAnswer = {
   source: 'fallback' | 'model'
   citations: RecruiterCitation[]
   modelId?: string
+  degradedReason?: string
 }
+
+export type RecruiterQuestionClass =
+  | 'strengths'
+  | 'risks'
+  | 'recommendation'
+  | 'missing_evidence'
+  | 'follow_ups'
+  | 'out_of_scope'
+  | 'general'
 
 const GROUNDING_VERSION = 'v1'
 
@@ -44,14 +57,11 @@ type DetailShape = {
 }
 
 function buildContext(detail: DetailShape) {
-  const transcript = detail.transcript
-    .slice(-14)
-    .map((entry) => `${entry.speaker}: ${entry.text}`)
-    .join('\n')
   const evidence = detail.evidence
     .slice(0, 8)
     .map(
-      (entry) => `${entry.dimension}: "${entry.snippet}" (${entry.rationale})`
+      (entry, index) =>
+        `[evidence:${index}:${entry.dimension}] ${entry.dimension}: "${entry.snippet}" (${entry.rationale})`
     )
     .join('\n')
   const dimensions =
@@ -60,6 +70,14 @@ function buildContext(detail: DetailShape) {
         (entry) => `${entry.dimension}: ${entry.score}/5 - ${entry.rationale}`
       )
       .join('\n') ?? 'No dimension scores are available yet.'
+  const transcript =
+    detail.transcript
+      .slice(-14)
+      .map(
+        (entry) =>
+          `[transcript:${entry.startedAt}] ${entry.speaker}: ${entry.text}`
+      )
+      .join('\n') || 'No transcript available.'
 
   return `
 Candidate: ${detail.candidate.name}
@@ -77,7 +95,7 @@ Evidence:
 ${evidence || 'No evidence available.'}
 
 Recent transcript:
-${transcript || 'No transcript available.'}
+${transcript}
 `.trim()
 }
 
@@ -101,78 +119,192 @@ function citationsFromDetail(detail: DetailShape): RecruiterCitation[] {
   return out
 }
 
-function fallbackAnswer(
-  question: string,
-  detail: DetailShape
-): RecruiterAnswer {
-  const normalizedQuestion = question.toLowerCase()
+function citationKindFromRef(ref: string): RecruiterCitation['kind'] {
+  if (ref.startsWith('transcript:')) return 'transcript'
+  if (ref.startsWith('evidence:')) return 'evidence'
+  return 'dimension'
+}
+
+export function classifyRecruiterQuestion(
+  question: string
+): RecruiterQuestionClass {
+  const q = question.toLowerCase().trim()
+
+  if (
+    /salary|compensation|ssn|social security|password|jailbreak|ignore (previous|all) instructions|write (me )?(a |some )?code|other candidate|personal (email|phone|address)/.test(
+      q
+    )
+  ) {
+    return 'out_of_scope'
+  }
+
+  if (
+    /missing|insufficient|thin|gap|lack\w* evidence|what.*(don'?t|do not|we not).*know|not enough evidence/.test(
+      q
+    )
+  ) {
+    return 'missing_evidence'
+  }
+
+  if (
+    /follow[- ]?up|next question|ask (them|the candidate)|what should (i|we) ask|probe|clarif(y|ying)/.test(
+      q
+    )
+  ) {
+    return 'follow_ups'
+  }
+
+  if (/strength|strong|good at|what.*(do|did).*well|positive signal/.test(q)) {
+    return 'strengths'
+  }
+
+  if (/concern|risk|weak|red flag|worry|negative signal|issue with/.test(q)) {
+    return 'risks'
+  }
+
+  if (
+    /recommend|advance|reject|hire|decision|should (we|i) (move|advance|reject|hire)/.test(
+      q
+    )
+  ) {
+    return 'recommendation'
+  }
+
+  if (
+    /summary|overall|tell me about|how did|walk me through|general (take|view)/.test(
+      q
+    )
+  ) {
+    return 'general'
+  }
+
+  return 'out_of_scope'
+}
+
+function refuseOutOfScope(detail: DetailShape): RecruiterAnswer {
+  return {
+    text: `I can only answer from this session’s report, evidence, and transcript for ${detail.candidate.name}. Ask about strengths, risks, the recommendation, missing evidence, or suggested follow-up questions.`,
+    source: 'fallback',
+    citations: [],
+  }
+}
+
+function missingEvidenceAnswer(detail: DetailShape): RecruiterAnswer {
   const citations = citationsFromDetail(detail)
-
-  if (normalizedQuestion.includes('strength')) {
-    return {
-      text: `The strongest reported areas for ${detail.candidate.name} are ${detail.report?.topStrengths.join(', ') || 'not available yet'}. Review the evidence cards to verify whether those strengths are well-supported.`,
-      source: 'fallback',
-      citations,
-    }
-  }
-
-  if (
-    normalizedQuestion.includes('concern') ||
-    normalizedQuestion.includes('risk')
-  ) {
-    return {
-      text: `The main concerns currently flagged are ${detail.report?.topConcerns.join(', ') || 'not available yet'}. If this is a borderline case, treat it as a manual-review candidate instead of trusting the automated score alone.`,
-      source: 'fallback',
-      citations,
-    }
-  }
-
-  if (
-    normalizedQuestion.includes('recommend') ||
-    normalizedQuestion.includes('advance') ||
-    normalizedQuestion.includes('reject')
-  ) {
-    return {
-      text: `${detail.candidate.name} currently has a ${detail.report?.recommendation ?? 'pending'} recommendation with ${detail.report?.confidence ?? 'pending'} confidence. Use the evidence cards and transcript to confirm whether the recruiter decision should follow that recommendation.`,
-      source: 'fallback',
-      citations,
-    }
-  }
-
-  if (
-    normalizedQuestion.includes('missing') ||
-    normalizedQuestion.includes('follow-up') ||
-    normalizedQuestion.includes('follow up') ||
-    normalizedQuestion.includes('gap')
-  ) {
-    const thinDimensions = (detail.report?.dimensionScores ?? [])
+  const lowDimensions =
+    detail.report?.dimensionScores
       .filter((entry) => entry.score <= 2)
-      .map((entry) => entry.dimension)
-    const gaps =
-      thinDimensions.length > 0
-        ? thinDimensions.join(', ')
-        : detail.report?.topConcerns.join(', ') || 'not clearly identified yet'
+      .map((entry) => entry.dimension) ?? []
+  const evidenceCount = detail.evidence.length
+  const confidence = detail.report?.confidence ?? 'pending'
+
+  if (evidenceCount === 0) {
     return {
-      text: `Likely follow-up areas for ${detail.candidate.name}: ${gaps}. Ask for concrete examples in those dimensions and confirm whether the transcript already covers them before deciding.`,
+      text: `There is no structured evidence stored for this session yet. Treat any automated recommendation (${detail.report?.recommendation ?? 'pending'}, confidence ${confidence}) as provisional until transcript review is complete.`,
+      source: 'fallback',
+      citations: [],
+    }
+  }
+
+  const thinParts = [
+    lowDimensions.length
+      ? `Low-scoring dimensions with limited support: ${lowDimensions.join(', ')}.`
+      : null,
+    `Only ${evidenceCount} evidence snippet${evidenceCount === 1 ? '' : 's'} ${evidenceCount === 1 ? 'is' : 'are'} available, and confidence is ${confidence}.`,
+    'Prefer manual review of the transcript before relying on gaps the model did not cover.',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  return {
+    text: thinParts,
+    source: 'fallback',
+    citations,
+  }
+}
+
+function followUpsAnswer(detail: DetailShape): RecruiterAnswer {
+  const citations = citationsFromDetail(detail)
+  const concerns = detail.report?.topConcerns ?? []
+  const lowDimensions =
+    detail.report?.dimensionScores
+      .filter((entry) => entry.score <= 3)
+      .map((entry) => entry.dimension) ?? []
+
+  const topics = [...new Set([...concerns, ...lowDimensions])].slice(0, 3)
+  if (!topics.length) {
+    return {
+      text: `Suggested follow-ups: ask ${detail.candidate.name} to walk through a concrete example from the interview, clarify decision tradeoffs, and explain how they would handle a weaker student or edge case. Ground any live follow-up in the transcript before treating it as scored evidence.`,
       source: 'fallback',
       citations,
     }
   }
 
-  const firstEvidence = detail.evidence[0]
+  const questions = topics.map(
+    (topic) =>
+      `Ask for a specific example that demonstrates ${topic}, including what they would do differently next time.`
+  )
 
-  if (firstEvidence) {
+  return {
+    text: `Suggested follow-up questions based on current concerns/scores:\n- ${questions.join('\n- ')}`,
+    source: 'fallback',
+    citations,
+  }
+}
+
+function generalAnswer(detail: DetailShape): RecruiterAnswer {
+  const citations = citationsFromDetail(detail)
+  const summary = detail.report?.summary
+  if (!summary && !detail.report) {
     return {
-      text: `The report points first to ${firstEvidence.dimension} as a meaningful signal. Evidence example: "${firstEvidence.snippet}". Rationale: ${firstEvidence.rationale}`,
+      text: `No scored report is available yet for ${detail.candidate.name}. Review the transcript directly, then ask a more specific question about strengths, risks, or recommendation once scoring finishes.`,
       source: 'fallback',
-      citations,
+      citations: citations.length ? citations : [],
     }
   }
 
   return {
-    text: `There is not enough structured evidence yet to answer that reliably. Use the transcript and report summary first, then ask a more specific question about strengths, concerns, or recommendation.`,
+    text: `${detail.candidate.name}: ${summary ?? 'No summary available yet.'} Current recommendation is ${detail.report?.recommendation ?? 'pending'} with ${detail.report?.confidence ?? 'pending'} confidence. Strengths: ${detail.report?.topStrengths.join(', ') || 'none listed'}. Concerns: ${detail.report?.topConcerns.join(', ') || 'none listed'}.`,
     source: 'fallback',
-    citations: [],
+    citations,
+  }
+}
+
+function fallbackAnswer(
+  question: string,
+  detail: DetailShape
+): RecruiterAnswer {
+  const questionClass = classifyRecruiterQuestion(question)
+  const citations = citationsFromDetail(detail)
+
+  switch (questionClass) {
+    case 'strengths':
+      return {
+        text: `The strongest reported areas for ${detail.candidate.name} are ${detail.report?.topStrengths.join(', ') || 'not available yet'}. Review the evidence cards to verify whether those strengths are well-supported.`,
+        source: 'fallback',
+        citations,
+      }
+    case 'risks':
+      return {
+        text: `The main concerns currently flagged are ${detail.report?.topConcerns.join(', ') || 'not available yet'}. If this is a borderline case, treat it as a manual-review candidate instead of trusting the automated score alone.`,
+        source: 'fallback',
+        citations,
+      }
+    case 'recommendation':
+      return {
+        text: `${detail.candidate.name} currently has a ${detail.report?.recommendation ?? 'pending'} recommendation with ${detail.report?.confidence ?? 'pending'} confidence. Use the evidence cards and transcript to confirm whether the recruiter decision should follow that recommendation.`,
+        source: 'fallback',
+        citations,
+      }
+    case 'missing_evidence':
+      return missingEvidenceAnswer(detail)
+    case 'follow_ups':
+      return followUpsAnswer(detail)
+    case 'general':
+      return generalAnswer(detail)
+    case 'out_of_scope':
+    default:
+      return refuseOutOfScope(detail)
   }
 }
 
@@ -182,23 +314,34 @@ export async function answerRecruiterQuestion(
   options?: {
     modelId?: string | undefined
     providerOptions?: Parameters<typeof generateText>[0]['providerOptions']
+    degradedReason?: string
   }
 ): Promise<RecruiterAnswer> {
-  const configuredModel = options?.modelId ?? serverEnv.KYMA_REVIEW_CHAT_MODEL
+  const configuredModel = options?.modelId?.trim() || undefined
 
   if (!configuredModel) {
-    return fallbackAnswer(question, detail)
+    return {
+      ...fallbackAnswer(question, detail),
+      degradedReason:
+        options?.degradedReason ??
+        'No explicit review-chat model configured with available credentials.',
+    }
+  }
+
+  const questionClass = classifyRecruiterQuestion(question)
+  if (questionClass === 'out_of_scope') {
+    return refuseOutOfScope(detail)
   }
 
   try {
     const { text } = await generateText({
       model: configuredModel,
       providerOptions: options?.providerOptions,
-      system:
-        'You are a grounded recruiter copilot. Answer only from the provided interview report, evidence, and transcript. Prefer recruiter-useful framing: strengths, risks, recommendation confidence, missing evidence, and follow-up areas. If the evidence is thin, say so plainly. Do not invent details. After your answer, add a line CITATIONS: followed by comma-separated refs like evidence:0:clarity or transcript:ISO timestamp for each claim you rely on most.',
-      prompt: `Answer the recruiter question using only the context below.\n\n${buildContext(
-        detail
-      )}\n\nQuestion: ${question}`,
+      system: RECRUITER_CHAT_SYSTEM_PROMPT,
+      prompt: buildRecruiterChatUserPrompt({
+        context: buildContext(detail),
+        question,
+      }),
     })
 
     const citations = parseCitationLine(text, detail)
@@ -210,7 +353,10 @@ export async function answerRecruiterQuestion(
       modelId: configuredModel,
     }
   } catch {
-    return fallbackAnswer(question, detail)
+    return {
+      ...fallbackAnswer(question, detail),
+      degradedReason: 'Model request failed; using deterministic fallback.',
+    }
   }
 }
 
@@ -236,11 +382,15 @@ function parseCitationLine(
   if (!raw) {
     return citationsFromDetail(detail).slice(0, 3)
   }
-  return raw.split(',').map((part) => ({
-    kind: 'evidence' as const,
-    ref: part.trim(),
-    label: part.trim(),
-  }))
+  return raw
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((ref) => ({
+      kind: citationKindFromRef(ref),
+      ref,
+      label: ref,
+    }))
 }
 
 export { GROUNDING_VERSION }

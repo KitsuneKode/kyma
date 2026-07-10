@@ -1,6 +1,6 @@
 import type { ByokProvider } from '@/lib/providers/provider-id'
 
-type ProviderKeyEnv = {
+export type ProviderKeyEnv = {
   OPENAI_API_KEY?: string
   GOOGLE_API_KEY?: string
   GEMINI_API_KEY?: string

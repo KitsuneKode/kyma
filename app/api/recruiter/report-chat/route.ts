@@ -6,7 +6,7 @@ import type { Id } from '@/convex/_generated/dataModel'
 import { getServerConvexAuthToken } from '@/lib/clerk/server-token'
 import {
   buildGatewayByokOptions,
-  resolveReviewChatModelId,
+  resolveReviewChatAttempt,
 } from '@/lib/providers/resolve-model'
 import {
   answerRecruiterQuestion,
@@ -77,22 +77,37 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    const reviewChatModelId = resolveReviewChatModelId(
-      workspaceSettings?.defaultModels,
-      detail.template.modelOverrides,
-      {
+    const reviewChatAttempt = resolveReviewChatAttempt({
+      workspaceDefaults: workspaceSettings?.defaultModels,
+      templateOverrides: detail.template.modelOverrides,
+      envFallbacks: {
         reviewChat: serverEnv.KYMA_REVIEW_CHAT_MODEL,
-      }
-    )
-    const providerOptions = buildGatewayByokOptions({
-      modelId: reviewChatModelId,
+      },
       providerKeys: workspaceSettings?.providerKeys,
       encryptionKey: serverEnv.KYMA_ENCRYPTION_KEY,
+      platformEnv: {
+        OPENAI_API_KEY: serverEnv.OPENAI_API_KEY,
+        GOOGLE_API_KEY: serverEnv.GOOGLE_API_KEY,
+        GEMINI_API_KEY: serverEnv.GEMINI_API_KEY,
+        ANTHROPIC_API_KEY: serverEnv.ANTHROPIC_API_KEY,
+      },
     })
 
+    const modelId = reviewChatAttempt.canAttemptModel
+      ? reviewChatAttempt.modelId
+      : undefined
+    const providerOptions = modelId
+      ? buildGatewayByokOptions({
+          modelId,
+          providerKeys: workspaceSettings?.providerKeys,
+          encryptionKey: serverEnv.KYMA_ENCRYPTION_KEY,
+        })
+      : undefined
+
     const answer = await answerRecruiterQuestion(body.question, detail, {
-      modelId: reviewChatModelId,
+      modelId,
       providerOptions,
+      degradedReason: reviewChatAttempt.degradedReason,
     })
 
     await fetchMutation(
@@ -118,6 +133,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       answer: answer.text,
       source: answer.source,
+      modelId: answer.modelId,
+      degradedReason: answer.degradedReason,
       citations: answer.citations,
       requestId,
     })
