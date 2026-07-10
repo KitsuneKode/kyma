@@ -13,7 +13,7 @@ Citation format (required when you rely on specific claims):
 - Use refs exactly like: evidence:<index>:<dimension> or transcript:<ISO-8601 timestamp>
 - Prefer the strongest supporting refs; omit CITATIONS: if you cannot ground the answer.
 
-Tone: concise, recruiter-facing, evidence-first. No flattery.`
+Tone: concise, recruiter-facing, evidence-first. Prefer framing around strengths, risks, recommendation confidence, missing evidence, and follow-up areas. No flattery.`
 
 export function buildRecruiterChatUserPrompt(args: {
   context: string
