@@ -8,6 +8,7 @@ Execution plans for Kyma live under this directory.
 | [mvp-plan.md](./mvp-plan.md)                               | Phased MVP delivery                                                                                      |
 | [grill-me.md](./grill-me.md)                               | Decision alignment sheet                                                                                 |
 | [hardening-and-polish-v1.md](./hardening-and-polish-v1.md) | Hardening tracker (owner-run verification)                                                               |
+| [operational-credibility-next.md](./operational-credibility-next.md) | **Active** next-phase plan: live-path proof → runtime fixes → policy → copilot → BYOK |
 | [production-launch-sweep.md](./production-launch-sweep.md) | Launch checklist                                                                                         |
 
 For architecture and product direction, see `.docs/`.
