@@ -77,15 +77,6 @@ export function TemplateEditForm({
   const [simulationMode, setSimulationMode] = useState<SimulationMode>(
     template.simulationMode ?? 'teaching'
   )
-  const [targetDurationMinutes, setTargetDurationMinutes] = useState(
-    template.targetDurationMinutes ?? 20
-  )
-  const [allowsResume, setAllowsResume] = useState(
-    template.allowsResume ?? true
-  )
-  const [interviewStyleMode, setInterviewStyleMode] = useState<
-    'standard' | 'intensive'
-  >(template.interviewStyleMode ?? 'standard')
   const [systemPrompt, setSystemPrompt] = useState(template.systemPrompt ?? '')
   const [simulationPersonaPrompt, setSimulationPersonaPrompt] = useState(
     template.simulationPersonaPrompt ?? template.childPersonaPrompt ?? ''
@@ -147,9 +138,6 @@ export function TemplateEditForm({
           scoring: modelOverrides.scoring.trim() || undefined,
         },
         rubricConfig,
-        targetDurationMinutes,
-        allowsResume,
-        interviewStyleMode,
       })
       toast.success('Template saved')
       router.refresh()
@@ -238,7 +226,10 @@ export function TemplateEditForm({
               max={120}
               value={targetDurationMinutes}
               onChange={(event) =>
-                setTargetDurationMinutes(Number(event.target.value) || 20)
+                setTargetDurationMinutes(
+                  Number(event.target.value) ||
+                    DEFAULT_INTERVIEW_POLICY.targetDurationMinutes
+                )
               }
             />
           </div>
@@ -264,8 +255,7 @@ export function TemplateEditForm({
             <Select
               value={interviewStyleMode}
               onValueChange={(value) =>
-                value &&
-                setInterviewStyleMode(value as 'standard' | 'intensive')
+                value && setInterviewStyleMode(value as InterviewStyleMode)
               }
             >
               <SelectTrigger id="template-style">
@@ -300,68 +290,6 @@ export function TemplateEditForm({
           dimensions and {formatSimulationMode(starterPreview.simulationMode)}{' '}
           simulation defaults.
         </p>
-      </WorkspaceSurface>
-
-      <WorkspaceSurface className="space-y-4 p-6">
-        <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-          Screening policy
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Defaults for invite duration, resume behavior, and interview pacing.
-          Screening batches can still override duration and resume.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="target-duration">Target duration (minutes)</Label>
-            <Input
-              id="target-duration"
-              type="number"
-              min={5}
-              max={120}
-              value={targetDurationMinutes}
-              onChange={(event) =>
-                setTargetDurationMinutes(
-                  Number(event.target.value) ||
-                    DEFAULT_INTERVIEW_POLICY.targetDurationMinutes
-                )
-              }
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="allows-resume">Resume</Label>
-            <Select
-              value={allowsResume ? 'allow' : 'deny'}
-              onValueChange={(value) =>
-                value && setAllowsResume(value === 'allow')
-              }
-            >
-              <SelectTrigger id="allows-resume">
-                <SelectValue placeholder="Resume policy" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="allow">Allow resume</SelectItem>
-                <SelectItem value="deny">Single-pass only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="interview-style">Interview style</Label>
-            <Select
-              value={interviewStyleMode}
-              onValueChange={(value) =>
-                value && setInterviewStyleMode(value as InterviewStyleMode)
-              }
-            >
-              <SelectTrigger id="interview-style">
-                <SelectValue placeholder="Interview style" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="standard">Standard</SelectItem>
-                <SelectItem value="intensive">Intensive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
       </WorkspaceSurface>
 
       <WorkspaceSurface className="space-y-4 p-6">

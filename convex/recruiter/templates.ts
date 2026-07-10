@@ -224,11 +224,6 @@ export const updateAssessmentTemplate = templateWriteMutation({
     wrapUpPrompt: v.optional(v.string()),
     rubricConfig: v.optional(rubricConfigValidator),
     modelOverrides: v.optional(modelOverridesValidator),
-    targetDurationMinutes: v.optional(v.number()),
-    allowsResume: v.optional(v.boolean()),
-    interviewStyleMode: v.optional(
-      v.union(v.literal('standard'), v.literal('intensive'))
-    ),
   },
   returns: v.id('assessmentTemplates'),
   handler: async (ctx, args) => {
