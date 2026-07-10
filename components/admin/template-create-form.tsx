@@ -16,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DEFAULT_INTERVIEW_POLICY } from '@/lib/interview/policy'
+import type { InterviewStyleMode } from '@/lib/interview/types'
 import {
   getJobFamilyStarter,
   JOB_FAMILIES,
@@ -32,11 +34,12 @@ export function TemplateCreateForm() {
   )
   const [name, setName] = useState('')
   const [jobFamily, setJobFamily] = useState<JobFamily>('software_engineering')
-  const [duration, setDuration] = useState(20)
+  const [duration, setDuration] = useState(
+    DEFAULT_INTERVIEW_POLICY.targetDurationMinutes
+  )
   const [allowsResume, setAllowsResume] = useState(true)
-  const [interviewStyleMode, setInterviewStyleMode] = useState<
-    'standard' | 'intensive'
-  >('standard')
+  const [interviewStyleMode, setInterviewStyleMode] =
+    useState<InterviewStyleMode>('standard')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -119,12 +122,15 @@ export function TemplateCreateForm() {
               max={120}
               value={duration}
               onChange={(event) =>
-                setDuration(Number(event.target.value) || 20)
+                setDuration(
+                  Number(event.target.value) ||
+                    DEFAULT_INTERVIEW_POLICY.targetDurationMinutes
+                )
               }
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="template-resume">Resume policy</Label>
+            <Label htmlFor="template-resume">Resume</Label>
             <Select
               value={allowsResume ? 'allow' : 'deny'}
               onValueChange={(value) =>
@@ -136,7 +142,7 @@ export function TemplateCreateForm() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="allow">Allow resume</SelectItem>
-                <SelectItem value="deny">Single attempt only</SelectItem>
+                <SelectItem value="deny">Single-pass only</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -145,8 +151,7 @@ export function TemplateCreateForm() {
             <Select
               value={interviewStyleMode}
               onValueChange={(value) =>
-                value &&
-                setInterviewStyleMode(value as 'standard' | 'intensive')
+                value && setInterviewStyleMode(value as InterviewStyleMode)
               }
             >
               <SelectTrigger id="template-style">

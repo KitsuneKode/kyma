@@ -49,6 +49,20 @@ type ReviewDetailTabsProps = {
     createdAt: string
   }>
   teachingSimulation: TeachingSimulationSummary
+  policySnapshot?: {
+    targetDurationMinutes: number
+    allowsResume: boolean
+    maxAttempts: number
+    rubricVersion: string
+    interviewStyleMode?: 'standard' | 'intensive' | null
+    templateName?: string | null
+  } | null
+}
+
+function formatStyleMode(mode?: string | null) {
+  if (mode === 'intensive') return 'Intensive'
+  if (mode === 'standard') return 'Standard'
+  return '—'
 }
 
 export function ReviewDetailTabs({
@@ -62,6 +76,7 @@ export function ReviewDetailTabs({
   recordings,
   decisions,
   teachingSimulation,
+  policySnapshot,
 }: ReviewDetailTabsProps) {
   return (
     <WorkspaceSurface className="p-0">
@@ -116,6 +131,45 @@ export function ReviewDetailTabs({
                 value={formatOptionalDateTime(teachingSimulation.startedAt)}
               />
             </dl>
+            {policySnapshot ? (
+              <div className="mt-6 border-t border-border/50 pt-5">
+                <p className="mb-3 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                  Screening policy
+                </p>
+                <dl className="grid gap-4 sm:grid-cols-2">
+                  <InfoRow
+                    label="Target duration"
+                    value={`${policySnapshot.targetDurationMinutes} min`}
+                  />
+                  <InfoRow
+                    label="Max attempts"
+                    value={String(policySnapshot.maxAttempts)}
+                  />
+                  <InfoRow
+                    label="Resume"
+                    value={
+                      policySnapshot.allowsResume
+                        ? 'Allowed'
+                        : 'Single-pass only'
+                    }
+                  />
+                  <InfoRow
+                    label="Rubric version"
+                    value={policySnapshot.rubricVersion}
+                  />
+                  <InfoRow
+                    label="Interview style"
+                    value={formatStyleMode(policySnapshot.interviewStyleMode)}
+                  />
+                  {policySnapshot.templateName ? (
+                    <InfoRow
+                      label="Policy template"
+                      value={policySnapshot.templateName}
+                    />
+                  ) : null}
+                </dl>
+              </div>
+            ) : null}
           </TabsContent>
 
           <TabsContent value="timeline">

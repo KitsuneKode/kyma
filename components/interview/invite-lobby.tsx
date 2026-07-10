@@ -323,6 +323,25 @@ export function InviteLobby({
               className="rounded-2xl p-6 ring-white/10 transition-colors hover:bg-muted/20"
             >
               <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
+                Attempts
+              </p>
+              <p className="mt-3 text-2xl font-bold tracking-tight text-foreground tabular-nums">
+                {initialSnapshot.policy.maxAttempts === 1
+                  ? '1 attempt'
+                  : `${initialSnapshot.policy.maxAttempts} attempts`}
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {initialSnapshot.policy.allowsResume
+                  ? 'You can reconnect and continue within an attempt until you submit.'
+                  : 'Each attempt is single-pass — finishing or leaving ends that attempt.'}
+              </p>
+            </WorkspaceSurface>
+
+            <WorkspaceSurface
+              as="div"
+              className="rounded-2xl p-6 ring-white/10 transition-colors hover:bg-muted/20 sm:col-span-2"
+            >
+              <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
                 Valid Until
               </p>
               <p className="mt-3 text-2xl font-bold tracking-tight text-pretty text-foreground tabular-nums">

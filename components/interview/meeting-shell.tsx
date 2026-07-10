@@ -32,6 +32,7 @@ import {
   type InterviewPolicy,
   type TranscriptSegment,
 } from '@/lib/interview/types'
+import { DEFAULT_INTERVIEW_POLICY } from '@/lib/interview/policy'
 import { maxActiveDurationMs } from '@/lib/interview/session-purpose'
 import type { SessionPurpose } from '@/lib/interview/session-purpose'
 
@@ -285,6 +286,26 @@ function InterviewConference({
   )
 }
 
+function resolveMeetingMaxDurationMs(
+  sessionPurpose: SessionPurpose,
+  policy?: InterviewPolicy
+) {
+  const policyMinutes = policy?.targetDurationMinutes
+  if (
+    typeof policyMinutes === 'number' &&
+    Number.isFinite(policyMinutes) &&
+    policyMinutes > 0
+  ) {
+    return policyMinutes * 60_000
+  }
+
+  if (sessionPurpose === 'screening') {
+    return DEFAULT_INTERVIEW_POLICY.targetDurationMinutes * 60_000
+  }
+
+  return maxActiveDurationMs(sessionPurpose)
+}
+
 export function MeetingShell({
   agentJoinTimedOut = false,
   activeDurationMs = 0,
@@ -296,13 +317,14 @@ export function MeetingShell({
   onDurationCapReached,
   onRetryAgentConnection,
   onSubmitInterview,
+  policy,
   preJoinChoices,
   room,
   session,
   sessionPurpose = 'screening',
   transcript,
 }: MeetingShellProps) {
-  const maxDurationMs = maxActiveDurationMs(sessionPurpose)
+  const maxDurationMs = resolveMeetingMaxDurationMs(sessionPurpose, policy)
 
   return (
     // Intentional dark-locked immersive interview experience.
