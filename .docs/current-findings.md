@@ -256,6 +256,7 @@ Still open product/tech debt:
 ## Validation log
 
 - 2026-07-10 — Code-only Phase B/C/D/E slice landed (finalize honesty, policy UI, copilot guardrails/citations/gating, livekitToken rate limit, screening/BYOK audits, BYOK design doc). Live room E2E still pending owner credentials.
+- 2026-07-10 (usable ship) — Merged #18 (commercial) + #20 (ops credibility) to `main` after rebase. Closed #16/#17. Left #19 open pending Next→Convex port. Local: `bun run typecheck` / `test` (286) / `lint` green; `live-path:preflight` OK with Clerk+LiveKit+encryption+`KYMA_ORG_PLAN_OVERRIDE=pro`. Override quota smoke: free rejects 11 candidates/batch, pro allows. Full LiveKit room E2E (verification items 3–4) still owner-run with `bun run dev:full`.
 - _Append dated rows here after manual LiveKit / end-to-end runs (same PR as behavior changes when possible)._
 
 ## Local Developer Experience
