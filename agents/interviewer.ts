@@ -440,7 +440,20 @@ async function startSession(ctx: JobContext) {
   const participantMetadata = parseCandidateMetadata(participant.metadata)
   const sessionId = participantMetadata.sessionId
   const port = createAgentSessionPort({ sessionId, logger })
-  const remoteConfig = await port.fetchConfig()
+  // Abort rather than silently interviewing on default prompts: a BYOK org's
+  // template, persona and models all come from this call.
+  let remoteConfig: Awaited<ReturnType<typeof port.fetchConfig>>
+  try {
+    remoteConfig = await port.fetchConfig()
+  } catch (error) {
+    await port.appendEvent(
+      'agent-config-fetch-failed',
+      `Interview config could not be loaded: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+    throw error
+  }
   const config = buildAgentTemplateConfig(remoteConfig)
   const videoInputEnabled = isAgentVideoInputEnabled()
   const candidateName =
