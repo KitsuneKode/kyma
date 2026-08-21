@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, test } from 'vitest'
 
 import { llmAssessmentReportSchema } from './llm-report-schema'
 import {
@@ -9,6 +9,7 @@ import {
   validateLlmReportEvidence,
 } from './llm-report'
 import { buildAssessmentReport, type TranscriptEntry } from './report-engine'
+import { resolveRubricDimensions } from '@/lib/rubric/resolve-rubric'
 
 const strongCandidateTranscript: TranscriptEntry[] = [
   {
@@ -242,19 +243,107 @@ describe('sanitizeLlmReportEvidence', () => {
 })
 
 describe('llmReportToAssessmentComputation', () => {
+  const sampleDimensions = resolveRubricDimensions({
+    dimensions: [
+      { name: 'clarity', weight: 1, isHardGate: true },
+      { name: 'engagement', weight: 1, isHardGate: false },
+    ],
+  })
+
   it('maps structured LLM output into assessment computation', () => {
     const report = buildSampleLlmReport()
-    const assessment = llmReportToAssessmentComputation(report, 'completed')
+    const assessment = llmReportToAssessmentComputation(
+      report,
+      'completed',
+      sampleDimensions
+    )
 
-    expect(assessment.overallRecommendation).toBe('yes')
+    // Derived from the dimension scores (5 and 4, equal weights), not from the
+    // model's asserted weightedScore of 4.1.
+    expect(assessment.weightedScore).toBe(4.5)
+    expect(assessment.overallRecommendation).toBe('strong_yes')
     expect(assessment.dimensionScores).toHaveLength(2)
     expect(assessment.evidence).toHaveLength(2)
     expect(assessment.status).toBe('completed')
 
     const manualReview = llmReportToAssessmentComputation(
       report,
-      'manual_review'
+      'manual_review',
+      sampleDimensions
     )
     expect(manualReview.status).toBe('manual_review')
+  })
+})
+
+describe('llmReportToAssessmentComputation recomputes rather than trusts', () => {
+  const rubric = resolveRubricDimensions({
+    dimensions: [
+      { name: 'domain_depth', weight: 3, isHardGate: true },
+      { name: 'warmth', weight: 1, isHardGate: false },
+    ],
+  })
+
+  function modelReport(overrides: Record<string, unknown> = {}) {
+    return {
+      overallRecommendation: 'strong_yes',
+      confidence: 'high',
+      summary: 'Model summary.',
+      weightedScore: 4.9,
+      hardGateTriggered: false,
+      topStrengths: ['depth'],
+      topConcerns: ['pace'],
+      needsManualReview: false,
+      dimensionScores: [
+        {
+          dimension: 'domain_depth',
+          score: 2,
+          rationale: 'Struggled with fundamentals.',
+          evidence: [{ quote: 'I am not sure', rationale: 'uncertain' }],
+        },
+        {
+          dimension: 'warmth',
+          score: 5,
+          rationale: 'Very personable.',
+          evidence: [{ quote: 'great question', rationale: 'warm' }],
+        },
+      ],
+      ...overrides,
+    } as never
+  }
+
+  test('ignores the model weighted score and derives it from the rubric', () => {
+    const result = llmReportToAssessmentComputation(
+      modelReport(),
+      'completed',
+      rubric
+    )
+
+    // (2 * 3 + 5 * 1) / 4 = 2.75, not the model's claimed 4.9
+    expect(result.weightedScore).toBe(2.75)
+  })
+
+  test('fires the template hard gate the model said was clear', () => {
+    const result = llmReportToAssessmentComputation(
+      modelReport(),
+      'completed',
+      rubric
+    )
+
+    expect(result.hardGateTriggered).toBe(true)
+    expect(result.overallRecommendation).toBe('no')
+  })
+
+  test('keeps the model rationale, summary and evidence intact', () => {
+    const result = llmReportToAssessmentComputation(
+      modelReport(),
+      'completed',
+      rubric
+    )
+
+    expect(result.summary).toBe('Model summary.')
+    expect(result.dimensionScores[0]?.rationale).toBe(
+      'Struggled with fundamentals.'
+    )
+    expect(result.evidence).toHaveLength(2)
   })
 })

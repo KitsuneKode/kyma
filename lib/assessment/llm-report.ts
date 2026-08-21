@@ -8,6 +8,11 @@ import {
   type DimensionEvidence,
   type TranscriptEntry,
 } from './report-engine'
+import { deriveAssessmentOutcome } from './scoring-policy'
+import {
+  resolveRubricDimensions,
+  type ResolvedRubricDimension,
+} from '@/lib/rubric/resolve-rubric'
 import {
   buildLlmAssessmentReportSchema,
   type LlmAssessmentReport,
@@ -330,25 +335,44 @@ function toDimensionEvidence(report: LlmAssessmentReport): DimensionEvidence[] {
   return evidence
 }
 
+/**
+ * Converts a model report into a persisted assessment.
+ *
+ * The model supplies dimension scores, rationale, evidence and prose. Every
+ * headline number - weighted score, hard gate, recommendation - is recomputed
+ * here from the template rubric, so a model cannot assert an outcome its own
+ * dimension scores do not support, and a recruiter's configured weights have
+ * arithmetic effect rather than only appearing in the prompt.
+ */
 export function llmReportToAssessmentComputation(
   report: LlmAssessmentReport,
-  status: AssessmentComputation['status']
+  status: AssessmentComputation['status'],
+  dimensions: ResolvedRubricDimension[]
 ): AssessmentComputation {
+  const dimensionScores = report.dimensionScores.map((item) => ({
+    dimension: item.dimension,
+    score: item.score,
+    rationale: item.rationale,
+  }))
+
+  const { weightedScore, hardGateTriggered, overallRecommendation } =
+    deriveAssessmentOutcome({
+      dimensionScores,
+      dimensions,
+      confidence: report.confidence,
+    })
+
   return {
     status,
-    overallRecommendation: report.overallRecommendation,
+    overallRecommendation,
     confidence: report.confidence,
     summary: report.summary,
-    weightedScore: Number(report.weightedScore.toFixed(2)),
-    hardGateTriggered: report.hardGateTriggered,
+    weightedScore,
+    hardGateTriggered,
     topStrengths: report.topStrengths,
     topConcerns: report.topConcerns,
     transcriptQualityNote: report.transcriptQualityNote,
-    dimensionScores: report.dimensionScores.map((item) => ({
-      dimension: item.dimension,
-      score: item.score,
-      rationale: item.rationale,
-    })),
+    dimensionScores,
     evidence: toDimensionEvidence(report),
   }
 }
@@ -404,7 +428,11 @@ ${buildTranscriptPrompt(input.transcript)}
 Return a structured assessment with evidence-backed dimension scores.`,
   })
 
-  const assessment = llmReportToAssessmentComputation(object, 'processing')
+  const assessment = llmReportToAssessmentComputation(
+    object,
+    'processing',
+    resolveRubricDimensions(input.rubricConfig)
+  )
 
   return {
     report: object,
@@ -449,24 +477,48 @@ export async function buildHybridAssessmentReport(args: {
     sanitizedReport,
     args.input.transcript
   )
+  const dimensions = resolveRubricDimensions(args.rubricConfig)
   const llmAssessment = llmReportToAssessmentComputation(
     sanitizedReport,
-    'processing'
+    'processing',
+    dimensions
   )
   const crossCheck = compareAssessmentReports(llmAssessment, deterministic)
+
+  // The model's self-reported headline numbers are advisory now that we derive
+  // them, but a wide gap between what it asserted and what its own dimension
+  // scores imply is a quality signal worth a human look.
+  const modelContradictedItself =
+    Math.abs(sanitizedReport.weightedScore - llmAssessment.weightedScore) >=
+      1 || sanitizedReport.hardGateTriggered !== llmAssessment.hardGateTriggered
+
+  // The rubric must be scored in full: a subset silently scores the candidate
+  // on part of the rubric, and duplicates collide as React keys in the charts.
+  const returnedNames = sanitizedReport.dimensionScores.map(
+    (item) => item.dimension
+  )
+  const hasDuplicateDimensions =
+    new Set(returnedNames).size !== returnedNames.length
+  const missesDimension = dimensions.some(
+    (dimension) => !returnedNames.includes(dimension.name)
+  )
+  const incompleteCoverage = hasDuplicateDimensions || missesDimension
 
   const needsManualReview =
     sanitizedReport.needsManualReview ||
     sanitizedReport.confidence === 'low' ||
     !evidenceValidation.valid ||
     crossCheck.hasDisagreement ||
+    modelContradictedItself ||
+    incompleteCoverage ||
     sanitizedReport.dimensionScores.some(
       (dimensionScore) => dimensionScore.evidence.length === 0
     )
 
   const report = llmReportToAssessmentComputation(
     sanitizedReport,
-    needsManualReview ? 'manual_review' : 'completed'
+    needsManualReview ? 'manual_review' : 'completed',
+    dimensions
   )
 
   return {

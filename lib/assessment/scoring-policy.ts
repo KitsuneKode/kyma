@@ -126,8 +126,17 @@ export function deriveAssessmentOutcome(args: {
   hardGateTriggered: boolean
   overallRecommendation: Recommendation
 } {
+  // Normalize over the dimensions actually scored, not every dimension in the
+  // rubric. Dividing by the full rubric weight while summing only a subset
+  // depresses the score toward 0 and would render a partial model response as
+  // a near-reject rather than an incomplete one.
+  const scoredDimensionNames = new Set(
+    args.dimensionScores.map((item) => item.dimension)
+  )
   const weights = Object.fromEntries(
-    args.dimensions.map((dimension) => [dimension.name, dimension.weight])
+    args.dimensions
+      .filter((dimension) => scoredDimensionNames.has(dimension.name))
+      .map((dimension) => [dimension.name, dimension.weight])
   )
   const weightedScore = computeAssessmentWeightedScore(
     args.dimensionScores,
