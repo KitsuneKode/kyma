@@ -90,6 +90,10 @@ export const applyDodoSubscriptionEvent = mutation({
   returns: v.object({
     applied: v.boolean(),
     orgId: v.union(v.id('organizations'), v.null()),
+    /** Discriminates a benign duplicate from a retryable unmirrored org. */
+    reason: v.optional(
+      v.union(v.literal('duplicate'), v.literal('org_not_mirrored'))
+    ),
   }),
   handler: async (ctx, args) => {
     requireBillingWriteKey(args.writeKey)
@@ -99,17 +103,10 @@ export const applyDodoSubscriptionEvent = mutation({
       .withIndex('by_event_key', (q) => q.eq('eventKey', args.eventKey))
       .unique()
     if (existingEvent) {
-      return { applied: false, orgId: null }
+      return { applied: false, orgId: null, reason: 'duplicate' as const }
     }
 
     const now = Date.now()
-    await ctx.db.insert('billingWebhookEvents', {
-      eventKey: args.eventKey,
-      eventType: args.eventType,
-      clerkOrgId: args.clerkOrgId,
-      subscriptionId: args.subscriptionId,
-      processedAt: now,
-    })
 
     const org = await ctx.db
       .query('organizations')
@@ -117,9 +114,25 @@ export const applyDodoSubscriptionEvent = mutation({
       .unique()
 
     if (!org) {
-      // Org may not be mirrored yet; still record the event so we don't retry forever.
-      return { applied: false, orgId: null }
+      // Deliberately do NOT record the event. The org is not mirrored yet
+      // (a subscription webhook can beat Clerk's organization.created), and
+      // recording it would make the dedupe check above suppress every
+      // redelivery - stranding the org on the wrong plan permanently.
+      // Returning `applied: false` lets the route signal a retry.
+      return {
+        applied: false,
+        orgId: null,
+        reason: 'org_not_mirrored' as const,
+      }
     }
+
+    await ctx.db.insert('billingWebhookEvents', {
+      eventKey: args.eventKey,
+      eventType: args.eventType,
+      clerkOrgId: args.clerkOrgId,
+      subscriptionId: args.subscriptionId,
+      processedAt: now,
+    })
 
     const nextPlan: OrgPlanTier = isOrgPlanTier(args.plan)
       ? args.plan

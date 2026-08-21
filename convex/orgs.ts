@@ -40,10 +40,13 @@ export const syncOrgFromClerkWebhook = mutation({
     }
 
     if (existing) {
+      // Clerk sends partial payloads. Convex deletes fields patched to
+      // `undefined`, so an update carrying only the name would otherwise erase
+      // the org's slug and avatar.
       await ctx.db.patch(existing._id, {
         name: args.name ?? existing.name,
-        slug: args.slug,
-        imageUrl: args.imageUrl,
+        ...(args.slug !== undefined ? { slug: args.slug } : {}),
+        ...(args.imageUrl !== undefined ? { imageUrl: args.imageUrl } : {}),
         updatedAt: now,
       })
       return existing._id
