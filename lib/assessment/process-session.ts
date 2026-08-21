@@ -11,6 +11,10 @@ import {
 
 import { buildHybridAssessmentReport } from './llm-report'
 import {
+  hardGateNamesFrom,
+  resolveRubricDimensions,
+} from '@/lib/rubric/resolve-rubric'
+import {
   buildAssessmentReport,
   type AssessmentComputation,
 } from './report-engine'
@@ -191,6 +195,13 @@ export async function processInterviewAssessment(
     summary: report.summary,
     weightedScore: report.weightedScore,
     hardGateTriggered: report.hardGateTriggered,
+    // Captured at scoring time so the review UI stars the gates that actually
+    // applied, rather than re-deriving from a template that may have changed.
+    hardGateDimensions: hardGateNamesFrom(
+      resolveRubricDimensions(
+        detail.template.rubricConfig as RubricConfig | undefined
+      )
+    ),
     topStrengths: report.topStrengths,
     topConcerns: report.topConcerns,
     transcriptQualityNote: report.transcriptQualityNote,

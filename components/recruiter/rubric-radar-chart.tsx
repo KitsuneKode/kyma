@@ -8,7 +8,12 @@ import {
   RadarChart,
 } from 'recharts'
 
-import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart'
 import { ChartEmptyState } from '@/components/recruiter/chart-states'
 import { formatDimensionLabel } from '@/lib/recruiter/format'
 import { isDefaultHardGateDimension } from '@/lib/rubric/constants'
@@ -35,11 +40,19 @@ type RubricRadarChartProps = {
   hardGateDimensions?: string[]
 }
 
+/**
+ * Gate status comes from the report, which captured the rubric that actually
+ * applied at scoring time. The default list is a fallback only for reports
+ * written before `hardGateDimensions` was persisted - re-deriving it for every
+ * report is what previously made the chart star gates the scorer ignored.
+ */
 function isHardGateDimension(
   dimension: string,
   hardGateDimensions?: string[]
 ): boolean {
-  if (hardGateDimensions?.includes(dimension)) return true
+  if (hardGateDimensions) {
+    return hardGateDimensions.includes(dimension)
+  }
   return isDefaultHardGateDimension(dimension)
 }
 
@@ -78,7 +91,13 @@ export function RubricRadarChart({
             dataKey="label"
             tick={{ fontSize: 10, fontWeight: 500 }}
           />
-          <PolarRadiusAxis domain={[0, 5]} tick={false} axisLine={false} />
+          <PolarRadiusAxis
+            domain={[0, 5]}
+            tickCount={6}
+            tick={{ fontSize: 9 }}
+            axisLine={false}
+          />
+          <ChartTooltip content={<ChartTooltipContent />} />
           <Radar
             name="Score"
             dataKey="score"

@@ -23,6 +23,8 @@ type ReviewAssessmentBentoProps = {
     transcriptQualityNote?: string | null
     weightedScore?: number | null
     hardGateTriggered?: boolean
+    /** Gates that applied at scoring time; absent on pre-migration reports. */
+    hardGateDimensions?: string[]
     topStrengths: string[]
     topConcerns: string[]
     dimensionScores: Array<{ dimension: string; score: number }>
@@ -84,7 +86,10 @@ export function ReviewAssessmentBento({
               </p>
             ) : null}
             <div className="-mx-2 mt-4">
-              <RubricRadar dimensionScores={report.dimensionScores} />
+              <RubricRadar
+                dimensionScores={report.dimensionScores}
+                hardGateDimensions={report.hardGateDimensions}
+              />
             </div>
           </>
         ) : (

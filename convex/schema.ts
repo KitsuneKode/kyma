@@ -366,6 +366,12 @@ export default defineSchema({
     summary: v.optional(v.string()),
     weightedScore: v.optional(v.number()),
     hardGateTriggered: v.optional(v.boolean()),
+    /**
+     * The dimensions that actually gated THIS report, captured at scoring time.
+     * Stored rather than re-derived so a report rendered later reflects the
+     * rubric that was applied, not whatever the template says today.
+     */
+    hardGateDimensions: v.optional(v.array(v.string())),
     topStrengths: v.optional(v.array(v.string())),
     topConcerns: v.optional(v.array(v.string())),
     transcriptQualityNote: v.optional(v.string()),

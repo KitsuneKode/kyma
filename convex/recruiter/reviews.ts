@@ -256,6 +256,7 @@ export const getCandidateReviewDetail = candidateReadQuery({
             summary: report.summary,
             weightedScore: report.weightedScore,
             hardGateTriggered: report.hardGateTriggered ?? false,
+            hardGateDimensions: report.hardGateDimensions,
             scoringSource: report.scoringSource,
             scoringModelId: report.scoringModelId,
             topStrengths: report.topStrengths ?? [],
