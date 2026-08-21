@@ -1,7 +1,7 @@
 import { ConvexError, v } from 'convex/values'
 
 import { mutation } from './_generated/server'
-import { hasTrustedProcessingKey } from './helpers/processingAuth'
+import { hasConfiguredWebhookKey } from './helpers/processingAuth'
 
 /**
  * Delegates to the shared processing-key guard rather than re-implementing the
@@ -9,7 +9,7 @@ import { hasTrustedProcessingKey } from './helpers/processingAuth'
  * check that keeps a missing key from being trusted outside development.
  */
 function requireWebhookWriteKey(writeKey: string) {
-  if (!hasTrustedProcessingKey(writeKey)) {
+  if (!hasConfiguredWebhookKey(writeKey)) {
     throw new ConvexError('Invalid write key for Clerk webhook sync.')
   }
 }

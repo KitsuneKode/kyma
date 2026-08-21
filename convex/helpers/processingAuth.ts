@@ -7,6 +7,31 @@ import { convexEnv } from '../../lib/env/convex'
 
 const DEV_PROCESSING_KEY = '__dev_preview__'
 
+/**
+ * Reads NODE_ENV from the raw process environment, NOT from the validated env
+ * shim.
+ *
+ * `lib/env/shared.ts` declares `NODE_ENV` with `.default('development')`, so
+ * `convexEnv.NODE_ENV` is the string `'development'` on a deployment where the
+ * variable was never set. Every "is this explicitly development?" check that
+ * reads the shim therefore passes in production. Guards that gate destructive
+ * or trust-granting behaviour must consult the raw value, where unset stays
+ * unset.
+ */
+export function rawNodeEnv(): string | undefined {
+  return typeof process === 'undefined' ? undefined : process.env?.NODE_ENV
+}
+
+/**
+ * True only when BOTH deployment signals explicitly say development. Absence of
+ * a production signal is not evidence of development.
+ */
+export function isExplicitDevelopmentDeployment(env: ProcessingAuthEnv) {
+  return (
+    rawNodeEnv() === 'development' && env.KYMA_DEPLOYMENT_ENV === 'development'
+  )
+}
+
 type ProcessingAuthEnv = {
   NODE_ENV?: string
   KYMA_DEPLOYMENT_ENV?: string
@@ -28,10 +53,12 @@ export function allowsLocalProcessingKeyFallback(env: ProcessingAuthEnv) {
     return false
   }
 
-  // Require an explicit development NODE_ENV — `test` and unset production
-  // signals stay fail-closed.
+  // Both signals must explicitly say development. Reading the validated shim
+  // here would accept an unset NODE_ENV as `'development'` and trust an empty
+  // key on a production deployment.
   return (
-    env.NODE_ENV === 'development' && !env.KYMA_PROCESSING_WRITE_KEY?.trim()
+    isExplicitDevelopmentDeployment(env) &&
+    !env.KYMA_PROCESSING_WRITE_KEY?.trim()
   )
 }
 
@@ -100,4 +127,19 @@ export async function resolveOrgIdForPipelineWrite(
   }
 
   return await requireSessionOrgId(ctx, sessionId)
+}
+
+/**
+ * Fail-closed guard for secret-bearing webhook endpoints (Clerk, Dodo).
+ *
+ * These are internet-reachable and grant billing and identity writes, so they
+ * require a CONFIGURED key in every deployment mode - the local empty-key
+ * convenience that `hasTrustedProcessingKey` allows must never apply to them.
+ */
+export function hasConfiguredWebhookKey(writeKey?: string) {
+  const configured = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+  if (!configured) {
+    return false
+  }
+  return secretsMatch(writeKey?.trim() ?? '', configured)
 }

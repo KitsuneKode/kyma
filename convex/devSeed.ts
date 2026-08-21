@@ -3,10 +3,10 @@
 import { ConvexError, v } from 'convex/values'
 
 import { internal } from './_generated/api'
-import { action, internalAction } from './_generated/server'
+import { internalAction } from './_generated/server'
 import { clerkIdFromIdentity } from './helpers/clerkIdentity'
 import { getOrgContextFromIdentity } from './helpers/orgContext'
-import { isConvexDevelopmentMode } from '../lib/env/deployment-mode'
+import { isExplicitDevelopmentDeployment } from './helpers/processingAuth'
 import { convexEnv } from '../lib/env/convex'
 
 const RESET_CONFIRMATION = 'RESET_DEV_ONLY'
@@ -46,10 +46,10 @@ export function assertDevSeedAllowed(env: {
   KYMA_DEPLOYMENT_ENV?: string
   NODE_ENV?: string
 }) {
-  const explicitlyDevelopment =
-    env.NODE_ENV === 'development' && isConvexDevelopmentMode(env)
-
-  if (!explicitlyDevelopment) {
+  // Must consult the RAW process env: `convexEnv.NODE_ENV` carries a zod
+  // `.default('development')`, so an unset variable on a production Convex
+  // deployment reads as development and this guard would pass.
+  if (!isExplicitDevelopmentDeployment(env)) {
     throw new ConvexError(
       'Dev seed/reset is blocked outside an explicit development deployment.'
     )
@@ -135,7 +135,7 @@ export const seedDevData = internalAction({
   },
 })
 
-export const seedDevDataForActiveOrg = action({
+export const seedDevDataForActiveOrg = internalAction({
   args: {
     confirm: v.string(),
     candidates: v.optional(v.number()),
