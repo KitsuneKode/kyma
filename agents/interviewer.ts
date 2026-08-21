@@ -259,6 +259,17 @@ function parseCandidateMetadata(rawMetadata?: string): CandidateMetadata {
   }
 }
 
+/**
+ * Candidate speech is owned by `UserInputTranscribed`, which carries
+ * interim/final state and STT timing. `ConversationItemAdded` therefore
+ * persists agent turns only - persisting user items there too wrote every
+ * candidate turn a second time under a different segment id, which the Convex
+ * upsert cannot deduplicate.
+ */
+export function resolveConversationItemSpeaker(role: string): 'agent' | null {
+  return role === 'assistant' ? 'agent' : null
+}
+
 function attachTranscriptPersistence(
   session: voice.AgentSession<InterviewUserData>,
   port: AgentSessionPort,
@@ -266,9 +277,20 @@ function attachTranscriptPersistence(
   sessionId: string | undefined,
   onBudgetCheck?: () => void
 ) {
+  // `UserInputTranscribedEvent` carries no stable per-utterance id (`speakerId`
+  // is documented as unsupported), and `createdAt` is fresh on every partial.
+  // Keying by that timestamp gave each partial its own id, so every partial
+  // missed the source-segment index, fell through to the full-session scan, and
+  // inserted another row - N rows and O(n^2) reads per spoken answer. Holding
+  // one id open until the final coalesces the utterance into a single row.
+  let activeCandidateSegmentId: string | null = null
+
   session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (event) => {
+    activeCandidateSegmentId ??= `candidate:${event.createdAt}`
+    const segmentId = activeCandidateSegmentId
+
     void port.upsertTranscript({
-      segmentId: `candidate:${event.createdAt}`,
+      segmentId,
       speaker: 'candidate',
       text: event.transcript,
       status: event.isFinal ? 'final' : 'partial',
@@ -276,6 +298,7 @@ function attachTranscriptPersistence(
     })
 
     if (event.isFinal) {
+      activeCandidateSegmentId = null
       const userData = session.userData
       userData.candidateTurnCount += 1
       onBudgetCheck?.()
@@ -305,21 +328,14 @@ function attachTranscriptPersistence(
       return
     }
 
-    const speaker =
-      event.item.role === 'user'
-        ? 'candidate'
-        : event.item.role === 'assistant'
-          ? 'agent'
-          : null
+    const speaker = resolveConversationItemSpeaker(event.item.role)
 
     if (!speaker) {
       return
     }
 
-    if (speaker === 'agent') {
-      session.userData.agentTurnCount += 1
-      onBudgetCheck?.()
-    }
+    session.userData.agentTurnCount += 1
+    onBudgetCheck?.()
 
     void port.upsertTranscript({
       segmentId: event.item.id,
