@@ -35,6 +35,7 @@ import type * as helpers_sessionReview from "../helpers/sessionReview.js";
 import type * as helpers_systemTemplates from "../helpers/systemTemplates.js";
 import type * as helpers_templates from "../helpers/templates.js";
 import type * as helpers_transcriptSegments from "../helpers/transcriptSegments.js";
+import type * as helpers_usageRollup from "../helpers/usageRollup.js";
 import type * as interviews_bootstrap from "../interviews/bootstrap.js";
 import type * as interviews_candidatePortal from "../interviews/candidatePortal.js";
 import type * as interviews_processing from "../interviews/processing.js";
@@ -98,6 +99,7 @@ declare const fullApi: ApiFromModules<{
   "helpers/systemTemplates": typeof helpers_systemTemplates;
   "helpers/templates": typeof helpers_templates;
   "helpers/transcriptSegments": typeof helpers_transcriptSegments;
+  "helpers/usageRollup": typeof helpers_usageRollup;
   "interviews/bootstrap": typeof interviews_bootstrap;
   "interviews/candidatePortal": typeof interviews_candidatePortal;
   "interviews/processing": typeof interviews_processing;
