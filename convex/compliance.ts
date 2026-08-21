@@ -235,8 +235,12 @@ export const deleteSubjectData = internalMutation({
       subjectEmail: args.subjectEmail,
       subjectUserId: args.subjectUserId,
     })
-    const start = args.cursor ?? 0
-    const slice = sessionIds.slice(start, start + DELETE_BATCH)
+    // `collectSubjectSessionIds` is recomputed on every continuation and the
+    // previous pass already deleted its sessions, so the list shrinks between
+    // runs. Offsetting into it with an absolute cursor therefore SKIPPED
+    // sessions - and reported `done` while subject data remained. Always take
+    // from the head and let the shrinking list terminate the loop.
+    const slice = sessionIds.slice(0, DELETE_BATCH)
     let deletedSessions = 0
 
     for (const sessionId of slice) {
@@ -245,60 +249,94 @@ export const deleteSubjectData = internalMutation({
         continue
       }
 
-      const [transcript, events, evidence, notes, chat, decisions, recordings] =
-        await Promise.all([
-          ctx.db
-            .query('transcriptSegments')
-            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('sessionEvents')
-            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('dimensionEvidence')
-            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('recruiterNotes')
-            .withIndex('by_session_and_created_at', (q) =>
-              q.eq('sessionId', session._id)
-            )
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('reportChatMessages')
-            .withIndex('by_session_and_created_at', (q) =>
-              q.eq('sessionId', session._id)
-            )
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('reviewDecisions')
-            .withIndex('by_session_and_created_at', (q) =>
-              q.eq('sessionId', session._id)
-            )
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('recordingArtifacts')
-            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-            .take(DELETE_BATCH),
-        ])
+      // Drain each child table to empty. A single `.take(DELETE_BATCH)` per
+      // table left orphaned rows behind for any interview with more than
+      // DELETE_BATCH segments - i.e. every real interview - while the DSR was
+      // recorded as complete and the candidate's PII survived.
+      const drainSessionChildRows = async () => {
+        let removed = 0
+        const drain = async (
+          rows: { _id: Parameters<typeof ctx.db.delete>[0] }[]
+        ) => {
+          for (const row of rows) {
+            await ctx.db.delete(row._id)
+            removed += 1
+          }
+        }
+
+        while (true) {
+          const [
+            transcript,
+            events,
+            evidence,
+            notes,
+            chat,
+            decisions,
+            recordings,
+          ] = await Promise.all([
+            ctx.db
+              .query('transcriptSegments')
+              .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('sessionEvents')
+              .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('dimensionEvidence')
+              .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('recruiterNotes')
+              .withIndex('by_session_and_created_at', (q) =>
+                q.eq('sessionId', session._id)
+              )
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('reportChatMessages')
+              .withIndex('by_session_and_created_at', (q) =>
+                q.eq('sessionId', session._id)
+              )
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('reviewDecisions')
+              .withIndex('by_session_and_created_at', (q) =>
+                q.eq('sessionId', session._id)
+              )
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('recordingArtifacts')
+              .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+              .take(DELETE_BATCH),
+          ])
+
+          const batch = [
+            ...transcript,
+            ...events,
+            ...evidence,
+            ...notes,
+            ...chat,
+            ...decisions,
+            ...recordings,
+          ]
+
+          if (batch.length === 0) {
+            break
+          }
+
+          await drain(batch)
+        }
+
+        return removed
+      }
+
+      await drainSessionChildRows()
 
       const report = await ctx.db
         .query('assessmentReports')
         .withIndex('by_session', (q) => q.eq('sessionId', session._id))
         .first()
 
-      for (const row of [
-        ...transcript,
-        ...events,
-        ...evidence,
-        ...notes,
-        ...chat,
-        ...decisions,
-        ...recordings,
-      ]) {
-        await ctx.db.delete(row._id)
-      }
       if (report) {
         await ctx.db.delete(report._id)
       }
@@ -306,11 +344,10 @@ export const deleteSubjectData = internalMutation({
       deletedSessions += 1
     }
 
-    const nextCursor = start + slice.length
-    if (nextCursor < sessionIds.length) {
+    if (sessionIds.length > slice.length) {
       await ctx.scheduler.runAfter(0, internal.compliance.deleteSubjectData, {
         ...args,
-        cursor: nextCursor,
+        cursor: 0,
       })
       return { done: false, deletedSessions }
     }
