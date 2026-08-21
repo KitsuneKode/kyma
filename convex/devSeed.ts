@@ -3,9 +3,10 @@
 import { ConvexError, v } from 'convex/values'
 
 import { internal } from './_generated/api'
-import { action } from './_generated/server'
+import { action, internalAction } from './_generated/server'
 import { clerkIdFromIdentity } from './helpers/clerkIdentity'
 import { getOrgContextFromIdentity } from './helpers/orgContext'
+import { isConvexDevelopmentMode } from '../lib/env/deployment-mode'
 import { convexEnv } from '../lib/env/convex'
 
 const RESET_CONFIRMATION = 'RESET_DEV_ONLY'
@@ -35,18 +36,32 @@ const SEED_TABLES = [
   'auditEvents',
 ] as const
 
-function assertDevelopmentMode() {
-  if (convexEnv.NODE_ENV === 'production') {
-    throw new ConvexError('Dev seed/reset is blocked in production mode.')
+/**
+ * Dev seeding must be impossible on any deployment that is not explicitly
+ * development. `NODE_ENV` defaults to `development` when unset, so an unset
+ * value is treated as untrusted rather than as a development signal - the
+ * previous NODE_ENV-only check passed on a real production Convex deployment.
+ */
+export function assertDevSeedAllowed(env: {
+  KYMA_DEPLOYMENT_ENV?: string
+  NODE_ENV?: string
+}) {
+  const explicitlyDevelopment =
+    env.NODE_ENV === 'development' && isConvexDevelopmentMode(env)
+
+  if (!explicitlyDevelopment) {
+    throw new ConvexError(
+      'Dev seed/reset is blocked outside an explicit development deployment.'
+    )
   }
 }
 
-export const resetDevData = action({
+export const resetDevData = internalAction({
   args: {
     confirm: v.string(),
   },
   handler: async (ctx, args): Promise<{ ok: true; deleted: number }> => {
-    assertDevelopmentMode()
+    assertDevSeedAllowed(convexEnv)
     if (args.confirm !== RESET_CONFIRMATION) {
       throw new ConvexError(
         `Confirmation mismatch. Pass "${RESET_CONFIRMATION}" to reset dev data.`
@@ -71,7 +86,7 @@ export const resetDevData = action({
   },
 })
 
-export const seedDevData = action({
+export const seedDevData = internalAction({
   args: {
     confirm: v.string(),
     candidates: v.optional(v.number()),
@@ -94,7 +109,7 @@ export const seedDevData = action({
     sampleInviteTokens: string[]
     sampleReviewSessionIds: string[]
   }> => {
-    assertDevelopmentMode()
+    assertDevSeedAllowed(convexEnv)
     if (args.confirm !== SEED_CONFIRMATION) {
       throw new ConvexError(
         `Confirmation mismatch. Pass "${SEED_CONFIRMATION}" to seed dev data.`
@@ -144,7 +159,7 @@ export const seedDevDataForActiveOrg = action({
     sampleInviteTokens: string[]
     sampleReviewSessionIds: string[]
   }> => {
-    assertDevelopmentMode()
+    assertDevSeedAllowed(convexEnv)
     if (args.confirm !== SEED_CONFIRMATION) {
       throw new ConvexError(
         `Confirmation mismatch. Pass "${SEED_CONFIRMATION}" to seed dev data.`
@@ -169,6 +184,12 @@ export const seedDevDataForActiveOrg = action({
 
     const clerkUserId = clerkIdFromIdentity(identity)
 
+    // BLAST RADIUS: seeding is scoped to the caller's org, but this clear is
+    // NOT - it empties all 21 seed tables across every org on the deployment.
+    // On a shared dev deployment one developer seeding their workspace destroys
+    // everyone else's. Safe only because `assertDevSeedAllowed` restricts this
+    // to explicit development deployments. Scope the clear by orgId before
+    // using this anywhere multi-tenant.
     for (const table of SEED_TABLES) {
       while (true) {
         const result = await ctx.runMutation(

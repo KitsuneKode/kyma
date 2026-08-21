@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 
 const SEED_CONFIRMATION = 'SEED_DEV_ONLY'
-const RESET_CONFIRMATION = 'RESET_DEV_ONLY'
 
 type SampleIndexEntry = {
   sessionId: string
@@ -80,7 +79,6 @@ function DevSetupHubTools() {
     api.workspace.ensureCurrentWorkspace
   )
   const seedForActiveOrg = useAction(api.devSeed.seedDevDataForActiveOrg)
-  const resetDevData = useAction(api.devSeed.resetDevData)
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -145,8 +143,10 @@ function DevSetupHubTools() {
         <h2 className="text-lg font-semibold">Workspace tools</h2>
         <p className="text-sm text-muted-foreground">
           Run these after selecting your organization in the recruiter header
-          switcher. Seeding is destructive for dev data and repopulates
-          screenings, candidates, reports, and settings for your active org.
+          switcher. Seeding repopulates screenings, candidates, reports, and
+          settings for your active org — but it first clears every seed table
+          across <strong>all</strong> organizations on this deployment. Do not
+          run it on a deployment anyone else is using.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button
@@ -176,19 +176,13 @@ function DevSetupHubTools() {
           >
             Seed data for active org
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={() =>
-              void runTask('Reset dev tables', () =>
-                resetDevData({ confirm: RESET_CONFIRMATION })
-              ).then(() => setSeedResult(null))
-            }
-          >
-            Reset all dev data
-          </Button>
         </div>
+        <p className="text-sm text-muted-foreground">
+          Resetting every table is deliberately not available from the browser.
+          Run <code className="font-mono text-xs">bun run db:reset:dev</code>{' '}
+          instead — the Convex CLI is admin-authenticated, so the wipe cannot be
+          triggered by anyone who merely reaches this page.
+        </p>
         {status ? (
           <p className="text-sm text-muted-foreground">{status}</p>
         ) : null}

@@ -30,7 +30,15 @@ Production host: `https://kyma.kitsunelabs.xyz`
 | `NEXT_PUBLIC_LIVEKIT_URL`                | Vercel          | LiveKit Cloud / self-hosted WS URL                               |
 | `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | Vercel + agent  | Token mint + room APIs                                           |
 | `KYMA_PROCESSING_WRITE_KEY`              | Vercel + Convex | **Required in production** for report writes / worker heartbeats |
-| `KYMA_DEPLOYMENT_ENV`                    | Vercel / Convex | Prefer `production` on the live site                             |
+| `KYMA_DEPLOYMENT_ENV`                    | Vercel / Convex | **Required** `production` on the live site — see note below      |
+| `NODE_ENV`                               | Convex          | **Required** `production` on the Convex prod deployment          |
+
+> **Why both are required.** `NODE_ENV` is declared with `.default('development')`
+> in `lib/env/shared.ts`, and Convex deployments do not set it automatically. The
+> dev-seed/reset guard (`convex/devSeed.ts`) and the processing-key fallback
+> (`convex/helpers/processingAuth.ts`) both treat an unset value as untrusted, so
+> leaving these blank on a production Convex deployment previously left a
+> destructive seeding path reachable. Set both explicitly.
 
 ### Clerk (recruiter / admin)
 
