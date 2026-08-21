@@ -61,6 +61,14 @@ async function seedSubject(
         startedAt: new Date().toISOString(),
       })
 
+      await ctx.db.insert('visualObservations', {
+        orgId: ORG_ID,
+        sessionId,
+        observation: 'candidate appeared distracted',
+        observedAt: new Date().toISOString(),
+        source: 'agent',
+      })
+
       for (let segment = 0; segment < segmentsPerSession; segment += 1) {
         await ctx.db.insert('transcriptSegments', {
           sessionId,
@@ -124,6 +132,38 @@ describe('subject data erasure', () => {
     )
 
     expect(orphans).toHaveLength(0)
+  })
+
+  test('leaves no orphaned visual observations', async () => {
+    const t = harness()
+    await seedSubject(t, { sessionCount: 3, segmentsPerSession: 50 })
+
+    await runErasureToCompletion(t)
+
+    const orphans = await t.run((ctx) =>
+      ctx.db.query('visualObservations').collect()
+    )
+
+    expect(orphans).toHaveLength(0)
+  })
+
+  test('erases a subject whose rows exceed the per-run budget', async () => {
+    const t = harness()
+    // 12 sessions x 250 segments = 3000 child rows, past ROW_BUDGET_PER_RUN,
+    // so completion depends on the budget-exhausted reschedule path.
+    await seedSubject(t, { sessionCount: 12, segmentsPerSession: 250 })
+
+    await runErasureToCompletion(t)
+
+    const sessions = await t.run((ctx) =>
+      ctx.db.query('interviewSessions').collect()
+    )
+    const segments = await t.run((ctx) =>
+      ctx.db.query('transcriptSegments').collect()
+    )
+
+    expect(sessions).toHaveLength(0)
+    expect(segments).toHaveLength(0)
   })
 
   test('a single small subject is erased in one pass', async () => {

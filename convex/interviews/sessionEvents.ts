@@ -65,6 +65,16 @@ export const appendSessionEvent = mutation({
       ? (source ?? 'assessment-pipeline')
       : 'candidate-client'
 
+    // Candidates may record events, never drive state. `isSessionStateWriteAllowed`
+    // is a denylist, so an unlisted terminal state like `failed` slipped
+    // through and let a candidate wedge their own interview: no report, no
+    // metering, and every later write refused. The invite path therefore
+    // carries no state at all - no client sends one today (verified across
+    // both browser call sites).
+    const resolvedState = isTrustedCaller
+      ? (state as InterviewSessionState | undefined)
+      : undefined
+
     return await insertSessionEventWithTransition(ctx, {
       session,
       sessionId,
@@ -72,7 +82,7 @@ export const appendSessionEvent = mutation({
       detail,
       source: resolvedSource,
       dedupeKey,
-      state: state as InterviewSessionState | undefined,
+      state: resolvedState,
     })
   },
 })

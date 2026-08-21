@@ -751,7 +751,11 @@ async function runInterviewSession(args: {
     logger,
     port,
     getActiveDurationMs: async () => {
-      const latestConfig = await port.fetchConfig()
+      // Tolerant here by design: this runs from a 30s poller invoked as
+      // `void checkBudget(...)`, so a throw would surface as an unhandled
+      // rejection and kill the worker process - taking every concurrent
+      // interview with it. The hard-fail belongs at session bootstrap only.
+      const latestConfig = await port.fetchConfig().catch(() => null)
       return (
         latestConfig?.activeDurationMs ?? remoteConfig?.activeDurationMs ?? 0
       )

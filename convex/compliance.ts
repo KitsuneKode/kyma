@@ -11,6 +11,14 @@ import {
 import { logAuditEvent } from './helpers/audit'
 
 const DELETE_BATCH = 40
+/**
+ * Ceiling on rows touched per invocation. Convex mutations are transactions
+ * with document read/write limits; an unbounded drain over 40 sessions x 7
+ * child tables aborts the whole transaction on real data, rolls back, and
+ * makes ZERO progress on every retry. Staying under the limit and
+ * rescheduling is what guarantees forward progress.
+ */
+const ROW_BUDGET_PER_RUN = 2_000
 
 async function collectSubjectSessionIds(
   ctx: QueryCtx | MutationCtx,
@@ -242,6 +250,8 @@ export const deleteSubjectData = internalMutation({
     // from the head and let the shrinking list terminate the loop.
     const slice = sessionIds.slice(0, DELETE_BATCH)
     let deletedSessions = 0
+    let rowsTouched = 0
+    let budgetExhausted = false
 
     for (const sessionId of slice) {
       const session = await ctx.db.get(sessionId)
@@ -249,22 +259,11 @@ export const deleteSubjectData = internalMutation({
         continue
       }
 
-      // Drain each child table to empty. A single `.take(DELETE_BATCH)` per
-      // table left orphaned rows behind for any interview with more than
-      // DELETE_BATCH segments - i.e. every real interview - while the DSR was
-      // recorded as complete and the candidate's PII survived.
+      // Drain child rows within the run's remaining budget. `drained` reports
+      // whether this session still has rows left, so the session document is
+      // only removed once its children are gone - never orphaning them.
       const drainSessionChildRows = async () => {
-        let removed = 0
-        const drain = async (
-          rows: { _id: Parameters<typeof ctx.db.delete>[0] }[]
-        ) => {
-          for (const row of rows) {
-            await ctx.db.delete(row._id)
-            removed += 1
-          }
-        }
-
-        while (true) {
+        while (rowsTouched < ROW_BUDGET_PER_RUN) {
           const [
             transcript,
             events,
@@ -273,6 +272,7 @@ export const deleteSubjectData = internalMutation({
             chat,
             decisions,
             recordings,
+            observations,
           ] = await Promise.all([
             ctx.db
               .query('transcriptSegments')
@@ -308,6 +308,13 @@ export const deleteSubjectData = internalMutation({
               .query('recordingArtifacts')
               .withIndex('by_session', (q) => q.eq('sessionId', session._id))
               .take(DELETE_BATCH),
+            // Agent-written observations describe the candidate's appearance
+            // and behaviour. Omitting this table left PII behind after a DSR
+            // reported completion.
+            ctx.db
+              .query('visualObservations')
+              .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+              .take(DELETE_BATCH),
           ])
 
           const batch = [
@@ -318,19 +325,29 @@ export const deleteSubjectData = internalMutation({
             ...chat,
             ...decisions,
             ...recordings,
+            ...observations,
           ]
 
           if (batch.length === 0) {
-            break
+            return true
           }
 
-          await drain(batch)
+          for (const row of batch) {
+            await ctx.db.delete(row._id)
+            rowsTouched += 1
+          }
         }
 
-        return removed
+        return false
       }
 
-      await drainSessionChildRows()
+      const childRowsDrained = await drainSessionChildRows()
+      if (!childRowsDrained) {
+        // Budget exhausted mid-session: stop here and continue next run. The
+        // session row stays so its remaining children are still reachable.
+        budgetExhausted = true
+        break
+      }
 
       const report = await ctx.db
         .query('assessmentReports')
@@ -339,12 +356,14 @@ export const deleteSubjectData = internalMutation({
 
       if (report) {
         await ctx.db.delete(report._id)
+        rowsTouched += 1
       }
+
       await ctx.db.delete(session._id)
       deletedSessions += 1
     }
 
-    if (sessionIds.length > slice.length) {
+    if (budgetExhausted || sessionIds.length > slice.length) {
       await ctx.scheduler.runAfter(0, internal.compliance.deleteSubjectData, {
         ...args,
         cursor: 0,

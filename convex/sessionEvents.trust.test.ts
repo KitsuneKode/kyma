@@ -96,6 +96,28 @@ describe('appendSessionEvent trust boundary', () => {
     expect(events.at(-1)?.source).toBe('candidate-client')
   })
 
+  test('a candidate cannot wedge their interview into a terminal state', async () => {
+    const t = harness()
+    const { sessionId, inviteToken } = await seedInterview(t, {
+      roomName: 'room-trust-failed',
+      sessionState: 'live',
+    })
+
+    // `failed` is terminal and was NOT on the ownership denylist, so it
+    // previously slipped through: no report, no metering, all later writes
+    // refused.
+    await t.mutation(api.interviews.sessionEvents.appendSessionEvent, {
+      inviteToken,
+      sessionId,
+      type: 'candidate-abandon',
+      detail: 'attempt to self-fail',
+      state: 'failed',
+    })
+
+    const session = await t.run((ctx) => ctx.db.get(sessionId))
+    expect(session?.state).toBe('live')
+  })
+
   test('a trusted caller with the processing key keeps its declared source', async () => {
     const t = harness()
     const { sessionId } = await seedInterview(t, {
