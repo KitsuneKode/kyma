@@ -265,31 +265,51 @@ export const updateAssessmentTemplate = templateWriteMutation({
       ...(args.interviewStyleMode
         ? { interviewStyleMode: args.interviewStyleMode }
         : {}),
-      systemPrompt: args.systemPrompt,
-      childPersonaPrompt: simulationPersonaPrompt,
-      simulationPersonaPrompt,
-      wrapUpPrompt: args.wrapUpPrompt,
-      rubricConfig: args.rubricConfig,
-      modelOverrides: args.modelOverrides,
-      rubricVersion: nextRubricVersion,
+      // Convex deletes any field patched to `undefined`, so every optional
+      // field must be spread conditionally. Writing these unconditionally let a
+      // name-only save erase the prompts and rubric for every later interview.
+      ...(args.systemPrompt !== undefined
+        ? { systemPrompt: args.systemPrompt }
+        : {}),
+      ...(simulationPersonaPrompt !== undefined
+        ? {
+            childPersonaPrompt: simulationPersonaPrompt,
+            simulationPersonaPrompt,
+          }
+        : {}),
+      ...(args.wrapUpPrompt !== undefined
+        ? { wrapUpPrompt: args.wrapUpPrompt }
+        : {}),
+      ...(args.rubricConfig !== undefined
+        ? { rubricConfig: args.rubricConfig, rubricVersion: nextRubricVersion }
+        : {}),
+      ...(args.modelOverrides !== undefined
+        ? { modelOverrides: args.modelOverrides }
+        : {}),
       updatedAt: now,
     })
 
-    await ctx.db.insert('assessmentTemplateVersions', {
-      orgId,
-      templateId: template._id,
-      rubricVersion: nextRubricVersion,
-      savedAt: now,
-      savedBy: actor,
-      jobFamily: args.jobFamily ?? template.jobFamily,
-      simulationMode: args.simulationMode ?? template.simulationMode,
-      systemPrompt: args.systemPrompt,
-      childPersonaPrompt: simulationPersonaPrompt,
-      simulationPersonaPrompt,
-      wrapUpPrompt: args.wrapUpPrompt,
-      rubricConfig: args.rubricConfig,
-      modelOverrides: args.modelOverrides,
-    })
+    // A version row is a rubric snapshot; only record one when the rubric
+    // actually changed, so name-only saves stop creating phantom versions.
+    if (args.rubricConfig !== undefined) {
+      await ctx.db.insert('assessmentTemplateVersions', {
+        orgId,
+        templateId: template._id,
+        rubricVersion: nextRubricVersion,
+        savedAt: now,
+        savedBy: actor,
+        jobFamily: args.jobFamily ?? template.jobFamily,
+        simulationMode: args.simulationMode ?? template.simulationMode,
+        systemPrompt: args.systemPrompt ?? template.systemPrompt,
+        childPersonaPrompt:
+          simulationPersonaPrompt ?? template.childPersonaPrompt,
+        simulationPersonaPrompt:
+          simulationPersonaPrompt ?? template.simulationPersonaPrompt,
+        wrapUpPrompt: args.wrapUpPrompt ?? template.wrapUpPrompt,
+        rubricConfig: args.rubricConfig,
+        modelOverrides: args.modelOverrides ?? template.modelOverrides,
+      })
+    }
 
     await logAuditEvent(ctx, {
       orgId,
