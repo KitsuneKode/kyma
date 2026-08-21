@@ -14,6 +14,8 @@ export type PlanQuotas = {
   maxBatchesPer30Days: number
   /** Max active invites (status created/opened/in_progress) per org. */
   maxActiveInvites: number
+  /** Max metered interview minutes per calendar month. Caps vendor spend. */
+  maxInterviewMinutesPerMonth: number
 }
 
 export const PLAN_QUOTAS: Record<OrgPlanTier, PlanQuotas> = {
@@ -21,58 +23,22 @@ export const PLAN_QUOTAS: Record<OrgPlanTier, PlanQuotas> = {
     maxCandidatesPerBatch: 10,
     maxBatchesPer30Days: 5,
     maxActiveInvites: 25,
+    maxInterviewMinutesPerMonth: 120,
   },
   pro: {
     maxCandidatesPerBatch: 50,
     maxBatchesPer30Days: 50,
     maxActiveInvites: 500,
+    maxInterviewMinutesPerMonth: 3_000,
   },
   enterprise: {
     maxCandidatesPerBatch: 200,
     maxBatchesPer30Days: 500,
     maxActiveInvites: 5_000,
+    maxInterviewMinutesPerMonth: 40_000,
   },
 } as const
 
 export function quotasForPlan(plan: OrgPlanTier): PlanQuotas {
   return PLAN_QUOTAS[plan]
-}
-
-export class PlanQuotaExceededError extends Error {
-  readonly code = 'PLAN_QUOTA_EXCEEDED' as const
-  readonly plan: OrgPlanTier
-  readonly limit: keyof PlanQuotas
-  readonly attempted: number
-  readonly max: number
-
-  constructor(
-    plan: OrgPlanTier,
-    limit: keyof PlanQuotas,
-    attempted: number,
-    max: number
-  ) {
-    super(
-      `Organization plan "${plan}" allows at most ${max} for ${limit} (attempted ${attempted}). Upgrade or contact support.`
-    )
-    this.name = 'PlanQuotaExceededError'
-    this.plan = plan
-    this.limit = limit
-    this.attempted = attempted
-    this.max = max
-  }
-}
-
-export function assertCandidatesPerBatch(
-  plan: OrgPlanTier,
-  candidateCount: number
-): void {
-  const max = quotasForPlan(plan).maxCandidatesPerBatch
-  if (candidateCount > max) {
-    throw new PlanQuotaExceededError(
-      plan,
-      'maxCandidatesPerBatch',
-      candidateCount,
-      max
-    )
-  }
 }

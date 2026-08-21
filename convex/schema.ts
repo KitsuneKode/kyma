@@ -511,6 +511,16 @@ export default defineSchema({
     updatedBy: v.string(),
   }).index('by_org_id', ['orgId']),
 
+  /** Per-org, per-month usage rollup. The basis for plan caps and invoicing. */
+  orgUsageRollups: defineTable({
+    orgId: v.string(),
+    /** Calendar month in UTC, `YYYY-MM`. */
+    period: v.string(),
+    interviewCount: v.number(),
+    interviewMinutes: v.number(),
+    updatedAt: v.number(),
+  }).index('by_org_and_period', ['orgId', 'period']),
+
   agentWorkerHeartbeats: defineTable({
     workerId: v.string(),
     agentName: v.string(),

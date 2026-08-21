@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
     const message =
       error instanceof Error ? error.message : 'Failed to bootstrap interview.'
     const status =
-      message === 'RATE_LIMITED'
+      message === 'RATE_LIMITED' || message.includes('monthly interview limit')
         ? 429
         : message === 'This interview link has expired.'
           ? 410

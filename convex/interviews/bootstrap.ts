@@ -8,6 +8,8 @@ import {
   resolveInviteSessionPurpose,
 } from '../helpers/interviewSession'
 import { resolveTemplateName } from '../helpers/sessionReview'
+import { quotasForPlan, resolveOrgPlanForOrg } from '../helpers/orgPlan'
+import { currentUsagePeriod, getUsageForPeriod } from '../helpers/usageRollup'
 
 export const getInviteBootstrapByokSummary = query({
   args: {
@@ -87,6 +89,22 @@ export const bootstrapPublicSession = mutation({
       }
 
       throw new ConvexError('This interview has already been submitted.')
+    }
+
+    // Cap metered usage before any room is created. Checked ahead of the
+    // resume path too, so an exhausted workspace cannot keep reopening a
+    // session. The message is candidate-facing - it must not leak plan detail.
+    const plan = await resolveOrgPlanForOrg(ctx, invite.orgId)
+    const quotas = quotasForPlan(plan)
+    const usage = await getUsageForPeriod(ctx, {
+      orgId: invite.orgId,
+      period: currentUsagePeriod(),
+    })
+
+    if (usage.interviewMinutes >= quotas.maxInterviewMinutesPerMonth) {
+      throw new ConvexError(
+        'This workspace has reached its monthly interview limit. Please contact the hiring team.'
+      )
     }
 
     if (!invite.candidateName) {

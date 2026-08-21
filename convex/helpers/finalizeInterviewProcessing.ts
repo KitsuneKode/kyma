@@ -1,6 +1,7 @@
 import type { Doc, Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import { internal } from '../_generated/api'
+import { recordInterviewUsage } from './usageRollup'
 import {
   PROCESSING_ENTRY_STATES,
   resolveProcessingTransitionPath,
@@ -116,6 +117,15 @@ export async function finalizeInterviewForProcessing(
   if (!reachedProcessing) {
     return { queued: false, transitioned: false }
   }
+
+  // Meter the completed interview exactly once. This block only runs on the
+  // genuine transition into `processing`; any later finalize for the same
+  // session short-circuits at the `currentState === 'processing'` branch above,
+  // so usage cannot be double-counted by a retry or a second caller.
+  await recordInterviewUsage(ctx, {
+    orgId: working.orgId,
+    durationMs: working.activeDurationMs ?? 0,
+  })
 
   const existingFinalize = await findFinalizeEvent(
     ctx,

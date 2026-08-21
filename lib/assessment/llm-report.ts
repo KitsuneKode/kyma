@@ -53,6 +53,15 @@ const RECOMMENDATION_RANK: Record<
 
 const TRANSCRIPT_PROMPT_CHAR_BUDGET = 48_000
 
+/**
+ * Hard ceiling on one scoring call. Must stay comfortably under the reaper's
+ * stuck-session threshold (`STUCK_AFTER_MS`, 10 minutes) so a hung provider
+ * fails fast into the deterministic fallback instead of being reaped. With
+ * BYOK the endpoint is partly customer-controlled, so an unbounded call could
+ * stall the pipeline indefinitely.
+ */
+const SCORING_TIMEOUT_MS = 90_000
+
 function normalizeForMatch(text: string) {
   return text
     .toLowerCase()
@@ -391,6 +400,7 @@ export async function generateLlmAssessmentReport(
     providerOptions: input.providerOptions,
     schema,
     maxRetries: 2,
+    abortSignal: AbortSignal.timeout(SCORING_TIMEOUT_MS),
     system: `You are an expert tutor-screening assessor operating inside a fixed scoring pipeline.
 
 Security rules (always follow):
