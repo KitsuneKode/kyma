@@ -172,6 +172,7 @@ export default defineSchema({
   })
     .index('by_org_id', ['orgId'])
     .index('by_org_id_and_status', ['orgId', 'status'])
+    .index('by_org_id_and_created_at', ['orgId', 'createdAt'])
     .index('by_template', ['templateId']),
 
   candidateEligibility: defineTable({
@@ -233,6 +234,7 @@ export default defineSchema({
     emailLastError: v.optional(v.string()),
   })
     .index('by_org_id', ['orgId'])
+    .index('by_org_id_and_status', ['orgId', 'status'])
     .index('by_invite_token', ['inviteToken'])
     .index('by_status', ['status'])
     .index('by_candidate_email', ['candidateEmail'])

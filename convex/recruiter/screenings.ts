@@ -73,65 +73,64 @@ export const listScreeningBatches = recruiterQuery({
     const { orgId } = ctx
     const { expiringUntilMs, staleBeforeMs } = getSessionOpsWindows(nowMs)
 
+    // Newest-first at the index level. Sampling on `by_org_id` returned the
+    // OLDEST batches, so a mature org's recent screenings were never visible.
     const batches = await ctx.db
       .query('screeningBatches')
-      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
+      .withIndex('by_org_id_and_created_at', (q) => q.eq('orgId', orgId))
+      .order('desc')
       .take(MAX_SCREENING_BATCHES)
 
     return await Promise.all(
-      [...batches]
-        .toSorted((left, right) =>
-          right.createdAt.localeCompare(left.createdAt)
+      batches.map(async (batch) => {
+        const [template, eligibility] = await Promise.all([
+          ctx.db.get(batch.templateId),
+          ctx.db
+            .query('candidateEligibility')
+            .withIndex('by_batch', (q) => q.eq('batchId', batch._id))
+            .take(MAX_BATCH_ELIGIBILITY),
+        ])
+
+        const inviteIds = eligibility.map((candidate) => candidate.inviteId)
+        const invites = await Promise.all(
+          inviteIds.map((inviteId) => ctx.db.get(inviteId))
         )
-        .map(async (batch) => {
-          const [template, eligibility] = await Promise.all([
-            ctx.db.get(batch.templateId),
-            ctx.db
-              .query('candidateEligibility')
-              .withIndex('by_batch', (q) => q.eq('batchId', batch._id))
-              .take(MAX_BATCH_ELIGIBILITY),
-          ])
 
-          const inviteIds = eligibility.map((candidate) => candidate.inviteId)
-          const invites = await Promise.all(
-            inviteIds.map((inviteId) => ctx.db.get(inviteId))
-          )
+        const expiringInvites = invites.filter((invite) =>
+          isInviteExpiringSoon(invite?.expiresAt, nowMs, expiringUntilMs)
+        ).length
 
-          const expiringInvites = invites.filter((invite) =>
-            isInviteExpiringSoon(invite?.expiresAt, nowMs, expiringUntilMs)
-          ).length
+        const candidateCount = eligibility.length
+        const completedCount = eligibility.filter(
+          (candidate) => candidate.status === 'submitted'
+        ).length
+        const completionPercent =
+          candidateCount === 0
+            ? 0
+            : Math.round((completedCount / candidateCount) * 100)
+        const stuckCandidates = await countStuckCandidatesForInvites(
+          ctx,
+          inviteIds,
+          staleBeforeMs
+        )
 
-          const candidateCount = eligibility.length
-          const completedCount = eligibility.filter(
-            (candidate) => candidate.status === 'submitted'
-          ).length
-          const completionPercent =
-            candidateCount === 0
-              ? 0
-              : Math.round((completedCount / candidateCount) * 100)
-          const stuckCandidates = await countStuckCandidatesForInvites(
-            ctx,
-            inviteIds,
-            staleBeforeMs
-          )
-
-          return {
-            id: batch._id,
-            name: batch.name,
-            status: batch.status,
-            createdAt: batch.createdAt,
-            expiresAt: batch.expiresAt,
-            allowedAttempts: batch.allowedAttempts,
-            templateName: resolveTemplateName(template?.name),
-            targetDurationMinutes: batch.targetDurationMinutes,
-            allowsResume: batch.allowsResume,
-            candidateCount,
-            completedCount,
-            completionPercent,
-            expiringInvites,
-            stuckCandidates,
-          }
-        })
+        return {
+          id: batch._id,
+          name: batch.name,
+          status: batch.status,
+          createdAt: batch.createdAt,
+          expiresAt: batch.expiresAt,
+          allowedAttempts: batch.allowedAttempts,
+          templateName: resolveTemplateName(template?.name),
+          targetDurationMinutes: batch.targetDurationMinutes,
+          allowsResume: batch.allowsResume,
+          candidateCount,
+          completedCount,
+          completionPercent,
+          expiringInvites,
+          stuckCandidates,
+        }
+      })
     )
   },
 })
@@ -244,33 +243,39 @@ export const createScreeningBatch = screeningWriteMutation({
     const thirtyDaysAgo = new Date(
       Date.now() - 1000 * 60 * 60 * 24 * 30
     ).toISOString()
+    // Exact within the quota window: a bounded range read on (orgId, createdAt).
+    // Sampling `by_org_id` returned the OLDEST rows, so any org past
+    // MAX_SCREENING_BATCHES lifetime batches counted zero and bypassed the quota.
     const recentBatches = await ctx.db
       .query('screeningBatches')
-      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-      .take(MAX_SCREENING_BATCHES)
-    const batchesLast30Days = recentBatches.filter(
-      (batch) => batch.createdAt >= thirtyDaysAgo
-    ).length
+      .withIndex('by_org_id_and_created_at', (q) =>
+        q.eq('orgId', orgId).gte('createdAt', thirtyDaysAgo)
+      )
+      .take(quotas.maxBatchesPer30Days + 1)
+    const batchesLast30Days = recentBatches.length
     if (batchesLast30Days >= quotas.maxBatchesPer30Days) {
       throw new ConvexError(
         `Organization plan "${plan}" allows at most ${quotas.maxBatchesPer30Days} screening batches per 30 days.`
       )
     }
 
-    const activeInviteStatuses = new Set([
-      'created',
-      'opened',
-      'in_progress',
-    ] as const)
-    const orgInvites = await ctx.db
-      .query('candidateInvites')
-      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-      .take(Math.min(quotas.maxActiveInvites + 50, 5_000))
-    const activeInviteCount = orgInvites.filter((invite) =>
-      activeInviteStatuses.has(
-        invite.status as 'created' | 'opened' | 'in_progress'
-      )
-    ).length
+    // Count each active status directly on (orgId, status) rather than sampling
+    // the oldest N invites of every status and filtering in memory.
+    const activeInviteStatuses = ['created', 'opened', 'in_progress'] as const
+    const activeInviteCap = quotas.maxActiveInvites + 1
+    let activeInviteCount = 0
+    for (const status of activeInviteStatuses) {
+      const rows = await ctx.db
+        .query('candidateInvites')
+        .withIndex('by_org_id_and_status', (q) =>
+          q.eq('orgId', orgId).eq('status', status)
+        )
+        .take(activeInviteCap - Math.min(activeInviteCount, activeInviteCap))
+      activeInviteCount += rows.length
+      if (activeInviteCount > quotas.maxActiveInvites) {
+        break
+      }
+    }
     if (activeInviteCount + args.candidates.length > quotas.maxActiveInvites) {
       throw new ConvexError(
         `Organization plan "${plan}" allows at most ${quotas.maxActiveInvites} active invites.`
