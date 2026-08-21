@@ -134,7 +134,7 @@ export const bootstrapPublicSession = mutation({
           throw new ConvexError('This screening does not allow session resume.')
         }
 
-        const reopenedRoomName = `interview-${inviteToken}-${Date.now()}`
+        const reopenedRoomName = `interview-${existingSession._id}-${Date.now()}`
         const reopenedAt = new Date().toISOString()
 
         await ctx.db.patch(existingSession._id, {
@@ -177,7 +177,7 @@ export const bootstrapPublicSession = mutation({
       }
     }
 
-    const roomName = `interview-${inviteToken}-${Date.now()}`
+    const roomName = `interview-${invite._id}-${Date.now()}`
     const startedAt = new Date().toISOString()
     const sessionPurpose = resolveInviteSessionPurpose(invite)
 

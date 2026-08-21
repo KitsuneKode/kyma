@@ -1,16 +1,15 @@
 import { ConvexError, v } from 'convex/values'
 
 import { mutation } from './_generated/server'
-import { convexEnv } from '../lib/env/convex'
+import { hasTrustedProcessingKey } from './helpers/processingAuth'
 
+/**
+ * Delegates to the shared processing-key guard rather than re-implementing the
+ * comparison. The local copy checked only the key, missing the deployment-mode
+ * check that keeps a missing key from being trusted outside development.
+ */
 function requireWebhookWriteKey(writeKey: string) {
-  const expectedKey = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
-  if (!expectedKey) {
-    throw new ConvexError(
-      'KYMA_PROCESSING_WRITE_KEY is required for Clerk webhook sync.'
-    )
-  }
-  if (writeKey !== expectedKey) {
+  if (!hasTrustedProcessingKey(writeKey)) {
     throw new ConvexError('Invalid write key for Clerk webhook sync.')
   }
 }

@@ -35,6 +35,23 @@ export function allowsLocalProcessingKeyFallback(env: ProcessingAuthEnv) {
   )
 }
 
+/**
+ * Length-independent comparison so a shared secret cannot be recovered by
+ * timing a byte-by-byte prefix match.
+ */
+export function secretsMatch(left: string, right: string): boolean {
+  if (left.length !== right.length) {
+    return false
+  }
+
+  let mismatch = 0
+  for (let index = 0; index < left.length; index += 1) {
+    mismatch |= left.charCodeAt(index) ^ right.charCodeAt(index)
+  }
+
+  return mismatch === 0
+}
+
 export function hasTrustedProcessingKeyForEnv(
   env: ProcessingAuthEnv,
   processingKey?: string
@@ -47,7 +64,7 @@ export function hasTrustedProcessingKeyForEnv(
     const normalized = processingKey?.trim() ?? ''
     return normalized === '' || normalized === DEV_PROCESSING_KEY
   }
-  return processingKey?.trim() === configured
+  return secretsMatch(processingKey?.trim() ?? '', configured)
 }
 
 export function hasTrustedProcessingKey(processingKey?: string) {

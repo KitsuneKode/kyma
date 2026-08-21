@@ -5,6 +5,7 @@ import { recruiterQuery } from './lib/customFunctions'
 import { requireAdmin, requireOrgId } from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
 import { convexEnv } from '../lib/env/convex'
+import { hasTrustedProcessingKey } from './helpers/processingAuth'
 import {
   DEFAULT_ORG_PLAN,
   isOrgPlanTier,
@@ -19,13 +20,7 @@ const planValidator = v.union(
 )
 
 function requireBillingWriteKey(writeKey: string) {
-  const expectedKey = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
-  if (!expectedKey) {
-    throw new ConvexError(
-      'KYMA_PROCESSING_WRITE_KEY is required for billing webhook sync.'
-    )
-  }
-  if (writeKey !== expectedKey) {
+  if (!hasTrustedProcessingKey(writeKey)) {
     throw new ConvexError('Invalid write key for billing webhook sync.')
   }
 }

@@ -170,6 +170,18 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ error: message }, { status })
+    // Public endpoint: only the mapped, candidate-safe messages are echoed.
+    // Everything else becomes a generic failure plus a request id - the detail
+    // already reached the logger and the error reporter.
+    return NextResponse.json(
+      {
+        error:
+          status >= 500
+            ? 'Unable to start this interview right now. Please try again.'
+            : message,
+        requestId,
+      },
+      { status }
+    )
   }
 }

@@ -91,7 +91,11 @@ describe('bootstrapPublicSession', () => {
       { inviteToken, participantName }
     )
 
-    expect(result.roomName).toMatch(/^interview-bootstrap-invite-token-/)
+    // The room name must NOT embed the invite token: it propagates into
+    // webhook payloads, egress filenames and S3 keys, none of which are
+    // treated as secret-bearing.
+    expect(result.roomName).toMatch(/^interview-/)
+    expect(result.roomName).not.toContain('bootstrap-invite-token')
     expect(result.targetDurationMinutes).toBe(20)
 
     const session = await t.run((ctx) => ctx.db.get(result.sessionId))
@@ -148,7 +152,11 @@ describe('bootstrapPublicSession', () => {
 
     expect(result.sessionId).toBe(sessionId)
     expect(result.roomName).not.toBe('interview-room-original')
-    expect(result.roomName).toMatch(/^interview-bootstrap-invite-token-/)
+    // The room name must NOT embed the invite token: it propagates into
+    // webhook payloads, egress filenames and S3 keys, none of which are
+    // treated as secret-bearing.
+    expect(result.roomName).toMatch(/^interview-/)
+    expect(result.roomName).not.toContain('bootstrap-invite-token')
 
     const session = await t.run((ctx) => ctx.db.get(sessionId!))
     expect(session?.state).toBe('connecting')

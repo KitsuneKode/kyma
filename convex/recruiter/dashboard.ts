@@ -27,6 +27,7 @@ async function buildDashboardPayload(
   const [
     manualReviewReports,
     pendingReports,
+    terminalReportGroups,
     activeSessionGroups,
     recentSessions,
     invitesSample,
@@ -44,6 +45,19 @@ async function buildDashboardPayload(
         q.eq('orgId', orgId).eq('status', 'pending')
       )
       .take(MAX_PENDING_REPORTS),
+    // Terminal reports are not review work, but a session that has one is NOT
+    // stale. Without them the attention list flagged every completed interview
+    // as a problem needing attention.
+    Promise.all(
+      (['completed', 'manual_review', 'failed'] as const).map((status) =>
+        ctx.db
+          .query('assessmentReports')
+          .withIndex('by_org_id_and_status', (q) =>
+            q.eq('orgId', orgId).eq('status', status)
+          )
+          .take(DASHBOARD_SESSION_SAMPLE)
+      )
+    ),
     Promise.all(
       ACTIVE_SESSION_STATES.map((state) =>
         ctx.db
@@ -71,6 +85,11 @@ async function buildDashboardPayload(
   ])
 
   const reports = [...manualReviewReports, ...pendingReports]
+  const reportedSessionIds = new Set(
+    [...reports, ...terminalReportGroups.flat()].map(
+      (report) => `${report.sessionId}`
+    )
+  )
   const sessions = recentSessions
   const invites = invitesSample
   const activeSessions = activeSessionGroups.flat().length
@@ -83,10 +102,6 @@ async function buildDashboardPayload(
     if (!session.startedAt) return false
     return new Date(session.startedAt).toDateString() === todayDateString
   }).length
-
-  const reportBySession = new Map(
-    reports.map((report) => [`${report.sessionId}`, report])
-  )
 
   const manualReviewSlice = manualReviewReports.slice(
     0,
@@ -151,7 +166,7 @@ async function buildDashboardPayload(
           isStaleSessionWithoutReport(
             session.startedAt,
             staleBeforeMs,
-            reportBySession.has(`${session._id}`)
+            reportedSessionIds.has(`${session._id}`)
           )
         )
         .slice(0, MAX_ATTENTION_ITEMS)
