@@ -1,7 +1,7 @@
 // @vitest-environment edge-runtime
 /// <reference types="vite/client" />
 
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { assertDevSeedAllowed } from './devSeed'
 import { convexEnv } from '../lib/env/convex'
@@ -16,25 +16,18 @@ import { convexEnv } from '../lib/env/convex'
  * production. Any future test here must go through `convexEnv` or set
  * `process.env` directly.
  */
-const originalNodeEnv = process.env.NODE_ENV
-const originalDeploymentEnv = process.env.KYMA_DEPLOYMENT_ENV
-
 function envWith(deploymentEnv?: string) {
   return { ...convexEnv, KYMA_DEPLOYMENT_ENV: deploymentEnv }
 }
 
 describe('dev seed deployment guard', () => {
   beforeEach(() => {
-    delete process.env.NODE_ENV
-    delete process.env.KYMA_DEPLOYMENT_ENV
+    vi.stubEnv('NODE_ENV', undefined as unknown as string)
+    vi.stubEnv('KYMA_DEPLOYMENT_ENV', undefined as unknown as string)
   })
 
   afterEach(() => {
-    if (originalNodeEnv === undefined) delete process.env.NODE_ENV
-    else process.env.NODE_ENV = originalNodeEnv
-    if (originalDeploymentEnv === undefined)
-      delete process.env.KYMA_DEPLOYMENT_ENV
-    else process.env.KYMA_DEPLOYMENT_ENV = originalDeploymentEnv
+    vi.unstubAllEnvs()
   })
 
   test('blocks a production deployment where neither variable was set', () => {
@@ -46,28 +39,28 @@ describe('dev seed deployment guard', () => {
   })
 
   test('blocks when the deployment env says production', () => {
-    process.env.NODE_ENV = 'development'
+    vi.stubEnv('NODE_ENV', 'development')
     expect(() => assertDevSeedAllowed(envWith('production'))).toThrow(
       /blocked/i
     )
   })
 
   test('blocks under a production NODE_ENV', () => {
-    process.env.NODE_ENV = 'production'
+    vi.stubEnv('NODE_ENV', 'production')
     expect(() => assertDevSeedAllowed(envWith('development'))).toThrow(
       /blocked/i
     )
   })
 
   test('blocks under a test NODE_ENV', () => {
-    process.env.NODE_ENV = 'test'
+    vi.stubEnv('NODE_ENV', 'test')
     expect(() => assertDevSeedAllowed(envWith('development'))).toThrow(
       /blocked/i
     )
   })
 
   test('blocks when only NODE_ENV says development', () => {
-    process.env.NODE_ENV = 'development'
+    vi.stubEnv('NODE_ENV', 'development')
     expect(() => assertDevSeedAllowed(envWith(undefined))).toThrow(/blocked/i)
   })
 
@@ -78,7 +71,7 @@ describe('dev seed deployment guard', () => {
   })
 
   test('allows only when BOTH signals explicitly say development', () => {
-    process.env.NODE_ENV = 'development'
+    vi.stubEnv('NODE_ENV', 'development')
     expect(() => assertDevSeedAllowed(envWith('development'))).not.toThrow()
   })
 })

@@ -4,33 +4,9 @@ import type { Id } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import { isProductionDeployment } from '../../lib/env/deployment-mode'
 import { convexEnv } from '../../lib/env/convex'
+import { isExplicitDevelopmentEnv } from '../../lib/env/node-env'
 
 const DEV_PROCESSING_KEY = '__dev_preview__'
-
-/**
- * Reads NODE_ENV from the raw process environment, NOT from the validated env
- * shim.
- *
- * `lib/env/shared.ts` declares `NODE_ENV` with `.default('development')`, so
- * `convexEnv.NODE_ENV` is the string `'development'` on a deployment where the
- * variable was never set. Every "is this explicitly development?" check that
- * reads the shim therefore passes in production. Guards that gate destructive
- * or trust-granting behaviour must consult the raw value, where unset stays
- * unset.
- */
-export function rawNodeEnv(): string | undefined {
-  return typeof process === 'undefined' ? undefined : process.env?.NODE_ENV
-}
-
-/**
- * True only when BOTH deployment signals explicitly say development. Absence of
- * a production signal is not evidence of development.
- */
-export function isExplicitDevelopmentDeployment(env: ProcessingAuthEnv) {
-  return (
-    rawNodeEnv() === 'development' && env.KYMA_DEPLOYMENT_ENV === 'development'
-  )
-}
 
 type ProcessingAuthEnv = {
   NODE_ENV?: string
@@ -39,9 +15,21 @@ type ProcessingAuthEnv = {
 }
 
 /**
+ * True only when BOTH deployment signals explicitly say development.
+ *
+ * Delegates to the documented env adapter, which reads the RAW process value:
+ * `convexEnv.NODE_ENV` carries a zod `.default('development')`, so a guard
+ * reading the shim would treat an unset variable on a production Convex
+ * deployment as a development signal.
+ */
+export function isExplicitDevelopmentDeployment(env: ProcessingAuthEnv) {
+  return isExplicitDevelopmentEnv(env.KYMA_DEPLOYMENT_ENV)
+}
+
+/**
  * Local/dev empty-key bypass is allowed only when the deployment is clearly
- * development. Production and any non-dev Convex deployment must never trust
- * a missing `KYMA_PROCESSING_WRITE_KEY` (including empty caller keys).
+ * development on BOTH signals. Production and any deployment that merely
+ * omitted its env vars must never trust a missing `KYMA_PROCESSING_WRITE_KEY`.
  */
 export function allowsLocalProcessingKeyFallback(env: ProcessingAuthEnv) {
   if (
@@ -53,9 +41,6 @@ export function allowsLocalProcessingKeyFallback(env: ProcessingAuthEnv) {
     return false
   }
 
-  // Both signals must explicitly say development. Reading the validated shim
-  // here would accept an unset NODE_ENV as `'development'` and trust an empty
-  // key on a production deployment.
   return (
     isExplicitDevelopmentDeployment(env) &&
     !env.KYMA_PROCESSING_WRITE_KEY?.trim()

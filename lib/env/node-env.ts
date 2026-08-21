@@ -16,6 +16,18 @@ export function isProductionNodeEnv() {
   return getRuntimeModeFromNodeEnv() === 'production'
 }
 
+/**
+ * True only when BOTH deployment signals explicitly say development.
+ *
+ * `lib/env/shared.ts` declares NODE_ENV with `.default('development')`, so the
+ * validated shims report `'development'` on a deployment where the variable was
+ * never set. Guards that gate destructive or trust-granting behaviour must use
+ * this raw reader, where unset stays unset, rather than the shim.
+ */
+export function isExplicitDevelopmentEnv(deploymentEnv?: string) {
+  return readNodeEnv() === 'development' && deploymentEnv === 'development'
+}
+
 export function allowDevPreviewRoutes() {
   return !isProductionNodeEnv()
 }
