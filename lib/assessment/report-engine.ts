@@ -1,19 +1,15 @@
 import type { RubricConfig } from './llm-report-schema'
 import {
   DIMENSION_LABELS,
-  DIMENSION_WEIGHTS,
   isRubricDimension,
-  RUBRIC_DIMENSIONS,
   type RubricDimension,
 } from '../rubric/constants'
 import {
   type Confidence,
   type Recommendation,
-  computeAssessmentWeightedScore,
-  isHardGateDimension,
-  isHardGateTriggered,
-  resolveRecommendation,
+  deriveAssessmentOutcome,
 } from './scoring-policy'
+import { resolveRubricDimensions } from '@/lib/rubric/resolve-rubric'
 
 export {
   DIMENSION_LABELS,
@@ -250,8 +246,7 @@ function computeDimensionScore(
   keywords: string[],
   segments: CandidateSegment[],
   candidateTurns: number,
-  candidateWords: number,
-  _isHardGate: boolean
+  candidateWords: number
 ) {
   const normalizedTranscript = normalize(
     segments.map((segment) => segment.text).join(' ')
@@ -386,27 +381,24 @@ export function buildAssessmentReport(
     0
   )
 
-  const configuredDimensions =
-    rubricConfig?.dimensions.filter((dimension) => dimension.name.trim()) ?? []
-  const dimensionDefinitions =
-    configuredDimensions.length > 0
-      ? configuredDimensions.map((dimension) => ({
-          name: dimension.name.trim(),
-          weight: dimension.weight,
-          isHardGate: dimension.isHardGate,
-          keywords:
-            dimension.keywords && dimension.keywords.length > 0
-              ? dimension.keywords
-              : isRubricDimension(dimension.name)
-                ? KEYWORDS[dimension.name]
-                : ['because', 'example', 'step', 'understand'],
-        }))
-      : RUBRIC_DIMENSIONS.map((dimension) => ({
-          name: dimension,
-          weight: DIMENSION_WEIGHTS[dimension],
-          isHardGate: isHardGateDimension(dimension),
-          keywords: KEYWORDS[dimension],
-        }))
+  // Weights and hard gates come from the shared resolver so the engine, the
+  // scoring policy and the review UI cannot drift apart. Only keyword hints
+  // stay local to this deterministic scorer.
+  const configuredKeywords = new Map(
+    (rubricConfig?.dimensions ?? [])
+      .filter((dimension) => (dimension.keywords?.length ?? 0) > 0)
+      .map((dimension) => [dimension.name.trim(), dimension.keywords ?? []])
+  )
+  const dimensionDefinitions = resolveRubricDimensions(rubricConfig).map(
+    (dimension) => ({
+      ...dimension,
+      keywords:
+        configuredKeywords.get(dimension.name) ??
+        (isRubricDimension(dimension.name)
+          ? KEYWORDS[dimension.name]
+          : ['because', 'example', 'step', 'understand']),
+    })
+  )
 
   const scoredDimensions = dimensionDefinitions.map((definition) =>
     computeDimensionScore(
@@ -414,8 +406,7 @@ export function buildAssessmentReport(
       definition.keywords,
       candidateSegments,
       candidateTurns,
-      candidateWords,
-      definition.isHardGate
+      candidateWords
     )
   )
   const dimensionScores: DimensionScore[] = scoredDimensions.map((item) => ({
@@ -427,16 +418,6 @@ export function buildAssessmentReport(
     .map((item) => item.evidence)
     .filter((item): item is DimensionEvidence => Boolean(item))
 
-  const weightByDimension = Object.fromEntries(
-    dimensionDefinitions.map((definition) => [
-      definition.name,
-      definition.weight,
-    ])
-  )
-  const weightedScore = computeAssessmentWeightedScore(
-    dimensionScores,
-    weightByDimension
-  )
   const transcriptQualityNote = describeTranscriptQuality(
     candidateTurns,
     candidateWords
@@ -450,13 +431,12 @@ export function buildAssessmentReport(
     confidence = 'low'
   }
 
-  const hardGateTriggered = isHardGateTriggered(dimensionScores)
-
-  const overallRecommendation = resolveRecommendation({
-    weightedScore,
-    confidence,
-    hardGateTriggered,
-  })
+  const { weightedScore, hardGateTriggered, overallRecommendation } =
+    deriveAssessmentOutcome({
+      dimensionScores,
+      dimensions: dimensionDefinitions,
+      confidence,
+    })
 
   const topStrengths = pickTopDimensions(dimensionScores, 'high')
   const topConcerns = pickTopDimensions(dimensionScores, 'low')
