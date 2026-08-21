@@ -96,10 +96,16 @@ export async function processInterviewAssessment(
     throw new Error('Session detail is unavailable for assessment processing.')
   }
 
-  if (detail.report?.status === 'completed') {
+  // Both statuses are terminal. Re-scoring a `manual_review` report would pay
+  // for another model call and could silently flip a human-routed review back
+  // to `completed`. This matches the guard in `markAssessmentProcessing`.
+  if (
+    detail.report?.status === 'completed' ||
+    detail.report?.status === 'manual_review'
+  ) {
     logger.info({
       event: 'assessment.processing.skip',
-      detail: 'Report already completed; skipping duplicate processing.',
+      detail: `Report already ${detail.report.status}; skipping duplicate processing.`,
     })
     return null
   }
