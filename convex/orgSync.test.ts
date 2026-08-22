@@ -193,6 +193,65 @@ describe('dodo billing event retry semantics', () => {
     expect(org?.plan).toBe('pro')
   })
 
+  test('a stale replay cannot resurrect a cancelled plan', async () => {
+    const t = harness()
+
+    await t.mutation(api.orgs.syncOrgFromClerkWebhook, {
+      writeKey: WRITE_KEY,
+      eventType: 'organization.created',
+      clerkOrgId: 'org_order',
+      name: 'Order Co',
+    })
+
+    const activeAt = Date.UTC(2026, 7, 22, 10, 0)
+    const cancelAt = Date.UTC(2026, 7, 22, 11, 0)
+
+    await t.mutation(api.billing.applyDodoSubscriptionEvent, {
+      writeKey: WRITE_KEY,
+      eventKey: 'evt_active',
+      eventType: 'subscription.active',
+      clerkOrgId: 'org_order',
+      plan: 'pro',
+      status: 'active',
+      eventAt: activeAt,
+    })
+
+    await t.mutation(api.billing.applyDodoSubscriptionEvent, {
+      writeKey: WRITE_KEY,
+      eventKey: 'evt_cancel',
+      eventType: 'subscription.cancelled',
+      clerkOrgId: 'org_order',
+      plan: 'free',
+      status: 'cancelled',
+      eventAt: cancelAt,
+    })
+
+    // A queued `active` event redelivered after the cancellation. Enabling
+    // retries made this reachable; without an ordering guard the org would be
+    // silently restored to pro while no longer paying.
+    const replay = await t.mutation(api.billing.applyDodoSubscriptionEvent, {
+      writeKey: WRITE_KEY,
+      eventKey: 'evt_active_replay',
+      eventType: 'subscription.active',
+      clerkOrgId: 'org_order',
+      plan: 'pro',
+      status: 'active',
+      eventAt: activeAt,
+    })
+
+    expect(replay.applied).toBe(false)
+    expect(replay.reason).toBe('stale_event')
+
+    const org = await t.run((ctx) =>
+      ctx.db
+        .query('organizations')
+        .withIndex('by_clerk_org_id', (q) => q.eq('clerkOrgId', 'org_order'))
+        .unique()
+    )
+
+    expect(org?.plan).toBe('free')
+  })
+
   test('a genuine duplicate is still suppressed', async () => {
     const t = harness()
 

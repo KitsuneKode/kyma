@@ -52,6 +52,8 @@ export default defineSchema({
     billingCurrentPeriodEnd: v.optional(v.number()),
     billingCancelAtPeriodEnd: v.optional(v.boolean()),
     billingUpdatedAt: v.optional(v.number()),
+    /** Timestamp of the newest billing event applied; guards out-of-order replay. */
+    billingEventAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -239,7 +241,8 @@ export default defineSchema({
     .index('by_status', ['status'])
     .index('by_candidate_email', ['candidateEmail'])
     .index('by_user', ['userId'])
-    .index('by_email_delivery_status', ['emailDeliveryStatus']),
+    .index('by_email_delivery_status', ['emailDeliveryStatus'])
+    .index('by_org_id_and_email_status', ['orgId', 'emailDeliveryStatus']),
 
   interviewSessions: defineTable({
     orgId: v.string(),

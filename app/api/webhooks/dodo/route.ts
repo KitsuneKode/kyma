@@ -65,6 +65,7 @@ function buildEventKey(
 }
 
 async function syncSubscription(args: {
+  eventAt?: number
   eventType: string
   eventKey: string
   data: SubscriptionLike
@@ -103,6 +104,7 @@ async function syncSubscription(args: {
     productId: args.data.product_id,
     currentPeriodEnd: periodEndMs(args.data.next_billing_date),
     cancelAtPeriodEnd: args.data.cancel_at_next_billing_date,
+    eventAt: args.eventAt,
   })
 
   // The org has not been mirrored from Clerk yet (a subscription webhook can
@@ -126,6 +128,7 @@ async function handleSubscriptionPayload(payload: {
     await syncSubscription({
       eventType: payload.type,
       eventKey: buildEventKey(payload.type, payload.data, payload.timestamp),
+      eventAt: new Date(payload.timestamp).getTime(),
       data: payload.data,
     })
   } catch (error) {

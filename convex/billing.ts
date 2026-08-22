@@ -81,13 +81,19 @@ export const applyDodoSubscriptionEvent = mutation({
     productId: v.optional(v.string()),
     currentPeriodEnd: v.optional(v.number()),
     cancelAtPeriodEnd: v.optional(v.boolean()),
+    /** Provider event time, used to reject out-of-order replays. */
+    eventAt: v.optional(v.number()),
   },
   returns: v.object({
     applied: v.boolean(),
     orgId: v.union(v.id('organizations'), v.null()),
     /** Discriminates a benign duplicate from a retryable unmirrored org. */
     reason: v.optional(
-      v.union(v.literal('duplicate'), v.literal('org_not_mirrored'))
+      v.union(
+        v.literal('duplicate'),
+        v.literal('org_not_mirrored'),
+        v.literal('stale_event')
+      )
     ),
   }),
   handler: async (ctx, args) => {
@@ -121,6 +127,28 @@ export const applyDodoSubscriptionEvent = mutation({
       }
     }
 
+    // Retries made replay ordering reachable: a queued `subscription.active`
+    // redelivered after a `subscription.cancelled` would silently restore the
+    // paid plan. Apply only events at least as new as the last one applied.
+    if (
+      args.eventAt !== undefined &&
+      org.billingEventAt !== undefined &&
+      args.eventAt < org.billingEventAt
+    ) {
+      await ctx.db.insert('billingWebhookEvents', {
+        eventKey: args.eventKey,
+        eventType: args.eventType,
+        clerkOrgId: args.clerkOrgId,
+        subscriptionId: args.subscriptionId,
+        processedAt: Date.now(),
+      })
+      return {
+        applied: false,
+        orgId: org._id,
+        reason: 'stale_event' as const,
+      }
+    }
+
     await ctx.db.insert('billingWebhookEvents', {
       eventKey: args.eventKey,
       eventType: args.eventType,
@@ -144,6 +172,7 @@ export const applyDodoSubscriptionEvent = mutation({
       billingCancelAtPeriodEnd:
         args.cancelAtPeriodEnd ?? org.billingCancelAtPeriodEnd,
       billingUpdatedAt: now,
+      ...(args.eventAt !== undefined ? { billingEventAt: args.eventAt } : {}),
       updatedAt: now,
     })
 

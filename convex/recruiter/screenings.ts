@@ -436,17 +436,29 @@ export const getInviteEmailDeliverySummary = recruiterQuery({
   handler: async (ctx, { nowMs }) => {
     const { orgId } = ctx
     const since = new Date(nowMs - 1000 * 60 * 60 * 24).toISOString()
-    const invites = await ctx.db
-      .query('candidateInvites')
-      .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-      .take(500)
+    // Count each delivery status directly. Sampling the 500 OLDEST invites on
+    // `by_org_id` meant any org past 500 lifetime invites permanently reported
+    // "0 pending, 0 failed" no matter how many invite emails were failing now.
+    const [pendingInvites, failedInvites] = await Promise.all([
+      ctx.db
+        .query('candidateInvites')
+        .withIndex('by_org_id_and_email_status', (q) =>
+          q.eq('orgId', orgId).eq('emailDeliveryStatus', 'pending')
+        )
+        .take(500),
+      ctx.db
+        .query('candidateInvites')
+        .withIndex('by_org_id_and_email_status', (q) =>
+          q.eq('orgId', orgId).eq('emailDeliveryStatus', 'failed')
+        )
+        .order('desc')
+        .take(500),
+    ])
+    const invites = [...pendingInvites, ...failedInvites]
 
     let failedLast24h = 0
-    let pending = 0
-    for (const invite of invites) {
-      if (invite.emailDeliveryStatus === 'pending') {
-        pending += 1
-      }
+    const pending = pendingInvites.length
+    for (const invite of failedInvites) {
       if (invite.emailDeliveryStatus !== 'failed') {
         continue
       }
