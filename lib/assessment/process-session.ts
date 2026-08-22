@@ -114,6 +114,12 @@ export async function processInterviewAssessment(
     return null
   }
 
+  // One cast, one source of truth. Three separate casts of this value let the
+  // LLM-failure fallback below score against the DEFAULT rubric while the save
+  // recorded the TEMPLATE's gate names - a report that actively misled.
+  const rubricConfig = detail.template.rubricConfig as RubricConfig | undefined
+  const rubricDimensions = resolveRubricDimensions(rubricConfig)
+
   const reviewInput = {
     sessionId: `${sessionId}`,
     candidateName: detail.candidate.name,
@@ -142,7 +148,7 @@ export async function processInterviewAssessment(
   try {
     const hybrid = await buildHybridAssessmentReport({
       input: reviewInput,
-      rubricConfig: detail.template.rubricConfig as RubricConfig | undefined,
+      rubricConfig,
       modelId: scoringModelId,
       providerOptions,
     })
@@ -174,7 +180,7 @@ export async function processInterviewAssessment(
       detail: message,
     })
 
-    const deterministic = buildAssessmentReport(reviewInput)
+    const deterministic = buildAssessmentReport(reviewInput, rubricConfig)
     report = {
       ...deterministic,
       status:
@@ -197,11 +203,7 @@ export async function processInterviewAssessment(
     hardGateTriggered: report.hardGateTriggered,
     // Captured at scoring time so the review UI stars the gates that actually
     // applied, rather than re-deriving from a template that may have changed.
-    hardGateDimensions: hardGateNamesFrom(
-      resolveRubricDimensions(
-        detail.template.rubricConfig as RubricConfig | undefined
-      )
-    ),
+    hardGateDimensions: hardGateNamesFrom(rubricDimensions),
     topStrengths: report.topStrengths,
     topConcerns: report.topConcerns,
     transcriptQualityNote: report.transcriptQualityNote,

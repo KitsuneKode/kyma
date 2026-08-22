@@ -15,6 +15,7 @@ export function ReviewConsoleBody() {
     evidenceWithTiming,
     weightedScore,
     hardGateTriggered,
+    hardGateDimensions,
   } = useReviewData()
   const activeDimension = useReviewActiveDimension()
   const { setActiveDimension, jumpToTime } = useReviewActions()
@@ -32,6 +33,7 @@ export function ReviewConsoleBody() {
           evidence={evidenceWithTiming}
           weightedScore={weightedScore}
           hardGateTriggered={hardGateTriggered}
+          hardGateDimensions={hardGateDimensions}
           activeDimension={activeDimension}
           onSelectDimension={setActiveDimension}
           onJumpToTime={jumpToTime}

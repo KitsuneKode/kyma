@@ -35,7 +35,7 @@ export function isHardGateDimension(
   dimension: string,
   dimensions?: ResolvedRubricDimension[]
 ) {
-  if (dimensions) {
+  if (dimensions && dimensions.length > 0) {
     return dimensions.some((item) => item.name === dimension && item.isHardGate)
   }
 
@@ -93,16 +93,20 @@ export function computeAssessmentWeightedScore(
     return computeWeightedScoreFromDimensions(dimensionScores) ?? 0
   }
 
-  const weightedRaw = dimensionScores.reduce((total, item, index) => {
-    const definitionWeight =
-      weights[item.dimension] ??
-      weights[dimensionScores[index]?.dimension ?? ''] ??
-      0
-    const normalizedWeight = definitionWeight / totalWeight
-    return total + item.score * normalizedWeight
+  const weightedRaw = dimensionScores.reduce((total, item) => {
+    const definitionWeight = weights[item.dimension] ?? 0
+    return total + item.score * (definitionWeight / totalWeight)
   }, 0)
 
-  return Number(weightedRaw.toFixed(2))
+  // Defence in depth. `resolveRubricDimensions` already rejects the inputs that
+  // can push this outside the band, but a score is a hiring signal - it must
+  // never render as NaN or as "23.0 out of 5.0" if a future caller bypasses
+  // the resolver.
+  if (!Number.isFinite(weightedRaw)) {
+    return computeWeightedScoreFromDimensions(dimensionScores) ?? 0
+  }
+
+  return Number(Math.min(5, Math.max(1, weightedRaw)).toFixed(2))
 }
 
 export { DEFAULT_HARD_GATE_DIMENSIONS }

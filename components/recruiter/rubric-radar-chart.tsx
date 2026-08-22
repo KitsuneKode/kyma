@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/chart'
 import { ChartEmptyState } from '@/components/recruiter/chart-states'
 import { formatDimensionLabel } from '@/lib/recruiter/format'
-import { isDefaultHardGateDimension } from '@/lib/rubric/constants'
+import { isReportHardGateDimension } from '@/lib/rubric/resolve-rubric'
 
 const chartConfig = {
   score: {
@@ -40,22 +40,6 @@ type RubricRadarChartProps = {
   hardGateDimensions?: string[]
 }
 
-/**
- * Gate status comes from the report, which captured the rubric that actually
- * applied at scoring time. The default list is a fallback only for reports
- * written before `hardGateDimensions` was persisted - re-deriving it for every
- * report is what previously made the chart star gates the scorer ignored.
- */
-function isHardGateDimension(
-  dimension: string,
-  hardGateDimensions?: string[]
-): boolean {
-  if (hardGateDimensions) {
-    return hardGateDimensions.includes(dimension)
-  }
-  return isDefaultHardGateDimension(dimension)
-}
-
 export function RubricRadarChart({
   dimensionScores,
   hardGateDimensions,
@@ -65,7 +49,7 @@ export function RubricRadarChart({
   }
 
   const data: RadarDatum[] = dimensionScores.map((d) => {
-    const hardGate = isHardGateDimension(d.dimension, hardGateDimensions)
+    const hardGate = isReportHardGateDimension(d.dimension, hardGateDimensions)
     const baseLabel = formatDimensionLabel(d.dimension)
     return {
       dimension: d.dimension,

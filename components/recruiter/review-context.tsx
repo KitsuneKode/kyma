@@ -101,6 +101,7 @@ type ReviewData = {
   defaultActiveDimension: string | null
   weightedScore?: number | null
   hardGateTriggered: boolean
+  hardGateDimensions?: string[]
 }
 
 const ReviewStoreContext = createContext<StoreApi<ReviewStoreState> | null>(
@@ -158,6 +159,7 @@ type ReviewProviderProps = {
   sessionEvents?: CandidateReviewDetail['events']
   weightedScore?: number | null
   hardGateTriggered?: boolean
+  hardGateDimensions?: string[]
   audioUrl?: string
   recordingStartTime?: string
   children: ReactNode
@@ -171,6 +173,7 @@ export function ReviewProvider({
   sessionEvents = [],
   weightedScore,
   hardGateTriggered = false,
+  hardGateDimensions,
   audioUrl,
   recordingStartTime,
   children,
@@ -397,6 +400,7 @@ export function ReviewProvider({
       defaultActiveDimension,
       weightedScore,
       hardGateTriggered,
+      hardGateDimensions,
     }),
     [
       candidateName,
@@ -410,6 +414,7 @@ export function ReviewProvider({
       defaultActiveDimension,
       weightedScore,
       hardGateTriggered,
+      hardGateDimensions,
     ]
   )
 
