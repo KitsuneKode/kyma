@@ -30,15 +30,28 @@ Production host: `https://kyma.kitsunelabs.xyz`
 | `NEXT_PUBLIC_LIVEKIT_URL`                | Vercel          | LiveKit Cloud / self-hosted WS URL                               |
 | `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | Vercel + agent  | Token mint + room APIs                                           |
 | `KYMA_PROCESSING_WRITE_KEY`              | Vercel + Convex | **Required in production** for report writes / worker heartbeats |
-| `KYMA_DEPLOYMENT_ENV`                    | Vercel / Convex | **Required** `production` on the live site — see note below      |
-| `NODE_ENV`                               | Convex          | **Required** `production` on the Convex prod deployment          |
+| `KYMA_DEPLOYMENT_ENV`                    | Vercel / Convex | Authoritative dev/prod signal — see note below                   |
 
-> **Why both are required.** `NODE_ENV` is declared with `.default('development')`
-> in `lib/env/shared.ts`, and Convex deployments do not set it automatically. The
+> **`KYMA_DEPLOYMENT_ENV` is the control; NODE_ENV is not.** Two facts, both
+> verified against a live Convex deployment:
+>
+> 1. `lib/env/shared.ts` declares `NODE_ENV` with `.default('development')`, so
+>    the validated env shims report `development` when the variable is unset.
+> 2. The Convex runtime **pins `process.env.NODE_ENV` to `production`** and
+>    ignores `bunx convex env set NODE_ENV`.
+>
+> So NODE_ENV cannot distinguish environments on the backend at all. The
 > dev-seed/reset guard (`convex/devSeed.ts`) and the processing-key fallback
-> (`convex/helpers/processingAuth.ts`) both treat an unset value as untrusted, so
-> leaving these blank on a production Convex deployment previously left a
-> destructive seeding path reachable. Set both explicitly.
+> (`convex/helpers/processingAuth.ts`) therefore require an explicit
+> `KYMA_DEPLOYMENT_ENV=development` opt-in. **Production needs no action** — an
+> unset value already fails closed. Set the variable only on dev deployments:
+>
+> ```bash
+> bunx convex env set KYMA_DEPLOYMENT_ENV development
+> ```
+>
+> Note that removing it does not immediately reach warm Node action containers,
+> which cache the validated env at module load.
 
 ### Clerk (recruiter / admin)
 

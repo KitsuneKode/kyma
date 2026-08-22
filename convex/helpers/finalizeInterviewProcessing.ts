@@ -2,6 +2,7 @@ import type { Doc, Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import { internal } from '../_generated/api'
 import { recordInterviewUsage } from './usageRollup'
+import { maxActiveDurationMs } from '../../lib/interview/session-purpose'
 import {
   PROCESSING_ENTRY_STATES,
   resolveProcessingTransitionPath,
@@ -125,6 +126,7 @@ export async function finalizeInterviewForProcessing(
   await recordInterviewUsage(ctx, {
     orgId: working.orgId,
     durationMs: working.activeDurationMs ?? 0,
+    maxDurationMs: maxActiveDurationMs(working.sessionPurpose),
   })
 
   const existingFinalize = await findFinalizeEvent(

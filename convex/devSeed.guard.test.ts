@@ -64,13 +64,15 @@ describe('dev seed deployment guard', () => {
     expect(() => assertDevSeedAllowed(envWith(undefined))).toThrow(/blocked/i)
   })
 
-  test('blocks when only the deployment env says development', () => {
-    expect(() => assertDevSeedAllowed(envWith('development'))).toThrow(
-      /blocked/i
-    )
+  test('allows the explicit opt-in when NODE_ENV is unset', () => {
+    // Verified against a live Convex deployment: the Convex runtime pins the
+    // raw NODE_ENV value to 'production' and ignores `convex env set NODE_ENV`,
+    // so requiring a development NODE_ENV would make dev seeding impossible
+    // there. KYMA_DEPLOYMENT_ENV is the operator-controlled opt-in.
+    expect(() => assertDevSeedAllowed(envWith('development'))).not.toThrow()
   })
 
-  test('allows only when BOTH signals explicitly say development', () => {
+  test('allows when the opt-in and a development NODE_ENV agree', () => {
     vi.stubEnv('NODE_ENV', 'development')
     expect(() => assertDevSeedAllowed(envWith('development'))).not.toThrow()
   })

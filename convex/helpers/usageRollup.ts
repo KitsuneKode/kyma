@@ -7,6 +7,13 @@ export type OrgUsage = {
 
 const EMPTY_USAGE: OrgUsage = { interviewCount: 0, interviewMinutes: 0 }
 
+/**
+ * Hard ceiling on what a single session can contribute to an invoice. Well
+ * above any legitimate interview, low enough that a corrupt duration cannot
+ * bill a customer for days of usage.
+ */
+const MAX_BILLABLE_SESSION_MS = 4 * 60 * 60_000
+
 /** Billing periods are calendar months in UTC so they do not drift by tenant. */
 export function currentUsagePeriod(nowMs: number = Date.now()): string {
   const date = new Date(nowMs)
@@ -45,11 +52,23 @@ export async function getUsageForPeriod(
  */
 export async function recordInterviewUsage(
   ctx: MutationCtx,
-  args: { orgId: string; durationMs: number; nowMs?: number }
+  args: {
+    orgId: string
+    durationMs: number
+    nowMs?: number
+    maxDurationMs?: number
+  }
 ): Promise<void> {
   const nowMs = args.nowMs ?? Date.now()
   const period = currentUsagePeriod(nowMs)
-  const minutes = Math.max(0, Math.round(args.durationMs / 60_000))
+  // Defence in depth against a corrupt duration reaching the invoice.
+  // `applySessionStateTransition` clamps the live segment at the source; this
+  // bounds anything that arrives by another path.
+  const boundedMs = Math.min(
+    Math.max(0, args.durationMs),
+    args.maxDurationMs ?? MAX_BILLABLE_SESSION_MS
+  )
+  const minutes = Math.round(boundedMs / 60_000)
 
   const existing = await ctx.db
     .query('orgUsageRollups')

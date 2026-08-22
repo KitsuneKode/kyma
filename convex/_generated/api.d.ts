@@ -15,6 +15,7 @@ import type * as compliance from "../compliance.js";
 import type * as crons from "../crons.js";
 import type * as devSeed from "../devSeed.js";
 import type * as devSeedMutations from "../devSeedMutations.js";
+import type * as devSeedTables from "../devSeedTables.js";
 import type * as helpers_assessmentReports from "../helpers/assessmentReports.js";
 import type * as helpers_assessmentTemplateMigration from "../helpers/assessmentTemplateMigration.js";
 import type * as helpers_audit from "../helpers/audit.js";
@@ -79,6 +80,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   devSeed: typeof devSeed;
   devSeedMutations: typeof devSeedMutations;
+  devSeedTables: typeof devSeedTables;
   "helpers/assessmentReports": typeof helpers_assessmentReports;
   "helpers/assessmentTemplateMigration": typeof helpers_assessmentTemplateMigration;
   "helpers/audit": typeof helpers_audit;

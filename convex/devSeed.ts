@@ -6,55 +6,13 @@ import { internal } from './_generated/api'
 import { internalAction } from './_generated/server'
 import { clerkIdFromIdentity } from './helpers/clerkIdentity'
 import { getOrgContextFromIdentity } from './helpers/orgContext'
-import { isExplicitDevelopmentDeployment } from './helpers/processingAuth'
+import { SEED_TABLES, assertDevSeedAllowed } from './devSeedTables'
 import { convexEnv } from '../lib/env/convex'
 
 const RESET_CONFIRMATION = 'RESET_DEV_ONLY'
 const SEED_CONFIRMATION = 'SEED_DEV_ONLY'
 
-const SEED_TABLES = [
-  'reportChatMessages',
-  'recruiterNotes',
-  'reviewDecisions',
-  'dimensionEvidence',
-  'assessmentReports',
-  'recordingArtifacts',
-  'transcriptSegments',
-  'sessionEvents',
-  'interviewSessions',
-  'candidateReadinessRuns',
-  'candidatePreferences',
-  'candidateEligibility',
-  'candidateInvites',
-  'screeningBatches',
-  'assessmentTemplateVersions',
-  'assessmentTemplates',
-  'orgMemberships',
-  'organizations',
-  'users',
-  'workspaceSettings',
-  'auditEvents',
-] as const
-
-/**
- * Dev seeding must be impossible on any deployment that is not explicitly
- * development. `NODE_ENV` defaults to `development` when unset, so an unset
- * value is treated as untrusted rather than as a development signal - the
- * previous NODE_ENV-only check passed on a real production Convex deployment.
- */
-export function assertDevSeedAllowed(env: {
-  KYMA_DEPLOYMENT_ENV?: string
-  NODE_ENV?: string
-}) {
-  // Must consult the RAW process env: `convexEnv.NODE_ENV` carries a zod
-  // `.default('development')`, so an unset variable on a production Convex
-  // deployment reads as development and this guard would pass.
-  if (!isExplicitDevelopmentDeployment(env)) {
-    throw new ConvexError(
-      'Dev seed/reset is blocked outside an explicit development deployment.'
-    )
-  }
-}
+export { assertDevSeedAllowed }
 
 export const resetDevData = internalAction({
   args: {
