@@ -83,6 +83,43 @@ describe('clerk org sync patch semantics', () => {
   })
 })
 
+describe('clerk user sync patch semantics', () => {
+  beforeEach(() => {
+    process.env.KYMA_PROCESSING_WRITE_KEY = WRITE_KEY
+  })
+
+  test('a partial user payload preserves the existing email', async () => {
+    const t = harness()
+
+    await t.mutation(api.users.syncFromClerkWebhook, {
+      writeKey: WRITE_KEY,
+      eventType: 'user.created',
+      clerkId: 'user_sync_1',
+      email: 'person@example.com',
+      name: 'Person One',
+    })
+
+    // A Clerk user.updated carrying only the name must not delete the email:
+    // `by_candidate_email` is the primary key for GDPR subject lookup.
+    await t.mutation(api.users.syncFromClerkWebhook, {
+      writeKey: WRITE_KEY,
+      eventType: 'user.updated',
+      clerkId: 'user_sync_1',
+      name: 'Person Renamed',
+    })
+
+    const user = await t.run((ctx) =>
+      ctx.db
+        .query('users')
+        .withIndex('by_clerk_id', (q) => q.eq('clerkId', 'user_sync_1'))
+        .unique()
+    )
+
+    expect(user?.name).toBe('Person Renamed')
+    expect(user?.email).toBe('person@example.com')
+  })
+})
+
 describe('dodo billing event retry semantics', () => {
   beforeEach(() => {
     process.env.KYMA_PROCESSING_WRITE_KEY = WRITE_KEY

@@ -127,6 +127,83 @@ describe('updateAssessmentTemplate patch semantics', () => {
     expect(after?.systemPrompt).toBe('You are a careful interviewer.')
   })
 
+  test('a prompt-only save still records a version snapshot', async () => {
+    const t = harness()
+    const templateId = await seedTemplate(t)
+    const asEditor = t.withIdentity(TEMPLATE_EDITOR)
+
+    await asEditor.mutation(api.recruiter.templates.updateAssessmentTemplate, {
+      templateId,
+      systemPrompt: 'A materially different interviewer persona.',
+    })
+
+    const versions = await t.run((ctx) =>
+      ctx.db
+        .query('assessmentTemplateVersions')
+        .withIndex('by_template', (q) => q.eq('templateId', templateId))
+        .collect()
+    )
+    const after = await t.run((ctx) => ctx.db.get(templateId))
+
+    // Prompts change interview behaviour as much as the rubric does; two
+    // reports must not share a rubricVersion across a prompt change.
+    expect(versions).toHaveLength(1)
+    expect(after?.rubricVersion).toBe('v2')
+    // The untouched rubric must be carried into the snapshot, not lost.
+    expect(versions[0]?.rubricConfig?.dimensions).toHaveLength(2)
+  })
+
+  test('rejects duplicate rubric dimension names', async () => {
+    const t = harness()
+    const templateId = await seedTemplate(t)
+    const asEditor = t.withIdentity(TEMPLATE_EDITOR)
+
+    await expect(
+      asEditor.mutation(api.recruiter.templates.updateAssessmentTemplate, {
+        templateId,
+        rubricConfig: {
+          dimensions: [
+            { name: 'clarity', weight: 1, isHardGate: false },
+            { name: 'clarity', weight: 1, isHardGate: false },
+          ],
+        },
+      })
+    ).rejects.toThrow(/duplicate/i)
+  })
+
+  test('rejects negative rubric weights', async () => {
+    const t = harness()
+    const templateId = await seedTemplate(t)
+    const asEditor = t.withIdentity(TEMPLATE_EDITOR)
+
+    await expect(
+      asEditor.mutation(api.recruiter.templates.updateAssessmentTemplate, {
+        templateId,
+        rubricConfig: {
+          dimensions: [{ name: 'clarity', weight: -9, isHardGate: false }],
+        },
+      })
+    ).rejects.toThrow(/at least 0/i)
+  })
+
+  test('rejects a rubric whose weights all sum to zero', async () => {
+    const t = harness()
+    const templateId = await seedTemplate(t)
+    const asEditor = t.withIdentity(TEMPLATE_EDITOR)
+
+    await expect(
+      asEditor.mutation(api.recruiter.templates.updateAssessmentTemplate, {
+        templateId,
+        rubricConfig: {
+          dimensions: [
+            { name: 'clarity', weight: 0, isHardGate: false },
+            { name: 'warmth', weight: 0, isHardGate: false },
+          ],
+        },
+      })
+    ).rejects.toThrow(/above 0/i)
+  })
+
   test('an explicit empty-string prompt is still writable', async () => {
     const t = harness()
     const templateId = await seedTemplate(t)

@@ -38,12 +38,14 @@ async function buildDashboardPayload(
       .withIndex('by_org_id_and_status', (q) =>
         q.eq('orgId', orgId).eq('status', 'manual_review')
       )
+      .order('desc')
       .take(MAX_MANUAL_REVIEW_CANDIDATES),
     ctx.db
       .query('assessmentReports')
       .withIndex('by_org_id_and_status', (q) =>
         q.eq('orgId', orgId).eq('status', 'pending')
       )
+      .order('desc')
       .take(MAX_PENDING_REPORTS),
     // Terminal reports are not review work, but a session that has one is NOT
     // stale. Without them the attention list flagged every completed interview
@@ -55,6 +57,10 @@ async function buildDashboardPayload(
           .withIndex('by_org_id_and_status', (q) =>
             q.eq('orgId', orgId).eq('status', status)
           )
+          // Newest-first, to match `recentSessions`. Ascending order would
+          // sample the OLDEST terminal reports, leaving the recent sessions
+          // unmatched and re-flagging every completed interview as stale.
+          .order('desc')
           .take(DASHBOARD_SESSION_SAMPLE)
       )
     ),
