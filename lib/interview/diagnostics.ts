@@ -139,3 +139,29 @@ export function createRequestId(prefix = 'req') {
 
   return `${prefix}_${id}`
 }
+
+/**
+ * Convex `ConvexError`s are thrown deliberately by our own backend code with
+ * candidate-facing wording ("This interview link has expired."). They are safe
+ * to surface. Anything else - a runtime fault, a validator failure, a provider
+ * error - is an internal detail and must not reach a public caller.
+ *
+ * Matched by name rather than `instanceof`: the error crosses the Convex client
+ * boundary, so the prototype is not preserved.
+ */
+export function isClientSafeConvexError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === 'ConvexError' || error.constructor?.name === 'ConvexError')
+  )
+}
+
+/** Strips Convex's "[Request ID: ...] Server Error / Uncaught ConvexError:" framing. */
+export function extractConvexErrorMessage(error: unknown): string | null {
+  if (!isClientSafeConvexError(error) || !(error instanceof Error)) {
+    return null
+  }
+  const match = error.message.match(/Uncaught ConvexError:\s*([^\n]+)/)
+  const message = (match?.[1] ?? error.message).trim()
+  return message.length > 0 && message.length <= 200 ? message : null
+}

@@ -5,6 +5,7 @@ import { api } from '@/convex/_generated/api'
 import {
   createDiagnosticLogger,
   createRequestId,
+  extractConvexErrorMessage,
   redactInviteToken,
 } from '@/lib/interview/diagnostics'
 import { assertServerRateLimit } from '@/lib/http/server-rate-limit'
@@ -143,8 +144,15 @@ export async function POST(request: NextRequest) {
       ...token,
     })
   } catch (error) {
+    // Backend business rules are thrown as ConvexError with candidate-facing
+    // wording and are safe (and useful) to surface. Everything else stays
+    // generic - an unexpected fault must not leak internals to a public caller.
+    const clientSafeMessage = extractConvexErrorMessage(error)
     const message =
-      error instanceof Error ? error.message : 'Failed to bootstrap interview.'
+      clientSafeMessage ??
+      (error instanceof Error
+        ? error.message
+        : 'Failed to bootstrap interview.')
     const status =
       message === 'RATE_LIMITED' || message.includes('monthly interview limit')
         ? 429
@@ -173,15 +181,19 @@ export async function POST(request: NextRequest) {
     // Public endpoint: only the mapped, candidate-safe messages are echoed.
     // Everything else becomes a generic failure plus a request id - the detail
     // already reached the logger and the error reporter.
+    // A ConvexError is a deliberate business rule, not a server fault: report
+    // it as a 409 the candidate can act on rather than a generic 500 retry.
+    const resolvedStatus = status >= 500 && clientSafeMessage ? 409 : status
+
     return NextResponse.json(
       {
         error:
-          status >= 500
+          resolvedStatus >= 500
             ? 'Unable to start this interview right now. Please try again.'
             : message,
         requestId,
       },
-      { status }
+      { status: resolvedStatus }
     )
   }
 }
