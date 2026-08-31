@@ -242,7 +242,8 @@ export default defineSchema({
     .index('by_candidate_email', ['candidateEmail'])
     .index('by_user', ['userId'])
     .index('by_email_delivery_status', ['emailDeliveryStatus'])
-    .index('by_org_id_and_email_status', ['orgId', 'emailDeliveryStatus']),
+    .index('by_org_id_and_email_status', ['orgId', 'emailDeliveryStatus'])
+    .index('by_batch', ['batchId']),
 
   interviewSessions: defineTable({
     orgId: v.string(),

@@ -62,9 +62,11 @@ export const bootstrapPublicSession = mutation({
   handler: async (ctx, { inviteToken, participantName }) => {
     const invite = await ensureInvite(ctx, inviteToken)
     const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite)
+    // Newest-first: if a race created two sessions, the latest is authoritative.
     const existingSession = await ctx.db
       .query('interviewSessions')
       .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
+      .order('desc')
       .first()
 
     if (invite.status === 'expired' || isInviteExpired(invite.expiresAt)) {

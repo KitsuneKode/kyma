@@ -39,6 +39,34 @@ export const SEED_TABLES = [
 ] as const
 
 /**
+ * Tables that are safe to clear per-org when seeding for an active workspace.
+ * Excludes cross-org tables (users, readiness runs, preferences) whose rows
+ * cannot be attributed to a single org without a join and whose global wipe
+ * would destroy other workspaces on a shared dev deployment.
+ */
+export const SEED_ORG_TABLES = [
+  'orgUsageRollups',
+  'reportChatMessages',
+  'recruiterNotes',
+  'reviewDecisions',
+  'dimensionEvidence',
+  'assessmentReports',
+  'recordingArtifacts',
+  'sessionEvents',
+  'interviewSessions',
+  'visualObservations',
+  'candidateEligibility',
+  'candidateInvites',
+  'screeningBatches',
+  'assessmentTemplateVersions',
+  'assessmentTemplates',
+  'workspaceSettings',
+  'auditEvents',
+  'organizations',
+  'orgMemberships',
+] as const
+
+/**
  * Dev seeding must be impossible on any deployment that has not explicitly
  * opted in to development.
  *

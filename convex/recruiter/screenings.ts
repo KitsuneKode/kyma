@@ -33,24 +33,33 @@ async function countStuckCandidatesForInvites(
   inviteIds: Id<'candidateInvites'>[],
   staleBeforeMs: number
 ) {
+  // Batch in parallel instead of sequential N+1 to bound latency on large batches.
+  const sessions = await Promise.all(
+    inviteIds.map((inviteId) =>
+      ctx.db
+        .query('interviewSessions')
+        .withIndex('by_invite', (q) => q.eq('inviteId', inviteId))
+        .order('desc')
+        .first()
+    )
+  )
+
+  const reports = await Promise.all(
+    sessions.map((session) =>
+      session?._id
+        ? ctx.db
+            .query('assessmentReports')
+            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+            .first()
+        : Promise.resolve(null)
+    )
+  )
+
   let stuckCandidates = 0
-
-  for (const inviteId of inviteIds) {
-    const session = await ctx.db
-      .query('interviewSessions')
-      .withIndex('by_invite', (q) => q.eq('inviteId', inviteId))
-      .order('desc')
-      .first()
-
-    if (!session?.startedAt) {
-      continue
-    }
-
-    const report = await ctx.db
-      .query('assessmentReports')
-      .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-      .first()
-
+  for (let index = 0; index < sessions.length; index += 1) {
+    const session = sessions[index]
+    if (!session?.startedAt) continue
+    const report = reports[index]
     if (
       isStaleSessionWithoutReport(
         session.startedAt,
@@ -81,25 +90,37 @@ export const listScreeningBatches = recruiterQuery({
       .order('desc')
       .take(MAX_SCREENING_BATCHES)
 
+    // Pre-fetch templates in parallel to avoid per-batch N+1 sequential gets.
+    const templateIds = [...new Set(batches.map((b) => b.templateId))]
+    const templateDocs = await Promise.all(
+      templateIds.map((id) => ctx.db.get(id))
+    )
+    const templateById = new Map(
+      templateDocs
+        .filter((doc): doc is NonNullable<typeof doc> => Boolean(doc))
+        .map((doc) => [doc._id, doc] as const)
+    )
+
     return await Promise.all(
       batches.map(async (batch) => {
-        const [template, eligibility] = await Promise.all([
-          ctx.db.get(batch.templateId),
-          ctx.db
-            .query('candidateEligibility')
-            .withIndex('by_batch', (q) => q.eq('batchId', batch._id))
-            .take(MAX_BATCH_ELIGIBILITY),
-        ])
+        const eligibility = await ctx.db
+          .query('candidateEligibility')
+          .withIndex('by_batch', (q) => q.eq('batchId', batch._id))
+          .take(MAX_BATCH_ELIGIBILITY)
 
-        const inviteIds = eligibility.map((candidate) => candidate.inviteId)
-        const invites = await Promise.all(
-          inviteIds.map((inviteId) => ctx.db.get(inviteId))
-        )
+        const template = templateById.get(batch.templateId)
+
+        // Batch-load invites via by_batch index instead of per-id gets.
+        const invites = await ctx.db
+          .query('candidateInvites')
+          .withIndex('by_batch', (q) => q.eq('batchId', batch._id))
+          .take(MAX_BATCH_ELIGIBILITY)
 
         const expiringInvites = invites.filter((invite) =>
-          isInviteExpiringSoon(invite?.expiresAt, nowMs, expiringUntilMs)
+          isInviteExpiringSoon(invite.expiresAt, nowMs, expiringUntilMs)
         ).length
 
+        const inviteIds = eligibility.map((candidate) => candidate.inviteId)
         const candidateCount = eligibility.length
         const completedCount = eligibility.filter(
           (candidate) => candidate.status === 'submitted'
@@ -157,36 +178,53 @@ export const getScreeningBatchDetail = recruiterQuery({
         .take(MAX_BATCH_ELIGIBILITY),
     ])
 
-    const candidates = await Promise.all(
-      eligibility.map(async (item) => {
-        const invite = await ctx.db.get(item.inviteId)
-        const session = invite
-          ? await ctx.db
+    // Batch-load invites and sessions to avoid per-candidate sequential N+1.
+    const inviteDocs = await Promise.all(
+      eligibility.map((item) => ctx.db.get(item.inviteId))
+    )
+    const inviteById = new Map(
+      inviteDocs
+        .filter((doc): doc is NonNullable<typeof doc> => Boolean(doc))
+        .map((doc) => [doc._id, doc] as const)
+    )
+    const sessionDocs = await Promise.all(
+      eligibility.map((item) => {
+        const invite = inviteById.get(item.inviteId)
+        return invite
+          ? ctx.db
               .query('interviewSessions')
               .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
               .order('desc')
               .first()
-          : null
-
-        return {
-          id: item._id,
-          inviteId: item.inviteId,
-          candidateName: item.candidateName,
-          candidateEmail: item.candidateEmail,
-          allowedAttempts: item.allowedAttempts,
-          attemptCount: item.attemptCount,
-          status: item.status,
-          inviteToken: invite?.inviteToken,
-          inviteStatus: invite?.status ?? 'created',
-          expiresAt: invite?.expiresAt,
-          emailDeliveryStatus: invite?.emailDeliveryStatus,
-          emailSentAt: invite?.emailSentAt,
-          isStuckProcessing: Boolean(
-            invite && isStuckProcessing(session?.state, session?.endedAt, nowMs)
-          ),
-        }
+          : Promise.resolve(null)
       })
     )
+    const sessionByInviteId = new Map(
+      eligibility.map(
+        (item, index) => [item.inviteId, sessionDocs[index]] as const
+      )
+    )
+    const candidates = eligibility.map((item) => {
+      const invite = inviteById.get(item.inviteId)
+      const session = sessionByInviteId.get(item.inviteId) ?? null
+      return {
+        id: item._id,
+        inviteId: item.inviteId,
+        candidateName: item.candidateName,
+        candidateEmail: item.candidateEmail,
+        allowedAttempts: item.allowedAttempts,
+        attemptCount: item.attemptCount,
+        status: item.status,
+        inviteToken: invite?.inviteToken,
+        inviteStatus: invite?.status ?? 'created',
+        expiresAt: invite?.expiresAt,
+        emailDeliveryStatus: invite?.emailDeliveryStatus,
+        emailSentAt: invite?.emailSentAt,
+        isStuckProcessing: Boolean(
+          invite && isStuckProcessing(session?.state, session?.endedAt, nowMs)
+        ),
+      }
+    })
 
     return {
       batch: {

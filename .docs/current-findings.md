@@ -237,6 +237,8 @@ Use these first before re-researching the current implementation choices:
 
 **Shipped on main (usable ship):** security/SaaS stack #3–#15; commercial #18 (Dodo, quotas, invite email, GDPR, BYOK gate, template policy); operational credibility #20 (finalize honesty, reaper, copilot guardrails, audits).
 
+**Shipped on fix/audit-remediation-phase-0 (pending merge):** 26 audit fixes across trust boundary, data-loss, billing, transcript, metering, compliance, scoring, plus follow-ups: templates audit log, reaper bucket, Inngest bounded, redispatch continuity (turn counters seeded, welcome skipped), org-scoped dev seed, screenings batch-fetch (parallel + by_batch index), BYOK AAD binding, bootstrap order desc. Local: `bun run typecheck`/`fmt`/`lint` green, `test` 391/391, `build` pass. See `.plans/2026-08-21-audit-remediation-merged.md` for provenance.
+
 Immediate owner work:
 
 1. **Phase A (owner-run):** full LiveKit path with `bun run live-path:preflight` + `bun run dev:full` (see `.plans/operational-credibility-next.md`)

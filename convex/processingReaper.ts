@@ -152,7 +152,7 @@ export const reapStuckProcessingSessions = internalMutation({
         type: 'processing-retried',
         detail: 'Stuck post-call processing re-enqueued by the reaper.',
         source: 'processing-reaper',
-        dedupeKey: `processing-reaper-retry:${session._id}:${now}`,
+        dedupeKey: `processing-reaper-retry:${session._id}:${retryBucket}`,
         createdAt: nowIso,
       })
       reEnqueued += 1

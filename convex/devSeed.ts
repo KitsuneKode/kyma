@@ -6,7 +6,11 @@ import { internal } from './_generated/api'
 import { internalAction } from './_generated/server'
 import { clerkIdFromIdentity } from './helpers/clerkIdentity'
 import { getOrgContextFromIdentity } from './helpers/orgContext'
-import { SEED_TABLES, assertDevSeedAllowed } from './devSeedTables'
+import {
+  SEED_ORG_TABLES,
+  SEED_TABLES,
+  assertDevSeedAllowed,
+} from './devSeedTables'
 import { convexEnv } from '../lib/env/convex'
 
 const RESET_CONFIRMATION = 'RESET_DEV_ONLY'
@@ -142,18 +146,17 @@ export const seedDevDataForActiveOrg = internalAction({
 
     const clerkUserId = clerkIdFromIdentity(identity)
 
-    // BLAST RADIUS: seeding is scoped to the caller's org, but this clear is
-    // NOT - it empties all 21 seed tables across every org on the deployment.
-    // On a shared dev deployment one developer seeding their workspace destroys
-    // everyone else's. Safe only because `assertDevSeedAllowed` restricts this
-    // to explicit development deployments. Scope the clear by orgId before
-    // using this anywhere multi-tenant.
-    for (const table of SEED_TABLES) {
+    // Scoped clear: only delete rows belonging to the caller's org. Global tables
+    // (users, readiness runs) are intentionally not cleared here - they are shared
+    // across workspaces and a per-org seed must not destroy other orgs on a
+    // shared dev deployment.
+    for (const table of SEED_ORG_TABLES) {
       while (true) {
         const result = await ctx.runMutation(
-          internal.devSeedMutations.clearTableChunk,
+          internal.devSeedMutations.clearOrgTableChunk,
           {
             table,
+            orgId,
             limit: 200,
           }
         )

@@ -350,9 +350,7 @@ export const updateAssessmentTemplate = templateWriteMutation({
       await ctx.db.insert('assessmentTemplateVersions', {
         orgId,
         templateId: template._id,
-        rubricVersion: behaviourChanged
-          ? nextRubricVersion
-          : template.rubricVersion,
+        rubricVersion: nextRubricVersion,
         savedAt: now,
         savedBy: actor,
         jobFamily: args.jobFamily ?? template.jobFamily,
@@ -374,7 +372,9 @@ export const updateAssessmentTemplate = templateWriteMutation({
       action: 'template.updated',
       resource: `template:${template._id}`,
       metadata: {
-        rubricVersion: nextRubricVersion,
+        rubricVersion: behaviourChanged
+          ? nextRubricVersion
+          : template.rubricVersion,
         ...(args.targetDurationMinutes !== undefined
           ? { targetDurationMinutes: args.targetDurationMinutes }
           : {}),

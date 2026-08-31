@@ -672,7 +672,8 @@ async function runInterviewSession(args: {
     apiKeys: (() => {
       const resolved = tryResolveWorkspaceApiKeys(
         remoteConfig?.providerKeys,
-        runtimeEnv.KYMA_ENCRYPTION_KEY
+        runtimeEnv.KYMA_ENCRYPTION_KEY,
+        remoteConfig?.orgId
       )
       if (resolved.error) {
         logger.error({
@@ -689,12 +690,13 @@ async function runInterviewSession(args: {
     })(),
   })
 
+  const isRedispatch = isRedispatchState(remoteConfig?.sessionState)
   const session = new voice.AgentSession<InterviewUserData>({
     userData: {
-      phase: 'warmup',
+      phase: isRedispatch ? 'screening' : 'warmup',
       simulationStarted: false,
-      candidateTurnCount: 0,
-      agentTurnCount: 0,
+      candidateTurnCount: remoteConfig?.candidateTurnCount ?? 0,
+      agentTurnCount: remoteConfig?.agentTurnCount ?? 0,
       budgetEnforced: false,
     },
     ...(runtimeModel.mode === 'realtime'
@@ -895,47 +897,74 @@ When live video is available, call recordVisualObservation at most once per mean
     await session.close()
   })
 
-  const welcomeInstructions = `
+  if (isRedispatch) {
+    // Resume without replaying the full welcome: candidate already heard it.
+    // A short re-entry keeps continuity and avoids resetting the turn budget.
+    session.userData.phase = 'screening'
+    await session.say(
+      `Welcome back, ${candidateName}. Looks like we had a brief reconnection — we'll pick up where we left off. When you're ready, continue with your previous thought.`,
+      {
+        addToChatCtx: true,
+        allowInterruptions: true,
+      }
+    )
+    await port.appendEvent(
+      'agent-redispatch-resumed',
+      'Agent resumed after redispatch without replaying full welcome.'
+    )
+    logger.info({
+      event: 'agent.redispatch.resumed',
+      detail: 'Redispatch re-entry prompt sent; welcome skipped.',
+      participantIdentity,
+      sessionId,
+      meta: {
+        candidateTurnCount: session.userData.candidateTurnCount,
+        agentTurnCount: session.userData.agentTurnCount,
+      },
+    })
+  } else {
+    const welcomeInstructions = `
 Greet ${candidateName} warmly as the interviewer for the ${config.templateName} voice screening conversation.
 Explain this should take about ${config.targetDurationMinutes} minutes and focuses on how they communicate and perform in role-relevant scenarios.
 Ask them to settle in and tell you when they are ready to begin.
 Stay in the warm-up phase until they clearly say they are ready.
 `.trim()
 
-  try {
-    await session.generateReply({
-      instructions: welcomeInstructions,
-    })
-  } catch (error) {
-    logger.warn({
-      event: 'agent.ready-check.generate-reply.failed',
-      detail: 'Falling back to scripted welcome prompt.',
-      sessionId,
-      error,
-    })
+    try {
+      await session.generateReply({
+        instructions: welcomeInstructions,
+      })
+    } catch (error) {
+      logger.warn({
+        event: 'agent.ready-check.generate-reply.failed',
+        detail: 'Falling back to scripted welcome prompt.',
+        sessionId,
+        error,
+      })
 
-    await session.say(
-      `Hi ${candidateName}, welcome. I am your interviewer for this voice screening conversation. This should take about ${config.targetDurationMinutes} minutes, and it will focus on how you communicate and handle role-relevant scenarios. Please take a moment to settle in, and whenever you are ready, just tell me you are ready to begin.`,
-      {
-        addToChatCtx: true,
-        allowInterruptions: true,
-      }
+      await session.say(
+        `Hi ${candidateName}, welcome. I am your interviewer for this voice screening conversation. This should take about ${config.targetDurationMinutes} minutes, and it will focus on how you communicate and handle role-relevant scenarios. Please take a moment to settle in, and whenever you are ready, just tell me you are ready to begin.`,
+        {
+          addToChatCtx: true,
+          allowInterruptions: true,
+        }
+      )
+    }
+
+    session.userData.phase = 'warmup'
+
+    await port.appendEvent(
+      'agent-ready-check-sent',
+      'Interviewer welcomed the candidate and asked for readiness before screening began.'
     )
+
+    logger.info({
+      event: 'agent.ready-check.sent',
+      detail: 'Initial welcome and readiness prompt was sent.',
+      participantIdentity,
+      sessionId,
+    })
   }
-
-  session.userData.phase = 'warmup'
-
-  await port.appendEvent(
-    'agent-ready-check-sent',
-    'Interviewer welcomed the candidate and asked for readiness before screening began.'
-  )
-
-  logger.info({
-    event: 'agent.ready-check.sent',
-    detail: 'Initial welcome and readiness prompt was sent.',
-    participantIdentity,
-    sessionId,
-  })
 }
 
 export default defineAgent({
