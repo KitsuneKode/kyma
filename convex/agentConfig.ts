@@ -7,6 +7,7 @@ import {
 } from './helpers/assessmentTemplateMigration'
 import { resolveInterviewPolicyFromInvite } from './helpers/interviewPolicy'
 import { upsertTranscriptSegmentForSession } from './helpers/transcriptSegments'
+import { DEFAULT_SESSION_TRANSCRIPT_LIMIT } from './helpers/sessionReview'
 import { pipelineMutation, pipelineQuery } from './lib/pipelineFunctions'
 import {
   interviewSessionStateValidator,
@@ -106,7 +107,7 @@ export const getInterviewAgentConfig = pipelineQuery({
     const segments = await ctx.db
       .query('transcriptSegments')
       .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
-      .collect()
+      .take(DEFAULT_SESSION_TRANSCRIPT_LIMIT)
     let candidateTurnCount = 0
     let agentTurnCount = 0
     for (const segment of segments) {

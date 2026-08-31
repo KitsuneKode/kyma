@@ -46,69 +46,6 @@ const consoleReporter: ErrorReporter = {
   },
 }
 
-type SentryLike = {
-  captureException: (
-    error: unknown,
-    hint?: {
-      tags?: Record<string, string>
-      extra?: Record<string, unknown>
-    }
-  ) => void
-}
-
-/**
- * Optional dynamic load of `@sentry/nextjs`.
- * Returns null when the package is not installed (expected for MVP).
- *
- * TODO(sentry):
- * 1. `bun add @sentry/nextjs`
- * 2. Initialize in `instrumentation.ts` with `SENTRY_DSN`
- * 3. Keep this reporter as the single capture entrypoint for API routes
- */
-async function loadSentry(): Promise<SentryLike | null> {
-  try {
-    // Runtime-only resolve so builds succeed when `@sentry/nextjs` is absent.
-    const dynamicImport = new Function(
-      'moduleId',
-      'return import(moduleId)'
-    ) as (
-      moduleId: string
-    ) => Promise<Partial<SentryLike> & { default?: SentryLike }>
-    const mod = await dynamicImport('@sentry/nextjs')
-
-    if (typeof mod.captureException === 'function') {
-      return mod as SentryLike
-    }
-    if (mod.default && typeof mod.default.captureException === 'function') {
-      return mod.default
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-async function tryReportToSentry(
-  error: Error,
-  context?: ErrorReportContext
-): Promise<void> {
-  const sentry = await loadSentry()
-  if (!sentry) {
-    return
-  }
-
-  sentry.captureException(error, {
-    tags: {
-      ...(context?.route ? { route: context.route } : {}),
-      ...context?.tags,
-    },
-    extra: {
-      requestId: context?.requestId,
-      ...context?.extra,
-    },
-  })
-}
-
 /**
  * Capture an unexpected error for ops. Safe to call from route catch blocks;
  * never throws.
@@ -119,7 +56,6 @@ export async function reportError(
 ): Promise<void> {
   try {
     await consoleReporter.captureException(error, context)
-    await tryReportToSentry(normalizeError(error), context)
   } catch (reportingFailure) {
     console.error('[ops:error] reporter failed', reportingFailure)
   }

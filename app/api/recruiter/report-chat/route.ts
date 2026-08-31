@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
       },
       providerKeys: workspaceSettings?.providerKeys,
       encryptionKey: serverEnv.KYMA_ENCRYPTION_KEY,
+      aad: detail.orgId,
       platformEnv: {
         OPENAI_API_KEY: serverEnv.OPENAI_API_KEY,
         GOOGLE_API_KEY: serverEnv.GOOGLE_API_KEY,
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
           modelId,
           providerKeys: workspaceSettings?.providerKeys,
           encryptionKey: serverEnv.KYMA_ENCRYPTION_KEY,
+          aad: detail.orgId,
         })
       : undefined
 

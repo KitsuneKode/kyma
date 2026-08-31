@@ -1,4 +1,5 @@
 import { brand, getSiteUrl } from '@/lib/brand/site'
+import { serializeJsonLd } from './serialize-json-ld'
 
 export function MarketingJsonLd() {
   const siteUrl = getSiteUrl()
@@ -45,15 +46,15 @@ export function MarketingJsonLd() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(organization) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(website) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(software) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(software) }}
       />
     </>
   )

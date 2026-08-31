@@ -15,6 +15,7 @@ const allowedProcessEnvPaths = new Set([
   'scripts/clerk-setup-kyma-auth.ts',
   'agents/worker.ts',
   'instrumentation.ts',
+  'proxy.ts',
 ])
 
 const scanRoots = [

@@ -4,6 +4,7 @@ import { fetchAction } from 'convex/nextjs'
 
 import { api } from '@/convex/_generated/api'
 import { serverEnv } from '@/lib/env/server'
+import { isProductionDeployment } from '@/lib/env/deployment-mode'
 
 type RateLimitName =
   | 'livekitToken'
@@ -14,7 +15,12 @@ type RateLimitName =
 export async function assertServerRateLimit(name: RateLimitName, key: string) {
   const writeKey = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
   if (!writeKey) {
-    if (serverEnv.NODE_ENV === 'production') {
+    if (
+      isProductionDeployment({
+        deploymentEnv: serverEnv.KYMA_DEPLOYMENT_ENV,
+        nodeEnv: serverEnv.NODE_ENV,
+      })
+    ) {
       throw new Error('Rate limiting is not configured for production.')
     }
     return

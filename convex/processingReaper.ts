@@ -141,19 +141,34 @@ export const reapStuckProcessingSessions = internalMutation({
       // inside one window collapse to a single Inngest event instead of
       // launching a fresh concurrent run on every sweep.
       const retryBucket = Math.floor(now / STUCK_AFTER_MS)
-      await ctx.scheduler.runAfter(0, internal.processingPipeline.run, {
-        sessionId: session._id,
-        forceEventId: `${interviewProcessingEventId(`${session._id}`)}-reap-${retryBucket}`,
-      })
+      const retryDedupeKey = `processing-reaper-retry:${session._id}:${retryBucket}`
+      const existingRetry = await ctx.db
+        .query('sessionEvents')
+        .withIndex('by_session_and_dedupe_key', (q) =>
+          q.eq('sessionId', session._id).eq('dedupeKey', retryDedupeKey)
+        )
+        .first()
 
+      if (existingRetry) {
+        continue
+      }
+
+      // Record the claim before scheduling. Convex serializes conflicting
+      // mutations, so a concurrent reaper run observes this event and cannot
+      // enqueue a second copy for the same retry bucket.
       await ctx.db.insert('sessionEvents', {
         orgId: session.orgId,
         sessionId: session._id,
         type: 'processing-retried',
         detail: 'Stuck post-call processing re-enqueued by the reaper.',
         source: 'processing-reaper',
-        dedupeKey: `processing-reaper-retry:${session._id}:${retryBucket}`,
+        dedupeKey: retryDedupeKey,
         createdAt: nowIso,
+      })
+
+      await ctx.scheduler.runAfter(0, internal.processingPipeline.run, {
+        sessionId: session._id,
+        forceEventId: `${interviewProcessingEventId(`${session._id}`)}-reap-${retryBucket}`,
       })
       reEnqueued += 1
     }

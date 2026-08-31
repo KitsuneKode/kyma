@@ -1,5 +1,6 @@
 import { getSiteUrl } from '@/lib/brand/site'
 import { personaPath, type PersonaPage } from '@/lib/seo/personas'
+import { serializeJsonLd } from './serialize-json-ld'
 
 export function PersonaJsonLd({ persona }: { persona: PersonaPage }) {
   const siteUrl = getSiteUrl()
@@ -60,15 +61,15 @@ export function PersonaJsonLd({ persona }: { persona: PersonaPage }) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webPage) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(webPage) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumb) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqPage) }}
       />
     </>
   )

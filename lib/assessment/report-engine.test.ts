@@ -31,18 +31,18 @@ describe('buildAssessmentReport', () => {
   })
 })
 
-describe('report engine honours template hard gates', () => {
-  function thinTranscript() {
-    return [
-      {
-        speaker: 'candidate' as const,
-        text: 'I am not sure. Maybe. I guess it depends, probably.',
-        status: 'final' as const,
-        startedAt: '2026-08-21T10:00:00.000Z',
-      },
-    ]
-  }
+function thinTranscript() {
+  return [
+    {
+      speaker: 'candidate' as const,
+      text: 'I am not sure. Maybe. I guess it depends, probably.',
+      status: 'final' as const,
+      startedAt: '2026-08-21T10:00:00.000Z',
+    },
+  ]
+}
 
+describe('report engine honours template hard gates', () => {
   test('a custom gated dimension can trigger the gate', () => {
     const report = buildAssessmentReport(
       {

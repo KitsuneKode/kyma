@@ -47,12 +47,15 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  let signatureVerified = false
+
   try {
     const receiver = new WebhookReceiver(apiKey, apiSecret)
     const event = await receiver.receive(
       body,
       getWebhookAuthorizationHeader(request)
     )
+    signatureVerified = true
     const roomName = event.room?.name || event.egressInfo?.roomName
     const participantIdentity = event.participant?.identity
     const participantName = event.participant?.name
@@ -165,8 +168,12 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Invalid webhook.' },
-      { status: 401 }
+      {
+        error: signatureVerified
+          ? 'LiveKit webhook processing failed.'
+          : 'Invalid LiveKit webhook signature.',
+      },
+      { status: signatureVerified ? 500 : 401 }
     )
   }
 }

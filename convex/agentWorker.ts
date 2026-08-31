@@ -3,6 +3,8 @@ import { v } from 'convex/values'
 import { internalMutation } from './_generated/server'
 import { pipelineMutation, pipelineQuery } from './lib/pipelineFunctions'
 
+const MAX_WORKER_LIVENESS_ROWS = 100
+
 const workerStatusValidator = v.union(
   v.literal('running'),
   v.literal('draining'),
@@ -90,7 +92,7 @@ export const reapStaleWorkerHeartbeats = internalMutation({
 })
 
 /**
- * Read all worker heartbeats for operator health. Staleness is intentionally
+ * Read the latest bounded set of worker heartbeats for operator health. Staleness is intentionally
  * computed by the caller (server-side) so this query stays deterministic and
  * cacheable — never read wall-clock time inside a Convex query.
  */
@@ -102,7 +104,7 @@ export const getWorkerLiveness = pipelineQuery({
       .query('agentWorkerHeartbeats')
       .withIndex('by_last_seen_at')
       .order('desc')
-      .collect()
+      .take(MAX_WORKER_LIVENESS_ROWS)
 
     return {
       workers: heartbeats.map((heartbeat) => ({

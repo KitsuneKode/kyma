@@ -140,6 +140,7 @@ export async function processInterviewAssessment(
     modelId: scoringModelId,
     providerKeys: detail.workspace?.providerKeys,
     encryptionKey: serverEnv.KYMA_ENCRYPTION_KEY,
+    aad: detail.orgId,
   })
 
   let report: AssessmentComputation

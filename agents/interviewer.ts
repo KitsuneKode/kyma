@@ -20,6 +20,7 @@ import {
   createAgentSessionPort,
   type AgentSessionConfig,
   type AgentSessionPort,
+  type AgentTranscriptSegment,
 } from '@/lib/agent/session-port'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
 import { maybeStartRoomRecording } from '@/lib/livekit/recording'
@@ -294,12 +295,30 @@ function attachTranscriptPersistence(
   // inserted another row - N rows and O(n^2) reads per spoken answer. Holding
   // one id open until the final coalesces the utterance into a single row.
   let activeCandidateSegmentId: string | null = null
+  let pendingTranscriptWrites: Promise<void> = Promise.resolve()
+
+  const enqueueTranscriptWrite = (segment: AgentTranscriptSegment) => {
+    // LiveKit event handlers are synchronous callbacks. Serialize persistence so
+    // a late partial cannot overtake a final update, and retain the chain for the
+    // shutdown callback to flush before the worker closes the session.
+    pendingTranscriptWrites = pendingTranscriptWrites
+      .catch(() => undefined)
+      .then(() => port.upsertTranscript(segment))
+      .catch((error) => {
+        logger.warn({
+          event: 'agent.transcript.persist.failed',
+          detail: 'Unable to persist queued transcript segment.',
+          sessionId,
+          error,
+        })
+      })
+  }
 
   session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (event) => {
     activeCandidateSegmentId ??= `candidate:${event.createdAt}`
     const segmentId = activeCandidateSegmentId
 
-    void port.upsertTranscript({
+    enqueueTranscriptWrite({
       segmentId,
       speaker: 'candidate',
       text: event.transcript,
@@ -347,7 +366,7 @@ function attachTranscriptPersistence(
     session.userData.agentTurnCount += 1
     onBudgetCheck?.()
 
-    void port.upsertTranscript({
+    enqueueTranscriptWrite({
       segmentId: event.item.id,
       speaker,
       text,
@@ -355,6 +374,10 @@ function attachTranscriptPersistence(
       startedAt: new Date(event.item.createdAt).toISOString(),
     })
   })
+
+  return async () => {
+    await pendingTranscriptWrites
+  }
 }
 
 class SimulationPersonaAgent extends voice.Agent<InterviewUserData> {
@@ -861,9 +884,15 @@ When live video is available, call recordVisualObservation at most once per mean
     },
   })
 
-  attachTranscriptPersistence(session, port, logger, sessionId, () => {
-    void budgetEnforcer.checkBudget('turn-budget-check')
-  })
+  const flushTranscriptWrites = attachTranscriptPersistence(
+    session,
+    port,
+    logger,
+    sessionId,
+    () => {
+      void budgetEnforcer.checkBudget('turn-budget-check')
+    }
+  )
 
   await session.start({
     agent: interviewerAgent,
@@ -904,6 +933,7 @@ When live video is available, call recordVisualObservation at most once per mean
       detail: 'Shutting down interviewer agent session.',
       sessionId,
     })
+    await flushTranscriptWrites()
     await session.close()
   })
 

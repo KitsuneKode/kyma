@@ -4,13 +4,11 @@ import { finalizeInterviewForProcessing } from './helpers/finalizeInterviewProce
 import { insertSessionEventWithTransition } from './helpers/interviewSession'
 import { pipelineMutation } from './lib/pipelineFunctions'
 
+type ArtifactStatus = 'starting' | 'active' | 'complete' | 'failed'
+
 function mapArtifactStatus(event: string, hasError: boolean) {
   if (hasError) {
     return 'failed' as const
-  }
-
-  if (event === 'egress_started') {
-    return 'active' as const
   }
 
   if (event === 'egress_ended') {
@@ -18,6 +16,24 @@ function mapArtifactStatus(event: string, hasError: boolean) {
   }
 
   return 'active' as const
+}
+
+/**
+ * Provider webhooks can be retried or arrive out of order. A late non-terminal
+ * event must never move an artifact backwards after it has completed or failed.
+ */
+function resolveArtifactStatus(
+  existing: ArtifactStatus | undefined,
+  next: ArtifactStatus
+): ArtifactStatus {
+  if (
+    (existing === 'complete' || existing === 'failed') &&
+    (next === 'starting' || next === 'active')
+  ) {
+    return existing
+  }
+
+  return next
 }
 
 function inferArtifactType(
@@ -98,22 +114,41 @@ export const ingestWebhookEvent = pipelineMutation({
         ? `${args.event} for ${args.participantIdentity}`
         : `${args.event} for ${args.roomName}`)
 
-    const dedupeKey =
-      args.artifactKey ??
-      `${args.event}:${args.egressId ?? 'na'}:${args.participantIdentity ?? 'na'}`
+    // Artifact identity is stable across egress lifecycle events, but timeline
+    // identity is not: `egress_started` and `egress_ended` must each be recorded
+    // while both reconcile the same recording artifact.
+    const artifactKey = args.egressId
+      ? (args.artifactKey ??
+        buildArtifactKey(
+          args.egressId,
+          args.filename,
+          args.location,
+          args.manifestLocation
+        ))
+      : undefined
+    const dedupeKey = artifactKey
+      ? `egress:${artifactKey}:${args.event}`
+      : `${args.event}:${args.egressId ?? 'na'}:${args.participantIdentity ?? 'na'}`
     const existingEvent = await ctx.db
       .query('sessionEvents')
       .withIndex('by_session_and_dedupe_key', (q) =>
         q.eq('sessionId', session._id).eq('dedupeKey', dedupeKey)
       )
       .first()
-
-    if (existingEvent) {
-      return {
-        sessionId: session._id,
-        roomName: session.roomName,
-      }
-    }
+    // Older deployments used the artifact key itself as the event dedupe key.
+    // Recognise that shape for idempotency, but only for the same event so an
+    // old `egress_started` row cannot suppress a later `egress_ended` row.
+    const legacyArtifactEvent = artifactKey
+      ? await ctx.db
+          .query('sessionEvents')
+          .withIndex('by_session_and_dedupe_key', (q) =>
+            q.eq('sessionId', session._id).eq('dedupeKey', artifactKey)
+          )
+          .first()
+      : null
+    const matchingEvent =
+      existingEvent ??
+      (legacyArtifactEvent?.type === args.event ? legacyArtifactEvent : null)
 
     const isCandidateParticipant =
       args.participantIdentity?.startsWith('candidate-') ?? false
@@ -158,16 +193,19 @@ export const ingestWebhookEvent = pipelineMutation({
     }
 
     // Non-state events (egress, room lifecycle, agent participant churn) are
-    // recorded for the audit trail.
-    await ctx.db.insert('sessionEvents', {
-      orgId: session.orgId,
-      sessionId: session._id,
-      type: args.event,
-      detail,
-      source: 'livekit-webhook',
-      dedupeKey,
-      createdAt: now,
-    })
+    // recorded for the audit trail. Artifact reconciliation below intentionally
+    // runs even when this event was already recorded.
+    if (!matchingEvent) {
+      await ctx.db.insert('sessionEvents', {
+        orgId: session.orgId,
+        sessionId: session._id,
+        type: args.event,
+        detail,
+        source: 'livekit-webhook',
+        dedupeKey,
+        createdAt: now,
+      })
+    }
 
     if (
       args.event === 'room_finished' &&
@@ -183,51 +221,74 @@ export const ingestWebhookEvent = pipelineMutation({
       })
     }
 
-    if (args.egressId) {
+    if (args.egressId && artifactKey) {
       const artifactType = inferArtifactType(
         args.filename,
         args.manifestLocation
       )
-      const status = mapArtifactStatus(args.event, Boolean(args.error))
-      const artifactKey =
-        args.artifactKey ??
-        buildArtifactKey(
-          args.egressId,
-          args.filename,
-          args.location,
-          args.manifestLocation
-        )
+      const requestedStatus = mapArtifactStatus(args.event, Boolean(args.error))
+      const incomingUpdatedAt = toIsoFromEpochMs(args.updatedAtMs) ?? now
       const existing = await ctx.db
         .query('recordingArtifacts')
         .withIndex('by_artifact_key', (q) => q.eq('artifactKey', artifactKey))
         .first()
-      const artifactFields = {
-        orgId: session.orgId,
-        sessionId: session._id,
-        provider: 'livekit' as const,
-        egressId: args.egressId,
-        artifactKey,
-        roomName: args.roomName,
-        artifactType,
-        status,
-        filename: args.filename,
-        location: args.location,
-        manifestLocation: args.manifestLocation,
-        startedAt: toIsoFromEpochMs(args.startedAtMs),
-        endedAt: toIsoFromEpochMs(args.endedAtMs),
-        durationMs: args.durationMs,
-        sizeBytes: args.sizeBytes,
-        error: args.error,
-        createdAt: now,
-        updatedAt: toIsoFromEpochMs(args.updatedAtMs) ?? now,
-      }
+      const status = resolveArtifactStatus(existing?.status, requestedStatus)
 
       if (!existing) {
-        await ctx.db.insert('recordingArtifacts', artifactFields)
+        await ctx.db.insert('recordingArtifacts', {
+          orgId: session.orgId,
+          sessionId: session._id,
+          provider: 'livekit',
+          egressId: args.egressId,
+          artifactKey,
+          roomName: args.roomName,
+          artifactType,
+          status,
+          filename: args.filename,
+          location: args.location,
+          manifestLocation: args.manifestLocation,
+          startedAt: toIsoFromEpochMs(args.startedAtMs),
+          endedAt: toIsoFromEpochMs(args.endedAtMs),
+          durationMs: args.durationMs,
+          sizeBytes: args.sizeBytes,
+          error: args.error,
+          createdAt: now,
+          updatedAt: incomingUpdatedAt,
+        })
       } else {
+        // Do not replace optional metadata with undefined on a retry. LiveKit's
+        // started payload is often sparse while the ended payload is complete.
         await ctx.db.patch(existing._id, {
-          ...artifactFields,
-          createdAt: existing.createdAt,
+          orgId: session.orgId,
+          sessionId: session._id,
+          provider: 'livekit',
+          egressId: args.egressId,
+          artifactKey,
+          roomName: args.roomName,
+          artifactType,
+          status,
+          updatedAt:
+            existing.updatedAt.localeCompare(incomingUpdatedAt) > 0
+              ? existing.updatedAt
+              : incomingUpdatedAt,
+          ...(args.filename !== undefined ? { filename: args.filename } : {}),
+          ...(args.location !== undefined ? { location: args.location } : {}),
+          ...(args.manifestLocation !== undefined
+            ? { manifestLocation: args.manifestLocation }
+            : {}),
+          ...(args.startedAtMs !== undefined
+            ? { startedAt: toIsoFromEpochMs(args.startedAtMs) }
+            : {}),
+          ...(args.endedAtMs !== undefined
+            ? { endedAt: toIsoFromEpochMs(args.endedAtMs) }
+            : {}),
+          ...(args.durationMs !== undefined
+            ? { durationMs: args.durationMs }
+            : {}),
+          ...(args.sizeBytes !== undefined
+            ? { sizeBytes: args.sizeBytes }
+            : {}),
+          ...(args.error !== undefined ? { error: args.error } : {}),
         })
       }
     }

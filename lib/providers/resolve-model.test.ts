@@ -1,13 +1,40 @@
+import { createCipheriv, randomBytes } from 'node:crypto'
+
 import { describe, expect, it } from 'vitest'
 
 import { DEFAULT_MODELS } from '@/lib/providers/provider-id'
 import {
+  buildGatewayByokOptions,
   resolveExplicitReviewChatModelId,
   resolveModelId,
   resolveReviewChatAttempt,
   resolveScoringModelId,
   resolveStageModels,
 } from '@/lib/providers/resolve-model'
+
+function encryptedProviderKey(plaintext: string, aad: string) {
+  const key = Buffer.alloc(32, 7)
+  const iv = randomBytes(12)
+  const cipher = createCipheriv('aes-256-gcm', key, iv)
+  cipher.setAAD(Buffer.from(aad))
+  const ciphertext = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+    cipher.getAuthTag(),
+  ])
+
+  return {
+    encryptionKey: key.toString('hex'),
+    providerKey: {
+      keyId: 'key-1',
+      provider: 'openai',
+      encryptedKey: ciphertext.toString('base64'),
+      iv: iv.toString('base64'),
+      addedAt: Date.now(),
+      addedBy: 'test',
+    },
+  }
+}
 
 describe('resolveModelId precedence', () => {
   it('prefers template over workspace over env over default', () => {
@@ -37,6 +64,54 @@ describe('resolveModelId precedence', () => {
     expect(resolveModelId('tts', { tts: '   ' }, { tts: 'template/tts' })).toBe(
       'template/tts'
     )
+  })
+})
+
+describe('BYOK resolution', () => {
+  it('decrypts org-bound provider keys only with the matching AAD', () => {
+    const orgId = 'org_test'
+    const fixture = encryptedProviderKey('sk-test-provider-key', orgId)
+    const providerKeys = [fixture.providerKey]
+
+    expect(
+      resolveReviewChatAttempt({
+        envFallbacks: { reviewChat: 'openai/gpt-4.1-mini' },
+        providerKeys,
+        encryptionKey: fixture.encryptionKey,
+        aad: orgId,
+      })
+    ).toMatchObject({
+      modelId: 'openai/gpt-4.1-mini',
+      canAttemptModel: true,
+    })
+
+    expect(
+      resolveReviewChatAttempt({
+        envFallbacks: { reviewChat: 'openai/gpt-4.1-mini' },
+        providerKeys,
+        encryptionKey: fixture.encryptionKey,
+        aad: 'org_other',
+      }).canAttemptModel
+    ).toBe(false)
+  })
+
+  it('passes the decrypted org key to the AI SDK gateway', () => {
+    const fixture = encryptedProviderKey('sk-test-provider-key', 'org_test')
+
+    expect(
+      buildGatewayByokOptions({
+        modelId: 'openai/gpt-4.1-mini',
+        providerKeys: [fixture.providerKey],
+        encryptionKey: fixture.encryptionKey,
+        aad: 'org_test',
+      })
+    ).toEqual({
+      gateway: {
+        byok: {
+          openai: [{ apiKey: 'sk-test-provider-key' }],
+        },
+      },
+    })
   })
 })
 

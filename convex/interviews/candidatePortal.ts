@@ -21,6 +21,10 @@ import {
   PRACTICE_SESSION_WINDOW_MS,
 } from '../../lib/practice/packs'
 
+const MAX_CANDIDATE_SESSIONS = 100
+const MAX_CANDIDATE_INVITES_TO_LINK = 100
+const MAX_LEGACY_PRACTICE_INVITES = 100
+
 function resolvePracticeCreatedAt(invite: {
   practiceCreatedAt?: number
   inviteToken: string
@@ -60,10 +64,27 @@ async function countRecentPracticeSessions(
   nowMs: number
 ) {
   const cutoff = nowMs - PRACTICE_SESSION_WINDOW_MS
-  const invites = await ctx.db
-    .query('candidateInvites')
-    .withIndex('by_user', (q) => q.eq('userId', userId))
-    .collect()
+  const [currentInvites, legacyInvites] = await Promise.all([
+    ctx.db
+      .query('candidateInvites')
+      .withIndex('by_user_and_practice_created_at', (q) =>
+        q.eq('userId', userId).gte('practiceCreatedAt', cutoff)
+      )
+      .order('desc')
+      .take(PRACTICE_SESSION_LIMIT + 1),
+    // Keep a bounded compatibility read for invites created before the
+    // denormalized practiceCreatedAt field existed. New records use the indexed
+    // path above and never require a user-wide scan.
+    ctx.db
+      .query('candidateInvites')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .order('desc')
+      .take(MAX_LEGACY_PRACTICE_INVITES),
+  ])
+  const invites = [
+    ...currentInvites,
+    ...legacyInvites.filter((invite) => invite.practiceCreatedAt === undefined),
+  ]
 
   return invites.filter((invite) => {
     if (invite.sessionPurpose !== 'mock') {
@@ -270,7 +291,8 @@ export const createMockInterview = mutation({
     const activeSessions = await ctx.db
       .query('interviewSessions')
       .withIndex('by_candidate_user', (q) => q.eq('candidateUserId', user._id))
-      .collect()
+      .order('desc')
+      .take(MAX_CANDIDATE_SESSIONS)
 
     for (const activeSession of activeSessions) {
       if (
@@ -446,7 +468,8 @@ export const linkCandidateInviteByEmail = mutation({
       .withIndex('by_candidate_email', (q) =>
         q.eq('candidateEmail', normalizedEmail)
       )
-      .collect()
+      .order('desc')
+      .take(MAX_CANDIDATE_INVITES_TO_LINK)
 
     let linkedInvites = 0
     for (const invite of invites) {
@@ -498,7 +521,8 @@ export const listCandidateInterviews = query({
     const sessions = await ctx.db
       .query('interviewSessions')
       .withIndex('by_candidate_user', (q) => q.eq('candidateUserId', user._id))
-      .collect()
+      .order('desc')
+      .take(MAX_CANDIDATE_SESSIONS)
 
     const filteredSessions = sessions.filter((session) => {
       const sessionPurpose = session.sessionPurpose

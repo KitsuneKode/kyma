@@ -28,6 +28,7 @@ export const getSessionProcessingDetail = pipelineQuery({
   returns: v.union(
     v.object({
       sessionId: v.id('interviewSessions'),
+      orgId: v.string(),
       candidate: v.object({ name: v.string() }),
       template: v.object({
         name: v.string(),
@@ -98,6 +99,7 @@ export const getSessionProcessingDetail = pipelineQuery({
 
     return {
       sessionId: session._id,
+      orgId,
       candidate: {
         name: invite.candidateName ?? 'Candidate',
       },

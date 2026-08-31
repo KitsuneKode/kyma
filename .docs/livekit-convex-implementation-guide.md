@@ -120,7 +120,7 @@ They should not become the main business-logic layer.
 - candidate read access to invite/session snapshot
 - recruiter table queries
 - recruiter detail queries
-- safe state transitions initiated by app users
+- invite-bound candidate event writes (candidate clients never persist privileged session states)
 
 ## Use Convex Internal Functions For
 

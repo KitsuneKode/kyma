@@ -5,7 +5,8 @@ import { RenderErrorBoundary } from '@/components/errors/render-error-boundary'
 import { InviteAccessScreen } from '@/components/interview/invite-access-screen'
 import { InterviewWorkspace } from '@/components/interview/interview-workspace'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
-import { isProductionNodeEnv } from '@/lib/env/node-env'
+import { isProductionDeployment } from '@/lib/env/deployment-mode'
+import { serverEnv } from '@/lib/env/server'
 import { serverConvexQuery } from '@/lib/convex/server-query'
 import { UNAVAILABLE_INVITE_FALLBACK_MESSAGE } from '@/lib/interview/invite-access-copy'
 import { createInitialInterviewSnapshot } from '@/lib/interview/snapshot'
@@ -54,15 +55,17 @@ export default async function InterviewPage({ params }: InterviewPageProps) {
 
   const snapshot = createInitialInterviewSnapshot(inviteId, publicSnapshot)
 
+  const isProd = isProductionDeployment({
+    deploymentEnv: serverEnv.KYMA_DEPLOYMENT_ENV,
+    nodeEnv: serverEnv.NODE_ENV,
+  })
   return (
     // Intentional dark-locked interview shell (immersive route exception).
     <main className={interviewShellClassName}>
       <RenderErrorBoundary title="Interview workspace">
         <InterviewWorkspace
           initialSnapshot={snapshot}
-          skipInviteAuth={
-            !isProductionNodeEnv() && !hasClerkServerCredentials()
-          }
+          skipInviteAuth={!isProd && !hasClerkServerCredentials()}
         />
       </RenderErrorBoundary>
     </main>

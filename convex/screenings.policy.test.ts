@@ -182,7 +182,7 @@ describe('extendBatchExpiry', () => {
           rubricVersion: 'v1',
         })
 
-        const batchId = await ctx.db.insert('screeningBatches', {
+        const createdBatchId = await ctx.db.insert('screeningBatches', {
           orgId: RECRUITER_IDENTITY.org_id as string,
           name: 'Extend batch',
           templateId,
@@ -193,19 +193,19 @@ describe('extendBatchExpiry', () => {
           createdAt: new Date().toISOString(),
         })
 
-        const openInviteId = await ctx.db.insert('candidateInvites', {
+        const createdOpenInviteId = await ctx.db.insert('candidateInvites', {
           orgId: RECRUITER_IDENTITY.org_id as string,
           inviteToken: 'open-invite',
           templateId,
-          batchId,
+          batchId: createdBatchId,
           status: 'opened',
           expiresAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
         })
 
         await ctx.db.insert('candidateEligibility', {
           orgId: RECRUITER_IDENTITY.org_id as string,
-          batchId,
-          inviteId: openInviteId,
+          batchId: createdBatchId,
+          inviteId: createdOpenInviteId,
           candidateName: 'Open Candidate',
           allowedAttempts: 1,
           attemptCount: 0,
@@ -213,19 +213,22 @@ describe('extendBatchExpiry', () => {
           createdAt: new Date().toISOString(),
         })
 
-        const completedInviteId = await ctx.db.insert('candidateInvites', {
-          orgId: RECRUITER_IDENTITY.org_id as string,
-          inviteToken: 'done-invite',
-          templateId,
-          batchId,
-          status: 'completed',
-          expiresAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
-        })
+        const createdCompletedInviteId = await ctx.db.insert(
+          'candidateInvites',
+          {
+            orgId: RECRUITER_IDENTITY.org_id as string,
+            inviteToken: 'done-invite',
+            templateId,
+            batchId: createdBatchId,
+            status: 'completed',
+            expiresAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+          }
+        )
 
         await ctx.db.insert('candidateEligibility', {
           orgId: RECRUITER_IDENTITY.org_id as string,
-          batchId,
-          inviteId: completedInviteId,
+          batchId: createdBatchId,
+          inviteId: createdCompletedInviteId,
           candidateName: 'Done Candidate',
           allowedAttempts: 1,
           attemptCount: 1,
@@ -233,7 +236,11 @@ describe('extendBatchExpiry', () => {
           createdAt: new Date().toISOString(),
         })
 
-        return { batchId, openInviteId, completedInviteId }
+        return {
+          batchId: createdBatchId,
+          openInviteId: createdOpenInviteId,
+          completedInviteId: createdCompletedInviteId,
+        }
       }
     )
 

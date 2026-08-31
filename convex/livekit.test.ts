@@ -131,6 +131,74 @@ describe('ingestWebhookEvent session transitions', () => {
       events.filter((event) => event.type === 'participant_joined')
     ).toHaveLength(1)
   })
+
+  test('reconciles one egress artifact from active to complete', async () => {
+    const t = harness()
+    const { sessionId, roomName } = await seedInterview(t, {
+      roomName: 'room-recording',
+      sessionState: 'live',
+    })
+    const artifactKey = 'egress-1:interview.mp4'
+
+    await t.mutation(api.livekit.ingestWebhookEvent, {
+      processingKey: PROCESSING_KEY,
+      event: 'egress_started',
+      roomName,
+      egressId: 'egress-1',
+      artifactKey,
+      filename: 'interview.mp4',
+      startedAtMs: Date.now(),
+    })
+
+    const active = await t.run((ctx) =>
+      ctx.db
+        .query('recordingArtifacts')
+        .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+        .first()
+    )
+    expect(active?.status).toBe('active')
+
+    await t.mutation(api.livekit.ingestWebhookEvent, {
+      processingKey: PROCESSING_KEY,
+      event: 'egress_ended',
+      roomName,
+      egressId: 'egress-1',
+      artifactKey,
+      filename: 'interview.mp4',
+      location: 's3://bucket/interview.mp4',
+      endedAtMs: Date.now(),
+      durationMs: 12_000,
+      sizeBytes: 2048,
+    })
+    await t.mutation(api.livekit.ingestWebhookEvent, {
+      processingKey: PROCESSING_KEY,
+      event: 'egress_ended',
+      roomName,
+      egressId: 'egress-1',
+      artifactKey,
+      filename: 'interview.mp4',
+      location: 's3://bucket/interview.mp4',
+      endedAtMs: Date.now(),
+      durationMs: 12_000,
+      sizeBytes: 2048,
+    })
+
+    const [artifact, events] = await t.run(async (ctx) => [
+      await ctx.db
+        .query('recordingArtifacts')
+        .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+        .first(),
+      await ctx.db
+        .query('sessionEvents')
+        .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+        .collect(),
+    ])
+    expect(artifact?.status).toBe('complete')
+    expect(artifact?.location).toBe('s3://bucket/interview.mp4')
+    expect(
+      events.filter((event) => event.type === 'egress_ended')
+    ).toHaveLength(1)
+  })
 })
 
 describe('finalize -> report pipeline', () => {

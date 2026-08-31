@@ -108,6 +108,37 @@ describe('reapStuckProcessingSessions', () => {
     const session = await t.run((ctx) => ctx.db.get(sessionId))
     expect(session?.state).toBe('processing')
   })
+
+  test('does not enqueue duplicate retries inside one retry bucket', async () => {
+    const t = harness()
+    const { sessionId } = await seedInterview(t, {
+      roomName: 'reap-dedupe',
+      sessionState: 'processing',
+      endedAt: new Date(Date.now() - STUCK_AGE_MS).toISOString(),
+    })
+
+    const first = await t.mutation(
+      internal.processingReaper.reapStuckProcessingSessions,
+      {}
+    )
+    const second = await t.mutation(
+      internal.processingReaper.reapStuckProcessingSessions,
+      {}
+    )
+
+    expect(first.reEnqueued).toBe(1)
+    expect(second.reEnqueued).toBe(0)
+
+    const retryEvents = await t.run((ctx) =>
+      ctx.db
+        .query('sessionEvents')
+        .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+        .collect()
+    )
+    expect(
+      retryEvents.filter((event) => event.type === 'processing-retried')
+    ).toHaveLength(1)
+  })
 })
 
 describe('reapStalePreProcessingSessions', () => {

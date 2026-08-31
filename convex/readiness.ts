@@ -20,6 +20,8 @@ async function resolveSignedInCandidateUserId(ctx: MutationCtx) {
   return user._id
 }
 
+const MAX_READINESS_HISTORY = 50
+
 async function findCandidateUserIdForQuery(ctx: QueryCtx) {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) {
@@ -38,12 +40,13 @@ export const getCandidateReadinessRuns = query({
     }
     const runs = await ctx.db
       .query('candidateReadinessRuns')
-      .withIndex('by_candidate_user', (q) =>
+      .withIndex('by_candidate_user_and_ran_at', (q) =>
         q.eq('candidateUserId', candidateUserId)
       )
-      .collect()
+      .order('desc')
+      .take(MAX_READINESS_HISTORY)
 
-    return runs.toSorted((left, right) => right.ranAt.localeCompare(left.ranAt))
+    return runs
   },
 })
 
