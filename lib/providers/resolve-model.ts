@@ -215,21 +215,15 @@ function parseHexKeyBytes(hex: string) {
   return Buffer.from(hex, 'hex')
 }
 
-export function decryptWorkspaceKey(args: {
-  encryptedKey: string
-  iv: string
-  encryptionKey?: string
+function tryDecryptWithKey(
+  encryptedKey: string,
+  iv: string,
+  keyHex: string,
   aad?: string
-}) {
-  const key = args.encryptionKey?.trim()
-  if (!key) {
-    throw new Error(
-      'KYMA_ENCRYPTION_KEY is required for provider key resolution.'
-    )
-  }
-  const keyBytes = parseHexKeyBytes(key)
-  const ivBytes = Buffer.from(args.iv, 'base64')
-  const encryptedBytes = Buffer.from(args.encryptedKey, 'base64')
+): string {
+  const keyBytes = parseHexKeyBytes(keyHex)
+  const ivBytes = Buffer.from(iv, 'base64')
+  const encryptedBytes = Buffer.from(encryptedKey, 'base64')
   if (encryptedBytes.length < 16) {
     throw new Error('Encrypted provider key payload is invalid.')
   }
@@ -237,8 +231,8 @@ export function decryptWorkspaceKey(args: {
   const ciphertext = encryptedBytes.subarray(0, encryptedBytes.length - 16)
   const tryDecrypt = (withAad: boolean) => {
     const decipher = createDecipheriv('aes-256-gcm', keyBytes, ivBytes)
-    if (withAad && args.aad?.trim()) {
-      decipher.setAAD(Buffer.from(args.aad.trim()))
+    if (withAad && aad?.trim()) {
+      decipher.setAAD(Buffer.from(aad.trim()))
     }
     decipher.setAuthTag(authTag)
     const decrypted = Buffer.concat([
@@ -247,16 +241,44 @@ export function decryptWorkspaceKey(args: {
     ])
     return decrypted.toString('utf8')
   }
-
-  if (args.aad?.trim()) {
+  if (aad?.trim()) {
     try {
       return tryDecrypt(true)
     } catch {
       return tryDecrypt(false)
     }
   }
-
   return tryDecrypt(false)
+}
+
+export function decryptWorkspaceKey(args: {
+  encryptedKey: string
+  iv: string
+  encryptionKey?: string
+  aad?: string
+  previousEncryptionKey?: string
+}) {
+  const key = args.encryptionKey?.trim()
+  if (!key) {
+    throw new Error(
+      'KYMA_ENCRYPTION_KEY is required for provider key resolution.'
+    )
+  }
+  const keysToTry = [key, args.previousEncryptionKey?.trim()].filter(
+    (k): k is string => Boolean(k && /^[a-f0-9]{64}$/i.test(k))
+  )
+  let lastError: unknown = null
+  for (const k of keysToTry) {
+    try {
+      return tryDecryptWithKey(args.encryptedKey, args.iv, k, args.aad)
+    } catch (e) {
+      lastError = e
+      continue
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('BYOK decryption failed.')
 }
 
 export function resolveWorkspaceApiKeys(
