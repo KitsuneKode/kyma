@@ -121,10 +121,12 @@ export const listScreeningBatches = recruiterQuery({
         ).length
 
         const inviteIds = eligibility.map((candidate) => candidate.inviteId)
-        const candidateCount = eligibility.length
-        const completedCount = eligibility.filter(
-          (candidate) => candidate.status === 'submitted'
-        ).length
+        // Prefer denormalized counters for O(1) reads; fallback to counting for old batches.
+        const candidateCount = batch.candidateCount ?? eligibility.length
+        const completedCount =
+          batch.completedCount ??
+          eligibility.filter((candidate) => candidate.status === 'submitted')
+            .length
         const completionPercent =
           candidateCount === 0
             ? 0
@@ -353,6 +355,8 @@ export const createScreeningBatch = screeningWriteMutation({
       allowsResume: resolvedAllowsResume,
       candidateReleaseMode: args.candidateReleaseMode ?? 'inherit',
       createdAt: now,
+      candidateCount: args.candidates.length,
+      completedCount: 0,
     })
 
     for (const candidate of args.candidates) {

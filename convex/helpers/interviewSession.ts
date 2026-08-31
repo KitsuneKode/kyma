@@ -258,9 +258,37 @@ export async function applySessionStateTransition(
     })
 
     if (invite?.eligibilityId) {
-      await ctx.db.patch(invite.eligibilityId, {
-        status: 'submitted',
-      })
+      const eligibility = await ctx.db.get(invite.eligibilityId)
+      // Idempotent: only increment completedCount when first transitioning to submitted.
+      if (eligibility && eligibility.status !== 'submitted') {
+        await ctx.db.patch(invite.eligibilityId, {
+          status: 'submitted',
+        })
+        // Maintain denormalized batch counter transactionally.
+        const batch = await ctx.db.get(eligibility.batchId)
+        if (batch) {
+          if (batch.completedCount === undefined) {
+            // Backfill old batches that predate counters.
+            const batchEligibility = await ctx.db
+              .query('candidateEligibility')
+              .withIndex('by_batch', (q) =>
+                q.eq('batchId', eligibility.batchId)
+              )
+              .collect()
+            const submittedCount = batchEligibility.filter(
+              (e) => e.status === 'submitted'
+            ).length
+            await ctx.db.patch(batch._id, {
+              candidateCount: batch.candidateCount ?? batchEligibility.length,
+              completedCount: submittedCount,
+            })
+          } else {
+            await ctx.db.patch(batch._id, {
+              completedCount: (batch.completedCount ?? 0) + 1,
+            })
+          }
+        }
+      }
     }
   }
 }
