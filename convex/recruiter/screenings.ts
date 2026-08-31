@@ -80,7 +80,13 @@ export const listScreeningBatches = recruiterQuery({
   },
   handler: async (ctx, { nowMs }) => {
     const { orgId } = ctx
-    const { expiringUntilMs, staleBeforeMs } = getSessionOpsWindows(nowMs)
+    const serverNow = Date.now()
+    const clampedNowMs =
+      Number.isFinite(nowMs) && Math.abs(nowMs - serverNow) < 5 * 60 * 1000
+        ? nowMs
+        : serverNow
+    const { expiringUntilMs, staleBeforeMs } =
+      getSessionOpsWindows(clampedNowMs)
 
     // Newest-first at the index level. Sampling on `by_org_id` returned the
     // OLDEST batches, so a mature org's recent screenings were never visible.
@@ -117,7 +123,7 @@ export const listScreeningBatches = recruiterQuery({
           .take(MAX_BATCH_ELIGIBILITY)
 
         const expiringInvites = invites.filter((invite) =>
-          isInviteExpiringSoon(invite.expiresAt, nowMs, expiringUntilMs)
+          isInviteExpiringSoon(invite.expiresAt, clampedNowMs, expiringUntilMs)
         ).length
 
         const inviteIds = eligibility.map((candidate) => candidate.inviteId)
@@ -477,7 +483,12 @@ export const getInviteEmailDeliverySummary = recruiterQuery({
   }),
   handler: async (ctx, { nowMs }) => {
     const { orgId } = ctx
-    const since = new Date(nowMs - 1000 * 60 * 60 * 24).toISOString()
+    const serverNow = Date.now()
+    const clampedNowMs =
+      Number.isFinite(nowMs) && Math.abs(nowMs - serverNow) < 5 * 60 * 1000
+        ? nowMs
+        : serverNow
+    const since = new Date(clampedNowMs - 1000 * 60 * 60 * 24).toISOString()
     // Count each delivery status directly. Sampling the 500 OLDEST invites on
     // `by_org_id` meant any org past 500 lifetime invites permanently reported
     // "0 pending, 0 failed" no matter how many invite emails were failing now.
@@ -500,13 +511,13 @@ export const getInviteEmailDeliverySummary = recruiterQuery({
 
     let failedLast24h = 0
     const pending = pendingInvites.length
+    // C-14: only count failed where emailSentAt is within window; do not fallback to expiresAt or count missing timestamps.
     for (const invite of failedInvites) {
       if (invite.emailDeliveryStatus !== 'failed') {
         continue
       }
-      const failedAt = invite.emailSentAt ?? invite.expiresAt
-      // Best-effort recency: prefer emailSentAt; fall back to invite expiry window.
-      if (failedAt >= since || !invite.emailSentAt) {
+      if (!invite.emailSentAt) continue
+      if (invite.emailSentAt >= since) {
         failedLast24h += 1
       }
     }
@@ -555,7 +566,12 @@ export const extendBatchExpiry = screeningWriteMutation({
       if (!invite || invite.status === 'completed') {
         continue
       }
-      await ctx.db.patch(invite._id, { expiresAt })
+      // C-13: expired invites stay locked if status remains 'expired' after extension.
+      const patch: Record<string, unknown> = { expiresAt }
+      if (invite.status === 'expired') {
+        patch.status = 'created'
+      }
+      await ctx.db.patch(invite._id, patch as never)
       updatedInviteCount += 1
     }
 

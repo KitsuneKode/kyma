@@ -21,4 +21,12 @@ crons.interval(
   {}
 )
 
+// Keep worker heartbeat table bounded (C-09).
+crons.interval(
+  'reap-stale-worker-heartbeats',
+  { hours: 24 },
+  internal.agentWorker.reapStaleWorkerHeartbeats,
+  {}
+)
+
 export default crons
