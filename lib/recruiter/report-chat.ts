@@ -375,14 +375,22 @@ function parseCitationLine(
 ): RecruiterCitation[] {
   const marker = 'CITATIONS:'
   const line = text.split('\n').find((l) => l.includes(marker))
+  const validRefs = new Set([
+    ...detail.evidence.slice(0, 8).map((_, i) => `evidence:${i}:`),
+    ...detail.transcript.slice(-14).map((e) => `transcript:${e.startedAt}`),
+    'evidence:',
+    'transcript:',
+    'dimension:',
+  ])
+  const fallback = citationsFromDetail(detail).slice(0, 3)
   if (!line) {
-    return citationsFromDetail(detail).slice(0, 3)
+    return fallback
   }
   const raw = line.slice(line.indexOf(marker) + marker.length).trim()
   if (!raw) {
-    return citationsFromDetail(detail).slice(0, 3)
+    return fallback
   }
-  return raw
+  const parsed = raw
     .split(',')
     .map((part) => part.trim())
     .filter(Boolean)
@@ -391,6 +399,18 @@ function parseCitationLine(
       ref,
       label: ref,
     }))
+  // B-B12: validate refs are known evidence/transcript anchors; else fallback to grounded citations.
+  const allValid = parsed.every(
+    (c) =>
+      validRefs.has(c.ref) ||
+      c.ref.startsWith('evidence:') ||
+      c.ref.startsWith('transcript:') ||
+      c.ref.startsWith('dimension:')
+  )
+  if (!allValid || parsed.length === 0) {
+    return fallback
+  }
+  return parsed.slice(0, 5)
 }
 
 export { GROUNDING_VERSION }
