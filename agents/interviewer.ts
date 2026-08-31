@@ -113,6 +113,7 @@ type AgentTemplateConfig = {
   targetDurationMinutes: number
   jobFamily?: string
   simulationMode: SimulationMode
+  interviewStyleMode: 'standard' | 'intensive'
   interviewerInstructions: string
   simulationPersonaInstructions: string
   wrapUpInstructions: string
@@ -191,14 +192,23 @@ function buildAgentTemplateConfig(
     scoring: runtimeEnv.KYMA_SCORING_MODEL,
   }
 
+  const styleMode = (remoteConfig?.interviewStyleMode ?? 'standard') as
+    | 'standard'
+    | 'intensive'
+  const baseInstructions =
+    remoteConfig?.systemPrompt?.trim() || envConfig.interviewerInstructions
+  const styleSuffix =
+    styleMode === 'intensive'
+      ? '\n\nStyle: intensive — probe deeper, ask concise follow-ups when answers are vague, and keep pace brisk but warm.'
+      : ''
   return {
     templateName: remoteConfig?.templateName ?? 'AI Voice Screener',
     targetDurationMinutes:
       remoteConfig?.targetDurationMinutes ?? DEFAULT_TARGET_DURATION_MINUTES,
     jobFamily: remoteConfig?.jobFamily,
     simulationMode: remoteConfig?.simulationMode ?? 'teaching',
-    interviewerInstructions:
-      remoteConfig?.systemPrompt?.trim() || envConfig.interviewerInstructions,
+    interviewStyleMode: styleMode,
+    interviewerInstructions: `${baseInstructions}${styleSuffix}`,
     simulationPersonaInstructions:
       remoteConfig?.simulationPersonaPrompt?.trim() ||
       remoteConfig?.childPersonaPrompt?.trim() ||

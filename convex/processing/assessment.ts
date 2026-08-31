@@ -77,10 +77,10 @@ export const getSessionProcessingDetail = pipelineQuery({
 
     const { orgId, session, invite, template, report } = base
 
-    const { snapshot: policySnapshot } = await resolveInterviewPolicyFromInvite(
-      ctx,
-      invite
-    )
+    // Prefer frozen snapshot from session start; fallback to live resolve for old sessions.
+    const policySnapshot =
+      session.policySnapshot ??
+      (await resolveInterviewPolicyFromInvite(ctx, invite)).snapshot
     const workspaceSettings = await ctx.db
       .query('workspaceSettings')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))

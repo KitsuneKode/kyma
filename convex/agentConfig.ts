@@ -10,6 +10,7 @@ import { upsertTranscriptSegmentForSession } from './helpers/transcriptSegments'
 import { pipelineMutation, pipelineQuery } from './lib/pipelineFunctions'
 import {
   interviewSessionStateValidator,
+  interviewStyleModeValidator,
   jobFamilyValidator,
   modelOverridesValidator,
   sessionPurposeValidator,
@@ -55,6 +56,18 @@ const interviewAgentConfigValidator = v.object({
   candidateTurnCount: v.number(),
   agentTurnCount: v.number(),
   orgId: v.string(),
+  interviewStyleMode: v.optional(interviewStyleModeValidator),
+  policySnapshot: v.optional(
+    v.object({
+      targetDurationMinutes: v.number(),
+      allowsResume: v.boolean(),
+      maxAttempts: v.number(),
+      rubricVersion: v.string(),
+      templateId: v.string(),
+      templateName: v.optional(v.string()),
+      interviewStyleMode: v.optional(interviewStyleModeValidator),
+    })
+  ),
 })
 
 export const getInterviewAgentConfig = pipelineQuery({
@@ -104,7 +117,9 @@ export const getInterviewAgentConfig = pipelineQuery({
 
     return {
       templateName: template.name,
-      targetDurationMinutes: policy.targetDurationMinutes,
+      targetDurationMinutes:
+        session.policySnapshot?.targetDurationMinutes ??
+        policy.targetDurationMinutes,
       jobFamily: template.jobFamily,
       simulationMode: resolveTemplateSimulationMode(template),
       systemPrompt: template.systemPrompt,
@@ -124,6 +139,17 @@ export const getInterviewAgentConfig = pipelineQuery({
       candidateTurnCount,
       agentTurnCount,
       orgId: invite.orgId,
+      interviewStyleMode:
+        session.interviewStyleMode ?? template.interviewStyleMode ?? 'standard',
+      policySnapshot: session.policySnapshot ?? {
+        targetDurationMinutes: policy.targetDurationMinutes,
+        allowsResume: policy.allowsResume,
+        maxAttempts: policy.maxAttempts,
+        rubricVersion: template.rubricVersion,
+        templateId: `${invite.templateId}`,
+        templateName: template.name,
+        interviewStyleMode: template.interviewStyleMode ?? 'standard',
+      },
     }
   },
 })

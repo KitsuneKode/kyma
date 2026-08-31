@@ -47,6 +47,84 @@ export const getInviteBootstrapByokSummary = query({
   },
 })
 
+/**
+ * Persist client-observed connection state. Called when LiveKit reports
+ * reconnecting/interrupted so the server does not stay in connecting/live
+ * waiting solely for a webhook that may be delayed or lost.
+ */
+export const updateSessionConnectionState = mutation({
+  args: {
+    inviteToken: v.string(),
+    sessionId: v.id('interviewSessions'),
+    state: v.union(
+      v.literal('reconnecting'),
+      v.literal('interrupted'),
+      v.literal('live')
+    ),
+  },
+  handler: async (ctx, { inviteToken, sessionId, state }) => {
+    const invite = await ensureInvite(ctx, inviteToken)
+    const session = await ctx.db.get(sessionId)
+    if (!session || `${session.inviteId}` !== `${invite._id}`) {
+      throw new ConvexError('Session not found for invite.')
+    }
+    if (['processing', 'completed', 'failed'].includes(session.state))
+      return null
+    // Only allow forward progress: connecting -> live/reconnecting, live -> reconnecting/interrupted
+    const allowed: Record<string, string[]> = {
+      connecting: ['live', 'reconnecting', 'interrupted'],
+      live: ['reconnecting', 'interrupted'],
+      reconnecting: ['live', 'interrupted', 'connecting'],
+      interrupted: ['connecting', 'live'],
+    }
+    const nextAllowed = allowed[session.state] ?? []
+    if (!nextAllowed.includes(state)) return null
+    await ctx.db.patch(sessionId, { state: state as typeof session.state })
+    await ctx.db.insert('sessionEvents', {
+      orgId: session.orgId,
+      sessionId,
+      type: `connection-${state}`,
+      detail: `Client reported connection state ${state}`,
+      source: 'candidate-client',
+      createdAt: new Date().toISOString(),
+    })
+    return { state }
+  },
+})
+
+/**
+ * Promote a session from connecting to live when the client has successfully
+ * joined the LiveKit room. This is a fallback for the webhook path.
+ */
+export const promoteSessionToLive = mutation({
+  args: {
+    inviteToken: v.string(),
+    sessionId: v.id('interviewSessions'),
+  },
+  handler: async (ctx, { inviteToken, sessionId }) => {
+    const invite = await ensureInvite(ctx, inviteToken)
+    const session = await ctx.db.get(sessionId)
+    if (!session || `${session.inviteId}` !== `${invite._id}`) {
+      throw new ConvexError('Session not found for invite.')
+    }
+    if (session.state !== 'connecting' && session.state !== 'reconnecting')
+      return null
+    await ctx.db.patch(sessionId, {
+      state: 'live',
+      lastLiveStartedAt: new Date().toISOString(),
+    })
+    await ctx.db.insert('sessionEvents', {
+      orgId: session.orgId,
+      sessionId,
+      type: 'session-promoted-live',
+      detail: 'Session promoted to live via client join',
+      source: 'candidate-client',
+      createdAt: new Date().toISOString(),
+    })
+    return { state: 'live' as const }
+  },
+})
+
 export const bootstrapPublicSession = mutation({
   args: {
     inviteToken: v.string(),
@@ -131,7 +209,10 @@ export const bootstrapPublicSession = mutation({
           'This invite is already attached to another candidate participant.'
         )
       }
-      if (existingSession.state === 'interrupted') {
+      if (
+        existingSession.state === 'interrupted' ||
+        existingSession.state === 'reconnecting'
+      ) {
         if (!policy.allowsResume) {
           throw new ConvexError('This screening does not allow session resume.')
         }
@@ -183,6 +264,16 @@ export const bootstrapPublicSession = mutation({
     const startedAt = new Date().toISOString()
     const sessionPurpose = resolveInviteSessionPurpose(invite)
 
+    // Freeze policy snapshot at session start so later template edits do not retroactively change scoring.
+    const policySnapshot = {
+      targetDurationMinutes: policy.targetDurationMinutes,
+      allowsResume: policy.allowsResume,
+      maxAttempts: policy.maxAttempts,
+      rubricVersion: template?.rubricVersion ?? 'v1',
+      templateId: `${invite.templateId}`,
+      templateName: resolveTemplateName(template?.name),
+      interviewStyleMode: template?.interviewStyleMode ?? 'standard',
+    }
     const sessionId = await ctx.db.insert('interviewSessions', {
       orgId: invite.orgId,
       inviteId: invite._id,
@@ -195,6 +286,8 @@ export const bootstrapPublicSession = mutation({
       activeDurationMs: 0,
       sessionPurpose,
       candidateUserId: invite.userId,
+      policySnapshot,
+      interviewStyleMode: template?.interviewStyleMode ?? 'standard',
     })
 
     await ctx.db.patch(invite._id, {

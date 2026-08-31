@@ -264,6 +264,8 @@ export default defineSchema({
     failureReason: v.optional(v.string()),
     candidateUserId: v.optional(v.id('users')),
     sessionPurpose: v.optional(sessionPurposeValidator),
+    policySnapshot: v.optional(interviewPolicySnapshotValidator),
+    interviewStyleMode: v.optional(interviewStyleModeValidator),
   })
     .index('by_org_id', ['orgId'])
     .index('by_org_id_and_state', ['orgId', 'state'])
