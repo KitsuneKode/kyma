@@ -21,8 +21,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
@@ -35,6 +33,12 @@ import { useMotionPresets } from '@/lib/motion/use-motion-presets'
 import { formatStatusLabel, formatDateTime } from '@/lib/recruiter/format'
 import type { DashboardLiveSlice } from '@/lib/recruiter/types'
 import { cn } from '@/lib/utils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart'
 
 export function RecruiterDashboard({
   sessionsToday,
@@ -147,187 +151,193 @@ export function RecruiterDashboard({
         ))}
       </motion.section>
 
-      {/* Charts — give the dashboard a pulse beyond static counts */}
+      {/* Charts — shadcn ChartContainer + remotion-style spring */}
       <motion.section
         className="grid gap-6 lg:grid-cols-3"
         variants={staggerChildren}
         initial="hidden"
         animate="visible"
       >
-        <motion.div
-          variants={listItem}
-          className="rounded-3xl bg-card p-7 shadow-[var(--shadow-sm)] ring-1 ring-border/60 lg:col-span-2"
-        >
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/10">
-                <IconTrendingUp className="size-4 text-primary/70" />
+        <motion.div variants={listItem} className="lg:col-span-2">
+          <Card className="rounded-3xl shadow-[var(--shadow-sm)]">
+            <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/10">
+                  <IconTrendingUp className="size-4 text-primary/70" />
+                </div>
+                <CardTitle className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+                  Sessions — last 14 days
+                </CardTitle>
               </div>
-              <h3 className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-                Sessions — last 14 days
-              </h3>
-            </div>
-            <span className="font-mono text-[11px] text-muted-foreground/60 tabular-nums">
-              {timelineData.reduce((sum, d) => sum + d.sessions, 0)} total
-            </span>
-          </div>
-          <div className="h-[180px] w-full">
-            {summary === undefined ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground/60">
-                Loading chart…
-              </div>
-            ) : timelineData.every((d) => d.sessions === 0) ? (
-              <div className="flex h-full items-center justify-center rounded-2xl bg-muted/30 px-6 py-8 text-center text-sm leading-relaxed text-muted-foreground/70">
-                No sessions in the last 14 days. New interviews will appear here
-                as a daily pulse.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={timelineData}
-                  margin={{ left: -10, right: 8, top: 8, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient
-                      id="dashSessions"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
+              <span className="font-mono text-[11px] text-muted-foreground/60 tabular-nums">
+                {timelineData.reduce((sum, d) => sum + d.sessions, 0)} total
+              </span>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[180px] w-full">
+                {summary === undefined ? (
+                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground/60">
+                    Loading chart…
+                  </div>
+                ) : timelineData.every((d) => d.sessions === 0) ? (
+                  <div className="flex h-full items-center justify-center rounded-2xl bg-muted/30 px-6 py-8 text-center text-sm leading-relaxed text-muted-foreground/70">
+                    No sessions in the last 14 days. New interviews will appear
+                    here as a daily pulse.
+                  </div>
+                ) : (
+                  <ChartContainer
+                    config={{
+                      sessions: { label: 'Sessions', color: 'var(--primary)' },
+                    }}
+                    className="h-[180px] w-full"
+                  >
+                    <AreaChart
+                      data={timelineData}
+                      margin={{ left: -10, right: 8, top: 8, bottom: 0 }}
                     >
-                      <stop
-                        offset="0%"
-                        stopColor="var(--primary)"
-                        stopOpacity={0.22}
+                      <defs>
+                        <linearGradient
+                          id="dashSessions"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="var(--primary)"
+                            stopOpacity={0.22}
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="var(--primary)"
+                            stopOpacity={0.02}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--border)"
+                        opacity={0.6}
+                        vertical={false}
                       />
-                      <stop
-                        offset="100%"
-                        stopColor="var(--primary)"
-                        stopOpacity={0.02}
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval="preserveStartEnd"
                       />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--border)"
-                    opacity={0.6}
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                    axisLine={false}
-                    tickLine={false}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={28}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 12,
-                      fontSize: 12,
-                    }}
-                    labelStyle={{
-                      color: 'var(--muted-foreground)',
-                      fontSize: 11,
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="sessions"
-                    stroke="var(--primary)"
-                    strokeWidth={2}
-                    fill="url(#dashSessions)"
-                    dot={false}
-                    activeDot={{
-                      r: 4,
-                      strokeWidth: 2,
-                      fill: 'var(--card)',
-                      stroke: 'var(--primary)',
-                    }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={28}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Area
+                        type="monotone"
+                        dataKey="sessions"
+                        stroke="var(--primary)"
+                        strokeWidth={2}
+                        fill="url(#dashSessions)"
+                        dot={false}
+                        activeDot={{
+                          r: 4,
+                          strokeWidth: 2,
+                          fill: 'var(--card)',
+                          stroke: 'var(--primary)',
+                        }}
+                        isAnimationActive
+                        animationDuration={900}
+                        animationEasing="ease-out"
+                      />
+                    </AreaChart>
+                  </ChartContainer>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
 
-        <motion.div
-          variants={listItem}
-          className="rounded-3xl bg-card p-7 shadow-[var(--shadow-sm)] ring-1 ring-border/60"
-        >
-          <div className="mb-6 flex items-center gap-2.5">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 ring-1 ring-emerald-500/15">
-              <IconChartBar className="size-4 text-emerald-600/70 dark:text-emerald-400/70" />
-            </div>
-            <h3 className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-              Invite funnel
-            </h3>
-          </div>
-          <div className="h-[180px] w-full">
-            {summary === undefined ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground/60">
-                Loading…
+        <motion.div variants={listItem}>
+          <Card className="rounded-3xl shadow-[var(--shadow-sm)]">
+            <CardHeader className="flex-row items-center gap-2.5 space-y-0 pb-3">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 ring-1 ring-emerald-500/15">
+                <IconChartBar className="size-4 text-emerald-600/70 dark:text-emerald-400/70" />
               </div>
-            ) : funnelData.length === 0 ? (
-              <div className="flex h-full items-center justify-center rounded-2xl bg-muted/30 px-6 py-4 text-center text-sm text-muted-foreground/70">
-                No invites yet. Create a batch to see the funnel.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={funnelData}
-                  layout="vertical"
-                  margin={{ left: 0, right: 16, top: 4, bottom: 4 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--border)"
-                    opacity={0.5}
-                    horizontal={false}
-                  />
-                  <XAxis type="number" hide allowDecimals={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    width={84}
-                    tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 12,
-                      fontSize: 12,
+              <CardTitle className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+                Invite funnel
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[180px] w-full">
+                {summary === undefined ? (
+                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground/60">
+                    Loading…
+                  </div>
+                ) : funnelData.length === 0 ? (
+                  <div className="flex h-full items-center justify-center rounded-2xl bg-muted/30 px-6 py-4 text-center text-sm text-muted-foreground/70">
+                    No invites yet. Create a batch to see the funnel.
+                  </div>
+                ) : (
+                  <ChartContainer
+                    config={{
+                      value: { label: 'Count', color: 'var(--primary)' },
                     }}
-                  />
-                  <Bar dataKey="value" radius={[8, 8, 8, 8]} barSize={18} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-          {recData.length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-2 border-t border-border/60 pt-4">
-              {recData.map((item) => (
-                <span
-                  key={item.name}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
-                >
-                  <span className="size-1.5 rounded-full bg-primary/60" />
-                  {item.name}: {item.value}
-                </span>
-              ))}
-            </div>
-          ) : null}
+                    className="h-[180px] w-full"
+                  >
+                    <BarChart
+                      data={funnelData}
+                      layout="vertical"
+                      margin={{ left: 0, right: 16, top: 4, bottom: 4 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--border)"
+                        opacity={0.5}
+                        horizontal={false}
+                      />
+                      <XAxis type="number" hide allowDecimals={false} />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={84}
+                        tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <ChartTooltip
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Bar
+                        dataKey="value"
+                        radius={[8, 8, 8, 8]}
+                        barSize={18}
+                        isAnimationActive
+                        animationDuration={800}
+                        animationEasing="ease-out"
+                      />
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </div>
+              {recData.length > 0 ? (
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-border/60 pt-4">
+                  {recData.map((item) => (
+                    <span
+                      key={item.name}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                    >
+                      <span className="size-1.5 rounded-full bg-primary/60" />
+                      {item.name}: {item.value}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
         </motion.div>
       </motion.section>
 
