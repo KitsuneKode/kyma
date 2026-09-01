@@ -275,6 +275,34 @@ describe('llmReportToAssessmentComputation', () => {
   })
 })
 
+function modelReport(overrides: Record<string, unknown> = {}) {
+  return {
+    overallRecommendation: 'strong_yes',
+    confidence: 'high',
+    summary: 'Model summary.',
+    weightedScore: 4.9,
+    hardGateTriggered: false,
+    topStrengths: ['depth'],
+    topConcerns: ['pace'],
+    needsManualReview: false,
+    dimensionScores: [
+      {
+        dimension: 'domain_depth',
+        score: 2,
+        rationale: 'Struggled with fundamentals.',
+        evidence: [{ quote: 'I am not sure', rationale: 'uncertain' }],
+      },
+      {
+        dimension: 'warmth',
+        score: 5,
+        rationale: 'Very personable.',
+        evidence: [{ quote: 'great question', rationale: 'warm' }],
+      },
+    ],
+    ...overrides,
+  } as never
+}
+
 describe('llmReportToAssessmentComputation recomputes rather than trusts', () => {
   const rubric = resolveRubricDimensions({
     dimensions: [
@@ -282,34 +310,6 @@ describe('llmReportToAssessmentComputation recomputes rather than trusts', () =>
       { name: 'warmth', weight: 1, isHardGate: false },
     ],
   })
-
-  function modelReport(overrides: Record<string, unknown> = {}) {
-    return {
-      overallRecommendation: 'strong_yes',
-      confidence: 'high',
-      summary: 'Model summary.',
-      weightedScore: 4.9,
-      hardGateTriggered: false,
-      topStrengths: ['depth'],
-      topConcerns: ['pace'],
-      needsManualReview: false,
-      dimensionScores: [
-        {
-          dimension: 'domain_depth',
-          score: 2,
-          rationale: 'Struggled with fundamentals.',
-          evidence: [{ quote: 'I am not sure', rationale: 'uncertain' }],
-        },
-        {
-          dimension: 'warmth',
-          score: 5,
-          rationale: 'Very personable.',
-          evidence: [{ quote: 'great question', rationale: 'warm' }],
-        },
-      ],
-      ...overrides,
-    } as never
-  }
 
   test('ignores the model weighted score and derives it from the rubric', () => {
     const result = llmReportToAssessmentComputation(

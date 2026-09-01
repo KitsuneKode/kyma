@@ -124,7 +124,7 @@ export const getReportChatGrounding = candidateReadQuery({
       return null
     }
 
-    const { invite, template, report } = base
+    const { orgId, invite, template, report } = base
 
     const { transcript, evidence } = await loadSessionReviewSlices(
       ctx,
@@ -137,6 +137,7 @@ export const getReportChatGrounding = candidateReadQuery({
     )
 
     return {
+      orgId,
       candidate: {
         name: invite.candidateName ?? 'Candidate',
       },

@@ -12,7 +12,7 @@ import {
 } from '@/lib/auth/clerk-role'
 import { resolveAppRoute } from '@/lib/auth/routing'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
-import { allowDevPreviewRoutes, isProductionNodeEnv } from '@/lib/env/node-env'
+import { isProductionDeployment } from '@/lib/env/deployment-mode'
 
 const isRecruiterRoute = createRouteMatcher(['/recruiter(.*)', '/admin(.*)'])
 const isRecruiterSetupRoute = createRouteMatcher(['/recruiter/setup(.*)'])
@@ -30,9 +30,13 @@ const isPublicRoute = createRouteMatcher([
   '/api(.*)',
 ])
 const hasClerk = hasClerkServerCredentials()
+const isProdDeployment = isProductionDeployment({
+  deploymentEnv: process.env.KYMA_DEPLOYMENT_ENV,
+  nodeEnv: process.env.NODE_ENV,
+})
 const failClosedWithoutClerk = mustFailClosedWithoutClerk({
   hasClerk,
-  isProduction: isProductionNodeEnv(),
+  isProduction: isProdDeployment,
 })
 
 function denyUnconfiguredAuth() {
@@ -55,7 +59,7 @@ export default hasClerk
 
       const isProtectedRoute =
         (!isPublicRoute(req) &&
-          !(allowDevPreviewRoutes() && isDevPreviewRoute(req))) ||
+          !(!isProdDeployment && isDevPreviewRoute(req))) ||
         isRecruiterRoute(req) ||
         isCandidateRoute(req) ||
         isOnboardingRoute(req) ||

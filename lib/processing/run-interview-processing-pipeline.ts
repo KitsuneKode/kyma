@@ -4,11 +4,12 @@ import {
   markAssessmentProcessing,
   processInterviewAssessment,
 } from '../assessment/process-session'
-import { isDevelopmentMode } from '../runtime-mode'
+import { isProductionDeployment } from '../env/deployment-mode'
 
 type ProcessingPipelineEnv = {
   INNGEST_EVENT_KEY?: string
   NODE_ENV?: string
+  KYMA_DEPLOYMENT_ENV?: string
 }
 
 type ProcessingEnqueue = (
@@ -39,14 +40,24 @@ export async function runInterviewProcessingPipeline(
         eventIds: result.ids,
       }
     } catch (error) {
-      if (!isDevelopmentMode(env.NODE_ENV)) {
+      if (
+        isProductionDeployment({
+          deploymentEnv: env.KYMA_DEPLOYMENT_ENV,
+          nodeEnv: env.NODE_ENV,
+        })
+      ) {
         console.error(
           'Failed to enqueue interview processing via Inngest. Falling back to inline processing.',
           error
         )
       }
     }
-  } else if (!isDevelopmentMode(env.NODE_ENV)) {
+  } else if (
+    isProductionDeployment({
+      deploymentEnv: env.KYMA_DEPLOYMENT_ENV,
+      nodeEnv: env.NODE_ENV,
+    })
+  ) {
     console.error(
       'INNGEST_EVENT_KEY is required to enqueue interview processing.'
     )

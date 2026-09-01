@@ -15,7 +15,7 @@ import { mapDbEventTypeToUi } from '@/lib/interview/session-events'
 
 /**
  * The single canonical public candidate read model is the source of this shape.
- * Trusting its inferred type (state, transcript, recordings, policy are all
+ * Trusting its inferred type (state, transcript, and policy are all
  * validated unions at the Convex boundary) lets the snapshot layer drop the
  * defensive runtime normalization it used to carry. Only `sessionEvents.type`
  * is a free string in the DB, so it is the one field still mapped — in exactly
@@ -72,7 +72,9 @@ export function createInitialInterviewSnapshot(
     events: events.length ? events : [inviteOpenedEvent],
     preflight: createDefaultPreflightSteps(),
     transcript: publicSession?.transcript ?? [],
-    recordings: publicSession?.recordings ?? [],
+    // Recording artifacts are recruiter-only and intentionally absent from the
+    // public candidate snapshot.
+    recordings: [],
   }
 }
 
@@ -107,9 +109,9 @@ export function mergeInterviewSnapshot(
     transcript: publicSession.transcript.length
       ? publicSession.transcript
       : base.transcript,
-    recordings: publicSession.recordings.length
-      ? publicSession.recordings
-      : base.recordings,
+    // Preserve the base value for compatibility, but never hydrate recordings
+    // from the invite-token public projection.
+    recordings: base.recordings,
   }
 }
 

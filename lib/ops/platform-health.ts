@@ -5,6 +5,7 @@ import { connection } from 'next/server'
 import { api } from '@/convex/_generated/api'
 import { serverEnv } from '@/lib/env/server'
 import { clientEnv } from '@/lib/env/client'
+import { isProductionDeployment } from '@/lib/env/deployment-mode'
 import { serverConvexQuery } from '@/lib/convex/server-query'
 import { hasLivekitRecordingConfig } from '@/lib/livekit/recording'
 import {
@@ -30,7 +31,10 @@ function isSet(value: string | undefined) {
 
 function processingKeyStatus(): HealthCheck {
   const key = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
-  const isProd = serverEnv.NODE_ENV === 'production'
+  const isProd = isProductionDeployment({
+    deploymentEnv: serverEnv.KYMA_DEPLOYMENT_ENV,
+    nodeEnv: serverEnv.NODE_ENV,
+  })
 
   if (!key) {
     return {
@@ -64,7 +68,10 @@ function scoringCredentialsStatus(): HealthCheck {
   const scoringModel =
     serverEnv.KYMA_SCORING_MODEL?.trim() || DEFAULT_MODELS.scoring
   const provider = providerFromModelId(scoringModel)
-  const isProd = serverEnv.NODE_ENV === 'production'
+  const isProd = isProductionDeployment({
+    deploymentEnv: serverEnv.KYMA_DEPLOYMENT_ENV,
+    nodeEnv: serverEnv.NODE_ENV,
+  })
 
   if (!provider) {
     return {
@@ -90,7 +97,10 @@ function scoringCredentialsStatus(): HealthCheck {
 }
 
 async function agentWorkerLivenessStatus(): Promise<HealthCheck> {
-  const isProd = serverEnv.NODE_ENV === 'production'
+  const isProd = isProductionDeployment({
+    deploymentEnv: serverEnv.KYMA_DEPLOYMENT_ENV,
+    nodeEnv: serverEnv.NODE_ENV,
+  })
   const processingKey = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
   const label = 'Agent worker liveness'
 
@@ -142,7 +152,10 @@ async function agentWorkerLivenessStatus(): Promise<HealthCheck> {
 }
 
 async function stuckProcessingStatus(): Promise<HealthCheck> {
-  const isProd = serverEnv.NODE_ENV === 'production'
+  const isProd = isProductionDeployment({
+    deploymentEnv: serverEnv.KYMA_DEPLOYMENT_ENV,
+    nodeEnv: serverEnv.NODE_ENV,
+  })
   const processingKey = serverEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
   const label = 'Stuck processing sessions'
 
@@ -254,7 +267,10 @@ async function inviteEmailDeliveryStatus(): Promise<HealthCheck> {
 }
 
 export async function collectPlatformHealthChecks(): Promise<HealthCheck[]> {
-  const isProd = serverEnv.NODE_ENV === 'production'
+  const isProd = isProductionDeployment({
+    deploymentEnv: serverEnv.KYMA_DEPLOYMENT_ENV,
+    nodeEnv: serverEnv.NODE_ENV,
+  })
   const clerkConfigured =
     isSet(serverEnv.CLERK_SECRET_KEY) &&
     isSet(clientEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)

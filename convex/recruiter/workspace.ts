@@ -5,7 +5,11 @@ import type { Doc } from '../_generated/dataModel'
 import { action, internalQuery, query } from '../_generated/server'
 import { orgAdminMutation, recruiterQuery } from '../lib/customFunctions'
 import { logAuditEvent } from '../helpers/audit'
-import { requireAdmin, requireOrgId } from '../helpers/auth'
+import {
+  requireAdmin,
+  requireOrgId,
+  requireRecruiterContext,
+} from '../helpers/auth'
 import { decryptProviderKey, encryptProviderKey } from '../helpers/encryption'
 import { resolveOrgPlanForOrg } from '../helpers/orgPlan'
 import { convexEnv } from '../../lib/env/convex'
@@ -287,6 +291,19 @@ export const getWorkspaceSettingsRaw = internalQuery({
   },
 })
 
+/** Resolve the same candidate-review capability used by recruiter chat. */
+export const assertCandidateReviewAccessForAction = query({
+  args: {},
+  returns: v.object({ orgId: v.string() }),
+  handler: async (ctx) => {
+    const { orgId } = await requireRecruiterContext(
+      ctx,
+      'recruiter:candidates:read'
+    )
+    return { orgId }
+  },
+})
+
 export const getWorkspaceSettingsForReportChat = action({
   args: {},
   returns: v.union(
@@ -303,7 +320,7 @@ export const getWorkspaceSettingsForReportChat = action({
     providerKeys?: Doc<'workspaceSettings'>['providerKeys']
   } | null> => {
     const { orgId } = await ctx.runQuery(
-      api.recruiter.workspace.assertAdminForAction,
+      api.recruiter.workspace.assertCandidateReviewAccessForAction,
       {}
     )
     const settings: Doc<'workspaceSettings'> | null = await ctx.runQuery(

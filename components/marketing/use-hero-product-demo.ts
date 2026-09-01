@@ -64,19 +64,19 @@ export function useHeroProductDemo(
     if (!isPlaying) return
 
     const interval = window.setInterval(() => {
-      setPlaybackTimeSec((current) => {
-        const next = current + 2.8
-        if (next >= DEMO_TOTAL_DURATION_SEC) {
-          window.clearInterval(interval)
-          setIsPlaying(false)
-          return DEMO_TOTAL_DURATION_SEC
-        }
-        return next
-      })
+      setPlaybackTimeSec((current) =>
+        Math.min(current + 2.8, DEMO_TOTAL_DURATION_SEC)
+      )
     }, 80)
 
     return () => window.clearInterval(interval)
   }, [isPlaying])
+
+  useEffect(() => {
+    if (isPlaying && playbackTimeSec >= DEMO_TOTAL_DURATION_SEC) {
+      setIsPlaying(false)
+    }
+  }, [isPlaying, playbackTimeSec])
 
   // Highlight the active turn during playback — no scrolling.
   useEffect(() => {

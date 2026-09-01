@@ -4,6 +4,8 @@ import { requireSessionOrgId } from './helpers/processingAuth'
 import { recruiterQuery } from './lib/customFunctions'
 import { pipelineMutation } from './lib/pipelineFunctions'
 
+const MAX_VISUAL_OBSERVATIONS = 100
+
 const visualObservationRecordValidator = v.object({
   id: v.id('visualObservations'),
   observation: v.string(),
@@ -50,18 +52,17 @@ export const listForSession = recruiterQuery({
 
     const observations = await ctx.db
       .query('visualObservations')
-      .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
-      .collect()
-
-    return observations
-      .toSorted((left, right) =>
-        left.observedAt.localeCompare(right.observedAt)
+      .withIndex('by_session_and_observed_at', (q) =>
+        q.eq('sessionId', args.sessionId)
       )
-      .map((entry) => ({
-        id: entry._id,
-        observation: entry.observation,
-        observedAt: entry.observedAt,
-        source: entry.source,
-      }))
+      .order('desc')
+      .take(MAX_VISUAL_OBSERVATIONS)
+
+    return observations.toReversed().map((entry) => ({
+      id: entry._id,
+      observation: entry.observation,
+      observedAt: entry.observedAt,
+      source: entry.source,
+    }))
   },
 })

@@ -6,6 +6,7 @@ import type { Id } from '@/convex/_generated/dataModel'
 import { AdminStatePanel } from '@/components/admin/admin-state-panel'
 import { CandidateReviewWorkspace } from '@/components/recruiter/candidate-review-workspace'
 import { serverEnv } from '@/lib/env/server'
+import { isProductionDeployment } from '@/lib/env/deployment-mode'
 import {
   hasConvexDeployment,
   serverConvexQuery,
@@ -20,7 +21,12 @@ type DevReviewPageProps = {
 export default async function DevReviewPage({ params }: DevReviewPageProps) {
   await connection()
 
-  if (serverEnv.NODE_ENV === 'production') {
+  if (
+    isProductionDeployment({
+      deploymentEnv: serverEnv.KYMA_DEPLOYMENT_ENV,
+      nodeEnv: serverEnv.NODE_ENV,
+    })
+  ) {
     notFound()
   }
 

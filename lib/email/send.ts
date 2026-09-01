@@ -7,6 +7,7 @@ import type {
   SendEmailResult,
 } from '@/lib/email/types'
 import { serverEnv } from '@/lib/env/server'
+import { isProductionDeployment } from '@/lib/env/deployment-mode'
 
 const DEFAULT_FROM = 'Kyma <noreply@kyma.kitsunelabs.xyz>'
 
@@ -32,7 +33,11 @@ export async function sendEmail(
 
   if (!apiKey) {
     const skippedReason = 'RESEND_API_KEY not configured'
-    if (serverEnv.NODE_ENV === 'production') {
+    const isProd = isProductionDeployment({
+      deploymentEnv: serverEnv.KYMA_DEPLOYMENT_ENV,
+      nodeEnv: serverEnv.NODE_ENV,
+    })
+    if (isProd) {
       console.warn('[email:noop]', {
         kind: email.kind,
         to: email.to,

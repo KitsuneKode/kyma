@@ -57,6 +57,38 @@ describe('transcript segment upsert', () => {
     expect(rows[0]?.text).toBe('I would start with a simple example')
   })
 
+  test('a late partial cannot downgrade a finalized utterance', async () => {
+    const t = harness()
+    const { sessionId } = await seedInterview(t, {
+      roomName: 'room-final-monotonic',
+    })
+    const startedAt = '2026-08-21T10:00:00.000Z'
+
+    await t.run(async (ctx) => {
+      await upsertTranscriptSegmentForSession(ctx, {
+        sessionId,
+        segmentId: 'candidate:final',
+        speaker: 'candidate',
+        text: 'final answer',
+        status: 'final',
+        startedAt,
+      })
+      await upsertTranscriptSegmentForSession(ctx, {
+        sessionId,
+        segmentId: 'candidate:final',
+        speaker: 'candidate',
+        text: 'stale partial answer',
+        status: 'partial',
+        startedAt,
+      })
+    })
+
+    const rows = await segmentsFor(t, sessionId)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.status).toBe('final')
+    expect(rows[0]?.text).toBe('final answer')
+  })
+
   test('separate utterances produce separate rows', async () => {
     const t = harness()
     const { sessionId } = await seedInterview(t, {

@@ -82,6 +82,13 @@ export async function upsertTranscriptSegmentForSession(
     )
 
   if (match) {
+    // STT providers may deliver a late interim event after the final event.
+    // Never downgrade a finalized segment or replace its final text with stale
+    // partial content.
+    if (match.status === 'final' && args.status === 'partial') {
+      return match._id
+    }
+
     await ctx.db.patch(match._id, {
       sourceSegmentId,
       text: args.text,

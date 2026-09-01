@@ -107,30 +107,21 @@ export async function loadSessionReviewSlices(
     eventsLimit?: number
   }
 ) {
-  const transcriptLimit = options?.transcriptLimit
-  const eventsLimit = options?.eventsLimit
+  const transcriptLimit =
+    options?.transcriptLimit ?? DEFAULT_SESSION_TRANSCRIPT_LIMIT
+  const eventsLimit = options?.eventsLimit ?? DEFAULT_SESSION_EVENTS_LIMIT
 
   const [transcriptRaw, eventsRaw, evidence] = await Promise.all([
-    transcriptLimit !== undefined
-      ? ctx.db
-          .query('transcriptSegments')
-          .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-          .order('desc')
-          .take(transcriptLimit)
-      : ctx.db
-          .query('transcriptSegments')
-          .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-          .collect(),
-    eventsLimit !== undefined
-      ? ctx.db
-          .query('sessionEvents')
-          .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-          .order('desc')
-          .take(eventsLimit)
-      : ctx.db
-          .query('sessionEvents')
-          .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
-          .collect(),
+    ctx.db
+      .query('transcriptSegments')
+      .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+      .order('desc')
+      .take(transcriptLimit),
+    ctx.db
+      .query('sessionEvents')
+      .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+      .order('desc')
+      .take(eventsLimit),
     reportId
       ? ctx.db
           .query('dimensionEvidence')
@@ -139,12 +130,8 @@ export async function loadSessionReviewSlices(
       : Promise.resolve([]),
   ])
 
-  const transcript = sortByIsoAsc(
-    transcriptLimit !== undefined ? transcriptRaw.toReversed() : transcriptRaw
-  )
-  const events = sortByIsoAsc(
-    eventsLimit !== undefined ? eventsRaw.toReversed() : eventsRaw
-  )
+  const transcript = sortByIsoAsc(transcriptRaw.toReversed())
+  const events = sortByIsoAsc(eventsRaw.toReversed())
 
   return {
     transcript,

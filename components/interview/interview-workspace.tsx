@@ -78,11 +78,9 @@ export function InterviewWorkspace({
   skipInviteAuth = false,
 }: InterviewWorkspaceProps) {
   const [requestId] = useState(() => createRequestId('client'))
-  const storeRef = useRef<StoreApi<WorkspaceStore>>(null)
-  if (storeRef.current === null) {
-    storeRef.current = createWorkspaceStore(initialSnapshot)
-  }
-  const store = storeRef.current
+  const [store] = useState<StoreApi<WorkspaceStore>>(() =>
+    createWorkspaceStore(initialSnapshot)
+  )
   const {
     view,
     session,
