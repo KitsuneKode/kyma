@@ -146,6 +146,47 @@ async function buildDashboardPayload(
     }
   })
 
+  // Charts: derive from sampled data to avoid extra reads.
+  const funnel = {
+    invited: invites.filter(
+      (i) => i.status === 'created' || i.status === 'opened'
+    ).length,
+    inProgress: invites.filter((i) => i.status === 'in_progress').length,
+    completed: invites.filter((i) => i.status === 'completed').length,
+    expired: invites.filter((i) => i.status === 'expired').length,
+  }
+  const timelineDays = 14
+  const timelineMap = new Map<string, number>()
+  for (let offset = timelineDays - 1; offset >= 0; offset -= 1) {
+    const date = new Date(nowMs - offset * 24 * 60 * 60 * 1000)
+    const key = date.toISOString().slice(0, 10)
+    timelineMap.set(key, 0)
+  }
+  for (const session of sessions) {
+    if (!session.startedAt) continue
+    const key = new Date(session.startedAt).toISOString().slice(0, 10)
+    if (timelineMap.has(key)) {
+      timelineMap.set(key, (timelineMap.get(key) ?? 0) + 1)
+    }
+  }
+  const timeline = [...timelineMap.entries()].map(([date, count]) => ({
+    date: date.slice(5),
+    sessions: count,
+  }))
+  const recommendationCounts = {
+    strong_yes: 0,
+    yes: 0,
+    mixed: 0,
+    no: 0,
+  }
+  for (const report of terminalReportGroups.flat()) {
+    if (report.overallRecommendation && report.status === 'completed') {
+      const rec =
+        report.overallRecommendation as keyof typeof recommendationCounts
+      if (rec in recommendationCounts) recommendationCounts[rec] += 1
+    }
+  }
+
   return {
     counts: {
       pendingReviews,
@@ -188,6 +229,11 @@ async function buildDashboardPayload(
       sessionId: event.sessionId,
       createdAt: event.createdAt,
     })),
+    charts: {
+      funnel,
+      timeline,
+      recommendations: recommendationCounts,
+    },
   }
 }
 
