@@ -97,6 +97,13 @@ export const clearOrgTableChunk = internalMutation({
             .query('orgUsageRollups')
             .withIndex('by_org_id_and_period', (q) => q.eq('orgId', args.orgId))
             .take(limit)
+        case 'screeningBatchOperationalStats':
+          return await ctx.db
+            .query('screeningBatchOperationalStats')
+            .withIndex('by_org_id_and_computed_at', (q) =>
+              q.eq('orgId', args.orgId)
+            )
+            .take(limit)
         case 'reportChatMessages':
           return await ctx.db
             .query('reportChatMessages')

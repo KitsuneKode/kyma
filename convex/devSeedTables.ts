@@ -14,6 +14,7 @@ import { isExplicitDevelopmentEnv } from '../lib/env/node-env'
  */
 export const SEED_TABLES = [
   'orgUsageRollups',
+  'screeningBatchOperationalStats',
   'reportChatMessages',
   'recruiterNotes',
   'reviewDecisions',
@@ -46,6 +47,7 @@ export const SEED_TABLES = [
  */
 export const SEED_ORG_TABLES = [
   'orgUsageRollups',
+  'screeningBatchOperationalStats',
   'reportChatMessages',
   'recruiterNotes',
   'reviewDecisions',

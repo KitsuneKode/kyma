@@ -178,7 +178,18 @@ export default defineSchema({
     .index('by_org_id', ['orgId'])
     .index('by_org_id_and_status', ['orgId', 'status'])
     .index('by_org_id_and_created_at', ['orgId', 'createdAt'])
+    .index('by_status', ['status'])
     .index('by_template', ['templateId']),
+
+  screeningBatchOperationalStats: defineTable({
+    orgId: v.string(),
+    batchId: v.id('screeningBatches'),
+    expiringInviteCount: v.number(),
+    stuckCandidateCount: v.number(),
+    computedAt: v.number(),
+  })
+    .index('by_batch_id', ['batchId'])
+    .index('by_org_id_and_computed_at', ['orgId', 'computedAt']),
 
   candidateEligibility: defineTable({
     orgId: v.string(),

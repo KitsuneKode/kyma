@@ -119,4 +119,25 @@ describe('screening sampling order', () => {
     expect(batches.length).toBeGreaterThan(0)
     expect(batches[0]?.name).toMatch(/^Recent batch/)
   })
+
+  test('rejects batches beyond the supported operational maximum', async () => {
+    const t = harness()
+    const { templateId } = await seedBatches(t, {
+      oldCount: 0,
+      recentCount: 0,
+    })
+    const asRecruiter = t.withIdentity(RECRUITER)
+
+    await expect(
+      asRecruiter.mutation(api.recruiter.screenings.createScreeningBatch, {
+        name: 'Oversized batch',
+        allowedAttempts: 1,
+        templateId,
+        candidates: Array.from({ length: 501 }, (_, index) => ({
+          candidateName: `Candidate ${index}`,
+          candidateEmail: `candidate-${index}@example.com`,
+        })),
+      })
+    ).rejects.toThrow(/supported maximum of 500 candidates/i)
+  })
 })

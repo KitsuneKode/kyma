@@ -29,4 +29,11 @@ crons.interval(
   {}
 )
 
+crons.interval(
+  'refresh-screening-batch-operational-stats',
+  { minutes: 5 },
+  internal.screeningBatchOps.dispatchScreeningBatchOperationalStatsRefresh,
+  {}
+)
+
 export default crons
