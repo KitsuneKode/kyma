@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-import { runtimeEnv } from '@/lib/env/runtime'
+import { runtimeEnv } from './lib/env/runtime'
 
 const baseURL = runtimeEnv.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000'
 

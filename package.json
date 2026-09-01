@@ -14,11 +14,12 @@
     "lint:fix": "oxlint --fix .",
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
+    "check:conflicts": "bun run scripts/check-conflict-markers.ts",
     "typecheck": "tsc --noEmit",
-    "check": "bun run fmt:check && bun run lint && bun run test && bun run convex:ci && git diff --exit-code -- convex/_generated && bunx next typegen && bun run typecheck && bun run build",
+    "check": "bun run fmt:check && bun run check:conflicts && bun run lint && bun run test && bun run convex:ci && git diff --exit-code -- convex/_generated && bunx next typegen && bun run typecheck && bun run build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "knip": "knip --no-progress",
+    "knip": "knip --no-progress --dependencies",
     "test:e2e": "playwright test",
     "lint:staged": "lint-staged",
     "commitlint": "commitlint --edit",
@@ -106,10 +107,12 @@
     "oxfmt": "^0.54.0",
     "oxlint": "^1.69.0",
     "postcss": "^8.5.15",
+    "postcss-load-config": "^6.0.1",
     "shadcn": "^4.11.0",
     "standardwebhooks": "^1.0.0",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
+    "vite": "^8.0.9",
     "vitest": "^4.1.8"
   }
 }

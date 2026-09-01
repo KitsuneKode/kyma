@@ -40,6 +40,8 @@ export const askReportChat = action({
     answer: v.string(),
     source: v.union(v.literal('fallback'), v.literal('model')),
     citations: v.array(citationValidator),
+    modelId: v.optional(v.string()),
+    degradedReason: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
     const question = args.question.trim()
@@ -48,7 +50,7 @@ export const askReportChat = action({
     }
 
     const { orgId } = await ctx.runQuery(
-      api.recruiter.workspace.assertCandidateReadForAction,
+      api.recruiter.workspace.assertCandidateReviewAccessForAction,
       {}
     )
 
@@ -120,6 +122,8 @@ export const askReportChat = action({
       answer: answer.text,
       source: answer.source,
       citations: answer.citations,
+      modelId: answer.modelId,
+      degradedReason: answer.degradedReason,
     }
   },
 })

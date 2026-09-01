@@ -36,17 +36,12 @@ import type * as helpers_sessionReview from "../helpers/sessionReview.js";
 import type * as helpers_systemTemplates from "../helpers/systemTemplates.js";
 import type * as helpers_templates from "../helpers/templates.js";
 import type * as helpers_transcriptSegments from "../helpers/transcriptSegments.js";
-<<<<<<< HEAD
 import type * as helpers_usageRollup from "../helpers/usageRollup.js";
-||||||| parent of 46297bc (test(convex): add real local integration verification harness)
-import type * as http from "../http.js";
-import type * as httpWebhooks from "../httpWebhooks.js";
-=======
 import type * as http from "../http.js";
 import type * as httpWebhooks from "../httpWebhooks.js";
 import type * as integrationSeed from "../integrationSeed.js";
->>>>>>> 46297bc (test(convex): add real local integration verification harness)
 import type * as interviews_bootstrap from "../interviews/bootstrap.js";
+import type * as interviews_bootstrapActions from "../interviews/bootstrapActions.js";
 import type * as interviews_candidatePortal from "../interviews/candidatePortal.js";
 import type * as interviews_processing from "../interviews/processing.js";
 import type * as interviews_public from "../interviews/public.js";
@@ -66,6 +61,7 @@ import type * as rateLimiter from "../rateLimiter.js";
 import type * as readiness from "../readiness.js";
 import type * as recruiter_candidates from "../recruiter/candidates.js";
 import type * as recruiter_dashboard from "../recruiter/dashboard.js";
+import type * as recruiter_reportChat from "../recruiter/reportChat.js";
 import type * as recruiter_reviews from "../recruiter/reviews.js";
 import type * as recruiter_screenings from "../recruiter/screenings.js";
 import type * as recruiter_templates from "../recruiter/templates.js";
@@ -110,17 +106,12 @@ declare const fullApi: ApiFromModules<{
   "helpers/systemTemplates": typeof helpers_systemTemplates;
   "helpers/templates": typeof helpers_templates;
   "helpers/transcriptSegments": typeof helpers_transcriptSegments;
-<<<<<<< HEAD
   "helpers/usageRollup": typeof helpers_usageRollup;
-||||||| parent of 46297bc (test(convex): add real local integration verification harness)
-  http: typeof http;
-  httpWebhooks: typeof httpWebhooks;
-=======
   http: typeof http;
   httpWebhooks: typeof httpWebhooks;
   integrationSeed: typeof integrationSeed;
->>>>>>> 46297bc (test(convex): add real local integration verification harness)
   "interviews/bootstrap": typeof interviews_bootstrap;
+  "interviews/bootstrapActions": typeof interviews_bootstrapActions;
   "interviews/candidatePortal": typeof interviews_candidatePortal;
   "interviews/processing": typeof interviews_processing;
   "interviews/public": typeof interviews_public;
@@ -140,6 +131,7 @@ declare const fullApi: ApiFromModules<{
   readiness: typeof readiness;
   "recruiter/candidates": typeof recruiter_candidates;
   "recruiter/dashboard": typeof recruiter_dashboard;
+  "recruiter/reportChat": typeof recruiter_reportChat;
   "recruiter/reviews": typeof recruiter_reviews;
   "recruiter/screenings": typeof recruiter_screenings;
   "recruiter/templates": typeof recruiter_templates;
