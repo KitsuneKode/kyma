@@ -25,6 +25,7 @@ document.pdf
 
 # testing
 /coverage
+/.worktrees/
 
 .codex
 .cursor/
