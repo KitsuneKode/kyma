@@ -100,13 +100,19 @@ related) keys as documented in `.docs/architecture.md`.
 
 ### Remaining (do not expand critical path until closed)
 
-- Stronger KMS / envelope key management (rotate, per-tenant DEK) beyond a
-  single app-level `KYMA_ENCRYPTION_KEY`
 - Broader provider coverage and UI polish for key lifecycle
 - Owner-run verification item 6 (BYOK provider validation end-to-end)
 - Ensure every future provider call site uses shared resolve helpers only
 - Optional: hash rate-limit keys that embed invite tokens if logs ever capture
   limiter keys
+
+### Rotation (shipped)
+
+- `KYMA_ENCRYPTION_KEY_PREVIOUS` (64-char hex, optional) — previous envelope key
+- Decrypt tries current key (with AAD `orgId` then without), then previous key; encrypt always uses current key
+- `convex/helpers/encryption.ts` and `lib/providers/resolve-model.ts` both support fallback; old ciphertext remains readable after rotation without migration
+- To rotate: set new `KYMA_ENCRYPTION_KEY`, keep old as `KYMA_ENCRYPTION_KEY_PREVIOUS` for one deploy cycle, then remove previous after all workspaces have re-saved keys (or run a re-encryption job)
+- AAD binding to `orgId` prevents ciphertext portability between workspaces
 
 ## Related files
 

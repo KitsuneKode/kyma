@@ -4,8 +4,8 @@ import { convexEnv } from '../../lib/env/convex'
 
 const IV_LENGTH = 12
 
-function getEncryptionKeyBytes() {
-  const key = convexEnv.KYMA_ENCRYPTION_KEY?.trim()
+function getEncryptionKeyBytes(keyOverride?: string) {
+  const key = (keyOverride ?? convexEnv.KYMA_ENCRYPTION_KEY)?.trim()
   if (!key) {
     throw new ConvexError(
       'KYMA_ENCRYPTION_KEY is required for BYOK encryption operations.'
@@ -36,10 +36,10 @@ function base64ToBytes(value: string) {
   return bytes
 }
 
-async function getCryptoKey() {
+async function getCryptoKey(keyOverride?: string) {
   return await crypto.subtle.importKey(
     'raw',
-    getEncryptionKeyBytes(),
+    getEncryptionKeyBytes(keyOverride),
     { name: 'AES-GCM' },
     false,
     ['encrypt', 'decrypt']
@@ -73,31 +73,52 @@ export async function decryptProviderKey(args: {
   iv: string
   aad?: string
 }) {
-  const cryptoKey = await getCryptoKey()
   const aad = args.aad?.trim()
   const additionalData = aad ? new TextEncoder().encode(aad) : undefined
-  const tryDecrypt = async (withAad: boolean) => {
-    const params: AesGcmParams = {
-      name: 'AES-GCM',
-      iv: base64ToBytes(args.iv),
-      ...(withAad && additionalData ? { additionalData } : {}),
-    }
-    const decrypted = await crypto.subtle.decrypt(
-      params,
-      cryptoKey,
-      base64ToBytes(args.encryptedKey)
+  const keysToTry = [
+    convexEnv.KYMA_ENCRYPTION_KEY?.trim(),
+    convexEnv.KYMA_ENCRYPTION_KEY_PREVIOUS?.trim(),
+  ].filter((k): k is string => Boolean(k && /^[a-f0-9]{64}$/i.test(k)))
+
+  if (keysToTry.length === 0) {
+    throw new ConvexError(
+      'KYMA_ENCRYPTION_KEY is required for BYOK decryption.'
     )
-    return new TextDecoder().decode(decrypted)
   }
 
-  if (aad) {
+  let lastError: unknown = null
+  for (const keyStr of keysToTry) {
     try {
-      return await tryDecrypt(true)
-    } catch {
-      // Fallback for keys encrypted before AAD binding was added.
+      const cryptoKey = await getCryptoKey(keyStr)
+      const tryDecrypt = async (withAad: boolean) => {
+        const params: AesGcmParams = {
+          name: 'AES-GCM',
+          iv: base64ToBytes(args.iv),
+          ...(withAad && additionalData ? { additionalData } : {}),
+        }
+        const decrypted = await crypto.subtle.decrypt(
+          params,
+          cryptoKey,
+          base64ToBytes(args.encryptedKey)
+        )
+        return new TextDecoder().decode(decrypted)
+      }
+      if (aad) {
+        try {
+          return await tryDecrypt(true)
+        } catch (e) {
+          lastError = e
+          // Fallback for pre-AAD ciphertext
+          return await tryDecrypt(false)
+        }
+      }
       return await tryDecrypt(false)
+    } catch (e) {
+      lastError = e
+      continue
     }
   }
-
-  return await tryDecrypt(false)
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('BYOK decryption failed.')
 }
