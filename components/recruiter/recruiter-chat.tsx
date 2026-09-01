@@ -3,23 +3,28 @@
 import Link from 'next/link'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { IconSparkles, IconX, IconSend2 } from '@tabler/icons-react'
+import { IconSparkles, IconX } from '@tabler/icons-react'
 
 import {
   Message,
   MessageContent,
   MessageResponse,
 } from '@/components/ai-elements/message'
+import {
+  Conversation,
+  ConversationEmpty,
+} from '@/components/ai-elements/conversation'
+import { PromptInput } from '@/components/ai-elements/prompt-input'
 import { CitationList } from '@/components/recruiter/citation-list'
 import {
   useReviewActions,
   useReviewData,
 } from '@/components/recruiter/review-context'
-import { WorkspaceTextarea } from '@/components/workspace/textarea'
 import { useAuthenticatedQuery } from '@/lib/convex/use-authenticated-query'
 import { api } from '@/convex/_generated/api'
 import type { CitationJumpTarget } from '@/lib/recruiter/citation-resolve'
 import { cn } from '@/lib/utils'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 type ChatMessage = {
   id: string
@@ -222,13 +227,6 @@ export function RecruiterChat({
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      void handleSubmit()
-    }
-  }
-
   return (
     <>
       <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2">
@@ -290,102 +288,28 @@ export function RecruiterChat({
                 </button>
               </div>
 
-              <div
-                className="relative flex-1 overflow-y-auto px-6 py-6"
-                style={{
-                  maskImage:
-                    'linear-gradient(to bottom, black 90%, transparent 100%)',
-                }}
-              >
-                <div className="flex flex-col gap-6 pb-24">
-                  {showFallbackBanner ? (
-                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-100">
-                      <p className="font-medium">
-                        Copilot runs in fallback mode
-                      </p>
-                      <p className="mt-1 text-xs opacity-90">
-                        {sessionDegradedReason ??
-                          'Set an explicit review-chat model and ensure platform or workspace credentials are available for model-backed answers.'}
-                      </p>
-                      <Link
-                        href="/recruiter/settings#models"
-                        className="mt-3 inline-block text-xs font-medium underline underline-offset-4"
-                      >
-                        Open model settings
-                      </Link>
-                    </div>
-                  ) : null}
-                  {messages.length ? (
-                    messages.map((message, index) => (
-                      <motion.div
-                        key={message.id}
-                        initial={{
-                          opacity: 0,
-                          y: 12,
-                          scale: 0.96,
-                          filter: 'blur(4px)',
-                        }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                          scale: 1,
-                          filter: 'blur(0px)',
-                        }}
-                        transition={{
-                          type: 'spring',
-                          damping: 25,
-                          stiffness: 200,
-                          delay: index === messages.length - 1 ? 0 : 0.1,
-                        }}
-                      >
-                        <Message from={message.role}>
-                          <MessageContent
-                            className={cn(
-                              'rounded-2xl px-5 py-4 text-[14px] leading-relaxed shadow-sm',
-                              message.role === 'assistant'
-                                ? 'border border-border/40 bg-foreground/5 text-foreground/90'
-                                : 'ml-4 bg-primary text-primary-foreground'
-                            )}
-                          >
-                            <p className="mb-2 text-[10px] font-medium tracking-widest uppercase opacity-50">
-                              {message.role}
-                              {message.answerSource
-                                ? ` · ${formatAnswerSourceLabel(message.answerSource)}`
-                                : ''}
-                              {message.modelId ? ` · ${message.modelId}` : ''}
-                            </p>
-                            {message.role === 'assistant' ? (
-                              <MessageResponse>
-                                {message.content}
-                              </MessageResponse>
-                            ) : (
-                              <p>{message.content}</p>
-                            )}
-                            {message.citationsJson ? (
-                              <div className="mt-4 border-t border-border/50 pt-4">
-                                <CitationList
-                                  citationsJson={message.citationsJson}
-                                  resolveContext={citationResolveContext}
-                                  onJump={handleCitationJump}
-                                />
-                              </div>
-                            ) : null}
-                          </MessageContent>
-                        </Message>
-                      </motion.div>
-                    ))
-                  ) : (
-                    <div className="flex flex-col items-center justify-center gap-4 py-20 text-center opacity-50">
-                      <IconSparkles className="size-8" />
-                      <p className="text-sm">
-                        Ask about the candidate’s strengths, risks,
-                        recommendation, or missing evidence.
-                      </p>
-                    </div>
-                  )}
-
-                  {isSubmitting && (
+              <Conversation className="flex-1">
+                {showFallbackBanner ? (
+                  <Alert className="rounded-2xl border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100">
+                    <AlertTitle className="text-sm font-medium">
+                      Copilot runs in fallback mode
+                    </AlertTitle>
+                    <AlertDescription className="mt-1 text-xs opacity-90">
+                      {sessionDegradedReason ??
+                        'Set an explicit review-chat model and ensure platform or workspace credentials are available for model-backed answers.'}
+                    </AlertDescription>
+                    <Link
+                      href="/recruiter/settings#models"
+                      className="mt-3 inline-block text-xs font-medium underline underline-offset-4"
+                    >
+                      Open model settings
+                    </Link>
+                  </Alert>
+                ) : null}
+                {messages.length ? (
+                  messages.map((message, index) => (
                     <motion.div
+                      key={message.id}
                       initial={{
                         opacity: 0,
                         y: 12,
@@ -398,42 +322,104 @@ export function RecruiterChat({
                         scale: 1,
                         filter: 'blur(0px)',
                       }}
-                      className="flex items-center gap-3 px-2 text-muted-foreground"
+                      transition={{
+                        type: 'spring',
+                        damping: 25,
+                        stiffness: 200,
+                        delay: index === messages.length - 1 ? 0 : 0.05,
+                      }}
                     >
-                      <IconSparkles className="size-4 animate-pulse text-emerald-400" />
-                      <span className="text-xs font-medium">Thinking...</span>
+                      <Message from={message.role}>
+                        <MessageContent
+                          className={cn(
+                            'rounded-2xl px-5 py-4 text-[14px] leading-relaxed shadow-sm',
+                            message.role === 'assistant'
+                              ? 'border border-border/40 bg-card text-card-foreground'
+                              : 'ml-4 bg-primary text-primary-foreground'
+                          )}
+                        >
+                          <div className="mb-2 flex items-center gap-2 text-[10px] font-medium tracking-widest uppercase opacity-60">
+                            <span>{message.role}</span>
+                            {message.answerSource ? (
+                              <span className="inline-flex h-5 items-center rounded-full bg-secondary px-1.5 text-[10px] font-medium tracking-normal normal-case">
+                                {formatAnswerSourceLabel(message.answerSource)}
+                              </span>
+                            ) : null}
+                            {message.modelId ? (
+                              <span className="font-mono tracking-normal normal-case opacity-60">
+                                · {message.modelId}
+                              </span>
+                            ) : null}
+                          </div>
+                          {message.role === 'assistant' ? (
+                            <MessageResponse>{message.content}</MessageResponse>
+                          ) : (
+                            <p>{message.content}</p>
+                          )}
+                          {message.citationsJson ? (
+                            <div className="mt-4 border-t border-border/50 pt-4">
+                              <CitationList
+                                citationsJson={message.citationsJson}
+                                resolveContext={citationResolveContext}
+                                onJump={handleCitationJump}
+                              />
+                            </div>
+                          ) : null}
+                        </MessageContent>
+                      </Message>
                     </motion.div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-              </div>
-
-              <div className="absolute right-0 bottom-0 left-0 border-t border-border/40 bg-card p-4">
-                {error ? (
-                  <p className="mb-3 px-2 text-xs text-red-400">{error}</p>
-                ) : null}
-                <div className="relative flex items-center">
-                  <WorkspaceTextarea
-                    ref={inputRef}
-                    value={question}
-                    aria-label="Ask about this candidate"
-                    onChange={(e) => setQuestion(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ask a question..."
-                    className="min-h-[52px] resize-none rounded-2xl border-border/50 bg-foreground/5 pt-3.5 pr-12 pb-3 pl-4 text-sm text-foreground placeholder:text-muted-foreground/70 focus:border-border focus:ring-4 focus:ring-ring/20"
-                    rows={1}
-                    style={{ fieldSizing: 'content', maxHeight: '160px' }}
+                  ))
+                ) : (
+                  <ConversationEmpty
+                    icon={<IconSparkles className="size-8" />}
+                    title="Ask about this candidate"
+                    description="Ask about strengths, risks, recommendation, or missing evidence — grounded in transcript and evidence."
                   />
-                  <button
-                    type="button"
-                    aria-label="Send question"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting || !question.trim()}
-                    className="absolute right-2 bottom-2 flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-[transform,opacity] active:scale-[0.92] disabled:opacity-50"
+                )}
+
+                {isSubmitting && (
+                  <motion.div
+                    initial={{
+                      opacity: 0,
+                      y: 12,
+                      scale: 0.96,
+                      filter: 'blur(4px)',
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                      filter: 'blur(0px)',
+                    }}
+                    className="flex items-center gap-3 px-1 text-muted-foreground"
                   >
-                    <IconSend2 className="size-4" />
-                  </button>
-                </div>
+                    <IconSparkles className="size-4 animate-pulse text-emerald-400" />
+                    <span className="text-xs font-medium">Thinking…</span>
+                  </motion.div>
+                )}
+                <div ref={messagesEndRef} />
+              </Conversation>
+
+              <div className="border-t border-border/40 bg-card p-4">
+                {error ? (
+                  <Alert variant="destructive" className="mb-3 py-2">
+                    <AlertDescription className="text-xs">
+                      {error}
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+                <PromptInput
+                  ref={inputRef}
+                  value={question}
+                  onChange={setQuestion}
+                  onSubmit={handleSubmit}
+                  isLoading={isSubmitting}
+                  placeholder="Ask about strengths, risks, or recommendation..."
+                  aria-label="Ask about this candidate"
+                />
+                <p className="mt-2 px-1 text-[10px] leading-relaxed text-muted-foreground/60">
+                  Enter to send · Shift+Enter for newline · ⌘K to toggle
+                </p>
               </div>
             </motion.div>
           </>
