@@ -93,9 +93,16 @@ export const convexServerSchema = {
   KYMA_ENCRYPTION_KEY_PREVIOUS: serverSchema.KYMA_ENCRYPTION_KEY_PREVIOUS,
   KYMA_ADMIN_EMAILS: serverSchema.KYMA_ADMIN_EMAILS,
   KYMA_ORG_PLAN_OVERRIDE: serverSchema.KYMA_ORG_PLAN_OVERRIDE,
+  KYMA_REVIEW_CHAT_MODEL: serverSchema.KYMA_REVIEW_CHAT_MODEL,
   CLERK_SECRET_KEY: serverSchema.CLERK_SECRET_KEY,
   CLERK_FRONTEND_API_URL: serverSchema.CLERK_FRONTEND_API_URL,
   CLERK_JWT_ISSUER_DOMAIN: serverSchema.CLERK_JWT_ISSUER_DOMAIN,
+  CLERK_WEBHOOK_SIGNING_SECRET: serverSchema.CLERK_WEBHOOK_SIGNING_SECRET,
+  LIVEKIT_API_KEY: serverSchema.LIVEKIT_API_KEY,
+  LIVEKIT_API_SECRET: serverSchema.LIVEKIT_API_SECRET,
+  LIVEKIT_AGENT_NAME: serverSchema.LIVEKIT_AGENT_NAME,
+  LIVEKIT_WEBHOOK_API_KEY: serverSchema.LIVEKIT_WEBHOOK_API_KEY,
+  LIVEKIT_WEBHOOK_API_SECRET: serverSchema.LIVEKIT_WEBHOOK_API_SECRET,
   // Post-call processing is owned by Inngest; the Convex finalize path enqueues
   // via the Inngest event API since the SDK cannot run in the Convex runtime.
   INNGEST_EVENT_KEY: serverSchema.INNGEST_EVENT_KEY,
@@ -105,6 +112,10 @@ export const convexServerSchema = {
 export const convexClientSchema = {
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
     clientSchema.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+  NEXT_PUBLIC_LIVEKIT_URL: clientSchema.NEXT_PUBLIC_LIVEKIT_URL,
+  // Needed when assessment processing runs inside Convex and bridges via
+  // `convex/nextjs` (`lib/assessment/process-session.ts`).
+  NEXT_PUBLIC_CONVEX_URL: clientSchema.NEXT_PUBLIC_CONVEX_URL,
 } as const
 
 export const clientRuntimeEnv = {

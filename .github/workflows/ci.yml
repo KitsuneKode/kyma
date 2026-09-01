@@ -24,6 +24,9 @@ jobs:
       - name: Format check
         run: bun run fmt:check
 
+      - name: Conflict marker check
+        run: bun run check:conflicts
+
       - name: Lint
         run: bun run lint
 

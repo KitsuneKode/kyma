@@ -68,12 +68,16 @@ export const run = internalAction({
     // fresh run of a session stuck in processing.
     forceEventId: v.optional(v.string()),
   },
-  returns: v.null(),
+  returns: v.object({
+    queued: v.boolean(),
+    fallback: v.boolean(),
+    eventIds: v.optional(v.array(v.string())),
+  }),
   handler: async (_ctx, args) => {
     const eventId =
       args.forceEventId ?? interviewProcessingEventId(`${args.sessionId}`)
 
-    await runInterviewProcessingPipeline(
+    return await runInterviewProcessingPipeline(
       args.sessionId,
       {
         INNGEST_EVENT_KEY: convexEnv.INNGEST_EVENT_KEY,
@@ -81,7 +85,5 @@ export const run = internalAction({
       },
       (sessionId) => sendInngestProcessingEvent(sessionId, eventId)
     )
-
-    return null
   },
 })

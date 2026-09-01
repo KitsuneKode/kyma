@@ -19,6 +19,7 @@ export const processInterviewAssessmentFunction = inngest.createFunction(
     id: 'process-interview-assessment',
     name: 'Process interview assessment',
     retries: 3,
+    timeouts: { finish: '2m' },
     triggers: {
       event: INTERVIEW_PROCESSING_REQUESTED_EVENT,
     },
@@ -28,9 +29,9 @@ export const processInterviewAssessmentFunction = inngest.createFunction(
     const typedSessionId = sessionId as Id<'interviewSessions'>
 
     try {
-      // SCORING_TIMEOUT_MS is 90s inside generateLlmAssessmentReport; this step
-      // inherits that bound. Inngest's per-step timeout is configured at the
-      // function level when needed - AbortSignal covers the BYOK stall case.
+      // The provider call aborts after 90s. The function-level two-minute
+      // deadline also cancels a run if the process or durable step hangs beyond
+      // that abort window.
       return await step.run('generate-assessment-report', async () => {
         return await processInterviewAssessment(typedSessionId, 'inngest')
       })

@@ -79,25 +79,117 @@ export const clearOrgTableChunk = internalMutation({
         `Table "${args.table}" is not allowed for org-scoped reset.`
       )
     }
-    const table = args.table as SeedTable
-    let deleted = 0
-    // Tables with direct org scoping
-    if (table === 'organizations' || table === 'orgMemberships') {
-      const docs = await ctx.db
-        .query(table)
-        .filter((q) => q.eq(q.field('clerkOrgId'), args.orgId))
-        .take(limit)
-      for (const doc of docs) {
-        await ctx.db.delete(doc._id)
-        deleted += 1
+    const table = args.table as (typeof SEED_ORG_TABLES)[number]
+    const docs = await (async () => {
+      switch (table) {
+        case 'organizations':
+          return await ctx.db
+            .query('organizations')
+            .withIndex('by_clerk_org_id', (q) => q.eq('clerkOrgId', args.orgId))
+            .take(limit)
+        case 'orgMemberships':
+          return await ctx.db
+            .query('orgMemberships')
+            .withIndex('by_clerk_org_id', (q) => q.eq('clerkOrgId', args.orgId))
+            .take(limit)
+        case 'orgUsageRollups':
+          return await ctx.db
+            .query('orgUsageRollups')
+            .withIndex('by_org_id_and_period', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'screeningBatchOperationalStats':
+          return await ctx.db
+            .query('screeningBatchOperationalStats')
+            .withIndex('by_org_id_and_computed_at', (q) =>
+              q.eq('orgId', args.orgId)
+            )
+            .take(limit)
+        case 'reportChatMessages':
+          return await ctx.db
+            .query('reportChatMessages')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'recruiterNotes':
+          return await ctx.db
+            .query('recruiterNotes')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'reviewDecisions':
+          return await ctx.db
+            .query('reviewDecisions')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'dimensionEvidence':
+          return await ctx.db
+            .query('dimensionEvidence')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'assessmentReports':
+          return await ctx.db
+            .query('assessmentReports')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'recordingArtifacts':
+          return await ctx.db
+            .query('recordingArtifacts')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'sessionEvents':
+          return await ctx.db
+            .query('sessionEvents')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'interviewSessions':
+          return await ctx.db
+            .query('interviewSessions')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'visualObservations':
+          return await ctx.db
+            .query('visualObservations')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'candidateEligibility':
+          return await ctx.db
+            .query('candidateEligibility')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'candidateInvites':
+          return await ctx.db
+            .query('candidateInvites')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'screeningBatches':
+          return await ctx.db
+            .query('screeningBatches')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'assessmentTemplateVersions':
+          return await ctx.db
+            .query('assessmentTemplateVersions')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'assessmentTemplates':
+          return await ctx.db
+            .query('assessmentTemplates')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'workspaceSettings':
+          return await ctx.db
+            .query('workspaceSettings')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        case 'auditEvents':
+          return await ctx.db
+            .query('auditEvents')
+            .withIndex('by_org_id', (q) => q.eq('orgId', args.orgId))
+            .take(limit)
+        default:
+          table satisfies never
+          throw new ConvexError('Unsupported org-scoped seed table.')
       }
-      return { deleted }
-    }
-    // Most workspace tables carry orgId
-    const docs = await ctx.db
-      .query(table)
-      .filter((q) => q.eq(q.field('orgId'), args.orgId))
-      .take(limit)
+    })()
+    let deleted = 0
     for (const doc of docs) {
       await ctx.db.delete(doc._id)
       deleted += 1

@@ -71,12 +71,16 @@ The fastest way to create reliability is to keep each system responsible for one
 - recruiter notes and review state
 - leaderboard inputs
 
+## Convex Actions / HTTP Own
+
+- interview bootstrap orchestration + LiveKit token issuance
+- recruiter report-chat AI orchestration
+- inbound LiveKit and Clerk webhooks (`convex/http.ts`)
+- rate limits for those public/authenticated actions
+
 ## Next.js API Routes Own
 
-- server-only provider boundaries
-- bootstrap orchestration
-- LiveKit token issuance
-- inbound webhooks from third parties when needed
+- Inngest serve host (`/api/inngest`) for durable post-call workers
 
 ## Inngest Owns
 
@@ -97,23 +101,23 @@ The fastest way to create reliability is to keep each system responsible for one
 
 ## Recommended Routing Pattern
 
+## Use Convex Actions For
+
+- `interviews.bootstrapActions.bootstrapInterviewSession` (session + LiveKit JWT)
+- `recruiter.reportChat.askReportChat` (grounded AI copilot)
+- `interviews.bootstrapActions.requeueInterviewProcessing` (ops recovery)
+
+## Use Convex HTTP (`convex/http.ts`) For
+
+- `{CONVEX_SITE_URL}/livekit/webhook`
+- `{CONVEX_SITE_URL}/webhooks/clerk`
+- future recording callbacks that need a stable public URL
+
+These handlers should stay thin: verify signatures, then call Convex mutations/actions.
+
 ## Use Next.js Routes For
 
-- `/api/interviews/bootstrap`
-- `/api/livekit/token`
-- `/api/livekit/webhook`
-- future `/api/recordings/callback`
-
-These routes should be thin.
-
-Their job is to:
-
-- validate request
-- call provider SDKs
-- call Convex mutations or internal endpoints
-- return normalized responses
-
-They should not become the main business-logic layer.
+- `/api/inngest` only (Inngest serve)
 
 ## Use Convex Public Functions For
 
@@ -128,6 +132,7 @@ They should not become the main business-logic layer.
 - report state changes
 - denormalized leaderboard/stat updates
 - evidence extraction helpers
+- webhook verification helpers (`httpWebhooks.*`)
 
 ## Schema Design Principles
 

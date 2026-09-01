@@ -178,6 +178,49 @@ describe('answerRecruiterQuestion fallback', () => {
     expect(answer.citations[0]?.ref).toBe('evidence:0:clarity')
   })
 
+  it.each([
+    'CITATIONS: evidence:99:clarity',
+    'CITATIONS: transcript:2099-01-01T00:00:00.000Z',
+    'CITATIONS: dimension:invented',
+    'CITATIONS: evidence:0:clarity, dimension:invented',
+  ])('falls back when a model citation is unresolved: %s', async (line) => {
+    generateTextMock.mockResolvedValue({
+      text: `Grounded answer.\n${line}`,
+    } as Awaited<ReturnType<typeof generateText>>)
+
+    const answer = await answerRecruiterQuestion(
+      'What are the strengths?',
+      baseDetail,
+      { modelId: 'openai/gpt-4.1-mini' }
+    )
+
+    expect(answer.citations.map((citation) => citation.ref)).toEqual([
+      'evidence:0:clarity',
+      'transcript:2026-07-10T12:00:05.000Z',
+    ])
+  })
+
+  it('accepts evidence, transcript, and rubric dimensions that resolve', async () => {
+    generateTextMock.mockResolvedValue({
+      text: [
+        'Grounded answer.',
+        'CITATIONS: evidence:0:clarity, transcript:2026-07-10T12:00:05.000Z, dimension:pace',
+      ].join('\n'),
+    } as Awaited<ReturnType<typeof generateText>>)
+
+    const answer = await answerRecruiterQuestion(
+      'What are the strengths?',
+      baseDetail,
+      { modelId: 'openai/gpt-4.1-mini' }
+    )
+
+    expect(answer.citations.map((citation) => citation.ref)).toEqual([
+      'evidence:0:clarity',
+      'transcript:2026-07-10T12:00:05.000Z',
+      'dimension:pace',
+    ])
+  })
+
   it('falls back when the model call fails', async () => {
     generateTextMock.mockRejectedValue(new Error('upstream down'))
 

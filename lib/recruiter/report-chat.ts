@@ -119,12 +119,6 @@ function citationsFromDetail(detail: DetailShape): RecruiterCitation[] {
   return out
 }
 
-function citationKindFromRef(ref: string): RecruiterCitation['kind'] {
-  if (ref.startsWith('transcript:')) return 'transcript'
-  if (ref.startsWith('evidence:')) return 'evidence'
-  return 'dimension'
-}
-
 export function classifyRecruiterQuestion(
   question: string
 ): RecruiterQuestionClass {
@@ -375,13 +369,19 @@ function parseCitationLine(
 ): RecruiterCitation[] {
   const marker = 'CITATIONS:'
   const line = text.split('\n').find((l) => l.includes(marker))
-  const validRefs = new Set([
-    ...detail.evidence.slice(0, 8).map((_, i) => `evidence:${i}:`),
-    ...detail.transcript.slice(-14).map((e) => `transcript:${e.startedAt}`),
-    'evidence:',
-    'transcript:',
-    'dimension:',
-  ])
+  const validRefs = new Map<string, RecruiterCitation>()
+  for (const [index, entry] of detail.evidence.slice(0, 8).entries()) {
+    const ref = `evidence:${index}:${entry.dimension}`
+    validRefs.set(ref, { kind: 'evidence', ref, label: ref })
+  }
+  for (const entry of detail.transcript.slice(-14)) {
+    const ref = `transcript:${entry.startedAt}`
+    validRefs.set(ref, { kind: 'transcript', ref, label: ref })
+  }
+  for (const entry of detail.report?.dimensionScores ?? []) {
+    const ref = `dimension:${entry.dimension}`
+    validRefs.set(ref, { kind: 'dimension', ref, label: ref })
+  }
   const fallback = citationsFromDetail(detail).slice(0, 3)
   if (!line) {
     return fallback
@@ -390,27 +390,18 @@ function parseCitationLine(
   if (!raw) {
     return fallback
   }
-  const parsed = raw
+  const refs = raw
     .split(',')
     .map((part) => part.trim())
     .filter(Boolean)
-    .map((ref) => ({
-      kind: citationKindFromRef(ref),
-      ref,
-      label: ref,
-    }))
-  // B-B12: validate refs are known evidence/transcript anchors; else fallback to grounded citations.
-  const allValid = parsed.every(
-    (c) =>
-      validRefs.has(c.ref) ||
-      c.ref.startsWith('evidence:') ||
-      c.ref.startsWith('transcript:') ||
-      c.ref.startsWith('dimension:')
-  )
-  if (!allValid || parsed.length === 0) {
+  if (refs.length === 0 || refs.length > 5) {
     return fallback
   }
-  return parsed.slice(0, 5)
+  const parsed = refs.map((ref) => validRefs.get(ref))
+  if (parsed.some((citation) => !citation)) {
+    return fallback
+  }
+  return parsed as RecruiterCitation[]
 }
 
 export { GROUNDING_VERSION }

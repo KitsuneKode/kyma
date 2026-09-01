@@ -27,7 +27,7 @@ export async function getUsageForPeriod(
 ): Promise<OrgUsage> {
   const row = await ctx.db
     .query('orgUsageRollups')
-    .withIndex('by_org_and_period', (q) =>
+    .withIndex('by_org_id_and_period', (q) =>
       q.eq('orgId', args.orgId).eq('period', args.period)
     )
     .first()
@@ -72,7 +72,7 @@ export async function recordInterviewUsage(
 
   const existing = await ctx.db
     .query('orgUsageRollups')
-    .withIndex('by_org_and_period', (q) =>
+    .withIndex('by_org_id_and_period', (q) =>
       q.eq('orgId', args.orgId).eq('period', period)
     )
     .first()

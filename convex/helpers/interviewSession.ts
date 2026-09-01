@@ -8,6 +8,10 @@ import { transitionSessionSafely } from '../../lib/interview/session-machine'
 import { isSessionStateWriteAllowed } from '../../lib/interview/session-state-ownership'
 import type { InterviewSessionState } from '../../lib/interview/types'
 import type { SessionPurpose } from '../../lib/interview/session-purpose'
+import {
+  MAX_CANDIDATES_PER_SCREENING_BATCH,
+  assertLegacyScreeningBatchWithinLimit,
+} from './screeningLimits'
 
 export const WRITE_WINDOW_MS = 60_000
 export const MAX_SESSION_EVENTS_PER_WINDOW = 90
@@ -267,14 +271,18 @@ export async function applySessionStateTransition(
         // Maintain denormalized batch counter transactionally.
         const batch = await ctx.db.get(eligibility.batchId)
         if (batch) {
-          if (batch.completedCount === undefined) {
+          if (
+            batch.candidateCount === undefined ||
+            batch.completedCount === undefined
+          ) {
             // Backfill old batches that predate counters.
             const batchEligibility = await ctx.db
               .query('candidateEligibility')
               .withIndex('by_batch', (q) =>
                 q.eq('batchId', eligibility.batchId)
               )
-              .collect()
+              .take(MAX_CANDIDATES_PER_SCREENING_BATCH + 1)
+            assertLegacyScreeningBatchWithinLimit(batchEligibility.length)
             const submittedCount = batchEligibility.filter(
               (e) => e.status === 'submitted'
             ).length

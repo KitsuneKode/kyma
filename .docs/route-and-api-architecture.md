@@ -49,21 +49,30 @@ The App Router is split into layout shells:
 
 Recruiter workspace pages live under `app/(admin)/recruiter/*`. Org setup lives under `app/(app)/recruiter/setup` to avoid the recruiter sidebar guard.
 
-## Next Route Handlers (secrets, vendors)
+## Next Route Handlers (vendor hosts only)
 
-| Route                        | Role                                                                      |
-| ---------------------------- | ------------------------------------------------------------------------- |
-| `/api/interviews/bootstrap`  | Canonical Convex bootstrap + LiveKit token path (threads `agentMetadata`) |
-| `/api/interviews/process`    | Recovery path for sessions already in `processing` (Inngest or inline)    |
-| `/api/livekit/webhook`       | Signature-validated LiveKit webhooks → Convex                             |
-| `/api/inngest`               | Inngest serve                                                             |
-| `/api/recruiter/report-chat` | Clerk-authenticated copilot                                               |
+| Route          | Role                                                        |
+| -------------- | ----------------------------------------------------------- |
+| `/api/inngest` | Inngest serve (durable post-call assessment worker on Next) |
 
-`/api/livekit/token` was removed; use bootstrap.
+Interview bootstrap, report chat, LiveKit webhooks, and Clerk webhooks are **Convex-owned** (actions / `httpAction`). Do not reintroduce parallel Next `/api/*` product routes for those flows.
+
+## Convex HTTP + actions
+
+| Surface                                                  | Role                                                                |
+| -------------------------------------------------------- | ------------------------------------------------------------------- |
+| `interviews.bootstrapActions.bootstrapInterviewSession`  | Public bootstrap + LiveKit token (`useAction`)                      |
+| `interviews.bootstrapActions.requeueInterviewProcessing` | Ops recovery for sessions already in `processing`                   |
+| `recruiter.reportChat.askReportChat`                     | Clerk-authenticated grounded recruiter copilot (`useAction`)        |
+| `POST {CONVEX_SITE_URL}/livekit/webhook`                 | Signature-validated LiveKit webhooks → `livekit.ingestWebhookEvent` |
+| `POST {CONVEX_SITE_URL}/webhooks/clerk`                  | Signature-validated Clerk webhooks → user/org sync mutations        |
+
+`CONVEX_SITE_URL` is the Convex HTTP actions host (Dashboard → Settings → URL, or `NEXT_PUBLIC_CONVEX_SITE_URL`).
 
 ## Convex vs client
 
 - **Product state** lives in Convex (sessions, invites, transcript, reports).
+- **Client I/O** prefers `useQuery` / `useMutation` / `useAction`. Avoid `fetch('/api/...')` for product flows.
 - **Convex bundling:** do not import shared TS via the Next.js `@/` alias from `convex/*`. Use relative imports such as `../lib/...` for pure shared modules.
 - **Candidate browser writes** for session state (`live`, `interrupted`, `processing`) are owned by webhooks/agent — not the browser.
 - **Transcript writes** are agent-authoritative; browser `TranscriptionReceived` is UI-only.
@@ -96,6 +105,16 @@ Signed-in users are not auto-redirected away from `/` (marketing stays reachable
 
 Marketing CTAs use path-based auth URLs via [`lib/auth/workspace-intent.ts`](../lib/auth/workspace-intent.ts) (`signInPath`, `signUpPath`).
 
-## Rate limits (HTTP)
+## Rate limits
 
-Shared helper: `lib/http/server-rate-limit.ts` (`assertServerRateLimit`) — used by bootstrap, process, and report-chat routes. Backed by Convex `@convex-dev/rate-limiter`; requires `KYMA_PROCESSING_WRITE_KEY` in production (throws if missing).
+Bootstrap, processing recovery, and report-chat rate limits run inside Convex actions via `@convex-dev/rate-limiter` (`convex/rateLimiter.ts`). The Next helper `lib/http/server-rate-limit.ts` remains for any residual Next-hosted surfaces that need a trusted-server check.
+
+## Local integration verification (non-mock)
+
+Against a live local Convex deployment + Inngest event sink:
+
+```bash
+bun run test:convex-integration
+```
+
+This seeds real invite/session rows, calls `bootstrapInterviewSession` (LiveKit JWT mint), POSTs cryptographically signed LiveKit + Clerk webhooks to `{CONVEX_SITE_URL}`, and exercises `requeueInterviewProcessing` enqueue against a local Inngest sink on `:8799`.

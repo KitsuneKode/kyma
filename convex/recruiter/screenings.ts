@@ -1,18 +1,16 @@
 import { ConvexError, v } from 'convex/values'
 
-import type { Id } from '../_generated/dataModel'
-import type { QueryCtx } from '../_generated/server'
+import { internal } from '../_generated/api'
 import { recruiterQuery, screeningWriteMutation } from '../lib/customFunctions'
 import { logAuditEvent } from '../helpers/audit'
 import { getRecruiterActorId } from '../helpers/auth'
 import { DEFAULT_INTERVIEW_DURATION_MINUTES } from '../helpers/interviewPolicy'
 import { quotasForPlan, resolveOrgPlanForOrg } from '../helpers/orgPlan'
+import { isStuckProcessing } from '../helpers/sessionOps'
 import {
-  getSessionOpsWindows,
-  isInviteExpiringSoon,
-  isStaleSessionWithoutReport,
-  isStuckProcessing,
-} from '../helpers/sessionOps'
+  MAX_SCREENING_BATCHES_PER_LIST,
+  assertSupportedScreeningBatchSize,
+} from '../helpers/screeningLimits'
 import { resolveTemplateName } from '../helpers/sessionReview'
 import { ensureDefaultTemplate } from '../helpers/templates'
 import { slugify } from '../../lib/format/slug'
@@ -25,68 +23,14 @@ function buildInviteToken(candidateName: string) {
   return `${prefix}-${secret}`
 }
 
-const MAX_SCREENING_BATCHES = 100
 const MAX_BATCH_ELIGIBILITY = 500
-
-async function countStuckCandidatesForInvites(
-  ctx: QueryCtx,
-  inviteIds: Id<'candidateInvites'>[],
-  staleBeforeMs: number
-) {
-  // Batch in parallel instead of sequential N+1 to bound latency on large batches.
-  const sessions = await Promise.all(
-    inviteIds.map((inviteId) =>
-      ctx.db
-        .query('interviewSessions')
-        .withIndex('by_invite', (q) => q.eq('inviteId', inviteId))
-        .order('desc')
-        .first()
-    )
-  )
-
-  const reports = await Promise.all(
-    sessions.map((session) =>
-      session?._id
-        ? ctx.db
-            .query('assessmentReports')
-            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-            .first()
-        : Promise.resolve(null)
-    )
-  )
-
-  let stuckCandidates = 0
-  for (let index = 0; index < sessions.length; index += 1) {
-    const session = sessions[index]
-    if (!session?.startedAt) continue
-    const report = reports[index]
-    if (
-      isStaleSessionWithoutReport(
-        session.startedAt,
-        staleBeforeMs,
-        Boolean(report)
-      )
-    ) {
-      stuckCandidates += 1
-    }
-  }
-
-  return stuckCandidates
-}
 
 export const listScreeningBatches = recruiterQuery({
   args: {
     nowMs: v.number(),
   },
-  handler: async (ctx, { nowMs }) => {
+  handler: async (ctx) => {
     const { orgId } = ctx
-    const serverNow = Date.now()
-    const clampedNowMs =
-      Number.isFinite(nowMs) && Math.abs(nowMs - serverNow) < 5 * 60 * 1000
-        ? nowMs
-        : serverNow
-    const { expiringUntilMs, staleBeforeMs } =
-      getSessionOpsWindows(clampedNowMs)
 
     // Newest-first at the index level. Sampling on `by_org_id` returned the
     // OLDEST batches, so a mature org's recent screenings were never visible.
@@ -94,7 +38,7 @@ export const listScreeningBatches = recruiterQuery({
       .query('screeningBatches')
       .withIndex('by_org_id_and_created_at', (q) => q.eq('orgId', orgId))
       .order('desc')
-      .take(MAX_SCREENING_BATCHES)
+      .take(MAX_SCREENING_BATCHES_PER_LIST)
 
     // Pre-fetch templates in parallel to avoid per-batch N+1 sequential gets.
     const templateIds = [...new Set(batches.map((b) => b.templateId))]
@@ -106,61 +50,43 @@ export const listScreeningBatches = recruiterQuery({
         .filter((doc): doc is NonNullable<typeof doc> => Boolean(doc))
         .map((doc) => [doc._id, doc] as const)
     )
-
-    return await Promise.all(
-      batches.map(async (batch) => {
-        const eligibility = await ctx.db
-          .query('candidateEligibility')
-          .withIndex('by_batch', (q) => q.eq('batchId', batch._id))
-          .take(MAX_BATCH_ELIGIBILITY)
-
-        const template = templateById.get(batch.templateId)
-
-        // Batch-load invites via by_batch index instead of per-id gets.
-        const invites = await ctx.db
-          .query('candidateInvites')
-          .withIndex('by_batch', (q) => q.eq('batchId', batch._id))
-          .take(MAX_BATCH_ELIGIBILITY)
-
-        const expiringInvites = invites.filter((invite) =>
-          isInviteExpiringSoon(invite.expiresAt, clampedNowMs, expiringUntilMs)
-        ).length
-
-        const inviteIds = eligibility.map((candidate) => candidate.inviteId)
-        // Prefer denormalized counters for O(1) reads; fallback to counting for old batches.
-        const candidateCount = batch.candidateCount ?? eligibility.length
-        const completedCount =
-          batch.completedCount ??
-          eligibility.filter((candidate) => candidate.status === 'submitted')
-            .length
-        const completionPercent =
-          candidateCount === 0
-            ? 0
-            : Math.round((completedCount / candidateCount) * 100)
-        const stuckCandidates = await countStuckCandidatesForInvites(
-          ctx,
-          inviteIds,
-          staleBeforeMs
-        )
-
-        return {
-          id: batch._id,
-          name: batch.name,
-          status: batch.status,
-          createdAt: batch.createdAt,
-          expiresAt: batch.expiresAt,
-          allowedAttempts: batch.allowedAttempts,
-          templateName: resolveTemplateName(template?.name),
-          targetDurationMinutes: batch.targetDurationMinutes,
-          allowsResume: batch.allowsResume,
-          candidateCount,
-          completedCount,
-          completionPercent,
-          expiringInvites,
-          stuckCandidates,
-        }
-      })
+    const statsDocs = await Promise.all(
+      batches.map((batch) =>
+        ctx.db
+          .query('screeningBatchOperationalStats')
+          .withIndex('by_batch_id', (q) => q.eq('batchId', batch._id))
+          .unique()
+      )
     )
+
+    return batches.map((batch, index) => {
+      const template = templateById.get(batch.templateId)
+      const stats = statsDocs[index]
+      const candidateCount = batch.candidateCount ?? 0
+      const completedCount = batch.completedCount ?? 0
+      const completionPercent =
+        candidateCount === 0
+          ? 0
+          : Math.round((completedCount / candidateCount) * 100)
+
+      return {
+        id: batch._id,
+        name: batch.name,
+        status: batch.status,
+        createdAt: batch.createdAt,
+        expiresAt: batch.expiresAt,
+        allowedAttempts: batch.allowedAttempts,
+        templateName: resolveTemplateName(template?.name),
+        targetDurationMinutes: batch.targetDurationMinutes,
+        allowsResume: batch.allowsResume,
+        candidateCount,
+        completedCount,
+        completionPercent,
+        expiringInvites: stats?.expiringInviteCount ?? 0,
+        stuckCandidates: stats?.stuckCandidateCount ?? 0,
+        statsComputedAt: stats?.computedAt,
+      }
+    })
   },
 })
 
@@ -279,6 +205,8 @@ export const createScreeningBatch = screeningWriteMutation({
     const createdBy = await getRecruiterActorId(ctx)
     const plan = await resolveOrgPlanForOrg(ctx, orgId)
     const quotas = quotasForPlan(plan)
+
+    assertSupportedScreeningBatchSize(args.candidates.length)
 
     if (args.candidates.length > quotas.maxCandidatesPerBatch) {
       throw new ConvexError(
@@ -404,6 +332,12 @@ export const createScreeningBatch = screeningWriteMutation({
       })
     }
 
+    await ctx.scheduler.runAfter(
+      0,
+      internal.screeningBatchOps.refreshScreeningBatchOperationalStats,
+      { batchId }
+    )
+
     await logAuditEvent(ctx, {
       orgId,
       actorId: createdBy ?? undefined,
@@ -495,13 +429,13 @@ export const getInviteEmailDeliverySummary = recruiterQuery({
     const [pendingInvites, failedInvites] = await Promise.all([
       ctx.db
         .query('candidateInvites')
-        .withIndex('by_org_id_and_email_status', (q) =>
+        .withIndex('by_org_id_and_email_delivery_status', (q) =>
           q.eq('orgId', orgId).eq('emailDeliveryStatus', 'pending')
         )
         .take(500),
       ctx.db
         .query('candidateInvites')
-        .withIndex('by_org_id_and_email_status', (q) =>
+        .withIndex('by_org_id_and_email_delivery_status', (q) =>
           q.eq('orgId', orgId).eq('emailDeliveryStatus', 'failed')
         )
         .order('desc')
