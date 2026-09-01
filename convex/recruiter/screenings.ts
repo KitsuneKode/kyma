@@ -495,13 +495,13 @@ export const getInviteEmailDeliverySummary = recruiterQuery({
     const [pendingInvites, failedInvites] = await Promise.all([
       ctx.db
         .query('candidateInvites')
-        .withIndex('by_org_id_and_email_status', (q) =>
+        .withIndex('by_org_id_and_email_delivery_status', (q) =>
           q.eq('orgId', orgId).eq('emailDeliveryStatus', 'pending')
         )
         .take(500),
       ctx.db
         .query('candidateInvites')
-        .withIndex('by_org_id_and_email_status', (q) =>
+        .withIndex('by_org_id_and_email_delivery_status', (q) =>
           q.eq('orgId', orgId).eq('emailDeliveryStatus', 'failed')
         )
         .order('desc')

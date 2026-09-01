@@ -1,14 +1,28 @@
 // @vitest-environment edge-runtime
 /// <reference types="vite/client" />
 
+import { convexTest } from 'convex-test'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { assertDevSeedAllowed } from './devSeed'
-import { convexEnv } from '../lib/env/convex'
+import { internal } from './_generated/api'
+import {
+  CLERK_ORG_ID_SEED_TABLES,
+  ORG_ID_SEED_TABLES,
+  SEED_ORG_TABLES,
+  assertDevSeedAllowed,
+} from './devSeedTables'
+import devSeedMutationsSource from './devSeedMutations.ts?raw'
+import schema from './schema'
+
+const modules = import.meta.glob('./**/*.ts')
+
+function harness() {
+  return convexTest(schema, modules)
+}
 
 /**
- * These tests exercise the guard the way production calls it — through
- * `convexEnv`, whose `NODE_ENV` carries a zod `.default('development')`.
+ * These tests exercise the deployment opt-in together with the raw NODE_ENV
+ * signal that is visible outside the Convex runtime.
  *
  * An earlier version of this suite passed raw object literals such as `{}`,
  * a shape the real call site can never produce because the default has already
@@ -17,7 +31,7 @@ import { convexEnv } from '../lib/env/convex'
  * `process.env` directly.
  */
 function envWith(deploymentEnv?: string) {
-  return { ...convexEnv, KYMA_DEPLOYMENT_ENV: deploymentEnv }
+  return { KYMA_DEPLOYMENT_ENV: deploymentEnv }
 }
 
 describe('dev seed deployment guard', () => {
@@ -75,5 +89,82 @@ describe('dev seed deployment guard', () => {
   test('allows when the opt-in and a development NODE_ENV agree', () => {
     vi.stubEnv('NODE_ENV', 'development')
     expect(() => assertDevSeedAllowed(envWith('development'))).not.toThrow()
+  })
+})
+
+describe('org-scoped dev reset', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  test('every supported table belongs to exactly one indexed group', () => {
+    const orgIdTables = new Set<string>(ORG_ID_SEED_TABLES)
+    const clerkOrgIdTables = new Set<string>(CLERK_ORG_ID_SEED_TABLES)
+
+    expect(
+      SEED_ORG_TABLES.filter(
+        (table) =>
+          Number(orgIdTables.has(table)) +
+            Number(clerkOrgIdTables.has(table)) !==
+          1
+      )
+    ).toEqual([])
+    expect(
+      new Set([...ORG_ID_SEED_TABLES, ...CLERK_ORG_ID_SEED_TABLES])
+    ).toEqual(new Set(SEED_ORG_TABLES))
+  })
+
+  test('uses indexed reads rather than database filters', () => {
+    expect(devSeedMutationsSource).not.toContain('.filter(')
+  })
+
+  test('deletes only rows belonging to the requested organization', async () => {
+    vi.stubEnv('KYMA_DEPLOYMENT_ENV', 'development')
+    vi.stubEnv('CONVEX_CLOUD_URL', 'https://test.convex.cloud')
+    const t = harness()
+    await t.run(async (ctx) => {
+      await ctx.db.insert('workspaceSettings', {
+        orgId: 'org_target',
+        updatedAt: 1,
+        updatedBy: 'test',
+      })
+      await ctx.db.insert('workspaceSettings', {
+        orgId: 'org_other',
+        updatedAt: 1,
+        updatedBy: 'test',
+      })
+      await ctx.db.insert('organizations', {
+        clerkOrgId: 'org_target',
+        name: 'Target',
+        slug: 'target',
+        createdAt: 1,
+        updatedAt: 1,
+      })
+      await ctx.db.insert('organizations', {
+        clerkOrgId: 'org_other',
+        name: 'Other',
+        slug: 'other',
+        createdAt: 1,
+        updatedAt: 1,
+      })
+    })
+
+    await t.mutation(internal.devSeedMutations.clearOrgTableChunk, {
+      table: 'workspaceSettings',
+      orgId: 'org_target',
+    })
+    await t.mutation(internal.devSeedMutations.clearOrgTableChunk, {
+      table: 'organizations',
+      orgId: 'org_target',
+    })
+
+    const remaining = await t.run(async (ctx) => ({
+      settings: await ctx.db.query('workspaceSettings').take(10),
+      organizations: await ctx.db.query('organizations').take(10),
+    }))
+    expect(remaining.settings.map((row) => row.orgId)).toEqual(['org_other'])
+    expect(remaining.organizations.map((row) => row.clerkOrgId)).toEqual([
+      'org_other',
+    ])
   })
 })

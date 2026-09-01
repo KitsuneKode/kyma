@@ -66,6 +66,15 @@ export const SEED_ORG_TABLES = [
   'orgMemberships',
 ] as const
 
+export const CLERK_ORG_ID_SEED_TABLES = [
+  'organizations',
+  'orgMemberships',
+] as const
+
+export const ORG_ID_SEED_TABLES = SEED_ORG_TABLES.filter(
+  (table) => !(CLERK_ORG_ID_SEED_TABLES as readonly string[]).includes(table)
+)
+
 /**
  * Dev seeding must be impossible on any deployment that has not explicitly
  * opted in to development.
