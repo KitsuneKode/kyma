@@ -20,7 +20,6 @@ import {
   createAgentSessionPort,
   type AgentSessionConfig,
   type AgentSessionPort,
-  type AgentTranscriptSegment,
 } from '@/lib/agent/session-port'
 import { createDiagnosticLogger } from '@/lib/interview/diagnostics'
 import { maybeStartRoomRecording } from '@/lib/livekit/recording'
@@ -31,6 +30,7 @@ import {
   resolveSessionBudget,
 } from '@/lib/interview/session-purpose'
 import { resolveSimulationIntroLine } from '@/lib/templates/resolve-simulation-intro'
+import { createTranscriptPersistenceController } from './transcript-persistence'
 
 const DEFAULT_TARGET_DURATION_MINUTES = 18
 
@@ -270,17 +270,6 @@ function parseCandidateMetadata(rawMetadata?: string): CandidateMetadata {
   }
 }
 
-/**
- * Candidate speech is owned by `UserInputTranscribed`, which carries
- * interim/final state and STT timing. `ConversationItemAdded` therefore
- * persists agent turns only - persisting user items there too wrote every
- * candidate turn a second time under a different segment id, which the Convex
- * upsert cannot deduplicate.
- */
-export function resolveConversationItemSpeaker(role: string): 'agent' | null {
-  return role === 'assistant' ? 'agent' : null
-}
-
 function attachTranscriptPersistence(
   session: voice.AgentSession<InterviewUserData>,
   port: AgentSessionPort,
@@ -288,46 +277,17 @@ function attachTranscriptPersistence(
   sessionId: string | undefined,
   onBudgetCheck?: () => void
 ) {
-  // `UserInputTranscribedEvent` carries no stable per-utterance id (`speakerId`
-  // is documented as unsupported), and `createdAt` is fresh on every partial.
-  // Keying by that timestamp gave each partial its own id, so every partial
-  // missed the source-segment index, fell through to the full-session scan, and
-  // inserted another row - N rows and O(n^2) reads per spoken answer. Holding
-  // one id open until the final coalesces the utterance into a single row.
-  let activeCandidateSegmentId: string | null = null
-  let pendingTranscriptWrites: Promise<void> = Promise.resolve()
-
-  const enqueueTranscriptWrite = (segment: AgentTranscriptSegment) => {
-    // LiveKit event handlers are synchronous callbacks. Serialize persistence so
-    // a late partial cannot overtake a final update, and retain the chain for the
-    // shutdown callback to flush before the worker closes the session.
-    pendingTranscriptWrites = pendingTranscriptWrites
-      .catch(() => undefined)
-      .then(() => port.upsertTranscript(segment))
-      .catch((error) => {
-        logger.warn({
-          event: 'agent.transcript.persist.failed',
-          detail: 'Unable to persist queued transcript segment.',
-          sessionId,
-          error,
-        })
+  const controller = createTranscriptPersistenceController({
+    persist: (segment) => port.upsertTranscript(segment),
+    onError: (error) => {
+      logger.warn({
+        event: 'agent.transcript.persist.failed',
+        detail: 'Unable to persist queued transcript segment.',
+        sessionId,
+        error,
       })
-  }
-
-  session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (event) => {
-    activeCandidateSegmentId ??= `candidate:${event.createdAt}`
-    const segmentId = activeCandidateSegmentId
-
-    enqueueTranscriptWrite({
-      segmentId,
-      speaker: 'candidate',
-      text: event.transcript,
-      status: event.isFinal ? 'final' : 'partial',
-      startedAt: new Date(event.createdAt).toISOString(),
-    })
-
-    if (event.isFinal) {
-      activeCandidateSegmentId = null
+    },
+    onCandidateFinal: (event) => {
       const userData = session.userData
       userData.candidateTurnCount += 1
       onBudgetCheck?.()
@@ -344,7 +304,15 @@ function attachTranscriptPersistence(
           transcript: event.transcript,
         },
       })
-    }
+    },
+    onAgentFinal: () => {
+      session.userData.agentTurnCount += 1
+      onBudgetCheck?.()
+    },
+  })
+
+  session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (event) => {
+    controller.onCandidateTranscript(event)
   })
 
   session.on(voice.AgentSessionEventTypes.ConversationItemAdded, (event) => {
@@ -352,32 +320,15 @@ function attachTranscriptPersistence(
       return
     }
 
-    const text = event.item.textContent?.trim()
-    if (!text) {
-      return
-    }
-
-    const speaker = resolveConversationItemSpeaker(event.item.role)
-
-    if (!speaker) {
-      return
-    }
-
-    session.userData.agentTurnCount += 1
-    onBudgetCheck?.()
-
-    enqueueTranscriptWrite({
-      segmentId: event.item.id,
-      speaker,
-      text,
-      status: 'final',
-      startedAt: new Date(event.item.createdAt).toISOString(),
+    controller.onConversationItem({
+      id: event.item.id,
+      role: event.item.role,
+      textContent: event.item.textContent,
+      createdAt: event.item.createdAt,
     })
   })
 
-  return async () => {
-    await pendingTranscriptWrites
-  }
+  return controller.flush
 }
 
 class SimulationPersonaAgent extends voice.Agent<InterviewUserData> {
