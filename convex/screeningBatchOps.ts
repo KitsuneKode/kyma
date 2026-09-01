@@ -9,6 +9,7 @@ import {
 } from './_generated/server'
 import {
   MAX_CANDIDATES_PER_SCREENING_BATCH,
+  MAX_SCREENING_BATCHES_PER_LIST,
   SCREENING_OPS_LOOKUP_CONCURRENCY,
   assertLegacyScreeningBatchWithinLimit,
 } from './helpers/screeningLimits'
@@ -26,14 +27,13 @@ type OperationalStatsSnapshot = {
   computedAt: number
 } | null
 
-const operationalStatsFields = {
+const operationalStatsValidator = v.object({
   orgId: v.string(),
   batchId: v.id('screeningBatches'),
   expiringInviteCount: v.number(),
   stuckCandidateCount: v.number(),
   computedAt: v.number(),
-}
-const operationalStatsValidator = v.object(operationalStatsFields)
+})
 
 export const computeScreeningBatchOperationalStats = internalQuery({
   args: {
@@ -117,7 +117,7 @@ export const computeScreeningBatchOperationalStats = internalQuery({
 })
 
 export const upsertScreeningBatchOperationalStats = internalMutation({
-  args: operationalStatsFields,
+  args: operationalStatsValidator.fields,
   returns: v.null(),
   handler: async (ctx, args) => {
     const batch = await ctx.db.get(args.batchId)
@@ -188,16 +188,17 @@ export const dispatchScreeningBatchOperationalStatsRefresh = internalMutation({
   handler: async (ctx) => {
     const batches = await ctx.db
       .query('screeningBatches')
-      .withIndex('by_status', (q) => q.eq('status', 'active'))
-      .take(25)
+      .order('desc')
+      .take(MAX_SCREENING_BATCHES_PER_LIST)
     const nowMs = Date.now()
-    for (const batch of batches) {
+    const activeBatches = batches.filter((batch) => batch.status === 'active')
+    for (const batch of activeBatches) {
       await ctx.scheduler.runAfter(
         0,
         internal.screeningBatchOps.refreshScreeningBatchOperationalStats,
         { batchId: batch._id, nowMs }
       )
     }
-    return { scheduled: batches.length }
+    return { scheduled: activeBatches.length }
   },
 })

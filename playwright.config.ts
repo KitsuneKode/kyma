@@ -24,7 +24,8 @@ export default defineConfig({
     : {
         // Public smoke tests intentionally run without production CI env so
         // Clerk and provider integrations stay disabled unless explicitly set.
-        command: 'env -u CI bun run dev:web',
+        command:
+          'env -u CI -u CONVEX_DEPLOYMENT NEXT_PUBLIC_CONVEX_URL= NEXT_PUBLIC_CONVEX_SITE_URL= NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY= CLERK_SECRET_KEY= CLERK_FRONTEND_API_URL= CLERK_JWT_ISSUER_DOMAIN= bun run dev:web',
         url: baseURL,
         timeout: 120_000,
         reuseExistingServer: !runtimeEnv.CI,

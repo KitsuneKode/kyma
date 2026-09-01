@@ -64,11 +64,15 @@ LIVEKIT_API_SECRET="${LIVEKIT_API_SECRET:-secretsecretsecretsecretsecretsecre}"
 NEXT_PUBLIC_LIVEKIT_URL="${NEXT_PUBLIC_LIVEKIT_URL:-ws://127.0.0.1:7880}"
 KYMA_PROCESSING_WRITE_KEY="${KYMA_PROCESSING_WRITE_KEY:-integration-processing-key}"
 CLERK_WEBHOOK_SIGNING_SECRET="${CLERK_WEBHOOK_SIGNING_SECRET:-whsec_$(openssl rand -base64 32 | tr -d '\n')}"
+CLERK_FRONTEND_API_URL="${CLERK_FRONTEND_API_URL:-https://placeholder.clerk.accounts.dev}"
+CLERK_SECRET_KEY="${CLERK_SECRET_KEY:-sk_test_integration_placeholder}"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-pk_test_integration_placeholder}"
 INNGEST_EVENT_KEY="${INNGEST_EVENT_KEY:-local-integration-event-key}"
 INNGEST_EVENT_API_BASE_URL="${INNGEST_EVENT_API_BASE_URL:-http://127.0.0.1:8799}"
 
 export LIVEKIT_API_KEY LIVEKIT_API_SECRET NEXT_PUBLIC_LIVEKIT_URL
 export KYMA_PROCESSING_WRITE_KEY CLERK_WEBHOOK_SIGNING_SECRET
+export CLERK_FRONTEND_API_URL CLERK_SECRET_KEY NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 export INNGEST_EVENT_KEY INNGEST_EVENT_API_BASE_URL
 
 echo "==> Ensuring local Convex is configured"
@@ -89,10 +93,17 @@ ensure_tmux() {
     tmux_cmd new-session -d -s "$name" -c "$ROOT_DIR" -- bash -l
 }
 
+tmux_pane_target() {
+  local name="$1"
+  # Select the session's active pane instead of assuming tmux's default 0.0.
+  # Managed environments may configure base-index=1.
+  printf '=%s:' "$name"
+}
+
 echo "==> Ensuring Inngest event sink on ${INNGEST_EVENT_API_BASE_URL}"
 ensure_tmux inngest-event-sink
 if ! port_open 8799; then
-  tmux_cmd send-keys -t "inngest-event-sink:0.0" \
+  tmux_cmd send-keys -t "$(tmux_pane_target inngest-event-sink)" \
     "export PATH=\"\$HOME/.bun/bin:\$PATH\"; bun -e \"
 const server = Bun.serve({
   port: 8799,
@@ -113,7 +124,7 @@ wait_port 8799 "Inngest event sink"
 echo "==> Ensuring Convex dev is running"
 ensure_tmux convex-dev
 if ! port_open 3210; then
-  tmux_cmd send-keys -t "convex-dev:0.0" \
+  tmux_cmd send-keys -t "$(tmux_pane_target convex-dev)" \
     "export PATH=\"\$HOME/.bun/bin:\$PATH\"; cd '$ROOT_DIR'; CONVEX_AGENT_MODE=anonymous bunx convex dev" C-m
 fi
 wait_port 3210 "Convex backend"
@@ -135,6 +146,9 @@ set_env NEXT_PUBLIC_LIVEKIT_URL "$NEXT_PUBLIC_LIVEKIT_URL"
 # processing runs inside Convex actions / the inline fallback path.
 set_env NEXT_PUBLIC_CONVEX_URL "$NEXT_PUBLIC_CONVEX_URL"
 set_env LIVEKIT_AGENT_NAME tutor-screener
+set_env CLERK_FRONTEND_API_URL "$CLERK_FRONTEND_API_URL"
+set_env CLERK_SECRET_KEY "$CLERK_SECRET_KEY"
+set_env NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
 set_env CLERK_WEBHOOK_SIGNING_SECRET "$CLERK_WEBHOOK_SIGNING_SECRET"
 set_env INNGEST_EVENT_KEY "$INNGEST_EVENT_KEY"
 set_env INNGEST_EVENT_API_BASE_URL "$INNGEST_EVENT_API_BASE_URL"
@@ -142,19 +156,26 @@ set_env INNGEST_EVENT_API_BASE_URL "$INNGEST_EVENT_API_BASE_URL"
 export CLERK_WEBHOOK_SIGNING_SECRET
 
 echo "==> Restarting Convex so action runtimes pick up env"
-tmux_cmd send-keys -t "convex-dev:0.0" C-c
+tmux_cmd send-keys -t "$(tmux_pane_target convex-dev)" C-c
 sleep 2
-tmux_cmd send-keys -t "convex-dev:0.0" \
+tmux_cmd send-keys -t "$(tmux_pane_target convex-dev)" \
   "export PATH=\"\$HOME/.bun/bin:\$PATH\"; cd '$ROOT_DIR'; CONVEX_AGENT_MODE=anonymous bunx convex dev" C-m
 wait_port 3210 "Convex backend (post-restart)"
 
+functions_ready=0
 for _ in $(seq 1 40); do
   if CONVEX_AGENT_MODE=anonymous bunx convex run integrationSeed:seedPublicInvite \
     '{"inviteToken":"ready-check","participantName":"Ready"}' >/dev/null 2>&1; then
+    functions_ready=1
     break
   fi
   sleep 1
 done
+if [[ "$functions_ready" -ne 1 ]]; then
+  echo "Timed out waiting for Convex functions to deploy." >&2
+  echo "Inspect the convex-dev process log for the deployment error." >&2
+  exit 1
+fi
 
 echo "==> Running verification against live local Convex"
 bun run scripts/verify-convex-integration.ts

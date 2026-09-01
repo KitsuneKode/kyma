@@ -178,7 +178,6 @@ export default defineSchema({
     .index('by_org_id', ['orgId'])
     .index('by_org_id_and_status', ['orgId', 'status'])
     .index('by_org_id_and_created_at', ['orgId', 'createdAt'])
-    .index('by_status', ['status'])
     .index('by_template', ['templateId']),
 
   screeningBatchOperationalStats: defineTable({
