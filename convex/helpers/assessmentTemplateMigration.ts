@@ -118,10 +118,11 @@ export async function migrateOrgAssessmentTemplates(
   ctx: MutationCtx,
   orgId: string
 ) {
+  // C-16: bound to MAX_ACTIVE_TEMPLATES (200) to avoid unbounded collect.
   const templates = await ctx.db
     .query('assessmentTemplates')
     .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
-    .collect()
+    .take(200)
 
   let migratedCount = 0
   for (const template of templates) {

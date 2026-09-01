@@ -139,21 +139,24 @@ export async function POST(request: NextRequest) {
       requestId,
     })
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Unable to answer the recruiter question.'
+    const rawMessage = error instanceof Error ? error.message : ''
+    const isRateLimit = rawMessage.includes('Rate limit')
+    // S-12: never echo raw provider/zod messages to client; log full error server-side.
+    const message = isRateLimit
+      ? 'Rate limit exceeded. Please retry shortly.'
+      : 'Unable to answer the recruiter question. Please try again.'
     await reportError(error, {
       route: '/api/recruiter/report-chat',
       requestId,
       tags: { surface: 'recruiter-report-chat' },
+      extra: { rawMessage: rawMessage.slice(0, 500) },
     })
     return NextResponse.json(
       {
         error: message,
         requestId,
       },
-      { status: message.includes('Rate limit') ? 429 : 400 }
+      { status: isRateLimit ? 429 : 400 }
     )
   }
 }
