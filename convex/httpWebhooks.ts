@@ -2,10 +2,11 @@
 
 import { verifyWebhook } from '@clerk/backend/webhooks'
 import { v } from 'convex/values'
+import type { FunctionArgs } from 'convex/server'
 import { WebhookReceiver } from 'livekit-server-sdk'
 
 import { api } from './_generated/api'
-import { internalAction } from './_generated/server'
+import { internalAction, type ActionCtx } from './_generated/server'
 import { convexEnv } from '../lib/env/convex'
 import {
   createDiagnosticLogger,
@@ -18,6 +19,30 @@ function toNumber(value?: bigint) {
     return undefined
   }
   return Number(value)
+}
+
+type LiveKitIngestArgs = FunctionArgs<typeof api.livekit.ingestWebhookEvent>
+type LiveKitIngestBase = Pick<
+  LiveKitIngestArgs,
+  | 'processingKey'
+  | 'roomName'
+  | 'participantIdentity'
+  | 'participantName'
+  | 'egressId'
+  | 'updatedAtMs'
+  | 'error'
+  | 'details'
+>
+
+function ingestLiveKitWebhookEvent(
+  ctx: ActionCtx,
+  base: LiveKitIngestBase,
+  event: Omit<LiveKitIngestArgs, keyof LiveKitIngestBase>
+) {
+  return ctx.runMutation(api.livekit.ingestWebhookEvent, {
+    ...base,
+    ...event,
+  })
 }
 
 type ClerkEmailAddress = {
@@ -149,6 +174,20 @@ export const ingestLivekitWebhook = internalAction({
       })
 
       const egress = event.egressInfo
+      const basePayload: LiveKitIngestBase = {
+        processingKey: writeKey,
+        roomName,
+        participantIdentity,
+        participantName,
+        egressId: egress?.egressId,
+        updatedAtMs: toNumber(egress?.updatedAt),
+        error: egress?.error || undefined,
+        details:
+          egress?.details ||
+          (roomName && participantIdentity
+            ? `${event.event} for ${participantIdentity} in ${roomName}`
+            : undefined),
+      }
       const mutations = []
 
       if (egress && event.event.startsWith('egress_')) {
@@ -157,79 +196,47 @@ export const ingestLivekitWebhook = internalAction({
 
         if (fileResults.length === 0 && segmentResults.length === 0) {
           mutations.push(
-            ctx.runMutation(api.livekit.ingestWebhookEvent, {
-              processingKey: writeKey,
+            ingestLiveKitWebhookEvent(ctx, basePayload, {
               event: event.event,
-              roomName,
-              participantIdentity,
-              participantName,
-              egressId: egress.egressId,
               startedAtMs: toNumber(egress.startedAt),
               endedAtMs: toNumber(egress.endedAt),
-              updatedAtMs: toNumber(egress.updatedAt),
-              error: egress.error || undefined,
-              details: egress.details || undefined,
             })
           )
         }
 
         for (const file of fileResults) {
           mutations.push(
-            ctx.runMutation(api.livekit.ingestWebhookEvent, {
-              processingKey: writeKey,
+            ingestLiveKitWebhookEvent(ctx, basePayload, {
               event: event.event,
-              roomName,
-              participantIdentity,
-              participantName,
-              egressId: egress.egressId,
               artifactKey: `${egress.egressId}:${file.location || file.filename || 'file'}`,
               filename: file.filename || undefined,
               location: file.location || undefined,
               startedAtMs: toNumber(file.startedAt),
               endedAtMs: toNumber(file.endedAt),
-              updatedAtMs: toNumber(egress.updatedAt),
               durationMs: toNumber(file.duration),
               sizeBytes: toNumber(file.size),
-              error: egress.error || undefined,
-              details: egress.details || undefined,
             })
           )
         }
 
         for (const segment of segmentResults) {
           mutations.push(
-            ctx.runMutation(api.livekit.ingestWebhookEvent, {
-              processingKey: writeKey,
+            ingestLiveKitWebhookEvent(ctx, basePayload, {
               event: event.event,
-              roomName,
-              participantIdentity,
-              participantName,
-              egressId: egress.egressId,
               artifactKey: `${egress.egressId}:${segment.playlistLocation || segment.playlistName || 'segments'}`,
               filename: segment.playlistName || undefined,
               manifestLocation: segment.playlistLocation || undefined,
               startedAtMs: toNumber(segment.startedAt),
               endedAtMs: toNumber(segment.endedAt),
-              updatedAtMs: toNumber(egress.updatedAt),
               durationMs: toNumber(segment.duration),
               sizeBytes: toNumber(segment.size),
-              error: egress.error || undefined,
-              details: egress.details || undefined,
             })
           )
         }
       } else {
         mutations.push(
-          ctx.runMutation(api.livekit.ingestWebhookEvent, {
-            processingKey: writeKey,
+          ingestLiveKitWebhookEvent(ctx, basePayload, {
             event: event.event,
-            roomName,
-            participantIdentity,
-            participantName,
-            details:
-              roomName && participantIdentity
-                ? `${event.event} for ${participantIdentity} in ${roomName}`
-                : undefined,
           })
         )
       }
