@@ -171,6 +171,9 @@ export default defineSchema({
       v.union(v.literal('auto'), v.literal('manual'), v.literal('inherit'))
     ),
     createdAt: v.string(),
+    // Denormalized counters for O(1) list loads (maintained transactionally).
+    candidateCount: v.optional(v.number()),
+    completedCount: v.optional(v.number()),
   })
     .index('by_org_id', ['orgId'])
     .index('by_org_id_and_status', ['orgId', 'status'])
