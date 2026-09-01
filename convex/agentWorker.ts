@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 
+import { internalMutation } from './_generated/server'
 import { pipelineMutation, pipelineQuery } from './lib/pipelineFunctions'
 
 const workerStatusValidator = v.union(
@@ -61,6 +62,31 @@ const workerLivenessValidator = v.object({
     })
   ),
   mostRecentSeenAt: v.union(v.number(), v.null()),
+})
+
+/**
+ * Reap worker heartbeats older than 7 days. Without this, a churning workerId
+ * (e.g. per-deploy id) would accumulate unbounded rows.
+ */
+export const reapStaleWorkerHeartbeats = internalMutation({
+  args: {},
+  returns: v.object({ deleted: v.number() }),
+  handler: async (ctx) => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
+    const stale = await ctx.db
+      .query('agentWorkerHeartbeats')
+      .withIndex('by_last_seen_at')
+      .order('asc')
+      .take(100)
+    let deleted = 0
+    for (const heartbeat of stale) {
+      if (heartbeat.lastSeenAt < cutoff) {
+        await ctx.db.delete(heartbeat._id)
+        deleted += 1
+      }
+    }
+    return { deleted }
+  },
 })
 
 /**
