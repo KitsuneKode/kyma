@@ -259,6 +259,17 @@ function parseCandidateMetadata(rawMetadata?: string): CandidateMetadata {
   }
 }
 
+/**
+ * Candidate speech is owned by `UserInputTranscribed`, which carries
+ * interim/final state and STT timing. `ConversationItemAdded` therefore
+ * persists agent turns only - persisting user items there too wrote every
+ * candidate turn a second time under a different segment id, which the Convex
+ * upsert cannot deduplicate.
+ */
+export function resolveConversationItemSpeaker(role: string): 'agent' | null {
+  return role === 'assistant' ? 'agent' : null
+}
+
 function attachTranscriptPersistence(
   session: voice.AgentSession<InterviewUserData>,
   port: AgentSessionPort,
@@ -266,9 +277,20 @@ function attachTranscriptPersistence(
   sessionId: string | undefined,
   onBudgetCheck?: () => void
 ) {
+  // `UserInputTranscribedEvent` carries no stable per-utterance id (`speakerId`
+  // is documented as unsupported), and `createdAt` is fresh on every partial.
+  // Keying by that timestamp gave each partial its own id, so every partial
+  // missed the source-segment index, fell through to the full-session scan, and
+  // inserted another row - N rows and O(n^2) reads per spoken answer. Holding
+  // one id open until the final coalesces the utterance into a single row.
+  let activeCandidateSegmentId: string | null = null
+
   session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (event) => {
+    activeCandidateSegmentId ??= `candidate:${event.createdAt}`
+    const segmentId = activeCandidateSegmentId
+
     void port.upsertTranscript({
-      segmentId: `candidate:${event.createdAt}`,
+      segmentId,
       speaker: 'candidate',
       text: event.transcript,
       status: event.isFinal ? 'final' : 'partial',
@@ -276,6 +298,7 @@ function attachTranscriptPersistence(
     })
 
     if (event.isFinal) {
+      activeCandidateSegmentId = null
       const userData = session.userData
       userData.candidateTurnCount += 1
       onBudgetCheck?.()
@@ -305,21 +328,14 @@ function attachTranscriptPersistence(
       return
     }
 
-    const speaker =
-      event.item.role === 'user'
-        ? 'candidate'
-        : event.item.role === 'assistant'
-          ? 'agent'
-          : null
+    const speaker = resolveConversationItemSpeaker(event.item.role)
 
     if (!speaker) {
       return
     }
 
-    if (speaker === 'agent') {
-      session.userData.agentTurnCount += 1
-      onBudgetCheck?.()
-    }
+    session.userData.agentTurnCount += 1
+    onBudgetCheck?.()
 
     void port.upsertTranscript({
       segmentId: event.item.id,
@@ -440,7 +456,20 @@ async function startSession(ctx: JobContext) {
   const participantMetadata = parseCandidateMetadata(participant.metadata)
   const sessionId = participantMetadata.sessionId
   const port = createAgentSessionPort({ sessionId, logger })
-  const remoteConfig = await port.fetchConfig()
+  // Abort rather than silently interviewing on default prompts: a BYOK org's
+  // template, persona and models all come from this call.
+  let remoteConfig: Awaited<ReturnType<typeof port.fetchConfig>>
+  try {
+    remoteConfig = await port.fetchConfig()
+  } catch (error) {
+    await port.appendEvent(
+      'agent-config-fetch-failed',
+      `Interview config could not be loaded: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+    throw error
+  }
   const config = buildAgentTemplateConfig(remoteConfig)
   const videoInputEnabled = isAgentVideoInputEnabled()
   const candidateName =
@@ -643,7 +672,8 @@ async function runInterviewSession(args: {
     apiKeys: (() => {
       const resolved = tryResolveWorkspaceApiKeys(
         remoteConfig?.providerKeys,
-        runtimeEnv.KYMA_ENCRYPTION_KEY
+        runtimeEnv.KYMA_ENCRYPTION_KEY,
+        remoteConfig?.orgId
       )
       if (resolved.error) {
         logger.error({
@@ -660,12 +690,13 @@ async function runInterviewSession(args: {
     })(),
   })
 
+  const isRedispatch = isRedispatchState(remoteConfig?.sessionState)
   const session = new voice.AgentSession<InterviewUserData>({
     userData: {
-      phase: 'warmup',
+      phase: isRedispatch ? 'screening' : 'warmup',
       simulationStarted: false,
-      candidateTurnCount: 0,
-      agentTurnCount: 0,
+      candidateTurnCount: remoteConfig?.candidateTurnCount ?? 0,
+      agentTurnCount: remoteConfig?.agentTurnCount ?? 0,
       budgetEnforced: false,
     },
     ...(runtimeModel.mode === 'realtime'
@@ -722,7 +753,11 @@ async function runInterviewSession(args: {
     logger,
     port,
     getActiveDurationMs: async () => {
-      const latestConfig = await port.fetchConfig()
+      // Tolerant here by design: this runs from a 30s poller invoked as
+      // `void checkBudget(...)`, so a throw would surface as an unhandled
+      // rejection and kill the worker process - taking every concurrent
+      // interview with it. The hard-fail belongs at session bootstrap only.
+      const latestConfig = await port.fetchConfig().catch(() => null)
       return (
         latestConfig?.activeDurationMs ?? remoteConfig?.activeDurationMs ?? 0
       )
@@ -862,47 +897,74 @@ When live video is available, call recordVisualObservation at most once per mean
     await session.close()
   })
 
-  const welcomeInstructions = `
+  if (isRedispatch) {
+    // Resume without replaying the full welcome: candidate already heard it.
+    // A short re-entry keeps continuity and avoids resetting the turn budget.
+    session.userData.phase = 'screening'
+    await session.say(
+      `Welcome back, ${candidateName}. Looks like we had a brief reconnection — we'll pick up where we left off. When you're ready, continue with your previous thought.`,
+      {
+        addToChatCtx: true,
+        allowInterruptions: true,
+      }
+    )
+    await port.appendEvent(
+      'agent-redispatch-resumed',
+      'Agent resumed after redispatch without replaying full welcome.'
+    )
+    logger.info({
+      event: 'agent.redispatch.resumed',
+      detail: 'Redispatch re-entry prompt sent; welcome skipped.',
+      participantIdentity,
+      sessionId,
+      meta: {
+        candidateTurnCount: session.userData.candidateTurnCount,
+        agentTurnCount: session.userData.agentTurnCount,
+      },
+    })
+  } else {
+    const welcomeInstructions = `
 Greet ${candidateName} warmly as the interviewer for the ${config.templateName} voice screening conversation.
 Explain this should take about ${config.targetDurationMinutes} minutes and focuses on how they communicate and perform in role-relevant scenarios.
 Ask them to settle in and tell you when they are ready to begin.
 Stay in the warm-up phase until they clearly say they are ready.
 `.trim()
 
-  try {
-    await session.generateReply({
-      instructions: welcomeInstructions,
-    })
-  } catch (error) {
-    logger.warn({
-      event: 'agent.ready-check.generate-reply.failed',
-      detail: 'Falling back to scripted welcome prompt.',
-      sessionId,
-      error,
-    })
+    try {
+      await session.generateReply({
+        instructions: welcomeInstructions,
+      })
+    } catch (error) {
+      logger.warn({
+        event: 'agent.ready-check.generate-reply.failed',
+        detail: 'Falling back to scripted welcome prompt.',
+        sessionId,
+        error,
+      })
 
-    await session.say(
-      `Hi ${candidateName}, welcome. I am your interviewer for this voice screening conversation. This should take about ${config.targetDurationMinutes} minutes, and it will focus on how you communicate and handle role-relevant scenarios. Please take a moment to settle in, and whenever you are ready, just tell me you are ready to begin.`,
-      {
-        addToChatCtx: true,
-        allowInterruptions: true,
-      }
+      await session.say(
+        `Hi ${candidateName}, welcome. I am your interviewer for this voice screening conversation. This should take about ${config.targetDurationMinutes} minutes, and it will focus on how you communicate and handle role-relevant scenarios. Please take a moment to settle in, and whenever you are ready, just tell me you are ready to begin.`,
+        {
+          addToChatCtx: true,
+          allowInterruptions: true,
+        }
+      )
+    }
+
+    session.userData.phase = 'warmup'
+
+    await port.appendEvent(
+      'agent-ready-check-sent',
+      'Interviewer welcomed the candidate and asked for readiness before screening began.'
     )
+
+    logger.info({
+      event: 'agent.ready-check.sent',
+      detail: 'Initial welcome and readiness prompt was sent.',
+      participantIdentity,
+      sessionId,
+    })
   }
-
-  session.userData.phase = 'warmup'
-
-  await port.appendEvent(
-    'agent-ready-check-sent',
-    'Interviewer welcomed the candidate and asked for readiness before screening began.'
-  )
-
-  logger.info({
-    event: 'agent.ready-check.sent',
-    detail: 'Initial welcome and readiness prompt was sent.',
-    participantIdentity,
-    sessionId,
-  })
 }
 
 export default defineAgent({

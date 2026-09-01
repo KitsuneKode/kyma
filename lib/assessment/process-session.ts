@@ -11,6 +11,10 @@ import {
 
 import { buildHybridAssessmentReport } from './llm-report'
 import {
+  hardGateNamesFrom,
+  resolveRubricDimensions,
+} from '@/lib/rubric/resolve-rubric'
+import {
   buildAssessmentReport,
   type AssessmentComputation,
 } from './report-engine'
@@ -96,13 +100,25 @@ export async function processInterviewAssessment(
     throw new Error('Session detail is unavailable for assessment processing.')
   }
 
-  if (detail.report?.status === 'completed') {
+  // Both statuses are terminal. Re-scoring a `manual_review` report would pay
+  // for another model call and could silently flip a human-routed review back
+  // to `completed`. This matches the guard in `markAssessmentProcessing`.
+  if (
+    detail.report?.status === 'completed' ||
+    detail.report?.status === 'manual_review'
+  ) {
     logger.info({
       event: 'assessment.processing.skip',
-      detail: 'Report already completed; skipping duplicate processing.',
+      detail: `Report already ${detail.report.status}; skipping duplicate processing.`,
     })
     return null
   }
+
+  // One cast, one source of truth. Three separate casts of this value let the
+  // LLM-failure fallback below score against the DEFAULT rubric while the save
+  // recorded the TEMPLATE's gate names - a report that actively misled.
+  const rubricConfig = detail.template.rubricConfig as RubricConfig | undefined
+  const rubricDimensions = resolveRubricDimensions(rubricConfig)
 
   const reviewInput = {
     sessionId: `${sessionId}`,
@@ -132,7 +148,7 @@ export async function processInterviewAssessment(
   try {
     const hybrid = await buildHybridAssessmentReport({
       input: reviewInput,
-      rubricConfig: detail.template.rubricConfig as RubricConfig | undefined,
+      rubricConfig,
       modelId: scoringModelId,
       providerOptions,
     })
@@ -164,7 +180,7 @@ export async function processInterviewAssessment(
       detail: message,
     })
 
-    const deterministic = buildAssessmentReport(reviewInput)
+    const deterministic = buildAssessmentReport(reviewInput, rubricConfig)
     report = {
       ...deterministic,
       status:
@@ -185,6 +201,9 @@ export async function processInterviewAssessment(
     summary: report.summary,
     weightedScore: report.weightedScore,
     hardGateTriggered: report.hardGateTriggered,
+    // Captured at scoring time so the review UI stars the gates that actually
+    // applied, rather than re-deriving from a template that may have changed.
+    hardGateDimensions: hardGateNamesFrom(rubricDimensions),
     topStrengths: report.topStrengths,
     topConcerns: report.topConcerns,
     transcriptQualityNote: report.transcriptQualityNote,

@@ -18,6 +18,7 @@ export const saveAssessmentReportFields = {
   summary: v.optional(v.string()),
   weightedScore: v.optional(v.number()),
   hardGateTriggered: v.optional(v.boolean()),
+  hardGateDimensions: v.optional(v.array(v.string())),
   topStrengths: v.optional(v.array(v.string())),
   topConcerns: v.optional(v.array(v.string())),
   transcriptQualityNote: v.optional(v.string()),
@@ -73,6 +74,18 @@ export async function persistAssessmentReport(
     .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
     .first()
 
+  // A report that already reached a terminal status must never be downgraded to
+  // `failed` by a straggler from an earlier, slower run - that would replace a
+  // real result (or a human-routed review) with a processing error.
+  const TERMINAL_REPORT_STATUSES = new Set(['completed', 'manual_review'])
+  if (
+    existingReport &&
+    args.status === 'failed' &&
+    TERMINAL_REPORT_STATUSES.has(existingReport.status)
+  ) {
+    return existingReport._id
+  }
+
   const reportFields = {
     orgId,
     sessionId: args.sessionId,
@@ -82,6 +95,7 @@ export async function persistAssessmentReport(
     summary: args.summary,
     weightedScore: args.weightedScore,
     hardGateTriggered: args.hardGateTriggered,
+    hardGateDimensions: args.hardGateDimensions,
     topStrengths: args.topStrengths,
     topConcerns: args.topConcerns,
     transcriptQualityNote: args.transcriptQualityNote,

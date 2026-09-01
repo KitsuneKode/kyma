@@ -11,6 +11,14 @@ import {
 import { logAuditEvent } from './helpers/audit'
 
 const DELETE_BATCH = 40
+/**
+ * Ceiling on rows touched per invocation. Convex mutations are transactions
+ * with document read/write limits; an unbounded drain over 40 sessions x 7
+ * child tables aborts the whole transaction on real data, rolls back, and
+ * makes ZERO progress on every retry. Staying under the limit and
+ * rescheduling is what guarantees forward progress.
+ */
+const ROW_BUDGET_PER_RUN = 2_000
 
 async function collectSubjectSessionIds(
   ctx: QueryCtx | MutationCtx,
@@ -235,9 +243,15 @@ export const deleteSubjectData = internalMutation({
       subjectEmail: args.subjectEmail,
       subjectUserId: args.subjectUserId,
     })
-    const start = args.cursor ?? 0
-    const slice = sessionIds.slice(start, start + DELETE_BATCH)
+    // `collectSubjectSessionIds` is recomputed on every continuation and the
+    // previous pass already deleted its sessions, so the list shrinks between
+    // runs. Offsetting into it with an absolute cursor therefore SKIPPED
+    // sessions - and reported `done` while subject data remained. Always take
+    // from the head and let the shrinking list terminate the loop.
+    const slice = sessionIds.slice(0, DELETE_BATCH)
     let deletedSessions = 0
+    let rowsTouched = 0
+    let budgetExhausted = false
 
     for (const sessionId of slice) {
       const session = await ctx.db.get(sessionId)
@@ -245,72 +259,114 @@ export const deleteSubjectData = internalMutation({
         continue
       }
 
-      const [transcript, events, evidence, notes, chat, decisions, recordings] =
-        await Promise.all([
-          ctx.db
-            .query('transcriptSegments')
-            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('sessionEvents')
-            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('dimensionEvidence')
-            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('recruiterNotes')
-            .withIndex('by_session_and_created_at', (q) =>
-              q.eq('sessionId', session._id)
-            )
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('reportChatMessages')
-            .withIndex('by_session_and_created_at', (q) =>
-              q.eq('sessionId', session._id)
-            )
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('reviewDecisions')
-            .withIndex('by_session_and_created_at', (q) =>
-              q.eq('sessionId', session._id)
-            )
-            .take(DELETE_BATCH),
-          ctx.db
-            .query('recordingArtifacts')
-            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-            .take(DELETE_BATCH),
-        ])
+      // Drain child rows within the run's remaining budget. `drained` reports
+      // whether this session still has rows left, so the session document is
+      // only removed once its children are gone - never orphaning them.
+      const drainSessionChildRows = async () => {
+        while (rowsTouched < ROW_BUDGET_PER_RUN) {
+          const [
+            transcript,
+            events,
+            evidence,
+            notes,
+            chat,
+            decisions,
+            recordings,
+            observations,
+          ] = await Promise.all([
+            ctx.db
+              .query('transcriptSegments')
+              .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('sessionEvents')
+              .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('dimensionEvidence')
+              .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('recruiterNotes')
+              .withIndex('by_session_and_created_at', (q) =>
+                q.eq('sessionId', session._id)
+              )
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('reportChatMessages')
+              .withIndex('by_session_and_created_at', (q) =>
+                q.eq('sessionId', session._id)
+              )
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('reviewDecisions')
+              .withIndex('by_session_and_created_at', (q) =>
+                q.eq('sessionId', session._id)
+              )
+              .take(DELETE_BATCH),
+            ctx.db
+              .query('recordingArtifacts')
+              .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+              .take(DELETE_BATCH),
+            // Agent-written observations describe the candidate's appearance
+            // and behaviour. Omitting this table left PII behind after a DSR
+            // reported completion.
+            ctx.db
+              .query('visualObservations')
+              .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+              .take(DELETE_BATCH),
+          ])
+
+          const batch = [
+            ...transcript,
+            ...events,
+            ...evidence,
+            ...notes,
+            ...chat,
+            ...decisions,
+            ...recordings,
+            ...observations,
+          ]
+
+          if (batch.length === 0) {
+            return true
+          }
+
+          for (const row of batch) {
+            await ctx.db.delete(row._id)
+            rowsTouched += 1
+          }
+        }
+
+        return false
+      }
+
+      const childRowsDrained = await drainSessionChildRows()
+      if (!childRowsDrained) {
+        // Budget exhausted mid-session: stop here and continue next run. The
+        // session row stays so its remaining children are still reachable.
+        budgetExhausted = true
+        break
+      }
 
       const report = await ctx.db
         .query('assessmentReports')
         .withIndex('by_session', (q) => q.eq('sessionId', session._id))
         .first()
 
-      for (const row of [
-        ...transcript,
-        ...events,
-        ...evidence,
-        ...notes,
-        ...chat,
-        ...decisions,
-        ...recordings,
-      ]) {
-        await ctx.db.delete(row._id)
-      }
       if (report) {
         await ctx.db.delete(report._id)
+        rowsTouched += 1
       }
+
       await ctx.db.delete(session._id)
       deletedSessions += 1
     }
 
-    const nextCursor = start + slice.length
-    if (nextCursor < sessionIds.length) {
+    if (budgetExhausted || sessionIds.length > slice.length) {
       await ctx.scheduler.runAfter(0, internal.compliance.deleteSubjectData, {
         ...args,
-        cursor: nextCursor,
+        cursor: 0,
       })
       return { done: false, deletedSessions }
     }

@@ -6,7 +6,7 @@ import { Bar, BarChart, Cell, XAxis, YAxis } from 'recharts'
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
 import { ChartEmptyState } from '@/components/recruiter/chart-states'
 import { formatDimensionLabel } from '@/lib/recruiter/format'
-import { isDefaultHardGateDimension } from '@/lib/rubric/constants'
+import { isReportHardGateDimension } from '@/lib/rubric/resolve-rubric'
 import { scoreColor } from '@/lib/ui/score-format'
 
 const chartConfig = {
@@ -24,14 +24,6 @@ type RubricScoreBarsChartProps = {
   hardGateDimensions?: string[]
 }
 
-function isHardGateDimension(
-  dimension: string,
-  hardGateDimensions?: string[]
-): boolean {
-  if (hardGateDimensions?.includes(dimension)) return true
-  return isDefaultHardGateDimension(dimension)
-}
-
 export function RubricScoreBarsChart({
   dimensionScores,
   hardGateDimensions,
@@ -39,7 +31,10 @@ export function RubricScoreBarsChart({
   const data = useMemo(() => {
     return dimensionScores
       .map((item) => {
-        const hardGate = isHardGateDimension(item.dimension, hardGateDimensions)
+        const hardGate = isReportHardGateDimension(
+          item.dimension,
+          hardGateDimensions
+        )
         const baseLabel = formatDimensionLabel(item.dimension)
         return {
           dimension: item.dimension,

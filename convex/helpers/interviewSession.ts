@@ -1,5 +1,7 @@
 import { ConvexError } from 'convex/values'
 
+import { maxActiveDurationMs } from '../../lib/interview/session-purpose'
+
 import type { Doc, Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import { transitionSessionSafely } from '../../lib/interview/session-machine'
@@ -225,9 +227,17 @@ export async function applySessionStateTransition(
     ].includes(nextState) &&
     session.lastLiveStartedAt
   ) {
-    patch.activeDurationMs =
-      (session.activeDurationMs ?? 0) +
-      durationBetween(session.lastLiveStartedAt, nowIso)
+    // Clamp the live segment to the session's own budget. A session abandoned
+    // in `live` and finalized later (by the reaper, or a delayed webhook)
+    // otherwise accrues the entire wall-clock gap - observed at ~61 days per
+    // session against a live deployment. Harmless as a display value, but this
+    // number is now metered and billed, so it must reflect a duration the
+    // session could physically have had.
+    const segmentMs = Math.min(
+      durationBetween(session.lastLiveStartedAt, nowIso),
+      maxActiveDurationMs(session.sessionPurpose)
+    )
+    patch.activeDurationMs = (session.activeDurationMs ?? 0) + segmentMs
     patch.lastLiveStartedAt = undefined
   }
 

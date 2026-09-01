@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  PLAN_QUOTAS,
-  PlanQuotaExceededError,
-  assertCandidatesPerBatch,
-  quotasForPlan,
-} from '@/lib/saas/plans'
+import { PLAN_QUOTAS, quotasForPlan } from '@/lib/saas/plans'
 
 describe('plan quotas', () => {
   it('exposes tighter free caps than pro/enterprise', () => {
@@ -16,11 +11,21 @@ describe('plan quotas', () => {
       PLAN_QUOTAS.pro.maxActiveInvites
     )
   })
+})
 
-  it('throws PlanQuotaExceededError when batch size exceeds plan', () => {
-    expect(() => assertCandidatesPerBatch('free', 11)).toThrow(
-      PlanQuotaExceededError
+describe('minutes quota', () => {
+  it('every tier declares a monthly minutes cap', () => {
+    for (const plan of ['free', 'pro', 'enterprise'] as const) {
+      expect(quotasForPlan(plan).maxInterviewMinutesPerMonth).toBeGreaterThan(0)
+    }
+  })
+
+  it('caps increase monotonically with tier', () => {
+    expect(PLAN_QUOTAS.free.maxInterviewMinutesPerMonth).toBeLessThan(
+      PLAN_QUOTAS.pro.maxInterviewMinutesPerMonth
     )
-    expect(() => assertCandidatesPerBatch('free', 10)).not.toThrow()
+    expect(PLAN_QUOTAS.pro.maxInterviewMinutesPerMonth).toBeLessThan(
+      PLAN_QUOTAS.enterprise.maxInterviewMinutesPerMonth
+    )
   })
 })

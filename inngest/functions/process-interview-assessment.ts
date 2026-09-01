@@ -28,6 +28,9 @@ export const processInterviewAssessmentFunction = inngest.createFunction(
     const typedSessionId = sessionId as Id<'interviewSessions'>
 
     try {
+      // SCORING_TIMEOUT_MS is 90s inside generateLlmAssessmentReport; this step
+      // inherits that bound. Inngest's per-step timeout is configured at the
+      // function level when needed - AbortSignal covers the BYOK stall case.
       return await step.run('generate-assessment-report', async () => {
         return await processInterviewAssessment(typedSessionId, 'inngest')
       })

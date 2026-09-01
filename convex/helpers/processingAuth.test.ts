@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 import {
   allowsLocalProcessingKeyFallback,
@@ -23,13 +23,27 @@ describe('processingAuth', () => {
     expect(hasTrustedProcessingKeyForEnv(env, '')).toBe(false)
   })
 
-  test('allows local empty-key fallback only in clear development', () => {
-    const env = { NODE_ENV: 'development' as const }
+  test('requires BOTH signals before trusting an empty key', () => {
+    // NODE_ENV alone is not enough: the validated shim defaults it to
+    // 'development', so a deployment that simply never set its env vars would
+    // otherwise trust an empty key from an anonymous caller.
+    const nodeEnvOnly = { NODE_ENV: 'development' as const }
+    expect(allowsLocalProcessingKeyFallback(nodeEnvOnly)).toBe(false)
+    expect(hasTrustedProcessingKeyForEnv(nodeEnvOnly, '')).toBe(false)
+  })
+
+  test('allows local empty-key fallback in clear development', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    const env = {
+      NODE_ENV: 'development' as const,
+      KYMA_DEPLOYMENT_ENV: 'development' as const,
+    }
     expect(allowsLocalProcessingKeyFallback(env)).toBe(true)
     expect(hasTrustedProcessingKeyForEnv(env, undefined)).toBe(true)
     expect(hasTrustedProcessingKeyForEnv(env, '')).toBe(true)
     expect(hasTrustedProcessingKeyForEnv(env, '__dev_preview__')).toBe(true)
     expect(hasTrustedProcessingKeyForEnv(env, 'other')).toBe(false)
+    vi.unstubAllEnvs()
   })
 
   test('does not allow empty-key fallback in test NODE_ENV without a key', () => {

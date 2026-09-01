@@ -163,6 +163,15 @@ export async function POST(request: NextRequest) {
 
     const status = message === 'RATE_LIMITED' ? 429 : 400
 
-    return NextResponse.json({ error: message }, { status })
+    return NextResponse.json(
+      {
+        error:
+          status === 429
+            ? message
+            : 'Unable to submit this interview right now. Please try again.',
+        requestId,
+      },
+      { status }
+    )
   }
 }

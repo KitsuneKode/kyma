@@ -27,6 +27,7 @@ async function buildDashboardPayload(
   const [
     manualReviewReports,
     pendingReports,
+    terminalReportGroups,
     activeSessionGroups,
     recentSessions,
     invitesSample,
@@ -37,13 +38,32 @@ async function buildDashboardPayload(
       .withIndex('by_org_id_and_status', (q) =>
         q.eq('orgId', orgId).eq('status', 'manual_review')
       )
+      .order('desc')
       .take(MAX_MANUAL_REVIEW_CANDIDATES),
     ctx.db
       .query('assessmentReports')
       .withIndex('by_org_id_and_status', (q) =>
         q.eq('orgId', orgId).eq('status', 'pending')
       )
+      .order('desc')
       .take(MAX_PENDING_REPORTS),
+    // Terminal reports are not review work, but a session that has one is NOT
+    // stale. Without them the attention list flagged every completed interview
+    // as a problem needing attention.
+    Promise.all(
+      (['completed', 'manual_review', 'failed'] as const).map((status) =>
+        ctx.db
+          .query('assessmentReports')
+          .withIndex('by_org_id_and_status', (q) =>
+            q.eq('orgId', orgId).eq('status', status)
+          )
+          // Newest-first, to match `recentSessions`. Ascending order would
+          // sample the OLDEST terminal reports, leaving the recent sessions
+          // unmatched and re-flagging every completed interview as stale.
+          .order('desc')
+          .take(DASHBOARD_SESSION_SAMPLE)
+      )
+    ),
     Promise.all(
       ACTIVE_SESSION_STATES.map((state) =>
         ctx.db
@@ -71,6 +91,11 @@ async function buildDashboardPayload(
   ])
 
   const reports = [...manualReviewReports, ...pendingReports]
+  const reportedSessionIds = new Set(
+    [...reports, ...terminalReportGroups.flat()].map(
+      (report) => `${report.sessionId}`
+    )
+  )
   const sessions = recentSessions
   const invites = invitesSample
   const activeSessions = activeSessionGroups.flat().length
@@ -83,10 +108,6 @@ async function buildDashboardPayload(
     if (!session.startedAt) return false
     return new Date(session.startedAt).toDateString() === todayDateString
   }).length
-
-  const reportBySession = new Map(
-    reports.map((report) => [`${report.sessionId}`, report])
-  )
 
   const manualReviewSlice = manualReviewReports.slice(
     0,
@@ -151,7 +172,7 @@ async function buildDashboardPayload(
           isStaleSessionWithoutReport(
             session.startedAt,
             staleBeforeMs,
-            reportBySession.has(`${session._id}`)
+            reportedSessionIds.has(`${session._id}`)
           )
         )
         .slice(0, MAX_ATTENTION_ITEMS)

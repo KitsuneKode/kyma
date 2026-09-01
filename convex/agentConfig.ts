@@ -52,6 +52,9 @@ const interviewAgentConfigValidator = v.object({
   maxActiveDurationMs: v.number(),
   maxCandidateTurns: v.number(),
   maxAgentTurns: v.number(),
+  candidateTurnCount: v.number(),
+  agentTurnCount: v.number(),
+  orgId: v.string(),
 })
 
 export const getInterviewAgentConfig = pipelineQuery({
@@ -85,6 +88,20 @@ export const getInterviewAgentConfig = pipelineQuery({
       .withIndex('by_org_id', (q) => q.eq('orgId', invite.orgId))
       .first()
 
+    // Seed turn counters from persisted transcript so a redispatch does not reset
+    // the budget. Counts are final segments only; partials are not counted.
+    const segments = await ctx.db
+      .query('transcriptSegments')
+      .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
+      .collect()
+    let candidateTurnCount = 0
+    let agentTurnCount = 0
+    for (const segment of segments) {
+      if (segment.status !== 'final') continue
+      if (segment.speaker === 'candidate') candidateTurnCount += 1
+      else if (segment.speaker === 'agent') agentTurnCount += 1
+    }
+
     return {
       templateName: template.name,
       targetDurationMinutes: policy.targetDurationMinutes,
@@ -104,6 +121,9 @@ export const getInterviewAgentConfig = pipelineQuery({
       maxActiveDurationMs: maxActiveDurationMs(sessionPurpose),
       maxCandidateTurns: budget.maxCandidateTurns,
       maxAgentTurns: budget.maxAgentTurns,
+      candidateTurnCount,
+      agentTurnCount,
+      orgId: invite.orgId,
     }
   },
 })

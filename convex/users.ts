@@ -1,11 +1,12 @@
 import { ConvexError, v } from 'convex/values'
 
+import { hasConfiguredWebhookKey } from './helpers/processingAuth'
+
 import { internalMutation, mutation } from './_generated/server'
 import {
   clerkIdFromIdentity,
   ensureUserForIdentity,
 } from './helpers/clerkIdentity'
-import { convexEnv } from '../lib/env/convex'
 
 /** Ensures a Convex `users` row exists for the signed-in Clerk account (webhook fallback). */
 export const ensureCurrentUser = mutation({
@@ -38,8 +39,11 @@ export const upsertInternal = internalMutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        email: args.email,
-        name: args.name,
+        // Clerk sends partial payloads and Convex deletes fields patched to
+        // `undefined`. Losing `email` would break `by_candidate_email`, which
+        // is the subject lookup GDPR erasure depends on.
+        ...(args.email !== undefined ? { email: args.email } : {}),
+        ...(args.name !== undefined ? { name: args.name } : {}),
         updatedAt: now,
       })
       return existing._id
@@ -47,8 +51,8 @@ export const upsertInternal = internalMutation({
 
     return await ctx.db.insert('users', {
       clerkId: args.clerkId,
-      email: args.email,
-      name: args.name,
+      ...(args.email !== undefined ? { email: args.email } : {}),
+      ...(args.name !== undefined ? { name: args.name } : {}),
       role: defaultRole,
       createdAt: now,
       updatedAt: now,
@@ -68,13 +72,9 @@ export const syncFromClerkWebhook = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const expectedKey = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
-    if (!expectedKey) {
-      throw new ConvexError(
-        'KYMA_PROCESSING_WRITE_KEY is required for Clerk webhook sync.'
-      )
-    }
-    if (args.writeKey !== expectedKey) {
+    // Shared, constant-time, fail-closed guard - a third local copy of this
+    // comparison was the last non-constant-time one in the codebase.
+    if (!hasConfiguredWebhookKey(args.writeKey)) {
       throw new ConvexError('Invalid write key for Clerk webhook sync.')
     }
 
@@ -92,8 +92,11 @@ export const syncFromClerkWebhook = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        email: args.email,
-        name: args.name,
+        // Clerk sends partial payloads and Convex deletes fields patched to
+        // `undefined`. Losing `email` would break `by_candidate_email`, which
+        // is the subject lookup GDPR erasure depends on.
+        ...(args.email !== undefined ? { email: args.email } : {}),
+        ...(args.name !== undefined ? { name: args.name } : {}),
         ...(args.preferredWorkspace
           ? { preferredWorkspace: args.preferredWorkspace }
           : {}),
@@ -104,8 +107,8 @@ export const syncFromClerkWebhook = mutation({
 
     return await ctx.db.insert('users', {
       clerkId: args.clerkId,
-      email: args.email,
-      name: args.name,
+      ...(args.email !== undefined ? { email: args.email } : {}),
+      ...(args.name !== undefined ? { name: args.name } : {}),
       preferredWorkspace: args.preferredWorkspace,
       role: 'candidate',
       createdAt: now,

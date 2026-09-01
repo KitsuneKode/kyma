@@ -46,15 +46,19 @@ async function getCryptoKey() {
   )
 }
 
-export async function encryptProviderKey(plaintext: string) {
+export async function encryptProviderKey(plaintext: string, aad?: string) {
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
   const cryptoKey = await getCryptoKey()
   const encodedPlaintext = new TextEncoder().encode(plaintext)
+  const additionalData = aad?.trim()
+    ? new TextEncoder().encode(aad.trim())
+    : undefined
   const encrypted = await crypto.subtle.encrypt(
     {
       name: 'AES-GCM',
       iv,
-    },
+      ...(additionalData ? { additionalData } : {}),
+    } as AesGcmParams,
     cryptoKey,
     encodedPlaintext
   )
@@ -67,15 +71,33 @@ export async function encryptProviderKey(plaintext: string) {
 export async function decryptProviderKey(args: {
   encryptedKey: string
   iv: string
+  aad?: string
 }) {
   const cryptoKey = await getCryptoKey()
-  const decrypted = await crypto.subtle.decrypt(
-    {
+  const aad = args.aad?.trim()
+  const additionalData = aad ? new TextEncoder().encode(aad) : undefined
+  const tryDecrypt = async (withAad: boolean) => {
+    const params: AesGcmParams = {
       name: 'AES-GCM',
       iv: base64ToBytes(args.iv),
-    },
-    cryptoKey,
-    base64ToBytes(args.encryptedKey)
-  )
-  return new TextDecoder().decode(decrypted)
+      ...(withAad && additionalData ? { additionalData } : {}),
+    }
+    const decrypted = await crypto.subtle.decrypt(
+      params,
+      cryptoKey,
+      base64ToBytes(args.encryptedKey)
+    )
+    return new TextDecoder().decode(decrypted)
+  }
+
+  if (aad) {
+    try {
+      return await tryDecrypt(true)
+    } catch {
+      // Fallback for keys encrypted before AAD binding was added.
+      return await tryDecrypt(false)
+    }
+  }
+
+  return await tryDecrypt(false)
 }

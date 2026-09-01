@@ -65,6 +65,7 @@ function buildEventKey(
 }
 
 async function syncSubscription(args: {
+  eventAt?: number
   eventType: string
   eventKey: string
   data: SubscriptionLike
@@ -91,7 +92,7 @@ async function syncSubscription(args: {
     catalog,
   })
 
-  await fetchMutation(api.billing.applyDodoSubscriptionEvent, {
+  const result = await fetchMutation(api.billing.applyDodoSubscriptionEvent, {
     writeKey,
     eventKey: args.eventKey,
     eventType: args.eventType,
@@ -103,7 +104,19 @@ async function syncSubscription(args: {
     productId: args.data.product_id,
     currentPeriodEnd: periodEndMs(args.data.next_billing_date),
     cancelAtPeriodEnd: args.data.cancel_at_next_billing_date,
+    eventAt: args.eventAt,
   })
+
+  // The org has not been mirrored from Clerk yet (a subscription webhook can
+  // arrive before organization.created). Throwing makes the adapter return a
+  // non-2xx so Dodo redelivers; the event was intentionally not recorded, so
+  // the retry will apply cleanly once the org exists. A `duplicate` result is
+  // benign and must NOT trigger a retry.
+  if (!result.applied && result.reason === 'org_not_mirrored') {
+    throw new Error(
+      `Organization ${clerkOrgId} is not mirrored yet; retry this billing event.`
+    )
+  }
 }
 
 async function handleSubscriptionPayload(payload: {
@@ -115,6 +128,7 @@ async function handleSubscriptionPayload(payload: {
     await syncSubscription({
       eventType: payload.type,
       eventKey: buildEventKey(payload.type, payload.data, payload.timestamp),
+      eventAt: new Date(payload.timestamp).getTime(),
       data: payload.data,
     })
   } catch (error) {

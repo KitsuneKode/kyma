@@ -52,6 +52,8 @@ export default defineSchema({
     billingCurrentPeriodEnd: v.optional(v.number()),
     billingCancelAtPeriodEnd: v.optional(v.boolean()),
     billingUpdatedAt: v.optional(v.number()),
+    /** Timestamp of the newest billing event applied; guards out-of-order replay. */
+    billingEventAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -172,6 +174,7 @@ export default defineSchema({
   })
     .index('by_org_id', ['orgId'])
     .index('by_org_id_and_status', ['orgId', 'status'])
+    .index('by_org_id_and_created_at', ['orgId', 'createdAt'])
     .index('by_template', ['templateId']),
 
   candidateEligibility: defineTable({
@@ -233,11 +236,14 @@ export default defineSchema({
     emailLastError: v.optional(v.string()),
   })
     .index('by_org_id', ['orgId'])
+    .index('by_org_id_and_status', ['orgId', 'status'])
     .index('by_invite_token', ['inviteToken'])
     .index('by_status', ['status'])
     .index('by_candidate_email', ['candidateEmail'])
     .index('by_user', ['userId'])
-    .index('by_email_delivery_status', ['emailDeliveryStatus']),
+    .index('by_email_delivery_status', ['emailDeliveryStatus'])
+    .index('by_org_id_and_email_status', ['orgId', 'emailDeliveryStatus'])
+    .index('by_batch', ['batchId']),
 
   interviewSessions: defineTable({
     orgId: v.string(),
@@ -364,6 +370,12 @@ export default defineSchema({
     summary: v.optional(v.string()),
     weightedScore: v.optional(v.number()),
     hardGateTriggered: v.optional(v.boolean()),
+    /**
+     * The dimensions that actually gated THIS report, captured at scoring time.
+     * Stored rather than re-derived so a report rendered later reflects the
+     * rubric that was applied, not whatever the template says today.
+     */
+    hardGateDimensions: v.optional(v.array(v.string())),
     topStrengths: v.optional(v.array(v.string())),
     topConcerns: v.optional(v.array(v.string())),
     transcriptQualityNote: v.optional(v.string()),
@@ -502,6 +514,16 @@ export default defineSchema({
     updatedAt: v.number(),
     updatedBy: v.string(),
   }).index('by_org_id', ['orgId']),
+
+  /** Per-org, per-month usage rollup. The basis for plan caps and invoicing. */
+  orgUsageRollups: defineTable({
+    orgId: v.string(),
+    /** Calendar month in UTC, `YYYY-MM`. */
+    period: v.string(),
+    interviewCount: v.number(),
+    interviewMinutes: v.number(),
+    updatedAt: v.number(),
+  }).index('by_org_and_period', ['orgId', 'period']),
 
   agentWorkerHeartbeats: defineTable({
     workerId: v.string(),

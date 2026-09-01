@@ -3,6 +3,7 @@ import {
   isDefaultHardGateDimension,
 } from '@/lib/rubric/constants'
 import { computeWeightedScoreFromDimensions } from '@/lib/ui/score-format'
+import type { ResolvedRubricDimension } from '@/lib/rubric/resolve-rubric'
 
 export const HARD_GATE_SCORE_THRESHOLD = 2
 
@@ -22,16 +23,32 @@ export {
 
 import type { Confidence, Recommendation } from '@/lib/domain/recommendation'
 
-export function isHardGateDimension(dimension: string) {
+/**
+ * Whether a dimension gates the whole assessment.
+ *
+ * When an explicit rubric is supplied it is authoritative — including its
+ * ability to clear a gate that is on by default, and to gate a custom dimension
+ * the built-in list has never heard of. The default list applies only when no
+ * rubric was resolved at all.
+ */
+export function isHardGateDimension(
+  dimension: string,
+  dimensions?: ResolvedRubricDimension[]
+) {
+  if (dimensions && dimensions.length > 0) {
+    return dimensions.some((item) => item.name === dimension && item.isHardGate)
+  }
+
   return isDefaultHardGateDimension(dimension)
 }
 
 export function isHardGateTriggered(
-  dimensionScores: Array<{ dimension: string; score: number }>
+  dimensionScores: Array<{ dimension: string; score: number }>,
+  dimensions?: ResolvedRubricDimension[]
 ) {
   return dimensionScores.some(
     (item) =>
-      isHardGateDimension(item.dimension) &&
+      isHardGateDimension(item.dimension, dimensions) &&
       item.score <= HARD_GATE_SCORE_THRESHOLD
   )
 }
@@ -76,16 +93,71 @@ export function computeAssessmentWeightedScore(
     return computeWeightedScoreFromDimensions(dimensionScores) ?? 0
   }
 
-  const weightedRaw = dimensionScores.reduce((total, item, index) => {
-    const definitionWeight =
-      weights[item.dimension] ??
-      weights[dimensionScores[index]?.dimension ?? ''] ??
-      0
-    const normalizedWeight = definitionWeight / totalWeight
-    return total + item.score * normalizedWeight
+  const weightedRaw = dimensionScores.reduce((total, item) => {
+    const definitionWeight = weights[item.dimension] ?? 0
+    return total + item.score * (definitionWeight / totalWeight)
   }, 0)
 
-  return Number(weightedRaw.toFixed(2))
+  // Defence in depth. `resolveRubricDimensions` already rejects the inputs that
+  // can push this outside the band, but a score is a hiring signal - it must
+  // never render as NaN or as "23.0 out of 5.0" if a future caller bypasses
+  // the resolver.
+  if (!Number.isFinite(weightedRaw)) {
+    return computeWeightedScoreFromDimensions(dimensionScores) ?? 0
+  }
+
+  return Number(Math.min(5, Math.max(1, weightedRaw)).toFixed(2))
 }
 
 export { DEFAULT_HARD_GATE_DIMENSIONS }
+
+/**
+ * Derives every headline number on a report from the dimension scores and the
+ * template rubric.
+ *
+ * Both the deterministic engine and the LLM path go through here, so a
+ * recruiter's configured weights and hard gates have arithmetic effect rather
+ * than merely appearing in a prompt. The LLM's own self-reported score,
+ * recommendation and gate flag are advisory only — they are cross-checked
+ * against this result, never trusted as the answer.
+ */
+export function deriveAssessmentOutcome(args: {
+  dimensionScores: Array<{ dimension: string; score: number }>
+  dimensions: ResolvedRubricDimension[]
+  confidence: Confidence
+}): {
+  weightedScore: number
+  hardGateTriggered: boolean
+  overallRecommendation: Recommendation
+} {
+  // Normalize over the dimensions actually scored, not every dimension in the
+  // rubric. Dividing by the full rubric weight while summing only a subset
+  // depresses the score toward 0 and would render a partial model response as
+  // a near-reject rather than an incomplete one.
+  const scoredDimensionNames = new Set(
+    args.dimensionScores.map((item) => item.dimension)
+  )
+  const weights = Object.fromEntries(
+    args.dimensions
+      .filter((dimension) => scoredDimensionNames.has(dimension.name))
+      .map((dimension) => [dimension.name, dimension.weight])
+  )
+  const weightedScore = computeAssessmentWeightedScore(
+    args.dimensionScores,
+    weights
+  )
+  const hardGateTriggered = isHardGateTriggered(
+    args.dimensionScores,
+    args.dimensions
+  )
+
+  return {
+    weightedScore,
+    hardGateTriggered,
+    overallRecommendation: resolveRecommendation({
+      weightedScore,
+      confidence: args.confidence,
+      hardGateTriggered,
+    }),
+  }
+}

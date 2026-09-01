@@ -80,7 +80,7 @@ export const addProviderKey = orgAdminMutation({
       .query('workspaceSettings')
       .withIndex('by_org_id', (q) => q.eq('orgId', orgId))
       .first()
-    const encrypted = await encryptProviderKey(trimmedKey)
+    const encrypted = await encryptProviderKey(trimmedKey, orgId)
     const entry = {
       keyId,
       provider: normalizeProvider(args.provider),
@@ -349,6 +349,7 @@ export const testProviderConnection = action({
     const apiKey = await decryptProviderKey({
       encryptedKey: candidate.encryptedKey,
       iv: candidate.iv,
+      aad: orgId,
     })
     if (!apiKey?.trim()) {
       throw new ConvexError(

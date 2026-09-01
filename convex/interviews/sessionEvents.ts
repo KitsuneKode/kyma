@@ -40,7 +40,8 @@ export const appendSessionEvent = mutation({
       state,
     }
   ) => {
-    const session = hasTrustedProcessingKey(processingKey)
+    const isTrustedCaller = hasTrustedProcessingKey(processingKey)
+    const session = isTrustedCaller
       ? await ctx.db.get(sessionId)
       : (
           await requireInviteSessionWriteAccess(
@@ -56,14 +57,32 @@ export const appendSessionEvent = mutation({
 
     await assertSessionEventThrottle(ctx, sessionId)
 
+    // `source` decides whether a state write is permitted, so it must reflect
+    // who the caller actually is - never what they claim to be. Only a caller
+    // holding the processing key may declare a privileged source; an invite
+    // token authenticates a candidate and nothing more.
+    const resolvedSource = isTrustedCaller
+      ? (source ?? 'assessment-pipeline')
+      : 'candidate-client'
+
+    // Candidates may record events, never drive state. `isSessionStateWriteAllowed`
+    // is a denylist, so an unlisted terminal state like `failed` slipped
+    // through and let a candidate wedge their own interview: no report, no
+    // metering, and every later write refused. The invite path therefore
+    // carries no state at all - no client sends one today (verified across
+    // both browser call sites).
+    const resolvedState = isTrustedCaller
+      ? (state as InterviewSessionState | undefined)
+      : undefined
+
     return await insertSessionEventWithTransition(ctx, {
       session,
       sessionId,
       type,
       detail,
-      source: source ?? 'candidate-client',
+      source: resolvedSource,
       dedupeKey,
-      state: state as InterviewSessionState | undefined,
+      state: resolvedState,
     })
   },
 })

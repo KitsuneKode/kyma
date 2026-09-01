@@ -51,6 +51,7 @@ export function CandidateReviewWorkspace({
       dimensionScores={detail.report?.dimensionScores ?? []}
       weightedScore={detail.report?.weightedScore}
       hardGateTriggered={detail.report?.hardGateTriggered ?? false}
+      hardGateDimensions={detail.report?.hardGateDimensions}
       audioUrl={resolvedAudioUrl}
       recordingStartTime={primaryRecording?.startedAt}
     >

@@ -4,6 +4,7 @@ import type { Id } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import { isProductionDeployment } from '../../lib/env/deployment-mode'
 import { convexEnv } from '../../lib/env/convex'
+import { isExplicitDevelopmentEnv } from '../../lib/env/node-env'
 
 const DEV_PROCESSING_KEY = '__dev_preview__'
 
@@ -14,9 +15,21 @@ type ProcessingAuthEnv = {
 }
 
 /**
+ * True only when BOTH deployment signals explicitly say development.
+ *
+ * Delegates to the documented env adapter, which reads the RAW process value:
+ * `convexEnv.NODE_ENV` carries a zod `.default('development')`, so a guard
+ * reading the shim would treat an unset variable on a production Convex
+ * deployment as a development signal.
+ */
+export function isExplicitDevelopmentDeployment(env: ProcessingAuthEnv) {
+  return isExplicitDevelopmentEnv(env.KYMA_DEPLOYMENT_ENV)
+}
+
+/**
  * Local/dev empty-key bypass is allowed only when the deployment is clearly
- * development. Production and any non-dev Convex deployment must never trust
- * a missing `KYMA_PROCESSING_WRITE_KEY` (including empty caller keys).
+ * development on BOTH signals. Production and any deployment that merely
+ * omitted its env vars must never trust a missing `KYMA_PROCESSING_WRITE_KEY`.
  */
 export function allowsLocalProcessingKeyFallback(env: ProcessingAuthEnv) {
   if (
@@ -28,11 +41,27 @@ export function allowsLocalProcessingKeyFallback(env: ProcessingAuthEnv) {
     return false
   }
 
-  // Require an explicit development NODE_ENV — `test` and unset production
-  // signals stay fail-closed.
   return (
-    env.NODE_ENV === 'development' && !env.KYMA_PROCESSING_WRITE_KEY?.trim()
+    isExplicitDevelopmentDeployment(env) &&
+    !env.KYMA_PROCESSING_WRITE_KEY?.trim()
   )
+}
+
+/**
+ * Length-independent comparison so a shared secret cannot be recovered by
+ * timing a byte-by-byte prefix match.
+ */
+export function secretsMatch(left: string, right: string): boolean {
+  if (left.length !== right.length) {
+    return false
+  }
+
+  let mismatch = 0
+  for (let index = 0; index < left.length; index += 1) {
+    mismatch |= left.charCodeAt(index) ^ right.charCodeAt(index)
+  }
+
+  return mismatch === 0
 }
 
 export function hasTrustedProcessingKeyForEnv(
@@ -47,7 +76,7 @@ export function hasTrustedProcessingKeyForEnv(
     const normalized = processingKey?.trim() ?? ''
     return normalized === '' || normalized === DEV_PROCESSING_KEY
   }
-  return processingKey?.trim() === configured
+  return secretsMatch(processingKey?.trim() ?? '', configured)
 }
 
 export function hasTrustedProcessingKey(processingKey?: string) {
@@ -83,4 +112,19 @@ export async function resolveOrgIdForPipelineWrite(
   }
 
   return await requireSessionOrgId(ctx, sessionId)
+}
+
+/**
+ * Fail-closed guard for secret-bearing webhook endpoints (Clerk, Dodo).
+ *
+ * These are internet-reachable and grant billing and identity writes, so they
+ * require a CONFIGURED key in every deployment mode - the local empty-key
+ * convenience that `hasTrustedProcessingKey` allows must never apply to them.
+ */
+export function hasConfiguredWebhookKey(writeKey?: string) {
+  const configured = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
+  if (!configured) {
+    return false
+  }
+  return secretsMatch(writeKey?.trim() ?? '', configured)
 }

@@ -8,10 +8,15 @@ import {
   RadarChart,
 } from 'recharts'
 
-import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart'
 import { ChartEmptyState } from '@/components/recruiter/chart-states'
 import { formatDimensionLabel } from '@/lib/recruiter/format'
-import { isDefaultHardGateDimension } from '@/lib/rubric/constants'
+import { isReportHardGateDimension } from '@/lib/rubric/resolve-rubric'
 
 const chartConfig = {
   score: {
@@ -35,14 +40,6 @@ type RubricRadarChartProps = {
   hardGateDimensions?: string[]
 }
 
-function isHardGateDimension(
-  dimension: string,
-  hardGateDimensions?: string[]
-): boolean {
-  if (hardGateDimensions?.includes(dimension)) return true
-  return isDefaultHardGateDimension(dimension)
-}
-
 export function RubricRadarChart({
   dimensionScores,
   hardGateDimensions,
@@ -52,7 +49,7 @@ export function RubricRadarChart({
   }
 
   const data: RadarDatum[] = dimensionScores.map((d) => {
-    const hardGate = isHardGateDimension(d.dimension, hardGateDimensions)
+    const hardGate = isReportHardGateDimension(d.dimension, hardGateDimensions)
     const baseLabel = formatDimensionLabel(d.dimension)
     return {
       dimension: d.dimension,
@@ -78,7 +75,13 @@ export function RubricRadarChart({
             dataKey="label"
             tick={{ fontSize: 10, fontWeight: 500 }}
           />
-          <PolarRadiusAxis domain={[0, 5]} tick={false} axisLine={false} />
+          <PolarRadiusAxis
+            domain={[0, 5]}
+            tickCount={6}
+            tick={{ fontSize: 9 }}
+            axisLine={false}
+          />
+          <ChartTooltip content={<ChartTooltipContent />} />
           <Radar
             name="Score"
             dataKey="score"

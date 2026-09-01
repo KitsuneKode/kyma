@@ -101,6 +101,7 @@ export function hasReviewChatCredentials(args: {
   providerKeys?: WorkspaceProviderKey[]
   encryptionKey?: string
   platformEnv?: ProviderKeyEnv
+  aad?: string
 }): boolean {
   const provider = providerFromModelId(args.modelId)
   if (!provider) return false
@@ -122,6 +123,7 @@ export function hasReviewChatCredentials(args: {
       encryptedKey: keyRecord.encryptedKey,
       iv: keyRecord.iv,
       encryptionKey: args.encryptionKey,
+      aad: args.aad,
     }).trim()
     return Boolean(apiKey)
   } catch {
@@ -140,6 +142,7 @@ export function resolveReviewChatAttempt(args: {
   providerKeys?: WorkspaceProviderKey[]
   encryptionKey?: string
   platformEnv?: ProviderKeyEnv
+  aad?: string
 }): ReviewChatModelResolution {
   const modelId = resolveExplicitReviewChatModelId(
     args.workspaceDefaults,
@@ -161,6 +164,7 @@ export function resolveReviewChatAttempt(args: {
       providerKeys: args.providerKeys,
       encryptionKey: args.encryptionKey,
       platformEnv: args.platformEnv,
+      aad: args.aad,
     })
   ) {
     return {
@@ -215,6 +219,7 @@ export function decryptWorkspaceKey(args: {
   encryptedKey: string
   iv: string
   encryptionKey?: string
+  aad?: string
 }) {
   const key = args.encryptionKey?.trim()
   if (!key) {
@@ -230,18 +235,34 @@ export function decryptWorkspaceKey(args: {
   }
   const authTag = encryptedBytes.subarray(encryptedBytes.length - 16)
   const ciphertext = encryptedBytes.subarray(0, encryptedBytes.length - 16)
-  const decipher = createDecipheriv('aes-256-gcm', keyBytes, ivBytes)
-  decipher.setAuthTag(authTag)
-  const decrypted = Buffer.concat([
-    decipher.update(ciphertext),
-    decipher.final(),
-  ])
-  return decrypted.toString('utf8')
+  const tryDecrypt = (withAad: boolean) => {
+    const decipher = createDecipheriv('aes-256-gcm', keyBytes, ivBytes)
+    if (withAad && args.aad?.trim()) {
+      decipher.setAAD(Buffer.from(args.aad.trim()))
+    }
+    decipher.setAuthTag(authTag)
+    const decrypted = Buffer.concat([
+      decipher.update(ciphertext),
+      decipher.final(),
+    ])
+    return decrypted.toString('utf8')
+  }
+
+  if (args.aad?.trim()) {
+    try {
+      return tryDecrypt(true)
+    } catch {
+      return tryDecrypt(false)
+    }
+  }
+
+  return tryDecrypt(false)
 }
 
 export function resolveWorkspaceApiKeys(
   providerKeys?: WorkspaceProviderKey[],
-  encryptionKey?: string
+  encryptionKey?: string,
+  aad?: string
 ): {
   openai?: string
   google?: string
@@ -255,6 +276,7 @@ export function resolveWorkspaceApiKeys(
           encryptedKey: openaiRecord.encryptedKey,
           iv: openaiRecord.iv,
           encryptionKey,
+          aad,
         }).trim()
       : undefined,
     google: googleRecord
@@ -262,6 +284,7 @@ export function resolveWorkspaceApiKeys(
           encryptedKey: googleRecord.encryptedKey,
           iv: googleRecord.iv,
           encryptionKey,
+          aad,
         }).trim()
       : undefined,
   }
@@ -269,7 +292,8 @@ export function resolveWorkspaceApiKeys(
 
 export function tryResolveWorkspaceApiKeys(
   providerKeys?: WorkspaceProviderKey[],
-  encryptionKey?: string
+  encryptionKey?: string,
+  aad?: string
 ): {
   apiKeys: { openai?: string; google?: string }
   error?: string
@@ -279,7 +303,9 @@ export function tryResolveWorkspaceApiKeys(
   }
 
   try {
-    return { apiKeys: resolveWorkspaceApiKeys(providerKeys, encryptionKey) }
+    return {
+      apiKeys: resolveWorkspaceApiKeys(providerKeys, encryptionKey, aad),
+    }
   } catch (error) {
     return {
       apiKeys: {},
@@ -295,6 +321,7 @@ export function buildGatewayByokOptions(args: {
   modelId?: string
   providerKeys?: WorkspaceProviderKey[]
   encryptionKey?: string
+  aad?: string
 }) {
   const provider = providerFromModelId(args.modelId)
   if (!provider) return undefined
@@ -304,6 +331,7 @@ export function buildGatewayByokOptions(args: {
     encryptedKey: keyRecord.encryptedKey,
     iv: keyRecord.iv,
     encryptionKey: args.encryptionKey,
+    aad: args.aad,
   }).trim()
   if (!apiKey) return undefined
 

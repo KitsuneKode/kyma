@@ -62,19 +62,23 @@ export async function upsertTranscriptSegmentForSession(
       q.eq('sessionId', args.sessionId).eq('sourceSegmentId', sourceSegmentId)
     )
     .first()
+
+  // A partial written before its source id stabilised is found by exact start
+  // time. The previous fallback `.collect()`ed the whole session transcript on
+  // every miss, which made each new segment O(n) and the session O(n^2) - and
+  // it ran on the live write path for every STT partial.
   const match =
     indexedMatch ??
     (
       await ctx.db
         .query('transcriptSegments')
-        .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
-        .collect()
+        .withIndex('by_session_and_started_at', (q) =>
+          q.eq('sessionId', args.sessionId).eq('startedAt', args.startedAt)
+        )
+        .take(8)
     ).find(
       (segment) =>
-        segment.sourceSegmentId === sourceSegmentId ||
-        (segment.startedAt === args.startedAt &&
-          segment.speaker === args.speaker &&
-          segment.status === 'partial')
+        segment.speaker === args.speaker && segment.status === 'partial'
     )
 
   if (match) {

@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useAuth, useOrganization } from '@clerk/nextjs'
-import { useAction, useConvexAuth, useMutation } from 'convex/react'
-import { useMemo, useState } from 'react'
+import { useConvexAuth, useMutation } from 'convex/react'
+import { useState } from 'react'
 
 import type { ClerkSetupStatus } from '@/lib/clerk/setup-status'
 import { AuthSetupRequired } from '@/components/auth/auth-setup-required'
@@ -11,19 +11,6 @@ import { ClerkJwtSetupCard } from '@/components/auth/clerk-jwt-setup-card'
 import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { WorkspaceSurface } from '@/components/workspace/surface'
-
-const SEED_CONFIRMATION = 'SEED_DEV_ONLY'
-const RESET_CONFIRMATION = 'RESET_DEV_ONLY'
-
-type SampleIndexEntry = {
-  sessionId: string
-  inviteToken: string
-  candidateName: string
-}
-
-type SeedResult = {
-  sampleIndex?: Record<string, SampleIndexEntry>
-}
 
 const SCREEN_LINKS = [
   { href: '/recruiter', label: 'Recruiter dashboard' },
@@ -79,17 +66,9 @@ function DevSetupHubTools() {
   const ensureCurrentWorkspace = useMutation(
     api.workspace.ensureCurrentWorkspace
   )
-  const seedForActiveOrg = useAction(api.devSeed.seedDevDataForActiveOrg)
-  const resetDevData = useAction(api.devSeed.resetDevData)
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [seedResult, setSeedResult] = useState<SeedResult | null>(null)
-
-  const sampleEntries = useMemo(
-    () => Object.entries(seedResult?.sampleIndex ?? {}),
-    [seedResult?.sampleIndex]
-  )
 
   async function runTask(label: string, task: () => Promise<unknown>) {
     setBusy(true)
@@ -144,9 +123,10 @@ function DevSetupHubTools() {
       <WorkspaceSurface className="space-y-4 p-6">
         <h2 className="text-lg font-semibold">Workspace tools</h2>
         <p className="text-sm text-muted-foreground">
-          Run these after selecting your organization in the recruiter header
-          switcher. Seeding is destructive for dev data and repopulates
-          screenings, candidates, reports, and settings for your active org.
+          Sync your organization here. Seeding and resetting are deliberately
+          not available from the browser: both clear every seed table across{' '}
+          <strong>all</strong> organizations on the deployment, so they are
+          restricted to the admin-authenticated Convex CLI.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button
@@ -158,75 +138,18 @@ function DevSetupHubTools() {
           >
             Sync org + settings
           </Button>
-          <Button
-            type="button"
-            disabled={busy || !isAuthenticated || !organization?.id}
-            onClick={() =>
-              void runTask('Seed active org', async () => {
-                const result = (await seedForActiveOrg({
-                  confirm: SEED_CONFIRMATION,
-                  candidates: 24,
-                  recruiters: 3,
-                  orgName: organization?.name,
-                })) as SeedResult
-                setSeedResult(result)
-                return result
-              })
-            }
-          >
-            Seed data for active org
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={() =>
-              void runTask('Reset dev tables', () =>
-                resetDevData({ confirm: RESET_CONFIRMATION })
-              ).then(() => setSeedResult(null))
-            }
-          >
-            Reset all dev data
-          </Button>
         </div>
+        <p className="text-sm text-muted-foreground">
+          Run <code className="font-mono text-xs">bun run db:seed:dev</code> to
+          seed, or{' '}
+          <code className="font-mono text-xs">bun run db:reset:dev</code> to
+          clear. Neither can be triggered by anyone who merely reaches this
+          page.
+        </p>
         {status ? (
           <p className="text-sm text-muted-foreground">{status}</p>
         ) : null}
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {sampleEntries.length > 0 ? (
-          <div className="space-y-3 rounded-xl border border-border/50 bg-muted/10 p-4">
-            <p className="text-sm font-medium">
-              Full-spectrum sample index ({sampleEntries.length} labels)
-            </p>
-            <ul className="grid max-h-80 gap-2 overflow-y-auto sm:grid-cols-2">
-              {sampleEntries.map(([label, entry]) => (
-                <li
-                  key={label}
-                  className="rounded-lg border border-border/40 bg-background/60 p-3 text-xs"
-                >
-                  <p className="font-mono font-medium">{label}</p>
-                  <p className="mt-1 text-muted-foreground">
-                    {entry.candidateName}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Link
-                      href={`/interviews/${entry.inviteToken}`}
-                      className="text-primary underline-offset-4 hover:underline"
-                    >
-                      Invite lobby
-                    </Link>
-                    <Link
-                      href={`/recruiter/candidates/${entry.sessionId}`}
-                      className="text-primary underline-offset-4 hover:underline"
-                    >
-                      Review report
-                    </Link>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
         <p className="text-xs text-muted-foreground">
           CLI alternative:{' '}
           <code className="rounded bg-muted px-1 py-0.5">

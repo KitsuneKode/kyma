@@ -12,36 +12,11 @@ import {
   type SampleIndex,
 } from './helpers/devSeedSpectrum'
 import { convexEnv } from '../lib/env/convex'
-
-function assertDevelopmentMode() {
-  if (convexEnv.NODE_ENV === 'production') {
-    throw new ConvexError('Dev seed/reset is blocked in production mode.')
-  }
-}
-
-const SEED_TABLES = [
-  'reportChatMessages',
-  'recruiterNotes',
-  'reviewDecisions',
-  'dimensionEvidence',
-  'assessmentReports',
-  'recordingArtifacts',
-  'transcriptSegments',
-  'sessionEvents',
-  'interviewSessions',
-  'candidateReadinessRuns',
-  'candidatePreferences',
-  'candidateEligibility',
-  'candidateInvites',
-  'screeningBatches',
-  'assessmentTemplateVersions',
-  'assessmentTemplates',
-  'orgMemberships',
-  'organizations',
-  'users',
-  'workspaceSettings',
-  'auditEvents',
-] as const
+import {
+  SEED_ORG_TABLES,
+  SEED_TABLES,
+  assertDevSeedAllowed,
+} from './devSeedTables'
 
 type SeedTable = TableNamesInDataModel<DataModel>
 
@@ -72,7 +47,7 @@ export const clearTableChunk = internalMutation({
   },
   returns: v.object({ deleted: v.number() }),
   handler: async (ctx, args) => {
-    assertDevelopmentMode()
+    assertDevSeedAllowed(convexEnv)
     const limit = Math.max(1, Math.min(args.limit ?? 200, 1000))
     if (!SEED_TABLES.includes(args.table as (typeof SEED_TABLES)[number])) {
       throw new ConvexError(`Table "${args.table}" is not allowed for reset.`)
@@ -83,6 +58,51 @@ export const clearTableChunk = internalMutation({
       await ctx.db.delete(doc._id)
     }
     return { deleted: docs.length }
+  },
+})
+
+export const clearOrgTableChunk = internalMutation({
+  args: {
+    table: v.string(),
+    orgId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  returns: v.object({ deleted: v.number() }),
+  handler: async (ctx, args) => {
+    assertDevSeedAllowed(convexEnv)
+    const limit = Math.max(1, Math.min(args.limit ?? 200, 1000))
+    if (
+      !SEED_TABLES.includes(args.table as (typeof SEED_TABLES)[number]) ||
+      !(SEED_ORG_TABLES as readonly string[]).includes(args.table)
+    ) {
+      throw new ConvexError(
+        `Table "${args.table}" is not allowed for org-scoped reset.`
+      )
+    }
+    const table = args.table as SeedTable
+    let deleted = 0
+    // Tables with direct org scoping
+    if (table === 'organizations' || table === 'orgMemberships') {
+      const docs = await ctx.db
+        .query(table)
+        .filter((q) => q.eq(q.field('clerkOrgId'), args.orgId))
+        .take(limit)
+      for (const doc of docs) {
+        await ctx.db.delete(doc._id)
+        deleted += 1
+      }
+      return { deleted }
+    }
+    // Most workspace tables carry orgId
+    const docs = await ctx.db
+      .query(table)
+      .filter((q) => q.eq(q.field('orgId'), args.orgId))
+      .take(limit)
+    for (const doc of docs) {
+      await ctx.db.delete(doc._id)
+      deleted += 1
+    }
+    return { deleted }
   },
 })
 
@@ -97,7 +117,7 @@ export const seedData = internalMutation({
     ownerName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    assertDevelopmentMode()
+    assertDevSeedAllowed(convexEnv)
     initDeterministicFaker()
     const orgId = args.targetOrgId?.trim() || SEED_ORG_ID
     const orgName = args.targetOrgName?.trim() || SEED_ORG_NAME

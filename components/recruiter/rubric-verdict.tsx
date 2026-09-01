@@ -29,6 +29,7 @@ type EvidenceItem = {
 
 type RubricVerdictProps = {
   dimensionScores: DimensionScore[]
+  hardGateDimensions?: string[]
   evidence: EvidenceItem[]
   weightedScore?: number | null
   hardGateTriggered?: boolean
@@ -39,6 +40,7 @@ type RubricVerdictProps = {
 
 export function RubricVerdict({
   dimensionScores,
+  hardGateDimensions,
   evidence,
   weightedScore,
   hardGateTriggered = false,
@@ -98,7 +100,10 @@ export function RubricVerdict({
       </div>
 
       <div className="mb-5">
-        <RubricScoreBars dimensionScores={dimensionScores} />
+        <RubricScoreBars
+          dimensionScores={dimensionScores}
+          hardGateDimensions={hardGateDimensions}
+        />
       </div>
 
       <motion.ul

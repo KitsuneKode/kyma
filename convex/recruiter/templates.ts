@@ -31,6 +31,49 @@ const rubricConfigValidator = v.object({
   ),
 })
 
+/**
+ * Rejects rubric input that would corrupt the weighted score.
+ *
+ * `resolveRubricDimensions` sanitizes defensively at scoring time, but silently
+ * dropping a recruiter's dimension is worse than refusing the save: they would
+ * believe a rubric is in force that is not. Fail loudly at the write boundary.
+ */
+function assertValidRubricConfig(rubricConfig?: {
+  dimensions: Array<{ name: string; weight: number }>
+}) {
+  if (!rubricConfig) {
+    return
+  }
+
+  const seen = new Set<string>()
+  for (const dimension of rubricConfig.dimensions) {
+    const name = dimension.name.trim()
+    if (!name) {
+      throw new ConvexError('Every rubric dimension needs a name.')
+    }
+    if (seen.has(name)) {
+      throw new ConvexError(`Duplicate rubric dimension "${name}".`)
+    }
+    seen.add(name)
+
+    if (!Number.isFinite(dimension.weight) || dimension.weight < 0) {
+      throw new ConvexError(
+        `Rubric weight for "${name}" must be a finite number of at least 0.`
+      )
+    }
+  }
+
+  const total = rubricConfig.dimensions.reduce(
+    (sum, dimension) => sum + dimension.weight,
+    0
+  )
+  if (rubricConfig.dimensions.length > 0 && total <= 0) {
+    throw new ConvexError(
+      'At least one rubric dimension must carry a weight above 0.'
+    )
+  }
+}
+
 function starterTemplateFields(jobFamily: JobFamily, now: number) {
   const starter = getJobFamilyStarter(jobFamily)
 
@@ -243,6 +286,7 @@ export const updateAssessmentTemplate = templateWriteMutation({
         'Target duration must be between 5 and 120 minutes.'
       )
     }
+    assertValidRubricConfig(args.rubricConfig)
     const nextVersion = Number.parseInt(
       template.rubricVersion.replace(/[^\d]/g, ''),
       10
@@ -250,6 +294,16 @@ export const updateAssessmentTemplate = templateWriteMutation({
     const nextRubricVersion = `v${Number.isFinite(nextVersion) ? nextVersion + 1 : 2}`
     const simulationPersonaPrompt =
       args.simulationPersonaPrompt ?? args.childPersonaPrompt
+    // Prompts and model overrides change interview and scoring behaviour just
+    // as much as the rubric does. Versioning only on `rubricConfig` let two
+    // reports carry the same `rubricVersion` while being produced by different
+    // prompts and different models - which breaks report reviewability.
+    const behaviourChanged =
+      args.rubricConfig !== undefined ||
+      args.systemPrompt !== undefined ||
+      args.wrapUpPrompt !== undefined ||
+      simulationPersonaPrompt !== undefined ||
+      args.modelOverrides !== undefined
     const now = Date.now()
 
     await ctx.db.patch(template._id, {
@@ -265,31 +319,52 @@ export const updateAssessmentTemplate = templateWriteMutation({
       ...(args.interviewStyleMode
         ? { interviewStyleMode: args.interviewStyleMode }
         : {}),
-      systemPrompt: args.systemPrompt,
-      childPersonaPrompt: simulationPersonaPrompt,
-      simulationPersonaPrompt,
-      wrapUpPrompt: args.wrapUpPrompt,
-      rubricConfig: args.rubricConfig,
-      modelOverrides: args.modelOverrides,
-      rubricVersion: nextRubricVersion,
+      // Convex deletes any field patched to `undefined`, so every optional
+      // field must be spread conditionally. Writing these unconditionally let a
+      // name-only save erase the prompts and rubric for every later interview.
+      ...(args.systemPrompt !== undefined
+        ? { systemPrompt: args.systemPrompt }
+        : {}),
+      ...(simulationPersonaPrompt !== undefined
+        ? {
+            childPersonaPrompt: simulationPersonaPrompt,
+            simulationPersonaPrompt,
+          }
+        : {}),
+      ...(args.wrapUpPrompt !== undefined
+        ? { wrapUpPrompt: args.wrapUpPrompt }
+        : {}),
+      ...(args.rubricConfig !== undefined
+        ? { rubricConfig: args.rubricConfig }
+        : {}),
+      ...(behaviourChanged ? { rubricVersion: nextRubricVersion } : {}),
+      ...(args.modelOverrides !== undefined
+        ? { modelOverrides: args.modelOverrides }
+        : {}),
       updatedAt: now,
     })
 
-    await ctx.db.insert('assessmentTemplateVersions', {
-      orgId,
-      templateId: template._id,
-      rubricVersion: nextRubricVersion,
-      savedAt: now,
-      savedBy: actor,
-      jobFamily: args.jobFamily ?? template.jobFamily,
-      simulationMode: args.simulationMode ?? template.simulationMode,
-      systemPrompt: args.systemPrompt,
-      childPersonaPrompt: simulationPersonaPrompt,
-      simulationPersonaPrompt,
-      wrapUpPrompt: args.wrapUpPrompt,
-      rubricConfig: args.rubricConfig,
-      modelOverrides: args.modelOverrides,
-    })
+    // A version row is a rubric snapshot; only record one when the rubric
+    // actually changed, so name-only saves stop creating phantom versions.
+    if (behaviourChanged) {
+      await ctx.db.insert('assessmentTemplateVersions', {
+        orgId,
+        templateId: template._id,
+        rubricVersion: nextRubricVersion,
+        savedAt: now,
+        savedBy: actor,
+        jobFamily: args.jobFamily ?? template.jobFamily,
+        simulationMode: args.simulationMode ?? template.simulationMode,
+        systemPrompt: args.systemPrompt ?? template.systemPrompt,
+        childPersonaPrompt:
+          simulationPersonaPrompt ?? template.childPersonaPrompt,
+        simulationPersonaPrompt:
+          simulationPersonaPrompt ?? template.simulationPersonaPrompt,
+        wrapUpPrompt: args.wrapUpPrompt ?? template.wrapUpPrompt,
+        rubricConfig: args.rubricConfig ?? template.rubricConfig,
+        modelOverrides: args.modelOverrides ?? template.modelOverrides,
+      })
+    }
 
     await logAuditEvent(ctx, {
       orgId,
@@ -297,7 +372,9 @@ export const updateAssessmentTemplate = templateWriteMutation({
       action: 'template.updated',
       resource: `template:${template._id}`,
       metadata: {
-        rubricVersion: nextRubricVersion,
+        rubricVersion: behaviourChanged
+          ? nextRubricVersion
+          : template.rubricVersion,
         ...(args.targetDurationMinutes !== undefined
           ? { targetDurationMinutes: args.targetDurationMinutes }
           : {}),

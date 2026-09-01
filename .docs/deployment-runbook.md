@@ -30,7 +30,28 @@ Production host: `https://kyma.kitsunelabs.xyz`
 | `NEXT_PUBLIC_LIVEKIT_URL`                | Vercel          | LiveKit Cloud / self-hosted WS URL                               |
 | `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | Vercel + agent  | Token mint + room APIs                                           |
 | `KYMA_PROCESSING_WRITE_KEY`              | Vercel + Convex | **Required in production** for report writes / worker heartbeats |
-| `KYMA_DEPLOYMENT_ENV`                    | Vercel / Convex | Prefer `production` on the live site                             |
+| `KYMA_DEPLOYMENT_ENV`                    | Vercel / Convex | Authoritative dev/prod signal — see note below                   |
+
+> **`KYMA_DEPLOYMENT_ENV` is the control; NODE_ENV is not.** Two facts, both
+> verified against a live Convex deployment:
+>
+> 1. `lib/env/shared.ts` declares `NODE_ENV` with `.default('development')`, so
+>    the validated env shims report `development` when the variable is unset.
+> 2. The Convex runtime **pins `process.env.NODE_ENV` to `production`** and
+>    ignores `bunx convex env set NODE_ENV`.
+>
+> So NODE_ENV cannot distinguish environments on the backend at all. The
+> dev-seed/reset guard (`convex/devSeed.ts`) and the processing-key fallback
+> (`convex/helpers/processingAuth.ts`) therefore require an explicit
+> `KYMA_DEPLOYMENT_ENV=development` opt-in. **Production needs no action** — an
+> unset value already fails closed. Set the variable only on dev deployments:
+>
+> ```bash
+> bunx convex env set KYMA_DEPLOYMENT_ENV development
+> ```
+>
+> Note that removing it does not immediately reach warm Node action containers,
+> which cache the validated env at module load.
 
 ### Clerk (recruiter / admin)
 

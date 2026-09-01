@@ -5,6 +5,7 @@ import { recruiterQuery } from './lib/customFunctions'
 import { requireAdmin, requireOrgId } from './helpers/auth'
 import { logAuditEvent } from './helpers/audit'
 import { convexEnv } from '../lib/env/convex'
+import { hasConfiguredWebhookKey } from './helpers/processingAuth'
 import {
   DEFAULT_ORG_PLAN,
   isOrgPlanTier,
@@ -19,13 +20,7 @@ const planValidator = v.union(
 )
 
 function requireBillingWriteKey(writeKey: string) {
-  const expectedKey = convexEnv.KYMA_PROCESSING_WRITE_KEY?.trim()
-  if (!expectedKey) {
-    throw new ConvexError(
-      'KYMA_PROCESSING_WRITE_KEY is required for billing webhook sync.'
-    )
-  }
-  if (writeKey !== expectedKey) {
+  if (!hasConfiguredWebhookKey(writeKey)) {
     throw new ConvexError('Invalid write key for billing webhook sync.')
   }
 }
@@ -86,10 +81,20 @@ export const applyDodoSubscriptionEvent = mutation({
     productId: v.optional(v.string()),
     currentPeriodEnd: v.optional(v.number()),
     cancelAtPeriodEnd: v.optional(v.boolean()),
+    /** Provider event time, used to reject out-of-order replays. */
+    eventAt: v.optional(v.number()),
   },
   returns: v.object({
     applied: v.boolean(),
     orgId: v.union(v.id('organizations'), v.null()),
+    /** Discriminates a benign duplicate from a retryable unmirrored org. */
+    reason: v.optional(
+      v.union(
+        v.literal('duplicate'),
+        v.literal('org_not_mirrored'),
+        v.literal('stale_event')
+      )
+    ),
   }),
   handler: async (ctx, args) => {
     requireBillingWriteKey(args.writeKey)
@@ -99,17 +104,10 @@ export const applyDodoSubscriptionEvent = mutation({
       .withIndex('by_event_key', (q) => q.eq('eventKey', args.eventKey))
       .unique()
     if (existingEvent) {
-      return { applied: false, orgId: null }
+      return { applied: false, orgId: null, reason: 'duplicate' as const }
     }
 
     const now = Date.now()
-    await ctx.db.insert('billingWebhookEvents', {
-      eventKey: args.eventKey,
-      eventType: args.eventType,
-      clerkOrgId: args.clerkOrgId,
-      subscriptionId: args.subscriptionId,
-      processedAt: now,
-    })
 
     const org = await ctx.db
       .query('organizations')
@@ -117,9 +115,47 @@ export const applyDodoSubscriptionEvent = mutation({
       .unique()
 
     if (!org) {
-      // Org may not be mirrored yet; still record the event so we don't retry forever.
-      return { applied: false, orgId: null }
+      // Deliberately do NOT record the event. The org is not mirrored yet
+      // (a subscription webhook can beat Clerk's organization.created), and
+      // recording it would make the dedupe check above suppress every
+      // redelivery - stranding the org on the wrong plan permanently.
+      // Returning `applied: false` lets the route signal a retry.
+      return {
+        applied: false,
+        orgId: null,
+        reason: 'org_not_mirrored' as const,
+      }
     }
+
+    // Retries made replay ordering reachable: a queued `subscription.active`
+    // redelivered after a `subscription.cancelled` would silently restore the
+    // paid plan. Apply only events at least as new as the last one applied.
+    if (
+      args.eventAt !== undefined &&
+      org.billingEventAt !== undefined &&
+      args.eventAt < org.billingEventAt
+    ) {
+      await ctx.db.insert('billingWebhookEvents', {
+        eventKey: args.eventKey,
+        eventType: args.eventType,
+        clerkOrgId: args.clerkOrgId,
+        subscriptionId: args.subscriptionId,
+        processedAt: Date.now(),
+      })
+      return {
+        applied: false,
+        orgId: org._id,
+        reason: 'stale_event' as const,
+      }
+    }
+
+    await ctx.db.insert('billingWebhookEvents', {
+      eventKey: args.eventKey,
+      eventType: args.eventType,
+      clerkOrgId: args.clerkOrgId,
+      subscriptionId: args.subscriptionId,
+      processedAt: now,
+    })
 
     const nextPlan: OrgPlanTier = isOrgPlanTier(args.plan)
       ? args.plan
@@ -136,6 +172,7 @@ export const applyDodoSubscriptionEvent = mutation({
       billingCancelAtPeriodEnd:
         args.cancelAtPeriodEnd ?? org.billingCancelAtPeriodEnd,
       billingUpdatedAt: now,
+      ...(args.eventAt !== undefined ? { billingEventAt: args.eventAt } : {}),
       updatedAt: now,
     })
 

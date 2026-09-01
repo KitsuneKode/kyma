@@ -3,50 +3,27 @@
 import { ConvexError, v } from 'convex/values'
 
 import { internal } from './_generated/api'
-import { action } from './_generated/server'
+import { internalAction } from './_generated/server'
 import { clerkIdFromIdentity } from './helpers/clerkIdentity'
 import { getOrgContextFromIdentity } from './helpers/orgContext'
+import {
+  SEED_ORG_TABLES,
+  SEED_TABLES,
+  assertDevSeedAllowed,
+} from './devSeedTables'
 import { convexEnv } from '../lib/env/convex'
 
 const RESET_CONFIRMATION = 'RESET_DEV_ONLY'
 const SEED_CONFIRMATION = 'SEED_DEV_ONLY'
 
-const SEED_TABLES = [
-  'reportChatMessages',
-  'recruiterNotes',
-  'reviewDecisions',
-  'dimensionEvidence',
-  'assessmentReports',
-  'recordingArtifacts',
-  'transcriptSegments',
-  'sessionEvents',
-  'interviewSessions',
-  'candidateReadinessRuns',
-  'candidatePreferences',
-  'candidateEligibility',
-  'candidateInvites',
-  'screeningBatches',
-  'assessmentTemplateVersions',
-  'assessmentTemplates',
-  'orgMemberships',
-  'organizations',
-  'users',
-  'workspaceSettings',
-  'auditEvents',
-] as const
+export { assertDevSeedAllowed }
 
-function assertDevelopmentMode() {
-  if (convexEnv.NODE_ENV === 'production') {
-    throw new ConvexError('Dev seed/reset is blocked in production mode.')
-  }
-}
-
-export const resetDevData = action({
+export const resetDevData = internalAction({
   args: {
     confirm: v.string(),
   },
   handler: async (ctx, args): Promise<{ ok: true; deleted: number }> => {
-    assertDevelopmentMode()
+    assertDevSeedAllowed(convexEnv)
     if (args.confirm !== RESET_CONFIRMATION) {
       throw new ConvexError(
         `Confirmation mismatch. Pass "${RESET_CONFIRMATION}" to reset dev data.`
@@ -71,7 +48,7 @@ export const resetDevData = action({
   },
 })
 
-export const seedDevData = action({
+export const seedDevData = internalAction({
   args: {
     confirm: v.string(),
     candidates: v.optional(v.number()),
@@ -94,7 +71,7 @@ export const seedDevData = action({
     sampleInviteTokens: string[]
     sampleReviewSessionIds: string[]
   }> => {
-    assertDevelopmentMode()
+    assertDevSeedAllowed(convexEnv)
     if (args.confirm !== SEED_CONFIRMATION) {
       throw new ConvexError(
         `Confirmation mismatch. Pass "${SEED_CONFIRMATION}" to seed dev data.`
@@ -120,7 +97,7 @@ export const seedDevData = action({
   },
 })
 
-export const seedDevDataForActiveOrg = action({
+export const seedDevDataForActiveOrg = internalAction({
   args: {
     confirm: v.string(),
     candidates: v.optional(v.number()),
@@ -144,7 +121,7 @@ export const seedDevDataForActiveOrg = action({
     sampleInviteTokens: string[]
     sampleReviewSessionIds: string[]
   }> => {
-    assertDevelopmentMode()
+    assertDevSeedAllowed(convexEnv)
     if (args.confirm !== SEED_CONFIRMATION) {
       throw new ConvexError(
         `Confirmation mismatch. Pass "${SEED_CONFIRMATION}" to seed dev data.`
@@ -169,12 +146,17 @@ export const seedDevDataForActiveOrg = action({
 
     const clerkUserId = clerkIdFromIdentity(identity)
 
-    for (const table of SEED_TABLES) {
+    // Scoped clear: only delete rows belonging to the caller's org. Global tables
+    // (users, readiness runs) are intentionally not cleared here - they are shared
+    // across workspaces and a per-org seed must not destroy other orgs on a
+    // shared dev deployment.
+    for (const table of SEED_ORG_TABLES) {
       while (true) {
         const result = await ctx.runMutation(
-          internal.devSeedMutations.clearTableChunk,
+          internal.devSeedMutations.clearOrgTableChunk,
           {
             table,
+            orgId,
             limit: 200,
           }
         )

@@ -8,6 +8,8 @@ import {
   resolveInviteSessionPurpose,
 } from '../helpers/interviewSession'
 import { resolveTemplateName } from '../helpers/sessionReview'
+import { quotasForPlan, resolveOrgPlanForOrg } from '../helpers/orgPlan'
+import { currentUsagePeriod, getUsageForPeriod } from '../helpers/usageRollup'
 
 export const getInviteBootstrapByokSummary = query({
   args: {
@@ -60,9 +62,11 @@ export const bootstrapPublicSession = mutation({
   handler: async (ctx, { inviteToken, participantName }) => {
     const invite = await ensureInvite(ctx, inviteToken)
     const { policy } = await resolveInterviewPolicyFromInvite(ctx, invite)
+    // Newest-first: if a race created two sessions, the latest is authoritative.
     const existingSession = await ctx.db
       .query('interviewSessions')
       .withIndex('by_invite', (q) => q.eq('inviteId', invite._id))
+      .order('desc')
       .first()
 
     if (invite.status === 'expired' || isInviteExpired(invite.expiresAt)) {
@@ -87,6 +91,22 @@ export const bootstrapPublicSession = mutation({
       }
 
       throw new ConvexError('This interview has already been submitted.')
+    }
+
+    // Cap metered usage before any room is created. Checked ahead of the
+    // resume path too, so an exhausted workspace cannot keep reopening a
+    // session. The message is candidate-facing - it must not leak plan detail.
+    const plan = await resolveOrgPlanForOrg(ctx, invite.orgId)
+    const quotas = quotasForPlan(plan)
+    const usage = await getUsageForPeriod(ctx, {
+      orgId: invite.orgId,
+      period: currentUsagePeriod(),
+    })
+
+    if (usage.interviewMinutes >= quotas.maxInterviewMinutesPerMonth) {
+      throw new ConvexError(
+        'This workspace has reached its monthly interview limit. Please contact the hiring team.'
+      )
     }
 
     if (!invite.candidateName) {
@@ -116,7 +136,7 @@ export const bootstrapPublicSession = mutation({
           throw new ConvexError('This screening does not allow session resume.')
         }
 
-        const reopenedRoomName = `interview-${inviteToken}-${Date.now()}`
+        const reopenedRoomName = `interview-${existingSession._id}-${Date.now()}`
         const reopenedAt = new Date().toISOString()
 
         await ctx.db.patch(existingSession._id, {
@@ -159,7 +179,7 @@ export const bootstrapPublicSession = mutation({
       }
     }
 
-    const roomName = `interview-${inviteToken}-${Date.now()}`
+    const roomName = `interview-${invite._id}-${Date.now()}`
     const startedAt = new Date().toISOString()
     const sessionPurpose = resolveInviteSessionPurpose(invite)
 
