@@ -5,6 +5,21 @@ This file is the unresolved execution queue only. For procedure steps, use
 
 Update rule: update this queue first; update the runbook only when procedure changes.
 
+**2026-09-09 split:** GitHub issue #31 remains the owner-run provider evidence
+matrix. Deterministic correctness/CI follow-ups live on
+`fix/production-qualification-followups` and do not mark any row in the
+evidence matrix as Passed. Seeded UI, mocked providers, and anonymous Convex
+loopback checks still do not count as provider evidence.
+
+**2026-09-09 agent preflight:** `bun run live-path:preflight` failed — missing
+`KYMA_PROCESSING_WRITE_KEY NEXT_PUBLIC_LIVEKIT_URL LIVEKIT_API_KEY
+LIVEKIT_API_SECRET`. Issue #31 items 3–4 remain Pending.
+
+**2026-09-09 local e2e:** Playwright Chromium installed; `next dev` accepted
+TCP on :3000 but did not complete HTTP for `/favicon.ico` or `/` within 20–90s
+in this worktree. CI remains the e2e gate. Do not treat this as a product-route
+failure.
+
 | Item                                | Automated | Manual                          | Test file                                                                                     |
 | ----------------------------------- | --------- | ------------------------------- | --------------------------------------------------------------------------------------------- |
 | 1 Clerk webhook sync                | —         | Yes                             | —                                                                                             |

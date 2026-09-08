@@ -108,7 +108,6 @@ Preferred backend domain boundaries:
 - `convex/livekit.ts`
 - `convex/processing/assessment.ts`
 - `convex/recruiter/*`
-- `convex/admin.ts`
 
 Preferred frontend domain boundaries:
 

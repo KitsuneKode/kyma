@@ -6,11 +6,7 @@ import { logAuditEvent } from '../helpers/audit'
 import { getRecruiterActorId } from '../helpers/auth'
 import { DEFAULT_INTERVIEW_DURATION_MINUTES } from '../helpers/interviewPolicy'
 import { quotasForPlan, resolveOrgPlanForOrg } from '../helpers/orgPlan'
-import {
-  getSessionOpsWindows,
-  isStuckProcessing,
-  requireValidQueryNowMs,
-} from '../helpers/sessionOps'
+import { getSessionOpsWindows, isStuckProcessing } from '../helpers/sessionOps'
 import {
   MAX_SCREENING_BATCHES_PER_LIST,
   assertSupportedScreeningBatchSize,
@@ -35,7 +31,7 @@ export const listScreeningBatches = recruiterQuery({
   },
   handler: async (ctx, { nowMs }) => {
     const { orgId } = ctx
-    requireValidQueryNowMs(nowMs)
+    getSessionOpsWindows(nowMs)
 
     // Newest-first at the index level. Sampling on `by_org_id` returned the
     // OLDEST batches, so a mature org's recent screenings were never visible.

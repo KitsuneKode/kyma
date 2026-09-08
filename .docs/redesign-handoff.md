@@ -45,7 +45,7 @@ Route architecture now uses App Router groups:
 
 - `(marketing)` for `/`
 - `(auth)` for `/sign-in` and `/sign-up`
-- `(app)` for authenticated operator pages (`/admin*`, `/video-demo`, `/write-up`)
+- `(app)` for authenticated operator pages (`/recruiter*`, `/video-demo`, `/write-up`; `/admin*` redirects)
 
 ### `/`
 
@@ -79,9 +79,9 @@ Purpose:
 Current behavior:
 
 - Clerk-backed catch-all pages (`[[...sign-in]]` and `[[...sign-up]]`)
-- signed-in users are redirected to `/admin`
+- signed-in recruiters are redirected to `/recruiter`
 
-### `/admin`
+### `/recruiter` (canonical; `/admin` redirects here)
 
 Purpose:
 
@@ -90,7 +90,7 @@ Purpose:
 Current state:
 
 - **Implemented:** Clerk-gated shell when Clerk env is configured; links to candidates and screenings.
-- Child routes ship real flows: `/admin/candidates` (queue), `/admin/candidates/[sessionId]` (detail, transcript, report, notes, copilot chat), `/admin/screenings` (batches), `/admin/screenings/new` (batch creation), `/admin/screenings/[batchId]` (invites per batch).
+- Child routes ship real flows: `/recruiter/candidates` (queue), `/recruiter/candidates/[sessionId]` (detail, transcript, report, notes, copilot chat), `/recruiter/screenings` (batches), `/recruiter/screenings/new` (batch creation), `/recruiter/screenings/[batchId]` (invites per batch).
 
 Design direction:
 
@@ -216,12 +216,11 @@ These are not fake anymore:
 ## What Is Still Weak
 
 - homepage is not product-quality
-- admin is not product-quality
+- recruiter surfaces exist at `/recruiter/*` but still need live-path proof and accessibility polish
 - meeting shell is still functional rather than premium
-- recruiter detail/review flow does not exist yet
 - processing state is thin
-- transcript/evidence/report relationship is not yet fully visualized
-- there is no screening creation UX yet
+- transcript/evidence/report relationship can still be clearer in review
+- issue #31 owner-run provider evidence is still pending
 - there is no candidate eligibility management UX yet
 
 ## Redesign Priorities
@@ -367,29 +366,29 @@ And between:
 - access/error states
 - processing/success states
 
-## Suggested Future Route Shape
+## Current Recruiter Route Shape
 
-This is a recommended product IA, not fully implemented today:
+This is the current recruiter IA. `/admin*` redirects to the matching `/recruiter*` path.
 
 - `/`
   - home / product entry
 
-- `/admin`
+- `/recruiter`
   - recruiter home
 
-- `/admin/screenings`
+- `/recruiter/screenings`
   - screening list
 
-- `/admin/screenings/[screeningId]`
+- `/recruiter/screenings/[batchId]`
   - screening detail, candidates, invites, status
 
-- `/admin/screenings/[screeningId]/create`
-  - screening creation/edit flow
+- `/recruiter/screenings/new`
+  - screening creation flow
 
-- `/admin/candidates`
+- `/recruiter/candidates`
   - all candidates / leaderboard
 
-- `/admin/candidates/[candidateId]`
+- `/recruiter/candidates/[sessionId]`
   - recruiter review detail
 
 - `/interviews/[inviteId]`

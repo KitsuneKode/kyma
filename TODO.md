@@ -4,12 +4,16 @@ Execution priorities follow [.docs/next-phase-prd.md](.docs/next-phase-prd.md). 
 
 ## Active engineering
 
-- End-to-end LiveKit path validation (see current-findings Testing Path).
-- Template-driven screening policy (duration, resume, attempts) end-to-end.
+- Owner-run LiveKit path proof (`.docs/verification-pending.md` items 3–4; GitHub issue #31).
+- Finish and land `fix/production-qualification-followups` (deterministic CI/correctness). This is code, not provider evidence.
+- BYOK KMS rotation + broader lifecycle after E6 owner-run validation.
+
+Shipped; do not rebuild:
+
+- Template-driven screening policy (duration, resume, attempts, `policySnapshot`).
 - Recruiter copilot citations + durable chat metadata.
-- HTTP + Convex throttles, audit trail, BYOK notes in security doc.
-- Production-ready BYOK: encrypted per-workspace provider keys and safe runtime hydration.
-- Flexible model selector UX: per-task model selection (agent STT/LLM/TTS and recruiter copilot) with guarded defaults.
+- HTTP + Convex throttles and audit trail.
+- Encrypted per-workspace provider keys and `testProviderConnection`.
 
 ## SaaS ops scaffolds (started)
 

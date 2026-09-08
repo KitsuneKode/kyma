@@ -54,21 +54,21 @@ working code from scratch.
 
 Already drafted in the worktree (uncommitted unless noted):
 
-| Item | Files | Status |
-| --- | --- | --- |
-| Design + thin plan | `.docs/production-qualification-followups-design.md`, `.plans/2026-09-02-production-qualification-followups.md` | Committed in `0212d3b` |
-| Query time validation | `convex/helpers/sessionOps.ts`, `sessionOps.test.ts` | Drafted |
-| Dashboard uses validated `nowMs` | `convex/recruiter/dashboard.ts` | Drafted |
-| Email summary uses validated `nowMs` | `convex/recruiter/screenings.ts` | Drafted |
-| Action auth is internal-only | `convex/recruiter/workspace.ts` | Drafted |
-| Report chat persistence internal | `convex/recruiter/reviews.ts`, `reportChat.ts` | Drafted |
-| Auth-boundary source tests | `convex/recruiter/workspace.auth-boundary.test.ts`, `reportChat.auth-boundary.test.ts` | Untracked |
-| Cursor dispatcher | `convex/screeningBatchOps.ts` + test with 101 archived batches | Drafted |
-| Inngest failure transition | `inngest/functions/process-interview-assessment.ts` + test | Drafted |
-| Harness without tmux | `scripts/run-convex-integration.sh`, `scripts/inngest-event-sink.ts` | Drafted |
-| CI knip + integration job | `.github/workflows/ci.yml`, `package.json` `check` / `check:quality` | Drafted |
-| Contract tests | `lib/ci/qualification-contract.test.ts`, `lib/ci/convex-integration-harness.test.ts` | Untracked |
-| Partial doc route fixes | `.docs/next-phase-prd.md`, `.docs/deployment-runbook.md`, `.docs/redesign-handoff.md`, `.docs/security-and-maintainability.md` | Drafted, still incomplete |
+| Item                                 | Files                                                                                                                          | Status                    |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
+| Design + thin plan                   | `.docs/production-qualification-followups-design.md`, `.plans/2026-09-02-production-qualification-followups.md`                | Committed in `0212d3b`    |
+| Query time validation                | `convex/helpers/sessionOps.ts`, `sessionOps.test.ts`                                                                           | Drafted                   |
+| Dashboard uses validated `nowMs`     | `convex/recruiter/dashboard.ts`                                                                                                | Drafted                   |
+| Email summary uses validated `nowMs` | `convex/recruiter/screenings.ts`                                                                                               | Drafted                   |
+| Action auth is internal-only         | `convex/recruiter/workspace.ts`                                                                                                | Drafted                   |
+| Report chat persistence internal     | `convex/recruiter/reviews.ts`, `reportChat.ts`                                                                                 | Drafted                   |
+| Auth-boundary source tests           | `convex/recruiter/workspace.auth-boundary.test.ts`, `reportChat.auth-boundary.test.ts`                                         | Untracked                 |
+| Cursor dispatcher                    | `convex/screeningBatchOps.ts` + test with 101 archived batches                                                                 | Drafted                   |
+| Inngest failure transition           | `inngest/functions/process-interview-assessment.ts` + test                                                                     | Drafted                   |
+| Harness without tmux                 | `scripts/run-convex-integration.sh`, `scripts/inngest-event-sink.ts`                                                           | Drafted                   |
+| CI knip + integration job            | `.github/workflows/ci.yml`, `package.json` `check` / `check:quality`                                                           | Drafted                   |
+| Contract tests                       | `lib/ci/qualification-contract.test.ts`, `lib/ci/convex-integration-harness.test.ts`                                           | Untracked                 |
+| Partial doc route fixes              | `.docs/next-phase-prd.md`, `.docs/deployment-runbook.md`, `.docs/redesign-handoff.md`, `.docs/security-and-maintainability.md` | Drafted, still incomplete |
 
 ## Remaining gaps this plan must close
 
@@ -201,7 +201,7 @@ rg -n "assertAdminForAction = query|assertCandidateReviewAccessForAction = query
 rg -n "api\.recruiter\.workspace\.assert|api\.recruiter\.reviews\.addReportChatMessage" convex
 ```
 
-Expected: no matches in `convex/` except comments/tests that assert the *absence* of those strings.
+Expected: no matches in `convex/` except comments/tests that assert the _absence_ of those strings.
 
 - [ ] **Step 2: Confirm `addReportChatMessage` insert does not write unknown fields**
 
@@ -258,7 +258,7 @@ In `.docs/current-findings.md` Important Files, replace the `convex/admin.ts` bu
 - `convex/recruiter/*`: recruiter workspace queries, screening writes, review surfaces, report chat
 ```
 
-In `.docs/next-phase-prd.md` Key Files, delete the `- \`convex/admin.ts\`` line. Keep `convex/recruiter/*`.
+In `.docs/next-phase-prd.md` Key Files, delete the `- \`convex/admin.ts\``line. Keep`convex/recruiter/\*`.
 
 - [ ] **Step 2: Rewrite Current Blockers so they stop contradicting shipped work**
 
@@ -624,19 +624,19 @@ Replace `<url>` with the PR URL from Step 3.
 
 ## Coverage check
 
-| Requirement | Task |
-| --- | --- |
-| Recruiter query `nowMs` validation | 2, 3 |
-| Internal action auth | 2, 3 |
-| Bounded dispatcher continuation | 2 |
-| Inngest failure transition test | 2 |
-| Harness without tmux | 2, 6 |
-| CI/local qualification parity | 2, 5 |
-| Stale route/docs collapse | 4 |
-| Live-path attempt, skip ≠ pass | 6 |
-| Agent review | 7 |
-| PR + issue #31 comment | 8 |
-| UI polish / Dodo / backup / load | Out of scope |
+| Requirement                        | Task         |
+| ---------------------------------- | ------------ |
+| Recruiter query `nowMs` validation | 2, 3         |
+| Internal action auth               | 2, 3         |
+| Bounded dispatcher continuation    | 2            |
+| Inngest failure transition test    | 2            |
+| Harness without tmux               | 2, 6         |
+| CI/local qualification parity      | 2, 5         |
+| Stale route/docs collapse          | 4            |
+| Live-path attempt, skip ≠ pass     | 6            |
+| Agent review                       | 7            |
+| PR + issue #31 comment             | 8            |
+| UI polish / Dodo / backup / load   | Out of scope |
 
 ## Definition of done
 

@@ -93,7 +93,7 @@ The current codebase compiles and the product loop exists, but the real proof st
 
 ### Why
 
-The current screening creation flow exists, but policy is still driven by app defaults rather than a first-class template or screening configuration model.
+Template and batch policy already ship (duration, resume, attempts, `policySnapshot`). Remaining work is owner-run template version history and any live-path gaps, not a rebuild of policy storage.
 
 ### Goals
 
@@ -270,7 +270,6 @@ Do not prioritize these before the four workstreams above are solid:
 - `convex/interviews/*`
 - `convex/processing/assessment.ts`
 - `convex/recruiter/*`
-- `convex/admin.ts`
 - `convex/livekit.ts`
 - `convex/schema.ts`
 - `lib/assessment/report-engine.ts`
