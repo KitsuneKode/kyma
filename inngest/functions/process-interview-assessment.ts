@@ -14,17 +14,27 @@ const payloadSchema = z.object({
   sessionId: z.string(),
 })
 
-export const processInterviewAssessmentFunction = inngest.createFunction(
-  {
-    id: 'process-interview-assessment',
-    name: 'Process interview assessment',
-    retries: 3,
-    timeouts: { finish: '2m' },
-    triggers: {
-      event: INTERVIEW_PROCESSING_REQUESTED_EVENT,
-    },
-  },
-  async ({ event, step }) => {
+export const ASSESSMENT_PROCESSING_FINISH_TIMEOUT = '2m'
+
+type AssessmentProcessingDependencies = {
+  processAssessment: typeof processInterviewAssessment
+  markFailed: typeof markAssessmentFailed
+}
+
+type AssessmentProcessingContext = {
+  event: { data: unknown }
+  step: {
+    run<T>(name: string, callback: () => Promise<T>): Promise<T>
+  }
+}
+
+export function createAssessmentProcessingHandler(
+  dependencies: AssessmentProcessingDependencies = {
+    processAssessment: processInterviewAssessment,
+    markFailed: markAssessmentFailed,
+  }
+) {
+  return async ({ event, step }: AssessmentProcessingContext) => {
     const { sessionId } = payloadSchema.parse(event.data)
     const typedSessionId = sessionId as Id<'interviewSessions'>
 
@@ -33,7 +43,7 @@ export const processInterviewAssessmentFunction = inngest.createFunction(
       // deadline also cancels a run if the process or durable step hangs beyond
       // that abort window.
       return await step.run('generate-assessment-report', async () => {
-        return await processInterviewAssessment(typedSessionId, 'inngest')
+        return await dependencies.processAssessment(typedSessionId, 'inngest')
       })
     } catch (error) {
       const message =
@@ -42,10 +52,23 @@ export const processInterviewAssessmentFunction = inngest.createFunction(
           : 'Assessment processing failed unexpectedly.'
 
       await step.run('mark-report-failed', async () => {
-        await markAssessmentFailed(typedSessionId, message)
+        await dependencies.markFailed(typedSessionId, message)
       })
 
       throw error
     }
   }
+}
+
+export const processInterviewAssessmentFunction = inngest.createFunction(
+  {
+    id: 'process-interview-assessment',
+    name: 'Process interview assessment',
+    retries: 3,
+    timeouts: { finish: ASSESSMENT_PROCESSING_FINISH_TIMEOUT },
+    triggers: {
+      event: INTERVIEW_PROCESSING_REQUESTED_EVENT,
+    },
+  },
+  createAssessmentProcessingHandler()
 )

@@ -1,8 +1,7 @@
 import { ConvexError, v } from 'convex/values'
 
-import { api, internal } from '../_generated/api'
-import type { Doc } from '../_generated/dataModel'
-import { action, internalQuery, query } from '../_generated/server'
+import { internal } from '../_generated/api'
+import { action, internalQuery } from '../_generated/server'
 import { orgAdminMutation, recruiterQuery } from '../lib/customFunctions'
 import { logAuditEvent } from '../helpers/audit'
 import {
@@ -254,7 +253,7 @@ export const updateCandidateReleaseMode = orgAdminMutation({
   },
 })
 
-export const assertAdminForAction = query({
+export const assertAdminForAction = internalQuery({
   args: {},
   returns: v.object({ orgId: v.string() }),
   handler: async (ctx) => {
@@ -292,7 +291,7 @@ export const getWorkspaceSettingsRaw = internalQuery({
 })
 
 /** Resolve the same candidate-review capability used by recruiter chat. */
-export const assertCandidateReviewAccessForAction = query({
+export const assertCandidateReviewAccessForAction = internalQuery({
   args: {},
   returns: v.object({ orgId: v.string() }),
   handler: async (ctx) => {
@@ -304,45 +303,12 @@ export const assertCandidateReviewAccessForAction = query({
   },
 })
 
-export const getWorkspaceSettingsForReportChat = action({
-  args: {},
-  returns: v.union(
-    v.object({
-      defaultModels: v.optional(modelOverridesValidator),
-      providerKeys: v.optional(v.array(workspaceProviderKeyValidator)),
-    }),
-    v.null()
-  ),
-  handler: async (
-    ctx
-  ): Promise<{
-    defaultModels?: Doc<'workspaceSettings'>['defaultModels']
-    providerKeys?: Doc<'workspaceSettings'>['providerKeys']
-  } | null> => {
-    const { orgId } = await ctx.runQuery(
-      api.recruiter.workspace.assertCandidateReviewAccessForAction,
-      {}
-    )
-    const settings: Doc<'workspaceSettings'> | null = await ctx.runQuery(
-      internal.recruiter.workspace.getWorkspaceSettingsRaw,
-      { orgId }
-    )
-    if (!settings) {
-      return null
-    }
-    return {
-      defaultModels: settings.defaultModels,
-      providerKeys: settings.providerKeys,
-    }
-  },
-})
-
 export const testProviderConnection = action({
   args: {
     provider: v.string(),
   },
   handler: async (ctx, args) => {
-    await ctx.runQuery(api.recruiter.workspace.assertAdminForAction, {})
+    await ctx.runQuery(internal.recruiter.workspace.assertAdminForAction, {})
     if (!convexEnv.KYMA_ENCRYPTION_KEY?.trim()) {
       throw new ConvexError(
         'KYMA_ENCRYPTION_KEY is required to test provider keys.'
@@ -350,7 +316,7 @@ export const testProviderConnection = action({
     }
     const normalizedProvider = normalizeProvider(args.provider)
     const { orgId } = await ctx.runQuery(
-      api.recruiter.workspace.assertAdminForAction,
+      internal.recruiter.workspace.assertAdminForAction,
       {}
     )
     const settings = await ctx.runQuery(

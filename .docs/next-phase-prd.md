@@ -243,25 +243,27 @@ Do not prioritize these before the four workstreams above are solid:
 
 ### Candidate
 
+- `/i/[token]`
 - `/interviews/[inviteId]`
 
 ### Recruiter
 
-- `/admin`
-- `/admin/candidates`
-- `/admin/candidates/[sessionId]`
-- `/admin/screenings`
-- `/admin/screenings/new`
-- `/admin/screenings/[batchId]`
+- `/recruiter`
+- `/recruiter/candidates`
+- `/recruiter/candidates/[sessionId]`
+- `/recruiter/screenings`
+- `/recruiter/screenings/new`
+- `/recruiter/screenings/[batchId]`
 
-### API
+### Server entry points
 
-- `/api/interviews/bootstrap`
-- `/api/interviews/process`
-- `/api/livekit/token`
-- `/api/livekit/webhook`
+- Convex action `interviews.bootstrapActions.bootstrapInterviewSession`
+- Convex action `interviews.bootstrapActions.requeueInterviewProcessing`
+- Convex action `recruiter.reportChat.askReportChat`
+- Convex HTTP `{CONVEX_SITE_URL}/livekit/webhook`
+- Convex HTTP `{CONVEX_SITE_URL}/webhooks/clerk`
 - `/api/inngest`
-- `/api/recruiter/report-chat`
+- `/api/billing/checkout`, `/api/billing/portal`, `/api/webhooks/dodo`
 
 ## Key Files To Know Before Editing
 

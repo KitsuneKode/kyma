@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { paginationOptsValidator } from 'convex/server'
 
 import { internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
@@ -183,20 +184,47 @@ export const recomputeScreeningBatchCounters = internalMutation({
 })
 
 export const dispatchScreeningBatchOperationalStatsRefresh = internalMutation({
-  args: {},
+  args: {
+    paginationOpts: v.optional(paginationOptsValidator),
+    nowMs: v.optional(v.number()),
+  },
   returns: v.object({ scheduled: v.number() }),
-  handler: async (ctx) => {
-    const batches = await ctx.db
+  handler: async (
+    ctx,
+    { paginationOpts: requestedPage, nowMs: requestedNowMs }
+  ) => {
+    const nowMs = requestedNowMs ?? Date.now()
+    const paginationOpts = requestedPage ?? {
+      cursor: null,
+      numItems: MAX_SCREENING_BATCHES_PER_LIST,
+      maximumRowsRead: MAX_SCREENING_BATCHES_PER_LIST,
+    }
+    const batchesPage = await ctx.db
       .query('screeningBatches')
       .order('desc')
-      .take(MAX_SCREENING_BATCHES_PER_LIST)
-    const nowMs = Date.now()
-    const activeBatches = batches.filter((batch) => batch.status === 'active')
+      .paginate(paginationOpts)
+    const activeBatches = batchesPage.page.filter(
+      (batch) => batch.status === 'active'
+    )
     for (const batch of activeBatches) {
       await ctx.scheduler.runAfter(
         0,
         internal.screeningBatchOps.refreshScreeningBatchOperationalStats,
         { batchId: batch._id, nowMs }
+      )
+    }
+    if (!batchesPage.isDone) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.screeningBatchOps
+          .dispatchScreeningBatchOperationalStatsRefresh,
+        {
+          paginationOpts: {
+            ...paginationOpts,
+            cursor: batchesPage.continueCursor,
+          },
+          nowMs,
+        }
       )
     }
     return { scheduled: activeBatches.length }

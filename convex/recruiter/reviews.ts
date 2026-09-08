@@ -1,4 +1,5 @@
 import { ConvexError, v } from 'convex/values'
+import { internalMutation } from '../_generated/server'
 
 import {
   candidateReadQuery,
@@ -74,8 +75,9 @@ export const addRecruiterNote = candidateWriteMutation({
   },
 })
 
-export const addReportChatMessage = candidateWriteMutation({
+export const addReportChatMessage = internalMutation({
   args: {
+    orgId: v.string(),
     sessionId: v.id('interviewSessions'),
     reportId: v.optional(v.id('assessmentReports')),
     role: v.union(
@@ -93,7 +95,7 @@ export const addReportChatMessage = candidateWriteMutation({
   },
   returns: v.id('reportChatMessages'),
   handler: async (ctx, args) => {
-    const { orgId } = ctx
+    const { orgId } = args
 
     await assertOrgOwnsSession(ctx, orgId, args.sessionId)
     if (args.reportId) {
@@ -106,7 +108,6 @@ export const addReportChatMessage = candidateWriteMutation({
     }
 
     return await ctx.db.insert('reportChatMessages', {
-      orgId,
       ...args,
       createdAt: new Date().toISOString(),
     })

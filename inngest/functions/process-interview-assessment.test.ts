@@ -1,6 +1,10 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
-import { processInterviewAssessmentFunction } from './process-interview-assessment'
+import {
+  ASSESSMENT_PROCESSING_FINISH_TIMEOUT,
+  createAssessmentProcessingHandler,
+  processInterviewAssessmentFunction,
+} from './process-interview-assessment'
 
 describe('assessment processing durability', () => {
   test('cancels an executing run after the provider abort window', () => {
@@ -18,6 +22,38 @@ describe('assessment processing durability', () => {
       isConnect: false,
     })
 
-    expect(config?.timeouts).toEqual({ finish: '2m' })
+    expect(config?.timeouts).toEqual({
+      finish: ASSESSMENT_PROCESSING_FINISH_TIMEOUT,
+    })
+  })
+
+  test('marks the report failed before propagating a processing error', async () => {
+    const processingError = new Error('provider unavailable')
+    const processAssessment = vi.fn().mockRejectedValue(processingError)
+    const markFailed = vi.fn().mockResolvedValue(undefined)
+    const steps: string[] = []
+    const handler = createAssessmentProcessingHandler({
+      processAssessment,
+      markFailed,
+    })
+
+    await expect(
+      handler({
+        event: { data: { sessionId: 'session-123' } },
+        step: {
+          run: async <T>(name: string, callback: () => Promise<T>) => {
+            steps.push(name)
+            return await callback()
+          },
+        },
+      })
+    ).rejects.toBe(processingError)
+
+    expect(processAssessment).toHaveBeenCalledWith('session-123', 'inngest')
+    expect(markFailed).toHaveBeenCalledWith(
+      'session-123',
+      'provider unavailable'
+    )
+    expect(steps).toEqual(['generate-assessment-report', 'mark-report-failed'])
   })
 })

@@ -26,7 +26,9 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `bun run typecheck` passes
 - `bun run lint` passes
 - `bun run build` passes
-- `bun run check` mirrors CI (`fmt:check`, `lint`, `test`, `convex:ci`, typecheck, build)
+- `bun run check` runs every deterministic qualification gate: formatting,
+  conflict markers, lint, Knip, Vitest, Convex validation and generated-file
+  checks, typecheck, build, real local Convex integration, and Playwright
 - invite flow renders at `/i/[token]` and `/interviews/[inviteId]`
 - candidate flow now uses `LiveKit PreJoin` plus a composed meeting shell built from LiveKit React components
 - candidate join triggers Convex bootstrap action (`interviews.bootstrapActions.bootstrapInterviewSession`)
@@ -133,12 +135,10 @@ This file is the fast restart point for future agents. Read this before re-resea
 - LiveKit room connection works only when `NEXT_PUBLIC_LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are set
 - actual conversational agent behavior still needs a running LiveKit agent worker and model/provider keys
 - duplicate-media-acquisition risk is reduced by passing selected device IDs through join, but the long-term best path is still tighter room lifecycle control
-- current invite/time-limit policy is app-level and defaulted, not yet template-driven
 - transcript persistence now depends on transcription events being emitted by the LiveKit/agent path, so final quality still depends on the chosen STT/runtime provider
 - recording URLs depend on LiveKit egress plus object storage credentials being configured
-- the report pipeline now generates first-pass evidence and scoring automatically, but it is deterministic and intentionally conservative
-- webhook-driven room sync exists, and Inngest is wired, but the model-based/AI reviewer layer still has not been added
-- screening creation currently uses the default template and app-level expiry/attempt policies, not template-driven controls yet
+- the report pipeline attempts structured model scoring, then falls back to a deterministic, conservative `manual_review` result when provider scoring is unavailable or invalid
+- real provider behavior still needs owner-run qualification even though the Inngest, fallback, and recovery paths are implemented
 - recruiter chat is grounded and usable, but it still needs true model-provider configuration or later BYOK to move beyond the fallback path
 - the child persona currently relies on prompt + TTS configuration rather than a dedicated voice-cloning path
 - native collaborative whiteboard is still deferred; current recommended visual-teaching path is screen share with tools like Excalidraw
@@ -236,7 +236,11 @@ Use these first before re-researching the current implementation choices:
 
 **Shipped on main (usable ship):** security/SaaS stack #3–#15; commercial #18 (Dodo, quotas, invite email, GDPR, BYOK gate, template policy); operational credibility #20 (finalize honesty, reaper, copilot guardrails, audits).
 
-**Shipped on fix/audit-remediation-phase-0 (pending merge):** 26 audit fixes across trust boundary, data-loss, billing, transcript, metering, compliance, scoring, plus follow-ups: templates audit log, reaper bucket, Inngest bounded, redispatch continuity (turn counters seeded, welcome skipped), org-scoped dev seed, screenings batch-fetch (parallel + by_batch index), BYOK AAD binding, bootstrap order desc. Local: `bun run typecheck`/`fmt`/`lint` green, `test` 391/391, `build` pass. See `.plans/2026-08-21-audit-remediation-merged.md` for provenance.
+**Shipped on main through PR #30:** audit remediation, transcript hot-path
+coalescing, deterministic score enforcement, metering, compliance erasure,
+Convex action/HTTP cutover, dashboard analytics, grounded recruiter chat,
+reconnect hardening, and the real local Convex integration harness. See
+`.plans/2026-09-01-production-readiness-integration.md` for provenance.
 
 Immediate owner work:
 
@@ -247,17 +251,16 @@ Immediate owner work:
 
 Still open product/tech debt:
 
-- persist/reconcile `reconnecting` server-side and promote `connecting → live` without waiting solely on webhooks
-- freeze policy snapshot at invite/session start (today recomputed at report time)
-- wire `interviewStyleMode` into agent behavior (`convex/agentConfig.ts` / `agents/interviewer.ts`)
-- Convex API cutover (#19): port #20 Next-route hardening into Convex actions/http before merge
-- replace in-memory HTTP rate limits with a shared store for multi-instance deploys
+- complete issue #31's real-provider, billing, recovery, observability, backup, and load evidence
+- validate the candidate lobby, interview room, charts, and transcript review on physical mobile devices
 - BYOK KMS rotation + broader lifecycle (`.docs/byok-architecture.md`)
 
 ## Validation log
 
 - 2026-07-10 — Code-only Phase B/C/D/E slice landed (finalize honesty, policy UI, copilot guardrails/citations/gating, livekitToken rate limit, screening/BYOK audits, BYOK design doc). Live room E2E still pending owner credentials.
 - 2026-07-10 (usable ship) — Merged #18 (commercial) + #20 (ops credibility) to `main` after rebase. Closed #16/#17. Left #19 open pending Next→Convex port. Local: `bun run typecheck` / `test` (286) / `lint` green; `live-path:preflight` OK with Clerk+LiveKit+encryption+`KYMA_ORG_PLAN_OVERRIDE=pro`. Override quota smoke: free rejects 11 candidates/batch, pro allows. Full LiveKit room E2E (verification items 3–4) still owner-run with `bun run dev:full`.
+- 2026-09-01 — PRs #21–#30 merged to `main`; CI passed on `3b38af9`.
+- 2026-09-02 — anonymous loopback Convex integration passed all 7 checks with synthetic credentials; real provider qualification remains tracked in issue #31.
 - _Append dated rows here after manual LiveKit / end-to-end runs (same PR as behavior changes when possible)._
 
 ## Local Developer Experience

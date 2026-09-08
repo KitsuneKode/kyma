@@ -8,7 +8,26 @@ import {
   isInviteExpiringSoon,
   isStaleSessionWithoutReport,
   isStuckProcessing,
+  requireValidQueryNowMs,
 } from './sessionOps'
+
+describe('query time validation', () => {
+  it('preserves a valid caller timestamp without reading the wall clock', () => {
+    expect(requireValidQueryNowMs(1_700_000_000_000)).toBe(1_700_000_000_000)
+  })
+
+  it.each([
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER,
+    -1,
+    1.5,
+  ])('rejects an invalid caller timestamp: %s', (nowMs) => {
+    expect(() => requireValidQueryNowMs(nowMs)).toThrow(
+      'nowMs must be a valid non-negative Date timestamp.'
+    )
+  })
+})
 
 describe('getSessionOpsWindows', () => {
   it('derives the 24h expiring window and 1h stale cutoff from nowMs', () => {

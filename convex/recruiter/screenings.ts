@@ -6,7 +6,11 @@ import { logAuditEvent } from '../helpers/audit'
 import { getRecruiterActorId } from '../helpers/auth'
 import { DEFAULT_INTERVIEW_DURATION_MINUTES } from '../helpers/interviewPolicy'
 import { quotasForPlan, resolveOrgPlanForOrg } from '../helpers/orgPlan'
-import { isStuckProcessing } from '../helpers/sessionOps'
+import {
+  getSessionOpsWindows,
+  isStuckProcessing,
+  requireValidQueryNowMs,
+} from '../helpers/sessionOps'
 import {
   MAX_SCREENING_BATCHES_PER_LIST,
   assertSupportedScreeningBatchSize,
@@ -29,8 +33,9 @@ export const listScreeningBatches = recruiterQuery({
   args: {
     nowMs: v.number(),
   },
-  handler: async (ctx) => {
+  handler: async (ctx, { nowMs }) => {
     const { orgId } = ctx
+    requireValidQueryNowMs(nowMs)
 
     // Newest-first at the index level. Sampling on `by_org_id` returned the
     // OLDEST batches, so a mature org's recent screenings were never visible.
@@ -97,6 +102,7 @@ export const getScreeningBatchDetail = recruiterQuery({
   },
   handler: async (ctx, { batchId, nowMs }) => {
     const { orgId } = ctx
+    const { nowMs: queryNowMs } = getSessionOpsWindows(nowMs)
 
     const batch = await ctx.db.get(batchId)
 
@@ -155,7 +161,8 @@ export const getScreeningBatchDetail = recruiterQuery({
         emailDeliveryStatus: invite?.emailDeliveryStatus,
         emailSentAt: invite?.emailSentAt,
         isStuckProcessing: Boolean(
-          invite && isStuckProcessing(session?.state, session?.endedAt, nowMs)
+          invite &&
+          isStuckProcessing(session?.state, session?.endedAt, queryNowMs)
         ),
       }
     })
@@ -417,12 +424,8 @@ export const getInviteEmailDeliverySummary = recruiterQuery({
   }),
   handler: async (ctx, { nowMs }) => {
     const { orgId } = ctx
-    const serverNow = Date.now()
-    const clampedNowMs =
-      Number.isFinite(nowMs) && Math.abs(nowMs - serverNow) < 5 * 60 * 1000
-        ? nowMs
-        : serverNow
-    const since = new Date(clampedNowMs - 1000 * 60 * 60 * 24).toISOString()
+    const { nowMs: queryNowMs } = getSessionOpsWindows(nowMs)
+    const since = new Date(queryNowMs - 1000 * 60 * 60 * 24).toISOString()
     // Count each delivery status directly. Sampling the 500 OLDEST invites on
     // `by_org_id` meant any org past 500 lifetime invites permanently reported
     // "0 pending, 0 failed" no matter how many invite emails were failing now.

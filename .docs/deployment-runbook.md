@@ -28,7 +28,7 @@ Production host: `https://kyma.kitsunelabs.xyz`
 | ---------------------------------------- | --------------- | ---------------------------------------------------------------- |
 | `NEXT_PUBLIC_CONVEX_URL`                 | Vercel          | Convex HTTP URL for the **prod** deployment                      |
 | `NEXT_PUBLIC_LIVEKIT_URL`                | Vercel          | LiveKit Cloud / self-hosted WS URL                               |
-| `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | Vercel + agent  | Token mint + room APIs                                           |
+| `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | Convex + agent  | Token mint + room APIs                                           |
 | `KYMA_PROCESSING_WRITE_KEY`              | Vercel + Convex | **Required in production** for report writes / worker heartbeats |
 | `KYMA_DEPLOYMENT_ENV`                    | Vercel / Convex | Authoritative dev/prod signal — see note below                   |
 
@@ -55,12 +55,12 @@ Production host: `https://kyma.kitsunelabs.xyz`
 
 ### Clerk (recruiter / admin)
 
-| Variable                                              | Where           | Notes                 |
-| ----------------------------------------------------- | --------------- | --------------------- |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`                   | Vercel          | Production Clerk app  |
-| `CLERK_SECRET_KEY`                                    | Vercel          | Server                |
-| `CLERK_FRONTEND_API_URL` or `CLERK_JWT_ISSUER_DOMAIN` | Vercel + Convex | Convex JWT validation |
-| `CLERK_WEBHOOK_SIGNING_SECRET`                        | Vercel          | `/api/webhooks/clerk` |
+| Variable                                              | Where           | Notes                              |
+| ----------------------------------------------------- | --------------- | ---------------------------------- |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`                   | Vercel + Convex | Production Clerk app               |
+| `CLERK_SECRET_KEY`                                    | Vercel + Convex | Server and Convex auth config      |
+| `CLERK_FRONTEND_API_URL` or `CLERK_JWT_ISSUER_DOMAIN` | Vercel + Convex | Convex JWT validation              |
+| `CLERK_WEBHOOK_SIGNING_SECRET`                        | Convex          | `{CONVEX_SITE_URL}/webhooks/clerk` |
 
 Sync Clerk-related keys into Convex with `bun run convex:sync-env:prod` (or dashboard).
 
@@ -105,7 +105,7 @@ Set `LIVEKIT_RECORDING_ENABLED=1` plus storage + template vars from `.env.exampl
 3. **Vercel** — promote / deploy the Next.js app; confirm Production env vars.
 4. **Inngest** — ensure the app points at `https://kyma.kitsunelabs.xyz/api/inngest` (or the Vercel production URL) with matching signing keys.
 5. **LiveKit agent** — start/restart `bun run agent:start` (or your process manager) with production LiveKit + provider env; confirm `LIVEKIT_AGENT_NAME` matches token dispatch.
-6. **Clerk webhook** — production endpoint `https://kyma.kitsunelabs.xyz/api/webhooks/clerk`.
+6. **Clerk webhook** — production endpoint `{CONVEX_SITE_URL}/webhooks/clerk`.
 
 ---
 
@@ -128,15 +128,15 @@ Run in order; stop on first hard failure.
 ### C. Interview path
 
 - [ ] Create or reuse a screening invite
-- [ ] Open `/i/<token>` → bootstrap succeeds (network: `POST /api/interviews/bootstrap` 200)
+- [ ] Open `/i/<token>` → Convex action `interviews.bootstrapActions.bootstrapInterviewSession` succeeds
 - [ ] Join LiveKit room; agent joins within ~30s
 - [ ] Speak briefly; transcript segments appear
-- [ ] Submit / end session → `POST /api/interviews/process` succeeds (queued or inline fallback)
+- [ ] Submit / end session → Convex processing enqueue succeeds (Inngest queued or inline fallback)
 - [ ] Report appears on recruiter session detail; scores are structured + evidence-backed
 
 ### D. Webhooks / jobs
 
-- [ ] LiveKit webhook deliveries succeed (`/api/livekit/webhook`)
+- [ ] LiveKit webhook deliveries succeed (`{CONVEX_SITE_URL}/livekit/webhook`)
 - [ ] Inngest dashboard shows processing events (or confirm intentional inline fallback in logs)
 
 ---

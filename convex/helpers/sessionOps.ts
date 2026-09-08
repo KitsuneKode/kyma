@@ -7,6 +7,9 @@ export const EXPIRING_INVITE_WINDOW_MS = 24 * 60 * 60 * 1000
 /** Processing sessions that ended this long ago are treated as stuck. */
 export const STUCK_PROCESSING_MS = 10 * 60 * 1000
 
+/** Largest timestamp accepted by the JavaScript Date specification. */
+export const MAX_DATE_TIMESTAMP_MS = 8_640_000_000_000_000
+
 export type SessionOpsWindows = {
   nowMs: number
   /** Exclusive lower bound: expiry must be after now. */
@@ -16,14 +19,31 @@ export type SessionOpsWindows = {
 }
 
 /**
+ * Validate caller-supplied time without consulting wall clock state inside a
+ * reactive Convex query. The value only affects the caller's operational view;
+ * authoritative expiry and lifecycle writes remain mutation-owned.
+ */
+export function requireValidQueryNowMs(nowMs: number): number {
+  if (
+    !Number.isSafeInteger(nowMs) ||
+    nowMs < 0 ||
+    nowMs > MAX_DATE_TIMESTAMP_MS
+  ) {
+    throw new Error('nowMs must be a valid non-negative Date timestamp.')
+  }
+  return nowMs
+}
+
+/**
  * Shared time windows for recruiter ops surfaces (dashboard + screenings).
  * Callers pass `nowMs` so Convex queries stay deterministic.
  */
 export function getSessionOpsWindows(nowMs: number): SessionOpsWindows {
+  const validNowMs = requireValidQueryNowMs(nowMs)
   return {
-    nowMs,
-    expiringUntilMs: nowMs + EXPIRING_INVITE_WINDOW_MS,
-    staleBeforeMs: nowMs - STALE_SESSION_MS,
+    nowMs: validNowMs,
+    expiringUntilMs: validNowMs + EXPIRING_INVITE_WINDOW_MS,
+    staleBeforeMs: validNowMs - STALE_SESSION_MS,
   }
 }
 

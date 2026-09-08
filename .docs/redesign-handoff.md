@@ -141,9 +141,9 @@ Current screen states inside this route:
 
 This route should become the best-designed part of the product first.
 
-## Current API Routes
+## Current Backend Entry Points
 
-### `/api/interviews/bootstrap`
+### `interviews.bootstrapActions.bootstrapInterviewSession`
 
 Purpose:
 
@@ -154,18 +154,23 @@ Purpose:
 
 Design implication:
 
-- errors from this route should map to polished candidate-facing states
+- action errors should map to polished candidate-facing states
 
-### `/api/livekit/token`
+### Convex HTTP webhooks
 
 Purpose:
 
-- creates LiveKit access token
-- includes optional agent dispatch config
+- `{CONVEX_SITE_URL}/livekit/webhook` receives signed LiveKit lifecycle events
+- `{CONVEX_SITE_URL}/webhooks/clerk` receives signed Clerk identity events
 
 Design implication:
 
-- failures should surface as trustworthy “we couldn’t connect” feedback, not generic crashes
+- failures should surface in recruiter health and operational logs without exposing secrets
+
+### Next.js route handlers
+
+- `/api/inngest` serves the assessment workflow
+- `/api/billing/checkout`, `/api/billing/portal`, and `/api/webhooks/dodo` own billing boundaries
 
 ## Current Screen Composition
 
