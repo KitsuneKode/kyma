@@ -179,6 +179,7 @@ export function DevSetupHub({
         <AuthSetupRequired
           missing={setupStatus.missing}
           derivedIssuerDomain={setupStatus.derivedIssuerDomain}
+          variant="local"
         />
       ) : (
         <DevSetupHubTools />

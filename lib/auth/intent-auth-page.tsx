@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 
-import { AuthSetupRequired } from '@/components/auth/auth-setup-required'
 import { ClerkAuthPanel } from '@/components/auth/clerk-auth-panel'
 import { getUserAppAccess } from '@/lib/auth/access'
+import { UnconfiguredAuth } from '@/lib/auth/unconfigured-auth'
 import type { WorkspaceIntent } from '@/lib/auth/workspace-intent'
 import {
   parseRedirectUrl,
@@ -25,7 +25,7 @@ export async function renderIntentAuthPage(
   if (!hasClerkServerCredentials()) {
     const setup = getClerkSetupStatus()
     return (
-      <AuthSetupRequired
+      <UnconfiguredAuth
         missing={setup.missing}
         derivedIssuerDomain={setup.derivedIssuerDomain}
       />

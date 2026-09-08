@@ -29,8 +29,8 @@ export default defineConfig({
         // Clerk and provider integrations stay disabled unless explicitly set.
         command:
           'env -u CI -u CONVEX_DEPLOYMENT NEXT_PUBLIC_CONVEX_URL= NEXT_PUBLIC_CONVEX_SITE_URL= NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY= CLERK_SECRET_KEY= CLERK_FRONTEND_API_URL= CLERK_JWT_ISSUER_DOMAIN= bun run dev:web',
-        // Probe a static asset so readiness does not cold-compile the largest
-        // marketing route before the browser suite can begin.
+        // Probe a committed favicon so readiness does not cold-compile the
+        // largest marketing route before the browser suite can begin.
         url: `${baseURL}/favicon.ico`,
         timeout: 120_000,
         reuseExistingServer: !runtimeEnv.CI,

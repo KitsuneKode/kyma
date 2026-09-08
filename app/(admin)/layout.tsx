@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator'
 import { AppAuthGate } from '@/components/auth/app-auth-gate'
 import { WorkspaceShell } from '@/components/workspace/workspace-shell'
 import { requireRecruiterPageAccess } from '@/lib/auth/access'
+import { shouldExposeLocalAuthSetupFromEnv } from '@/lib/env/node-env'
 import { getClerkSetupStatus } from '@/lib/clerk/setup-status'
 
 export default async function AdminLayout({
@@ -50,6 +51,7 @@ export default async function AdminLayout({
             clerkEnabled={clerkEnabled}
             setupStatus={setupStatus}
             signInHref="/sign-in/recruiter"
+            exposeLocalSetup={shouldExposeLocalAuthSetupFromEnv()}
           >
             {children}
           </AppAuthGate>

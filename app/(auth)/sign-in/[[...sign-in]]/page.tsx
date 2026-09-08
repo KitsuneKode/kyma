@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 
-import { AuthSetupRequired } from '@/components/auth/auth-setup-required'
 import { ClerkAuthPanel } from '@/components/auth/clerk-auth-panel'
 import { getPostSignInPath, getUserAppAccess } from '@/lib/auth/access'
+import { UnconfiguredAuth } from '@/lib/auth/unconfigured-auth'
 import { hasClerkServerCredentials } from '@/lib/clerk/config'
 import { getClerkSetupStatus } from '@/lib/clerk/setup-status'
 import {
@@ -22,7 +22,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
   if (!hasClerkServerCredentials()) {
     const setup = getClerkSetupStatus()
     return (
-      <AuthSetupRequired
+      <UnconfiguredAuth
         missing={setup.missing}
         derivedIssuerDomain={setup.derivedIssuerDomain}
       />
