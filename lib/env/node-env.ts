@@ -1,3 +1,8 @@
+import {
+  resolveAuthSetupSurface,
+  shouldExposeLocalAuthSetup,
+  type AuthSetupSurface,
+} from '@/lib/auth/local-auth-setup'
 import { resolveRuntimeMode, type RuntimeMode } from '@/lib/runtime-mode'
 
 /**
@@ -63,4 +68,20 @@ function isConvexRuntime() {
 
 export function allowDevPreviewRoutes() {
   return !isProductionNodeEnv()
+}
+
+function readAuthSetupSurfaceSignals() {
+  return {
+    deploymentEnv: process.env.KYMA_DEPLOYMENT_ENV,
+    nodeEnv: readNodeEnv(),
+    vercelEnv: process.env.VERCEL_ENV,
+  }
+}
+
+export function resolveAuthSetupSurfaceFromEnv(): AuthSetupSurface {
+  return resolveAuthSetupSurface(readAuthSetupSurfaceSignals())
+}
+
+export function shouldExposeLocalAuthSetupFromEnv() {
+  return shouldExposeLocalAuthSetup(readAuthSetupSurfaceSignals())
 }

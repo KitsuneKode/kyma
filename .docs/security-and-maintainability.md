@@ -22,9 +22,10 @@ Rules:
 
 ### 2. Treat webhook routes as hostile input
 
-The following routes must remain server-only and signature-validated:
+The following endpoints must remain server-only and signature-validated:
 
-- `/api/livekit/webhook`
+- `{CONVEX_SITE_URL}/livekit/webhook`
+- `{CONVEX_SITE_URL}/webhooks/clerk`
 - `/api/inngest`
 - future third-party callback routes
 
@@ -62,7 +63,7 @@ Rules:
 - do not expose the processing key to the browser
 - if the key is unset, treat that as a local/dev convenience only, not the intended production posture
 - production / non-dev Convex deployments must never trust an empty or missing processing key; local empty-key fallback is limited to clear `NODE_ENV=development`
-- HTTP rate-limit helpers (`lib/http/server-rate-limit.ts`) throw in production when the processing key is missing — they must not silently no-op
+- Convex processing mutations reject missing or invalid processing credentials
 
 ### 4. BYOK must not leak tenant keys to our server runtime longer than necessary
 
@@ -87,7 +88,7 @@ Shipped BYOK posture:
 
 ### ADR: shipped hardening (Kyma next-phase)
 
-- **HTTP rate limits:** `lib/http/server-rate-limit.ts` (Convex `@convex-dev/rate-limiter` via `assertServerRateLimit`) guards `/api/interviews/bootstrap` (`publicSnapshot` + `livekitToken`), `/api/interviews/process`, and `/api/recruiter/report-chat`. Production requires `KYMA_PROCESSING_WRITE_KEY` or the helper throws.
+- **Convex rate limits:** `@convex-dev/rate-limiter` guards interview bootstrap/token mint, processing enqueue, recruiter chat, and hot candidate mutations. Production processing writes require `KYMA_PROCESSING_WRITE_KEY`.
 - **Convex throttles:** `appendSessionEvent` and `upsertTranscriptSegment` reject excessive per-session write volume (rolling minute window).
 - **Capability-bound public writes:** candidate browser writes must include a matching `inviteToken` + `sessionId`; server paths use internal mutations.
 - **Webhook idempotency:** webhook event writes are deduped per session via `dedupeKey` to avoid duplicate timeline mutations from retries.
@@ -107,7 +108,6 @@ Preferred backend domain boundaries:
 - `convex/livekit.ts`
 - `convex/processing/assessment.ts`
 - `convex/recruiter/*`
-- `convex/admin.ts`
 
 Preferred frontend domain boundaries:
 

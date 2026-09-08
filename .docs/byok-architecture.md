@@ -52,9 +52,10 @@ encrypted keys already exist.
 | Next.js / Inngest          | report-chat, process-session | `decryptWorkspaceKey` / `tryResolveWorkspaceApiKeys` in `lib/providers/resolve-model.ts` |
 | Agent worker               | interviewer media routing    | runtime env + resolve helpers                                                            |
 
-`getWorkspaceSettingsForReportChat` may return **encrypted** key records to an
-authenticated server action so the Next.js route can decrypt locally. That
-payload must never be forwarded to the browser.
+Report chat decrypts workspace keys only inside the Convex action
+`recruiter.reportChat.askReportChat` after
+`internal.recruiter.workspace.assertCandidateReviewAccessForAction`. Encrypted
+key records must never be returned to the browser or to a public query/action.
 
 ## Platform keys vs BYOK
 

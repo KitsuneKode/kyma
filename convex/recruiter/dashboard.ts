@@ -21,15 +21,13 @@ async function buildDashboardPayload(
   orgId: string,
   nowMs: number
 ) {
-  // C-12: clamp client-controlled nowMs to server time to prevent skew.
-  const serverNow = Date.now()
-  const clampedNowMs =
-    Number.isFinite(nowMs) && Math.abs(nowMs - serverNow) < 5 * 60 * 1000
-      ? nowMs
-      : serverNow
-  const { expiringUntilMs, staleBeforeMs } = getSessionOpsWindows(clampedNowMs)
+  const {
+    nowMs: queryNowMs,
+    expiringUntilMs,
+    staleBeforeMs,
+  } = getSessionOpsWindows(nowMs)
   // C-15: use UTC date to avoid local-timezone bucketing.
-  const todayUtc = new Date(clampedNowMs).toISOString().slice(0, 10)
+  const todayUtc = new Date(queryNowMs).toISOString().slice(0, 10)
 
   const [
     manualReviewReports,
@@ -109,7 +107,7 @@ async function buildDashboardPayload(
 
   const pendingReviews = reports.length
   const expiringInvites = invites.filter((invite) =>
-    isInviteExpiringSoon(invite.expiresAt, nowMs, expiringUntilMs)
+    isInviteExpiringSoon(invite.expiresAt, queryNowMs, expiringUntilMs)
   ).length
   const sessionsToday = sessions.filter((session) => {
     if (!session.startedAt) return false
@@ -165,7 +163,7 @@ async function buildDashboardPayload(
   const timelineDays = 14
   const timelineMap = new Map<string, number>()
   for (let offset = timelineDays - 1; offset >= 0; offset -= 1) {
-    const date = new Date(clampedNowMs - offset * 24 * 60 * 60 * 1000)
+    const date = new Date(queryNowMs - offset * 24 * 60 * 60 * 1000)
     const key = date.toISOString().slice(0, 10)
     timelineMap.set(key, 0)
   }
@@ -206,7 +204,7 @@ async function buildDashboardPayload(
       manualReviewCandidates,
       invitesExpiringSoon: invites
         .filter((invite) =>
-          isInviteExpiringSoon(invite.expiresAt, nowMs, expiringUntilMs)
+          isInviteExpiringSoon(invite.expiresAt, queryNowMs, expiringUntilMs)
         )
         .slice(0, MAX_ATTENTION_ITEMS)
         .map((invite) => ({

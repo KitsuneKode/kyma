@@ -3,8 +3,9 @@
 
 import { convexTest } from 'convex-test'
 import { makeFunctionReference } from 'convex/server'
-import { describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
+import { internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
 import { applySessionStateTransition } from './helpers/interviewSession'
 import { getSessionOpsWindows } from './helpers/sessionOps'
@@ -104,6 +105,14 @@ describe('screening batch counters', () => {
 })
 
 describe('screening batch operational stats', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   test('refreshes exact expiring and stale counts for one bounded batch', async () => {
     const t = harness()
     const { orgId, templateId, batchId } = await seedBatch(t)
@@ -187,5 +196,40 @@ describe('screening batch operational stats', () => {
     ]) {
       expect(listSource).not.toContain(`query('${table}')`)
     }
+  })
+
+  test('eventually refreshes an old active batch behind newer inactive batches', async () => {
+    const t = harness()
+    const { orgId, templateId, batchId } = await seedBatch(t)
+
+    await t.run(async (ctx) => {
+      for (let index = 0; index < 101; index += 1) {
+        await ctx.db.insert('screeningBatches', {
+          orgId,
+          name: `Archived batch ${index}`,
+          templateId,
+          createdBy: 'test',
+          status: 'archived',
+          allowedAttempts: 1,
+          createdAt: new Date(index + 1).toISOString(),
+        })
+      }
+    })
+
+    await t.mutation(
+      internal.screeningBatchOps.dispatchScreeningBatchOperationalStatsRefresh,
+      {}
+    )
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+
+    const stats = await t.run((ctx) =>
+      ctx.db
+        .query('screeningBatchOperationalStats')
+        .withIndex('by_batch_id', (q) => q.eq('batchId', batchId))
+        .unique()
+    )
+    expect(stats).toEqual(
+      expect.objectContaining({ batchId, expiringInviteCount: 0 })
+    )
   })
 })

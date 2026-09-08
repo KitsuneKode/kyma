@@ -93,7 +93,7 @@ The current codebase compiles and the product loop exists, but the real proof st
 
 ### Why
 
-The current screening creation flow exists, but policy is still driven by app defaults rather than a first-class template or screening configuration model.
+Template and batch policy already ship (duration, resume, attempts, `policySnapshot`). Remaining work is owner-run template version history and any live-path gaps, not a rebuild of policy storage.
 
 ### Goals
 
@@ -243,32 +243,33 @@ Do not prioritize these before the four workstreams above are solid:
 
 ### Candidate
 
+- `/i/[token]`
 - `/interviews/[inviteId]`
 
 ### Recruiter
 
-- `/admin`
-- `/admin/candidates`
-- `/admin/candidates/[sessionId]`
-- `/admin/screenings`
-- `/admin/screenings/new`
-- `/admin/screenings/[batchId]`
+- `/recruiter`
+- `/recruiter/candidates`
+- `/recruiter/candidates/[sessionId]`
+- `/recruiter/screenings`
+- `/recruiter/screenings/new`
+- `/recruiter/screenings/[batchId]`
 
-### API
+### Server entry points
 
-- `/api/interviews/bootstrap`
-- `/api/interviews/process`
-- `/api/livekit/token`
-- `/api/livekit/webhook`
+- Convex action `interviews.bootstrapActions.bootstrapInterviewSession`
+- Convex action `interviews.bootstrapActions.requeueInterviewProcessing`
+- Convex action `recruiter.reportChat.askReportChat`
+- Convex HTTP `{CONVEX_SITE_URL}/livekit/webhook`
+- Convex HTTP `{CONVEX_SITE_URL}/webhooks/clerk`
 - `/api/inngest`
-- `/api/recruiter/report-chat`
+- `/api/billing/checkout`, `/api/billing/portal`, `/api/webhooks/dodo`
 
 ## Key Files To Know Before Editing
 
 - `convex/interviews/*`
 - `convex/processing/assessment.ts`
 - `convex/recruiter/*`
-- `convex/admin.ts`
 - `convex/livekit.ts`
 - `convex/schema.ts`
 - `lib/assessment/report-engine.ts`

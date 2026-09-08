@@ -50,7 +50,7 @@ export const askReportChat = action({
     }
 
     const { orgId } = await ctx.runQuery(
-      api.recruiter.workspace.assertCandidateReviewAccessForAction,
+      internal.recruiter.workspace.assertCandidateReviewAccessForAction,
       {}
     )
 
@@ -79,7 +79,8 @@ export const askReportChat = action({
 
     const reportId = args.reportId as Id<'assessmentReports'> | undefined
 
-    await ctx.runMutation(api.recruiter.reviews.addReportChatMessage, {
+    await ctx.runMutation(internal.recruiter.reviews.addReportChatMessage, {
+      orgId,
       sessionId: args.sessionId,
       reportId,
       role: 'user',
@@ -104,7 +105,8 @@ export const askReportChat = action({
       providerOptions,
     })
 
-    await ctx.runMutation(api.recruiter.reviews.addReportChatMessage, {
+    await ctx.runMutation(internal.recruiter.reviews.addReportChatMessage, {
+      orgId,
       sessionId: args.sessionId,
       reportId,
       role: 'assistant',

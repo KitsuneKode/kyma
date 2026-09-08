@@ -18,6 +18,7 @@ type AppAuthGateProps = {
   clerkEnabled: boolean
   setupStatus: ClerkSetupStatus
   signInHref?: string
+  exposeLocalSetup?: boolean
 }
 
 export function AppAuthGate({
@@ -25,6 +26,7 @@ export function AppAuthGate({
   clerkEnabled,
   setupStatus,
   signInHref = '/sign-in',
+  exposeLocalSetup = false,
 }: AppAuthGateProps) {
   const { isLoaded, isSignedIn } = useAuth()
   const { isAuthenticated, isLoading } = useConvexAuth()
@@ -46,6 +48,7 @@ export function AppAuthGate({
       <AuthSetupRequired
         missing={setupStatus.missing}
         derivedIssuerDomain={setupStatus.derivedIssuerDomain}
+        variant={exposeLocalSetup ? 'local' : 'hosted'}
       />
     )
   }
@@ -66,6 +69,35 @@ export function AppAuthGate({
   }
 
   if (state.kind === 'auth-unavailable') {
+    if (!exposeLocalSetup) {
+      return (
+        <WorkspaceEmptyState
+          eyebrow="Workspace access"
+          title="Couldn't finish signing in"
+          description="Your session didn't connect to this workspace. Refresh and try again, or return home."
+          action={
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                onClick={() => {
+                  window.location.reload()
+                }}
+              >
+                Retry
+              </Button>
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={<Link href="/" />}
+              >
+                Back to home
+              </Button>
+            </div>
+          }
+        />
+      )
+    }
+
     return (
       <div className="space-y-6">
         <WorkspaceEmptyState

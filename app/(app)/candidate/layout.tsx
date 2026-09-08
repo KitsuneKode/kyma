@@ -15,6 +15,7 @@ import { AppAuthGate } from '@/components/auth/app-auth-gate'
 import { WorkspacePromptBanner } from '@/components/auth/workspace-prompt-banner'
 import { WorkspaceShell } from '@/components/workspace/workspace-shell'
 import { requireCandidatePageAccess } from '@/lib/auth/access'
+import { shouldExposeLocalAuthSetupFromEnv } from '@/lib/env/node-env'
 import { getClerkSetupStatus } from '@/lib/clerk/setup-status'
 
 export default async function CandidateLayout({
@@ -45,6 +46,7 @@ export default async function CandidateLayout({
             clerkEnabled={clerkEnabled}
             setupStatus={setupStatus}
             signInHref="/sign-in/candidate"
+            exposeLocalSetup={shouldExposeLocalAuthSetupFromEnv()}
           >
             <CandidateInviteEmailLinker />
             {access.preferredWorkspace === 'unassigned' ? (

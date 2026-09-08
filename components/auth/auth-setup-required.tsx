@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { WorkspaceSurface } from '@/components/workspace/surface'
 import { Button } from '@/components/ui/button'
+import type { AuthSetupSurface } from '@/lib/auth/local-auth-setup'
 import type { ClerkSetupMissingKey } from '@/lib/clerk/setup-status'
 
 const SETUP_STEPS: { key: ClerkSetupMissingKey; hint: string }[] = [
@@ -31,12 +32,40 @@ const SETUP_STEPS: { key: ClerkSetupMissingKey; hint: string }[] = [
 type AuthSetupRequiredProps = {
   missing: ClerkSetupMissingKey[]
   derivedIssuerDomain?: string | null
+  variant?: AuthSetupSurface
+}
+
+function HostedAuthUnavailable() {
+  return (
+    <div className="space-y-6 text-center">
+      <header className="space-y-2">
+        <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+          Kyma
+        </p>
+        <h1 className="text-xl font-semibold tracking-tight">
+          Sign-in isn't available
+        </h1>
+        <p className="text-sm text-pretty text-muted-foreground">
+          This workspace isn't accepting sign-in right now. Return home, or try
+          again later.
+        </p>
+      </header>
+      <Button nativeButton={false} render={<Link href="/" />}>
+        Back to home
+      </Button>
+    </div>
+  )
 }
 
 export function AuthSetupRequired({
   missing,
   derivedIssuerDomain,
+  variant = 'hosted',
 }: AuthSetupRequiredProps) {
+  if (variant !== 'local') {
+    return <HostedAuthUnavailable />
+  }
+
   const missingSet = new Set(missing)
 
   return (

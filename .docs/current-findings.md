@@ -26,7 +26,9 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `bun run typecheck` passes
 - `bun run lint` passes
 - `bun run build` passes
-- `bun run check` mirrors CI (`fmt:check`, `lint`, `test`, `convex:ci`, typecheck, build)
+- `bun run check` runs every deterministic qualification gate: formatting,
+  conflict markers, lint, Knip, Vitest, Convex validation and generated-file
+  checks, typecheck, build, real local Convex integration, and Playwright
 - invite flow renders at `/i/[token]` and `/interviews/[inviteId]`
 - candidate flow now uses `LiveKit PreJoin` plus a composed meeting shell built from LiveKit React components
 - candidate join triggers Convex bootstrap action (`interviews.bootstrapActions.bootstrapInterviewSession`)
@@ -98,11 +100,9 @@ This file is the fast restart point for future agents. Read this before re-resea
 - `convex/interviews/*`: public snapshot, bootstrap, session events, candidate portal
 - `convex/interviews/bootstrapActions.ts`: bootstrap + LiveKit token + processing recovery
 - `convex/processing/assessment.ts`: pipeline-only assessment read/write (`getSessionProcessingDetail`, `saveAssessmentReport`)
-- `convex/recruiter/*`: recruiter workspace queries and review surfaces
+- `convex/recruiter/*`: recruiter workspace queries, screening writes, review surfaces, report chat
 - `convex/recruiter/reportChat.ts`: grounded recruiter chat action
-- `convex/admin.ts`: screening creation, eligibility, recruiter notes, and recruiter chat persistence
 - `components/interview/interview-workspace.tsx`: candidate-side join flow
-- `convex/recruiter.ts`: recruiter-side read models, report persistence, review decisions
 - `convex/livekit.ts`: webhook-driven room/event and recording-artifact ingestion
 - `convex/readiness.ts`: candidate readiness history read/write surface
 - `convex/profile.ts`: candidate interview preference read/write surface
@@ -129,20 +129,16 @@ This file is the fast restart point for future agents. Read this before re-resea
 
 ## Current Blockers
 
-- Clerk env is still required for full admin/auth testing
-- LiveKit room connection works only when `NEXT_PUBLIC_LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are set
-- actual conversational agent behavior still needs a running LiveKit agent worker and model/provider keys
-- duplicate-media-acquisition risk is reduced by passing selected device IDs through join, but the long-term best path is still tighter room lifecycle control
-- current invite/time-limit policy is app-level and defaulted, not yet template-driven
-- transcript persistence now depends on transcription events being emitted by the LiveKit/agent path, so final quality still depends on the chosen STT/runtime provider
-- recording URLs depend on LiveKit egress plus object storage credentials being configured
-- the report pipeline now generates first-pass evidence and scoring automatically, but it is deterministic and intentionally conservative
-- webhook-driven room sync exists, and Inngest is wired, but the model-based/AI reviewer layer still has not been added
-- screening creation currently uses the default template and app-level expiry/attempt policies, not template-driven controls yet
-- recruiter chat is grounded and usable, but it still needs true model-provider configuration or later BYOK to move beyond the fallback path
-- the child persona currently relies on prompt + TTS configuration rather than a dedicated voice-cloning path
-- native collaborative whiteboard is still deferred; current recommended visual-teaching path is screen share with tools like Excalidraw
-- primary repo lint/format is now `oxlint` + `oxfmt`
+These are operational proofs, not missing product features:
+
+- Clerk env is required for recruiter/auth testing
+- LiveKit room connection needs `NEXT_PUBLIC_LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET`
+- conversational agent behavior needs a running LiveKit agent worker and STT/LLM/TTS keys
+- transcript quality depends on the chosen STT/runtime provider
+- recording URLs depend on LiveKit egress plus object storage
+- structured LLM scoring falls back to deterministic `manual_review` when the provider is unavailable or invalid
+- issue #31 real-provider evidence is still pending owner-run (configuration presence and seeded UI do not count)
+- native collaborative whiteboard is deferred; screen share remains the teaching visual path
 
 ## Environment Variables That Matter Right Now
 
@@ -236,28 +232,32 @@ Use these first before re-researching the current implementation choices:
 
 **Shipped on main (usable ship):** security/SaaS stack #3–#15; commercial #18 (Dodo, quotas, invite email, GDPR, BYOK gate, template policy); operational credibility #20 (finalize honesty, reaper, copilot guardrails, audits).
 
-**Shipped on fix/audit-remediation-phase-0 (pending merge):** 26 audit fixes across trust boundary, data-loss, billing, transcript, metering, compliance, scoring, plus follow-ups: templates audit log, reaper bucket, Inngest bounded, redispatch continuity (turn counters seeded, welcome skipped), org-scoped dev seed, screenings batch-fetch (parallel + by_batch index), BYOK AAD binding, bootstrap order desc. Local: `bun run typecheck`/`fmt`/`lint` green, `test` 391/391, `build` pass. See `.plans/2026-08-21-audit-remediation-merged.md` for provenance.
+**Shipped on main through PR #30:** audit remediation, transcript hot-path
+coalescing, deterministic score enforcement, metering, compliance erasure,
+Convex action/HTTP cutover, dashboard analytics, grounded recruiter chat,
+reconnect hardening, and the real local Convex integration harness. See
+`.plans/2026-09-01-production-readiness-integration.md` for provenance.
 
 Immediate owner work:
 
-1. **Phase A (owner-run):** full LiveKit path with `bun run live-path:preflight` + `bun run dev:full` (see `.plans/operational-credibility-next.md`)
-2. Owner-run `.docs/verification-pending.md` items 1–4 / 6
-3. Set `RESEND_API_KEY` + `NEXT_PUBLIC_APP_URL` for real invite delivery (log-only without Resend)
-4. Live Dodo products/webhooks when ready for paid plans (override path works via `KYMA_ORG_PLAN_OVERRIDE`)
+1. **Phase A (owner-run):** one real invite → room → transcript → report. `bun run live-path:preflight` + `bun run dev:full`. See `.plans/operational-credibility-next.md`.
+2. Owner-run `.docs/verification-pending.md` items 1–4 and 6.
+3. Real invite email (`RESEND_API_KEY` + `NEXT_PUBLIC_APP_URL`) when sending to candidates.
+4. Live Dodo products/webhooks only when charging; `KYMA_ORG_PLAN_OVERRIDE` remains the local quota path.
 
-Still open product/tech debt:
+Still open after this PR:
 
-- persist/reconcile `reconnecting` server-side and promote `connecting → live` without waiting solely on webhooks
-- freeze policy snapshot at invite/session start (today recomputed at report time)
-- wire `interviewStyleMode` into agent behavior (`convex/agentConfig.ts` / `agents/interviewer.ts`)
-- Convex API cutover (#19): port #20 Next-route hardening into Convex actions/http before merge
-- replace in-memory HTTP rate limits with a shared store for multi-instance deploys
-- BYOK KMS rotation + broader lifecycle (`.docs/byok-architecture.md`)
+- issue #31 live evidence (Clerk isolation, LiveKit audio, STT, TTS, recording, Inngest, then later billing/alerts/backup/load)
+- BYOK KMS rotation (`.docs/byok-architecture.md`)
+- UI/accessibility polish (separate PR, not this branch)
 
 ## Validation log
 
 - 2026-07-10 — Code-only Phase B/C/D/E slice landed (finalize honesty, policy UI, copilot guardrails/citations/gating, livekitToken rate limit, screening/BYOK audits, BYOK design doc). Live room E2E still pending owner credentials.
 - 2026-07-10 (usable ship) — Merged #18 (commercial) + #20 (ops credibility) to `main` after rebase. Closed #16/#17. Left #19 open pending Next→Convex port. Local: `bun run typecheck` / `test` (286) / `lint` green; `live-path:preflight` OK with Clerk+LiveKit+encryption+`KYMA_ORG_PLAN_OVERRIDE=pro`. Override quota smoke: free rejects 11 candidates/batch, pro allows. Full LiveKit room E2E (verification items 3–4) still owner-run with `bun run dev:full`.
+- 2026-09-01 — PRs #21–#30 merged to `main`; CI passed on `3b38af9`.
+- 2026-09-02 — anonymous loopback Convex integration passed all 7 checks with synthetic credentials; real provider qualification remains tracked in issue #31.
+- 2026-09-09 — Correctness/CI follow-ups verified locally (`bun run test` 433/433, lint, typecheck, build). Live-path preflight: failed missing `KYMA_PROCESSING_WRITE_KEY NEXT_PUBLIC_LIVEKIT_URL LIVEKIT_API_KEY LIVEKIT_API_SECRET`. Local Playwright against `next dev` hung (TCP accept, no HTTP). Issue #31 remains owner-run evidence.
 - _Append dated rows here after manual LiveKit / end-to-end runs (same PR as behavior changes when possible)._
 
 ## Local Developer Experience

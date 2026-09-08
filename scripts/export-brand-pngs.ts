@@ -40,6 +40,25 @@ renderPng(ogSvg, 1200, join(publicDir, 'og-image.png'))
 const faviconIco = join(publicDir, 'favicon.ico')
 const appFaviconIco = join(root, 'app', 'favicon.ico')
 
+function pngToIco(png: Buffer, width: number, height: number) {
+  const header = Buffer.alloc(6)
+  header.writeUInt16LE(0, 0)
+  header.writeUInt16LE(1, 2)
+  header.writeUInt16LE(1, 4)
+
+  const entry = Buffer.alloc(16)
+  entry.writeUInt8(width >= 256 ? 0 : width, 0)
+  entry.writeUInt8(height >= 256 ? 0 : height, 1)
+  entry.writeUInt8(0, 2)
+  entry.writeUInt8(0, 3)
+  entry.writeUInt16LE(1, 4)
+  entry.writeUInt16LE(32, 6)
+  entry.writeUInt32LE(png.length, 8)
+  entry.writeUInt32LE(22, 12)
+
+  return Buffer.concat([header, entry, png])
+}
+
 const magick = spawnSync(
   'magick',
   [
@@ -52,7 +71,8 @@ const magick = spawnSync(
 )
 
 if (magick.status !== 0) {
-  throw new Error('Failed to generate favicon.ico with ImageMagick')
+  const png32 = readFileSync(join(publicDir, 'favicon-32x32.png'))
+  writeFileSync(faviconIco, pngToIco(png32, 32, 32))
 }
 
 writeFileSync(appFaviconIco, readFileSync(faviconIco))
