@@ -26,7 +26,7 @@ Transactional product email for candidate invites (and future report-ready mail)
 Optional `EMAIL_FROM` overrides the From header. Default:
 
 ```text
-Kyma <noreply@kyma.kitsunelabs.xyz>
+Kyma <noreply@kyma.kitsunekode.in>
 ```
 
 Verify the domain in Resend before enabling production sends.
@@ -51,7 +51,7 @@ Schema: `lib/env/shared.ts` → `serverEnv`.
 await sendEmail({
   kind: 'candidate_invite',
   to: 'candidate@example.com',
-  inviteUrl: 'https://kyma.kitsunelabs.xyz/i/<token>',
+  inviteUrl: 'https://kyma.kitsunekode.in/i/<token>',
   workspaceName: 'Acme Tutoring',
   candidateName: 'Alex',
   roleTitle: 'Math Tutor',
@@ -65,7 +65,7 @@ await sendEmail({
 await sendEmail({
   kind: 'report_ready',
   to: 'recruiter@example.com',
-  reportUrl: 'https://kyma.kitsunelabs.xyz/recruiter/sessions/<id>',
+  reportUrl: 'https://kyma.kitsunekode.in/recruiter/sessions/<id>',
   workspaceName: 'Acme Tutoring',
   candidateName: 'Alex',
   sessionId: '<convex session id>',

@@ -3,7 +3,7 @@ import 'server-only'
 import { clientEnv } from '@/lib/env/client'
 import { serverEnv } from '@/lib/env/server'
 
-const DEFAULT_SITE_URL = 'https://kyma.kitsunelabs.xyz'
+const DEFAULT_SITE_URL = 'https://kyma.kitsunekode.in'
 
 export function getSiteUrl(): string {
   const fromEnv =

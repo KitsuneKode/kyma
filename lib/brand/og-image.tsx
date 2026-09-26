@@ -108,7 +108,7 @@ export function OgImage({
             whiteSpace: 'nowrap',
           }}
         >
-          kyma.kitsunelabs.xyz
+          kyma.kitsunekode.in
         </div>
       </div>
     </div>

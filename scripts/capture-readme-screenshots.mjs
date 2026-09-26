@@ -11,7 +11,7 @@ import { chromium } from '@playwright/test'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const publicDir = join(root, 'public')
 const urlArg = process.argv.find((arg) => arg.startsWith('--url='))
-const baseUrl = urlArg?.slice('--url='.length) ?? 'https://kyma.kitsunelabs.xyz'
+const baseUrl = urlArg?.slice('--url='.length) ?? 'https://kyma.kitsunekode.in'
 
 mkdirSync(publicDir, { recursive: true })
 

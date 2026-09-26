@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://kyma.kitsunelabs.xyz"><img alt="Live Site" src="https://img.shields.io/badge/Live-kyma.kitsunelabs.xyz-2563eb?style=flat-square"></a>
+  <a href="https://kyma.kitsunekode.in"><img alt="Live Site" src="https://img.shields.io/badge/Live-kyma.kitsunekode.in-2563eb?style=flat-square"></a>
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-16a34a?style=flat-square">
   <img alt="Realtime Stack" src="https://img.shields.io/badge/Realtime-LiveKit-0ea5e9?style=flat-square">
   <img alt="Backend" src="https://img.shields.io/badge/Backend-Convex-7c3aed?style=flat-square">
@@ -15,7 +15,7 @@ Kyma is a **voice-first screening platform** for tutor and communication-heavy r
 
 You send a candidate a link, they join a short guided interview in-browser, and your team gets a structured review with transcript, evidence, and decision support.
 
-**Website:** [https://kyma.kitsunelabs.xyz](https://kyma.kitsunelabs.xyz)
+**Website:** [https://kyma.kitsunekode.in](https://kyma.kitsunekode.in)
 
 ## Why teams use Kyma
 
@@ -33,7 +33,7 @@ You send a candidate a link, they join a short guided interview in-browser, and 
 
 ## Product preview
 
-Screenshots captured from the live site at [kyma.kitsunelabs.xyz](https://kyma.kitsunelabs.xyz).
+Screenshots captured from the live site at [kyma.kitsunekode.in](https://kyma.kitsunekode.in).
 
 ![Kyma marketing homepage with hero and product preview](public/readme-hero.png)
 
@@ -53,15 +53,15 @@ Regenerate screenshots after UI changes: `bun run readme:capture`
 
 Public persona pages for programmatic SEO and audience-specific positioning:
 
-- [/for/education-teams](https://kyma.kitsunelabs.xyz/for/education-teams)
-- [/for/tutor-recruiters](https://kyma.kitsunelabs.xyz/for/tutor-recruiters)
-- [/for/online-learning-companies](https://kyma.kitsunelabs.xyz/for/online-learning-companies)
-- [/for/communication-heavy-roles](https://kyma.kitsunelabs.xyz/for/communication-heavy-roles)
-- Hub: [/for](https://kyma.kitsunelabs.xyz/for)
+- [/for/education-teams](https://kyma.kitsunekode.in/for/education-teams)
+- [/for/tutor-recruiters](https://kyma.kitsunekode.in/for/tutor-recruiters)
+- [/for/online-learning-companies](https://kyma.kitsunekode.in/for/online-learning-companies)
+- [/for/communication-heavy-roles](https://kyma.kitsunekode.in/for/communication-heavy-roles)
+- Hub: [/for](https://kyma.kitsunekode.in/for)
 
 ## Demo and access
 
-- Public site: [https://kyma.kitsunelabs.xyz](https://kyma.kitsunelabs.xyz)
+- Public site: [https://kyma.kitsunekode.in](https://kyma.kitsunekode.in)
 - Candidates start an auth-gated mock interview from the candidate portal
   (`/candidate`), which provisions an invite via `createMockInterview`. There is
   no unauthenticated public demo token.

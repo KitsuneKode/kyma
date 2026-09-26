@@ -7,7 +7,7 @@ describe('email payload types', () => {
     const payload: CandidateInviteEmail = {
       kind: 'candidate_invite',
       to: 'candidate@example.com',
-      inviteUrl: 'https://kyma.kitsunelabs.xyz/i/token',
+      inviteUrl: 'https://kyma.kitsunekode.in/i/token',
       workspaceName: 'Acme',
       roleTitle: 'Tutor',
     }
@@ -18,7 +18,7 @@ describe('email payload types', () => {
     const payload: ReportReadyEmail = {
       kind: 'report_ready',
       to: 'recruiter@example.com',
-      reportUrl: 'https://kyma.kitsunelabs.xyz/recruiter/sessions/abc',
+      reportUrl: 'https://kyma.kitsunekode.in/recruiter/sessions/abc',
       workspaceName: 'Acme',
       candidateName: 'Alex',
       sessionId: 'abc',

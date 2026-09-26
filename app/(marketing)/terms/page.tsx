@@ -115,16 +115,16 @@ export default function TermsPage() {
           Questions about these Terms:{' '}
           <a
             className="text-foreground underline underline-offset-4"
-            href="mailto:legal@kitsunelabs.com"
+            href="mailto:legal@kitsunekode.in"
           >
-            legal@kitsunelabs.com
+            legal@kitsunekode.in
           </a>
           . Privacy requests:{' '}
           <a
             className="text-foreground underline underline-offset-4"
-            href="mailto:privacy@kitsunelabs.com"
+            href="mailto:privacy@kitsunekode.in"
           >
-            privacy@kitsunelabs.com
+            privacy@kitsunekode.in
           </a>
           .
         </p>

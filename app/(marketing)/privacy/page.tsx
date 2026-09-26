@@ -142,9 +142,9 @@ export default function PrivacyPage() {
           To submit a request, email{' '}
           <a
             className="text-foreground underline underline-offset-4"
-            href="mailto:privacy@kitsunelabs.com"
+            href="mailto:privacy@kitsunekode.in"
           >
-            privacy@kitsunelabs.com
+            privacy@kitsunekode.in
           </a>{' '}
           with enough detail for us to verify your identity and locate relevant
           records. Our internal ops runbook for fulfilling requests is

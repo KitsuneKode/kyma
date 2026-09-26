@@ -1,4 +1,4 @@
-# Deployment Runbook — kyma.kitsunelabs.xyz
+# Deployment Runbook — kyma.kitsunekode.in
 
 Practical checklist for deploying Kyma on **Vercel (Next.js)** + **Convex** +
 **LiveKit agent worker** + optional **Inngest** / **Clerk**.
@@ -6,7 +6,7 @@ Practical checklist for deploying Kyma on **Vercel (Next.js)** + **Convex** +
 Canonical env model: [`.docs/env-model.md`](./env-model.md).  
 Templates: [`.env.example`](../.env.example), [`convex/.env.example`](../convex/.env.example).
 
-Production host: `https://kyma.kitsunelabs.xyz`
+Production host: `https://kyma.kitsunekode.in`
 
 ---
 
@@ -93,7 +93,7 @@ Set `LIVEKIT_RECORDING_ENABLED=1` plus storage + template vars from `.env.exampl
 
 | Variable              | Notes                                                          |
 | --------------------- | -------------------------------------------------------------- |
-| `NEXT_PUBLIC_APP_URL` | Prefer `https://kyma.kitsunelabs.xyz` (absolute links / email) |
+| `NEXT_PUBLIC_APP_URL` | Prefer `https://kyma.kitsunekode.in` (absolute links / email) |
 | `VERCEL_URL`          | Injected by Vercel; do not rely on it for canonical links      |
 
 ---
@@ -103,9 +103,9 @@ Set `LIVEKIT_RECORDING_ENABLED=1` plus storage + template vars from `.env.exampl
 1. **Convex functions** — deploy schema/functions to the production Convex deployment (`npx convex deploy` from CI or an owner-run prod pipeline; agents should not deploy prod casually).
 2. **Sync Convex env** — `bun run convex:sync-env:prod` or set keys in the Convex dashboard (`KYMA_PROCESSING_WRITE_KEY`, Clerk JWT issuer, Inngest event key, encryption key).
 3. **Vercel** — promote / deploy the Next.js app; confirm Production env vars.
-4. **Inngest** — ensure the app points at `https://kyma.kitsunelabs.xyz/api/inngest` (or the Vercel production URL) with matching signing keys.
+4. **Inngest** — ensure the app points at `https://kyma.kitsunekode.in/api/inngest` (or the Vercel production URL) with matching signing keys.
 5. **LiveKit agent** — start/restart `bun run agent:start` (or your process manager) with production LiveKit + provider env; confirm `LIVEKIT_AGENT_NAME` matches token dispatch.
-6. **Clerk webhook** — production endpoint `https://kyma.kitsunelabs.xyz/api/webhooks/clerk`.
+6. **Clerk webhook** — production endpoint `https://kyma.kitsunekode.in/api/webhooks/clerk`.
 
 ---
 
@@ -115,7 +115,7 @@ Run in order; stop on first hard failure.
 
 ### A. Static / health
 
-- [ ] `GET https://kyma.kitsunelabs.xyz/` returns 200
+- [ ] `GET https://kyma.kitsunekode.in/` returns 200
 - [ ] Open recruiter ops/health surface if available (platform health uses `lib/ops/platform-health.ts`) — Convex, LiveKit, processing key, agent liveness should not be `error`
 - [ ] `bun run test:e2e` against production only if intentionally configured (`PLAYWRIGHT_BASE_URL`)
 
@@ -146,7 +146,7 @@ Run in order; stop on first hard failure.
 ### Vercel (Next.js)
 
 1. Vercel Dashboard → Project → Deployments → previous healthy Production deployment → **Promote to Production**.
-2. Confirm `https://kyma.kitsunelabs.xyz` serves the prior build.
+2. Confirm `https://kyma.kitsunekode.in` serves the prior build.
 3. Re-run smoke A + C bootstrap at minimum.
 
 ### Convex

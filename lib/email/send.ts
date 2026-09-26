@@ -9,7 +9,7 @@ import type {
 import { serverEnv } from '@/lib/env/server'
 import { isProductionDeployment } from '@/lib/env/deployment-mode'
 
-const DEFAULT_FROM = 'Kyma <noreply@kyma.kitsunelabs.xyz>'
+const DEFAULT_FROM = 'Kyma <noreply@kyma.kitsunekode.in>'
 
 function resolveFrom(override?: string): string {
   return override?.trim() || serverEnv.EMAIL_FROM?.trim() || DEFAULT_FROM

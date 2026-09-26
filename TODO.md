@@ -15,7 +15,7 @@ Execution priorities follow [.docs/next-phase-prd.md](.docs/next-phase-prd.md). 
 
 - **Observability:** `lib/ops/error-reporting.ts` (console today; optional Sentry TODO). Wired on `/api/interviews/bootstrap` and `/api/interviews/process` catch paths. Install `@sentry/nextjs` + set `SENTRY_DSN` when enabling.
 - **Email:** `lib/email/` + [.docs/email-notifications.md](.docs/email-notifications.md). `sendEmail` logs/no-ops without `RESEND_API_KEY`; Resend fetch adapter ready. Invite email wired via `lib/recruiter/send-batch-invite-emails.ts` (batch invite flow); report-ready email still TODO.
-- **Deploy runbook:** [.docs/deployment-runbook.md](.docs/deployment-runbook.md) — env matrix, smoke tests, rollback for `kyma.kitsunelabs.xyz` (Vercel + Convex).
+- **Deploy runbook:** [.docs/deployment-runbook.md](.docs/deployment-runbook.md) — env matrix, smoke tests, rollback for `kyma.kitsunekode.in` (Vercel + Convex).
 
 ## Where to go from here
 
